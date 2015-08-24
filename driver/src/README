@@ -1,0 +1,22 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
+dustin.swales@noaa.gov
+
+Overview:
+This directory contains source code to test COSP
+
+Contents:
+cosp_test_v1.4.f90: Code to test COSPv1.4.0 interface
+cosp_test_v1.5.f90: Code to test COSPv1.5.0 interface
+cosp_test.f90:      Original test code with modifications to use new
+                    v1.4.0 interface.
+cosp_io.f90:        Subroutines for test code input and output
+Makefile.v1p4:      Makefile for test code that uses COSP v1.4.0
+		    interface
+Makefile.v1p5:      Makefile for test code that uses COSP v1.5.0
+		    interface
+Makefile.trunk:     Makefile that works on original version of test
+		    code.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

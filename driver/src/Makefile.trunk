@@ -1,0 +1,217 @@
+.SUFFIXES : .F .f .c .o .a .f90 .f95 .F90
+########################################################################
+#              Adapt these variables to your environment
+########################################################################
+F90      = ifort
+F90FLAGS = -g -p -check bounds -fpp -traceback -O3 -stand -prof-gen=srcpos -prof-dir Coverage/v1p4/ # -profile-functions
+NCDF_INC = /usr/local/ifort/include
+NCDF_LIB = /usr/local/ifort/lib
+
+CMOR_INC = /usr/local/ifort/include
+CMOR_LIB = /usr/local/ifort/lib
+
+INC = /usr/local/ifort/include
+LIB = /usr/local/ifort/lib
+
+UDUNITS_LIB = /usr/local/ifort/lib
+UDUNITS_INC = /usr/local/ifort/includes
+
+UUID_LIB = /usr/local/ifort/lib
+UUID_INC = /usr/local/ifort/include
+
+# COSP source directory
+SRC_F90    = /home/dswales/Projects/COSP/local_branch/src
+
+# COSPv1.4 model interface directory
+COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/local_branch/cosp-interface
+PROG = cosp_test
+
+# Non-optional simulators. You should not need to change this
+SIM_PATH     = $(SRC_F90)/simulator
+RT_PATH      = $(SIM_PATH)/rttov
+RS_PATH      = $(SIM_PATH)/quickbeam
+CS_PATH      = $(SIM_PATH)/actsim
+LLNL_PATH    = $(SIM_PATH)/llnl
+ISCCP_PATH   = $(SIM_PATH)/icarus-scops-4.1-bsd
+MISR_PATH    = $(SIM_PATH)/MISR_simulator
+MODIS_PATH   = $(SIM_PATH)/MODIS_simulator
+PARASOL_PATH = $(SIM_PATH)/parasol
+# RTTOV variables. You may need to change this
+RTTOV_PATH       = /Projects/Clouds/dswales/RTTOV/rttov93
+RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib 
+RTTOV_INC_PATH   = $(RTTOV_PATH)/include 
+RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod
+########################################################################
+#              End of modifications
+######################################################################## 
+
+OBJS =  cosp_kinds.o  cosp_constants.o cosp_cloudsat_interface.o cosp_config.o \
+        cosp_utils.o prec_scops.o cosp.o cosp_stats.o \
+        quickbeam.o cosp_optics.o cosp_interface_v1p4.o cosp_interface_v1p5.o \
+        array_lib.o mo_rng.o quickbeam_optics.o\
+        math_lib.o optics_lib.o parasol.o lidar_simulator.o \
+        cosp_calipso_interface.o cosp_io.o cosp_errorHandling.o\
+        cosp_isccp_interface.o icarus.o scops.o \
+        cosp_misr_interface.o MISR_simulator.o \
+	    cosp_modis_interface.o modis_simulator.o \
+        cosp_rttov_interface.o cosp_rttov.o mrgrnk.o cosp_parasol_interface.o
+
+all: $(PROG)
+$(PROG): $(OBJS)
+	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
+	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
+	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff \
+	-L${RTTOV_LIB_PATH} -lrttov9.3 \
+	-L${UDUNITS_LIB} -Wl,-rpath=${UDUNITS_LIB} -ludunits2 -lexpat -I${UDUNITS_INC} \
+	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \
+	-o $(PROG)
+
+rttov: $(OBJS) cosp_rttov.o
+	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) cosp_rttov.o \
+	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff -lnetcdf  \
+	-I$(INC) -L${LIB} -lsz \
+	-I$(CMOR_INC) -L${CMOR_LIB} -lcmor \
+	-I$(UUID_INC) -L${UUID_LIB} -luuid \
+	-L${UDUNITS_LIB} -ludunits2 -lexpat \
+	-L${RTTOV_LIB_PATH} -lrttov9.3 \
+	-o $(PROG)
+
+%.o: $(COSP_INTERFACE_F90)/%.f90
+	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	@echo "-----------------------------"
+
+%.o: $(SRC_F90)/%.f90
+	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	@echo "-----------------------------"
+
+%.o: $(SIM_PATH)/%.f90
+	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	@echo "-----------------------------"
+
+%.o: %.f90
+	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	@echo "-----------------------------"
+
+$(PROG).o     	          : cosp_config.o cosp.o cosp_io.o cosp_interface_v1p4.o         \
+                            cosp_interface_v1p5.o
+cosp_io.o            	  : cosp_kinds.o cosp_config.o cosp_interface_v1p5.o cosp.o
+cosp_interface_v1p4.o     : cosp_kinds.o cosp_utils.o cosp.o cosp_constants.o            \
+                            cosp_config.o cosp_optics.o quickbeam.o scops.o              \
+                            cosp_interface_v1p5.o quickbeam.o modis_simulator.o
+cosp_interface_v1p5.o     : cosp_kinds.o cosp_utils.o cosp.o cosp_constants.o            \
+                            cosp_config.o cosp_optics.o quickbeam.o mo_rng.o scops.o     \
+                            quickbeam_optics.o prec_scops.o			                
+cosp.o                    : cosp_kinds.o  cosp_constants.o prec_scops.o cosp_stats.o     \
+                            cosp_rttov_interface.o cosp_misr_interface.o                 \
+                            cosp_isccp_interface.o cosp_calipso_interface.o              \
+                            cosp_cloudsat_interface.o cosp_parasol_interface.o icarus.o  \
+                            cosp_rttov.o cosp_rttov_interface.o quickbeam.o              \
+                            MISR_simulator.o lidar_simulator.o parasol.o cosp_rttov.o    \
+                            quickbeam_optics.o cosp_modis_interface.o cosp_errorHandling.o
+cosp_config.o             : cosp_kinds.o
+cosp_stats.o              : cosp_kinds.o cosp_config.o
+cosp_utils.o              : cosp_kinds.o cosp_config.o
+cosp_calipso_interface.o  : cosp_kinds.o cosp_config.o lidar_simulator.o
+cosp_cloudsat_interface.o : cosp_kinds.o cosp_config.o quickbeam.o
+cosp_isccp_interface.o    : cosp_kinds.o cosp_config.o icarus.o 
+cosp_misr_interface.o     : cosp_kinds.o cosp_config.o MISR_simulator.o
+cosp_modis_interface.o    : cosp_kinds.o cosp_config.o modis_simulator.o
+cosp_rttov_interface.o    : cosp_kinds.o cosp_config.o cosp_rttov.o
+cosp_parasol_interface.o  : cosp_kinds.o parasol.o
+cosp_rttov.o              : cosp_kinds.o cosp_config.o
+optics_lib.o	          : cosp_kinds.o
+array_lib.o   	          : cosp_kinds.o
+math_lib.o                : cosp_kinds.o array_lib.o mrgrnk.o
+MISR_simulator.o          : cosp_kinds.o cosp_stats.o cosp_config.o
+modis_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
+lidar_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
+icarus.o	              : cosp_kinds.o cosp_constants.o cosp_optics.o cosp_stats.o
+quickbeam.o               : cosp_kinds.o cosp_config.o cosp_stats.o
+quickbeam_optics.o	      : cosp_kinds.o cosp_config.o array_lib.o math_lib.o            \
+                            optics_lib.o cosp_constants.o quickbeam.o
+mrgrnk.o                  : cosp_kinds.o
+prec_scops.o	          : cosp_kinds.o
+cosp_optics.o             : cosp_kinds.o cosp_constants.o 
+parasol.o                 : cosp_kinds.o cosp_constants.o cosp_config.o
+scops.o                   : cosp_kinds.o mo_rng.o
+mo_rng.o                  : cosp_kinds.o
+cosp_errorHandling.o      : cosp_kinds.o
+
+clean_objs:
+	rm -f $(OBJS) *.mod *.o
+
+clean:	
+	rm -f $(PROG) $(OBJS) *.mod *.o fort.*
+
+icarus.o : $(ISCCP_PATH)/icarus.f90
+	$(F90) $(F90FLAGS) -c $<
+
+prec_scops.o : $(SRC_F90)/subcol/prec_scops.f90
+	$(F90) $(F90FLAGS) -c $<
+
+scops.o : $(SRC_F90)/subcol/scops.f90
+	$(F90) $(F90FLAGS) -c $<
+
+quickbeam.o: $(RS_PATH)/quickbeam.f90
+	$(F90) $(F90FLAGS) -c $<
+
+array_lib.o : $(SRC_F90)/optics/array_lib.f90
+	$(F90) $(F90FLAGS) -c $<
+
+math_lib.o : $(SRC_F90)/optics/math_lib.f90
+	$(F90) $(F90FLAGS) -c $<
+
+mrgrnk.o : $(SRC_F90)/optics/mrgrnk.f90
+	$(F90) $(F90FLAGS) -c $<
+
+optics_lib.o : $(SRC_F90)/optics/optics_lib.f90
+	$(F90) $(F90FLAGS) -c $<
+
+MISR_simulator.o : $(MISR_PATH)/MISR_simulator.f90
+	$(F90) $(F90FLAGS) -c $<
+
+modis_simulator.o : $(MODIS_PATH)/modis_simulator.F90 
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_rttov.o : $(RT_PATH)/cosp_rttov.F90 
+	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+
+lidar_simulator.o : $(CS_PATH)/lidar_simulator.f90
+	$(F90) $(F90FLAGS) -c $<
+
+parasol.o : $(PARASOL_PATH)/parasol.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_optics.o :  $(SRC_F90)/optics/cosp_optics.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.f90
+	$(F90) $(F90FLAGS) -c $<
+
+quickbeam_optics.o :  $(SRC_F90)/optics/quickbeam_optics.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_kinds.o : $(SRC_F90)/hooks/cosp_kinds.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_errorHandling.o : $(SRC_F90)/hooks/cosp_errorHandling.f90
+	$(F90) $(F90FLAGS) -c $<
+	
+cosp_constants.o :  $(SRC_F90)/hooks/cosp_constants.f90
+	$(F90) $(F90FLAGS) -c $<
+
+mo_rng.o : $(SRC_F90)/rng/mo_rng.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_config.o :  $(SRC_F90)/cosp_config.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp.o :  $(SRC_F90)/cosp.f90
+	$(F90) $(F90FLAGS) -c $<
+	
+cosp_stats.o :  $(SRC_F90)/cosp_stats.f90
+	$(F90) $(F90FLAGS) -c $<

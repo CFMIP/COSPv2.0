@@ -1,0 +1,39 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
+dustin.swales@noaa.gov
+
+Overview:
+This directory contains the main cosp engine (ie. the piece of code
+that calls the individual simulators), configuration information and
+code common across simulators.
+
+Contents:
+cosp.f90: Contains the following subroutines and derived types:
+ *) type(cosp_grid_inputs)  - COSP inputs directly from model state
+ *) type(cosp_inputs)       - COSP inputs derived from model state (optics)
+ *) type(cosp_outputs)      - COSP outputs
+ *) cosp_simulator          - Main cosp engine
+ *) cosp_init               - COSP Initialization 
+ *) construct_cospIN        - Allocates derived (optical) inputs to COSP
+ *) construct_cospstateIN   - Allocates model field inputs to COSP
+ *) construct_cosp_outsputs - Allocates COSP outputs
+ *) destroy_cospIN          - Deallocates derived (optical) inputs to COSP
+ *) destroy_cospstateIN     - Deallocates model field inputs to COSP
+ *) destroy_cosp_outputs    - Deallocates COSP outputs.
+ *) cosp_errorCheck         - Error checking for inputs
+cosp_config.f90: Configuration information needed by BOTH the model/testcode
+                 and the individual simulators is declared here
+		 (ie. histogram bin boundaries)
+cosp_stats.f90:  Contains statistical subroutines used by multiple
+                 simulators (ie. Joint-histogram computation)
+
+Subdirectories:
+simulators/: Contains interfaces between COSP and the simulators, in
+             addition to the individual simulators.
+rng/:        Contains code to generate random numbers.
+optics/:     Contains code for computing the derived optical fields from
+             the model state.
+hooks/:      Contains code that is used by all of COSP
+subcol/:     Contains code used to generate sub-columns 
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

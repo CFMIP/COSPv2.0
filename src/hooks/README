@@ -1,0 +1,17 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
+dustin.swales@noaa.gov
+
+Overview: This directory contains codes that tie COSP to the host model,
+          or the testing code.
+
+Contents:
+cosp_constants.f90: Physical and mathematical constants used within COSP
+cosp_kinds.f90: Type(s) used within COSP.
+cosp_errorHandling.f90: Controls error reporting.
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
