@@ -1,0 +1,4 @@
+****** CMIP5_cf3hr
+- axis scatratio: The first requested value should be 0.605, instead of 0.0605. The bounds are also wrong.
+   values: 0.005, 0.605, 2.1, 4, 6, 8.5, 12.5, 17.5, 22.5, 27.5, 35, 45, 55, 70, 50040
+   bounds: 0, 0.01, 1.2, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100000

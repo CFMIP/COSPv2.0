@@ -1,0 +1,97 @@
+! (c) British Crown Copyright 2008, the Met Office.
+! All rights reserved.
+! 
+! Redistribution and use in source and binary forms, with or without modification, are permitted 
+! provided that the following conditions are met:
+! 
+!     * Redistributions of source code must retain the above copyright notice, this list 
+!       of conditions and the following disclaimer.
+!     * Redistributions in binary form must reproduce the above copyright notice, this list
+!       of conditions and the following disclaimer in the documentation and/or other materials 
+!       provided with the distribution.
+!     * Neither the name of the Met Office nor the names of its contributors may be used 
+!       to endorse or promote products derived from this software without specific prior written 
+!       permission.
+! 
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+! IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+! FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+! DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
+! IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+! OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+!
+!  History:
+!  May 2009 - A. Bodas-Salcedo - Initial version
+!  Dec 2010 - A. Bodas-Salcedo - v1.3.1
+!
+
+! Namelist that sets up output-related variables.
+! Configuration for CFMIP-2.
+! CloudSat and CALIPSO/PARASOL simulators ON, to be run offline.
+! Curtain and monthly gridded outputs from model curtain data.
+&COSP_OUTPUT
+  ! Simulator flags
+  Lradar_sim=.true.,
+  Llidar_sim=.true.,
+  Lisccp_sim=.false.,
+  Lmisr_sim=.false.,
+  Lmodis_sim=.false.,
+  Lrttov_sim=.false.,
+  ! Output variables
+  !- Variables unique in 1D (curtain) mode
+  Ltoffset=.true.,
+  !- CloudSat
+  Lcfaddbze94=.true.,
+  Ldbze94=.false.,
+  !- CALIPSO
+  Latb532=.false.,
+  LcfadLidarsr532=.true.,
+  Lclcalipso=.true.,
+  Lclhcalipso=.true.,
+  Lcllcalipso=.true.,
+  Lclmcalipso=.true.,
+  Lcltcalipso=.true.,
+  LparasolRefl=.true.,
+  !- ISCCP
+  Lalbisccp=.false.,
+  Lboxptopisccp=.false.,
+  Lboxtauisccp=.false.,
+  Lpctisccp=.false.,
+  Lclisccp=.false.,
+  Ltauisccp=.false.,
+  Lcltisccp=.false.,
+  Lmeantbisccp=.false.,
+  Lmeantbclrisccp=.false.,
+  !- MISR
+  LclMISR=.false.,
+  !- Use lidar and radar
+  Lclcalipso2=.true.,
+  Lcltlidarradar=.false.,
+  !- These are provided for debugging or special purposes
+  Lfracout=.false.,
+  LlidarBetaMol532=.false.,  
+  !- MODIS
+  Lcltmodis=.false.,
+  Lclwmodis=.false.,
+  Lclimodis=.false.,
+  Lclhmodis=.false.,
+  Lclmmodis=.false.,
+  Lcllmodis=.false.,
+  Ltautmodis=.false.,
+  Ltauwmodis=.false.,
+  Ltauimodis=.false.,
+  Ltautlogmodis=.false.,
+  Ltauwlogmodis=.false.,
+  Ltauilogmodis=.false.,
+  Lreffclwmodis=.false.,
+  Lreffclimodis=.false.,
+  Lpctmodis=.false.,
+  Llwpmodis=.false.,
+  Liwpmodis=.false.,
+  Lclmodis=.false.,
+  !- RTTOV
+  Ltbrttov=.false.,
+/

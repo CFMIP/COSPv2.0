@@ -1,0 +1,17 @@
+        !COMPILER-GENERATED INTERFACE MODULE: Thu Mar 19 13:16:19 2015
+        MODULE SCOPS__genmod
+          INTERFACE 
+            SUBROUTINE SCOPS(NPOINTS,NLEV,NCOL,SEED,CC,CONV,OVERLAP,    &
+     &FRAC_OUT,NCOLPRINT)
+              INTEGER(KIND=4) :: NCOL
+              INTEGER(KIND=4) :: NLEV
+              INTEGER(KIND=4) :: NPOINTS
+              INTEGER(KIND=4) :: SEED(NPOINTS)
+              REAL(KIND=4) :: CC(NPOINTS,NLEV)
+              REAL(KIND=4) :: CONV(NPOINTS,NLEV)
+              INTEGER(KIND=4) :: OVERLAP
+              REAL(KIND=4) :: FRAC_OUT(NPOINTS,NCOL,NLEV)
+              INTEGER(KIND=4) :: NCOLPRINT
+            END SUBROUTINE SCOPS
+          END INTERFACE 
+        END MODULE SCOPS__genmod
