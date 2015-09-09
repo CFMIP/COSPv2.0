@@ -1,3 +1,52 @@
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! Copyright (c) 2015, Regents of the University of Colorado
+! All rights reserved.
+!
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
+!
+! 1. Redistributions of source code must retain the above copyright notice, this list of 
+!    conditions and the following disclaimer.
+!
+! 2. Redistributions in binary form must reproduce the above copyright notice, this list
+!    of conditions and the following disclaimer in the documentation and/or other 
+!    materials provided with the distribution.
+!
+! 3. Neither the name of the copyright holder nor the names of its contributors may be 
+!    used to endorse or promote products derived from this software without specific prior
+!    written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
+! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+! LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!
+! History
+! 11/2005: John Haynes - Created
+! 09/2006  placed into subroutine form (Roger Marchand,JMH)
+! 08/2007  added equivalent volume spheres, Z and N scalling most distrubtion types (Roger Marchand)
+! 01/2008  'Do while' to determine if hydrometeor(s) present in volume
+!           changed for vectorization purposes (A. Bodas-Salcedo)
+!
+! 07/2010  V3.0 ... Modified to load or save scale factors to disk as a Look-Up Table (LUT)
+!  ... All hydrometeor and radar simulator properties now included in hp structure
+!  ... hp structure should be initialized by call to radar_simulator_init prior 
+!  ... to calling this subroutine.  
+!     Also ... Support of Morrison 2-moment style microphyscis (Np_matrix) added 
+!  ... Changes implement by Roj Marchand following work by Laura Fowler
+!
+!   10/2011  Modified ngate loop to go in either direction depending on flag 
+!     hp%radar_at_layer_one.  This affects the direction in which attenuation is summed.
+!
+!     Also removed called to AVINT for gas and hydrometeor attenuation and replaced with simple
+!     summation. (Roger Marchand)
+! May 2015 - D. Swales - Modified for COSPv2.0
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module quickbeam
   USE COSP_KINDS,           ONLY: wp
   USE MOD_COSP_CONFIG,      ONLY: DBZE_BINS,DBZE_MIN,DBZE_MAX,CFAD_ZE_MIN,CFAD_ZE_WIDTH, &

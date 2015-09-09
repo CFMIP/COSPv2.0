@@ -1,3 +1,34 @@
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! Copyright (c) 2015, Regents of the University of Colorado
+! All rights reserved.
+!
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
+!
+! 1. Redistributions of source code must retain the above copyright notice, this list of 
+!    conditions and the following disclaimer.
+!
+! 2. Redistributions in binary form must reproduce the above copyright notice, this list
+!    of conditions and the following disclaimer in the documentation and/or other 
+!    materials provided with the distribution.
+!
+! 3. Neither the name of the copyright holder nor the names of its contributors may be 
+!    used to endorse or promote products derived from this software without specific prior
+!    written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
+! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+! LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!
+! History
+! May 2015 - D. Swales - Original version
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_INTERFACE_v1p5
   USE COSP_KINDS,           ONLY: wp
   USE MOD_COSP,             ONLY: cosp_simulator,cosp_optical_inputs,cosp_column_inputs, &
@@ -9,7 +40,7 @@ MODULE MOD_COSP_INTERFACE_v1p5
                                   COSP_VERSION,numMODISTauBins,modis_histTau,            &
                                   modis_histTauEdges,modis_histTauCenters,ntau,          &
                                   tau_binBounds,tau_binEdges,tau_binCenters
-  USE cosp_optics,          ONLY: cosp_simulator_optics,polarized_optics,                &
+  USE cosp_optics,          ONLY: cosp_simulator_optics,lidar_optics,                &
                                   modis_optics_partition, num_trial_res,modis_optics
   USE MOD_COSP_UTILS,       ONLY: cosp_precip_mxratio
   USE quickbeam,            ONLY: radar_cfg,save_scale_LUTs
@@ -784,7 +815,7 @@ contains
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! LIDAR Polarized optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    call polarized_optics(npoints,gbx%Ncolumns,gbx%Nlevels,4,lidar_ice_type,             &
+    call lidar_optics(npoints,gbx%Ncolumns,gbx%Nlevels,4,lidar_ice_type,                 &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCLIQ),                    &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCICE),                    &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCLIQ),                    &

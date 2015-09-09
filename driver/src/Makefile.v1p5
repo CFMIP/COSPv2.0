@@ -3,7 +3,7 @@
 #              Adapt these variables to your environment
 ########################################################################
 F90      = ifort
-F90FLAGS = -fpp -traceback -O3 -check bounds -stand -prof-gen=srcpos -prof-dir Coverage/v1p5/ # -profile-functions
+F90FLAGS = -fpp -traceback -O3 -check bounds -stand #-prof-gen=srcpos -prof-dir Coverage/v1p5/ # -profile-functions
 NCDF_INC = /usr/local/ifort/include
 NCDF_LIB = /usr/local/ifort/lib
 
