@@ -1,54 +1,56 @@
-! (c) 2009-2010, Regents of the Unversity of Colorado
-!   Author: Robert Pincus, Cooperative Institute for Research in the Environmental Sciences
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! Copyright (c) 2015, Regents of the University of Colorado
 ! All rights reserved.
-! $Revision: 81 $, $Date: 2013-10-04 07:15:29 -0600 (Fri, 04 Oct 2013) $
-! $URL: https://cfmip-obs-sim.googlecode.com/svn/devel/branches/dustinswales/MODIS_simulator/modis_simulator.F90 $
-! 
-! Redistribution and use in source and binary forms, with or without modification, are permitted 
-! provided that the following conditions are met:
-! 
-!     * Redistributions of source code must retain the above copyright notice, this list 
-!       of conditions and the following disclaimer.
-!     * Redistributions in binary form must reproduce the above copyright notice, this list
-!       of conditions and the following disclaimer in the documentation and/or other materials 
-!       provided with the distribution.
-!     * Neither the name of the Met Office nor the names of its contributors may be used 
-!       to endorse or promote products derived from this software without specific prior written 
-!       permission.
-! 
-! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
-! IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
-! FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
-! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-! DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
-! IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
-! OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !
-
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
 !
-! History:
-!   May 2009 - Robert Pincus - Initial version
-!   June 2009 - Steve Platnick and Robert Pincus - Simple radiative transfer for size retrievals
-!   August 2009 - Robert Pincus - Consistency and bug fixes suggested by Rick Hemler (GFDL) 
-!   November 2009 - Robert Pincus - Bux fixes and speed-ups after experience with Rick Hemler using AM2 (GFDL) 
-!   January 2010 - Robert Pincus - Added high, middle, low cloud fractions 
+! 1. Redistributions of source code must retain the above copyright notice, this list of 
+!    conditions and the following disclaimer.
 !
-
+! 2. Redistributions in binary form must reproduce the above copyright notice, this list
+!    of conditions and the following disclaimer in the documentation and/or other 
+!    materials provided with the distribution.
+!
+! 3. Neither the name of the copyright holder nor the names of its contributors may be 
+!    used to endorse or promote products derived from this software without specific prior
+!    written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
+! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+! LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!
+! History
+! May 2009:      Robert Pincus - Initial version
+! June 2009:     Steve Platnick and Robert Pincus - Simple radiative transfer for size 
+!                retrievals
+! August 2009:   Robert Pincus - Consistency and bug fixes suggested by Rick Hemler (GFDL) 
+! November 2009: Robert Pincus - Bux fixes and speed-ups after experience with Rick Hemler 
+!                using AM2 (GFDL) 
+! January 2010:  Robert Pincus - Added high, middle, low cloud fractions
+! May 2015:      Dustin Swales - Modified for COSPv2.0
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
 ! Notes on using the MODIS simulator: 
-!  *) You may provide either layer-by-layer values of optical thickness at 0.67 and 2.1 microns, or 
-!     optical thickness at 0.67 microns and ice- and liquid-water contents (in consistent units of 
-!     your choosing)
+!  *) You may provide either layer-by-layer values of optical thickness at 0.67 and 2.1
+!     microns, or optical thickness at 0.67 microns and ice- and liquid-water contents 
+!     (in consistent units of your choosing)
 !  *) Required input also includes the optical thickness and cloud top pressure 
 !     derived from the ISCCP simulator run with parameter top_height = 1. 
-!  *) Cloud particle sizes are specified as radii, measured in meters, though within the module we 
-!     use units of microns. Where particle sizes are outside the bounds used in the MODIS retrieval
-!     libraries (parameters re_water_min, re_ice_min, etc.) the simulator returns missing values (re_fill)
-
+!  *) Cloud particle sizes are specified as radii, measured in meters, though within the 
+!     module we use units of microns. Where particle sizes are outside the bounds used in 
+!     the MODIS retrieval libraries (parameters re_water_min, re_ice_min, etc.) the 
+!     simulator returns missing values (re_fill)
 !
-! When error conditions are encountered this code calls the function complain_and_die, supplied at the 
-!   bottom of this module. Users probably want to replace this with something more graceful. 
+! When error conditions are encountered this code calls the function complain_and_die, 
+! supplied at the bottom of this module. Users probably want to replace this with 
+! something more graceful. 
 !
 module mod_modis_sim
   USE MOD_COSP_CONFIG, only: R_UNDEF,modis_histTau,modis_histPres,numMODISTauBins,       &

@@ -1,10 +1,35 @@
-! ##########################################################################
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! Copyright (c) 2015, Regents of the University of Colorado
+! All rights reserved.
 !
-! Copyright 2014, Regents of the University of Colorado. All right reserved.
-! Use and duplication is permitted under the terms of the
-! BSD 3-Clause License: https://opensource.org/licenses/BSD-3-Clause
+! Redistribution and use in source and binary forms, with or without modification, are 
+! permitted provided that the following conditions are met:
 !
-! ##########################################################################
+! 1. Redistributions of source code must retain the above copyright notice, this list of 
+!    conditions and the following disclaimer.
+!
+! 2. Redistributions in binary form must reproduce the above copyright notice, this list
+!    of conditions and the following disclaimer in the documentation and/or other 
+!    materials provided with the distribution.
+!
+! 3. Neither the name of the copyright holder nor the names of its contributors may be 
+!    used to endorse or promote products derived from this software without specific prior
+!    written permission.
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
+! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+! LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!
+! History:
+! 05/01/15  Dustin Swales - Original version
+! 
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module cosp_optics
   USE COSP_KINDS, ONLY: wp,dp
   USE COSP_MATH_CONSTANTS,  ONLY: pi
@@ -190,9 +215,9 @@ contains
   end subroutine modis_optics
   
   ! ######################################################################################
-  ! SUBROUTINE polarized_optics
+  ! SUBROUTINE lidar_optics
   ! ######################################################################################
-  subroutine polarized_optics(npoints,ncolumns,nlev,npart,ice_type,q_lsliq, q_lsice,     &
+  subroutine lidar_optics(npoints,ncolumns,nlev,npart,ice_type,q_lsliq, q_lsice,     &
                               q_cvliq, q_cvice,ls_radliq,ls_radice,cv_radliq,cv_radice,  &
                               pres,presf,temp,beta_mol,betatot,tau_part,tau_mol,tautot,  &
                               tautot_S_liq,tautot_S_ice,betatot_ice,betatot_liq,         &
@@ -237,8 +262,8 @@ contains
          tautot_ice,     & ! Total optical thickness of ice
          tautot_liq        ! Total optical thickness of liq
     REAL(WP),intent(out),dimension(npoints,nlev) :: &
-         beta_mol,       & !
-         tau_mol           !
+         beta_mol,       & ! Molecular backscatter coefficient
+         tau_mol           ! Molecular optical depth
     REAL(WP),intent(out),dimension(npoints,ncolumns) :: &
          tautot_S_liq,   & ! TOA optical depth for liquid
          tautot_S_ice      ! TOA optical depth for ice
@@ -436,7 +461,7 @@ contains
        tautot_S_ice(1:npoints,icol) = tautot_S_ice(1:npoints,icol)+tau_part(1:npoints,icol,nlev,2)+tau_part(1:npoints,icol,nlev,4)
     enddo
     
-  end subroutine polarized_optics
+  end subroutine lidar_optics
   
   ! ########################################################################################
   ! Optical functions used by MODIS_OPTICS
