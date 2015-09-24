@@ -127,15 +127,16 @@ MODULE MOD_COSP
           tautot,              & ! Optical thickess integrated from top (total)
           tautot_ice,          & ! Optical thickess integrated from top (ice)
           tautot_liq,          & ! Optical thickess integrated from top (liquid)
-          z_vol,               & ! Effective reflectivity factor (mm^6/m^3)
-          kr_vol,              & ! Attenuation coefficient hydro (dB/km) 
-          g_vol                  ! Attenuation coefficient gases (dB/km)
+          z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
+          kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
+          g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
      real(wp),allocatable,dimension(:,:) :: &
           beta_mol,            & ! Molecular backscatter coefficient
           tau_mol,             & ! Molecular optical depth
           tautot_S_liq,        & ! Liquid water optical thickness, from TOA to SFC
           tautot_S_ice           ! Ice water optical thickness, from TOA to SFC 
-     type(radar_cfg) :: rcfg
+     type(radar_cfg) :: &
+          rcfg_cloudsat         ! Radar comfiguration information (CLOUDSAT)
   end type cosp_optical_inputs
   
   ! ######################################################################################
@@ -475,10 +476,10 @@ CONTAINS
        cloudsatIN%Npoints    => Npoints
        cloudsatIN%Nlevels    => cospIN%Nlevels
        cloudsatIN%Ncolumns   => cospIN%Ncolumns
-       cloudsatIN%z_vol      => cospIN%z_vol
-       cloudsatIN%kr_vol     => cospIN%kr_vol
-       cloudsatIN%g_vol      => cospIN%g_vol
-       cloudsatIN%rcfg       => cospIN%rcfg
+       cloudsatIN%z_vol      => cospIN%z_vol_cloudsat
+       cloudsatIN%kr_vol     => cospIN%kr_vol_cloudsat
+       cloudsatIN%g_vol      => cospIN%g_vol_cloudsat
+       cloudsatIN%rcfg       => cospIN%rcfg_cloudsat
        cloudsatIN%hgt_matrix => cospgridIN%hgt_matrix
        
        ! Local variables used by the CLOUDSAT simulator
@@ -1161,8 +1162,10 @@ CONTAINS
              y%betatot_liq(npoints,ncolumns,nlevels),y%tautot(npoints,ncolumns,nlevels), &
              y%tautot_ice(npoints,ncolumns,nlevels), y%tautot_S_ice(npoints,nlevels),    &
              y%tautot_liq(npoints,ncolumns,nlevels), y%tautot_S_liq(npoints,nlevels),    &
-             y%taupart(npoints,ncolumns,nlevels,4),  y%z_vol(npoints,Ncolumns,nlevels),  &
-             y%kr_vol(npoints,Ncolumns,nlevels),     y%g_vol(npoints,Ncolumns,nlevels),  &
+             y%taupart(npoints,ncolumns,nlevels,4),                                      &
+             y%z_vol_cloudsat(npoints,Ncolumns,nlevels),                                 &
+             y%kr_vol_cloudsat(npoints,Ncolumns,nlevels),                                &
+             y%g_vol_cloudsat(npoints,Ncolumns,nlevels),                                 &
              y%asym(npoints,nColumns,nlevels),       y%ss_alb(npoints,nColumns,nlevels))
   end subroutine construct_cospIN
   
@@ -1394,8 +1397,8 @@ CONTAINS
     type(cosp_optical_inputs),intent(inout) :: y
     deallocate(y%tau_067,y%emiss_11,y%frac_out,y%beta_mol,y%tau_mol,y%betatot,           &
                y%betatot_ice,y%betatot_liq,y%tautot,y%tautot_ice,y%tautot_liq,           &
-               y%tautot_S_liq,y%tautot_S_ice,y%z_vol,y%kr_vol,y%g_vol,y%asym,y%ss_alb,   &
-               y%fracLiq,y%taupart)
+               y%tautot_S_liq,y%tautot_S_ice,y%z_vol_cloudsat,y%kr_vol_cloudsat,         &
+               y%g_vol_cloudsat,y%asym,y%ss_alb,y%fracLiq,y%taupart)
 
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2042,8 +2045,8 @@ CONTAINS
        cospOUT%parasolPix_refl(:,:,:) = R_UNDEF      
        cospOUT%parasolGrid_refl(:,:)  = R_UNDEF       
     endif    
-    if (any(cospIN%z_vol .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%z_vol contains values out of range')
+    if (any(cospIN%z_vol_cloudsat .lt. 0)) then
+       call errorMessage('ERROR: COSP input variable: cospIN%z_vol_cloudsat contains values out of range')
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        cospOUT%cloudsat_Ze_tot(:,:,:)     = R_UNDEF
@@ -2051,8 +2054,8 @@ CONTAINS
        cospOUT%lidar_only_freq_cloud(:,:) = R_UNDEF
        cospOUT%radar_lidar_tcc(:)         = R_UNDEF         
     endif
-    if (any(cospIN%kr_vol .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%kr_vol contains values out of range')
+    if (any(cospIN%kr_vol_cloudsat .lt. 0)) then
+       call errorMessage('ERROR: COSP input variable: cospIN%kr_vol_cloudsat contains values out of range')
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        cospOUT%cloudsat_Ze_tot(:,:,:)     = R_UNDEF
@@ -2060,8 +2063,8 @@ CONTAINS
        cospOUT%lidar_only_freq_cloud(:,:) = R_UNDEF
        cospOUT%radar_lidar_tcc(:)         = R_UNDEF       
     endif    
-    if (any(cospIN%g_vol .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%g_vol contains values out of range')
+    if (any(cospIN%g_vol_cloudsat .lt. 0)) then
+       call errorMessage('ERROR: COSP input variable: cospIN%g_vol_cloudsat contains values out of range')
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        cospOUT%cloudsat_Ze_tot(:,:,:)     = R_UNDEF
@@ -2155,25 +2158,25 @@ CONTAINS
   endif  
   
   ! CLOUDSAT    
-  if (size(cospIN%z_vol,1)          .ne. cospIN%Npoints .OR. &
-      size(cospIN%kr_vol,1)         .ne. cospIN%Npoints .OR. &
-      size(cospIN%g_vol,1)          .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%hgt_matrix,1) .ne. cospIN%Npoints) then
+  if (size(cospIN%z_vol_cloudsat,1)   .ne. cospIN%Npoints .OR. &
+      size(cospIN%kr_vol_cloudsat,1)  .ne. cospIN%Npoints .OR. &
+      size(cospIN%g_vol_cloudsat,1)   .ne. cospIN%Npoints .OR. &
+      size(cospgridIN%hgt_matrix,1)   .ne. cospIN%Npoints) then
       Lcloudsat_subcolumn = .false.
       Lcloudsat_column    = .false.
       call errorMessage('ERROR(cloudsat_simulator): The number of points in the input fields are inconsistent')
   endif
-  if (size(cospIN%z_vol,2)  .ne. cospIN%Ncolumns .OR. &
-      size(cospIN%kr_vol,2) .ne. cospIN%Ncolumns .OR. &
-      size(cospIN%g_vol,2)  .ne. cospIN%Ncolumns) then
+  if (size(cospIN%z_vol_cloudsat,2)  .ne. cospIN%Ncolumns .OR. &
+      size(cospIN%kr_vol_cloudsat,2) .ne. cospIN%Ncolumns .OR. &
+      size(cospIN%g_vol_cloudsat,2)  .ne. cospIN%Ncolumns) then
       Lcloudsat_subcolumn = .false.
       Lcloudsat_column    = .false.
       call errorMessage('ERROR(cloudsat_simulator): The number of sub-columns in the input fields are inconsistent')
   endif       
-  if (size(cospIN%z_vol,3)          .ne. cospIN%Nlevels .OR. &
-      size(cospIN%kr_vol,3)         .ne. cospIN%Nlevels .OR. &
-      size(cospIN%g_vol,3)          .ne. cospIN%Nlevels .OR. &
-      size(cospgridIN%hgt_matrix,2) .ne. cospIN%Nlevels) then
+  if (size(cospIN%z_vol_cloudsat,3)  .ne. cospIN%Nlevels .OR. &
+      size(cospIN%kr_vol_cloudsat,3) .ne. cospIN%Nlevels .OR. &
+      size(cospIN%g_vol_cloudsat,3)  .ne. cospIN%Nlevels .OR. &
+      size(cospgridIN%hgt_matrix,2)  .ne. cospIN%Nlevels) then
       Lcloudsat_subcolumn = .false.
       Lcloudsat_column    = .false.
       call errorMessage('ERROR(cloudsat_simulator): The number of levels in the input fields are inconsistent')

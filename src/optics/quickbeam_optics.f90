@@ -37,7 +37,7 @@ module mod_quickbeam_optics
   USE optics_lib,          ONLY: m_wat,m_ice,MieInt
   USE cosp_math_constants, ONLY: pi
   USE cosp_phys_constants, ONLY: rhoice  
-  use quickbeam,           ONLY: radar_cfg,dmin,dmax,radar_at_layer_one,Re_BIN_LENGTH,  &
+  use quickbeam,           ONLY: radar_cfg,dmin,dmax,Re_BIN_LENGTH,  &
                                  Re_MAX_BIN,nRe_types,nd,maxhclass
   use mod_cosp_config,     ONLY: N_HYDRO
   implicit none
