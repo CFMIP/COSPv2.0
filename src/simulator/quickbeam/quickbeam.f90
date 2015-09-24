@@ -65,7 +65,7 @@ module quickbeam
        dmin          = 0.1, & ! Quickbeam minimum size of discrete particle
        dmax          = 10000. ! Quickbeam maximum size of discrete particle
   
-  logical :: radar_at_layer_one   ! If true radar is assume to be at the edge 
+  !djs logical :: radar_at_layer_one   ! If true radar is assume to be at the edge 
                                   ! of the first layer, if the first layer is the
                                   ! surface than a ground-based radar.   If the
                                   ! first layer is the top-of-atmosphere, then
@@ -75,9 +75,14 @@ module quickbeam
   type radar_cfg
      ! Radar properties
      real(wp) :: freq,k2
-     integer  :: nhclass                           ! number of hydrometeor classes in use
+     integer  :: nhclass               ! Number of hydrometeor classes in use
      integer  :: use_gas_abs, do_ray
- 
+     logical  :: radar_at_layer_one    ! If true radar is assume to be at the edge 
+                                       ! of the first layer, if the first layer is the
+                                       ! surface than a ground-based radar.   If the
+                                       ! first layer is the top-of-atmosphere, then
+                                       ! a space borne radar.
+     
      ! Variables used to store Z scale factors
      character(len=240)                             :: scale_LUT_file_name
      logical                                        :: load_scale_LUTs, update_scale_LUTs
@@ -133,7 +138,7 @@ contains
     a_to_vol = 0._wp
 
     ! Loop over each range gate (ngate) ... starting with layer closest to the radar !
-    if(radar_at_layer_one) then
+    if(rcfg%radar_at_layer_one) then
        start_gate = 1
        end_gate   = ngate
        d_gate     = 1

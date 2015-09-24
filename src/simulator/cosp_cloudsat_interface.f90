@@ -33,8 +33,7 @@ MODULE MOD_COSP_CLOUDSAT_INTERFACE
   USE MOD_COSP_CONFIG, ONLY: DBZE_BINS,CFAD_ZE_MIN,CFAD_ZE_WIDTH,SR_BINS,DBZE_MAX,       &
                              DBZE_MIN
   USE COSP_KINDS,      ONLY: wp
-  USE quickbeam,       ONLY: quickbeam_init,radar_cfg,Re_MAX_BIN,Re_BIN_LENGTH,          &
-                             radar_at_layer_one
+  USE quickbeam,       ONLY: quickbeam_init,radar_cfg,Re_MAX_BIN,Re_BIN_LENGTH
   IMPLICIT NONE
          
   ! Directory where LUTs will be stored
@@ -142,9 +141,9 @@ CONTAINS
     hgt_descending = hgt_matrix(1,1) > hgt_matrix(1,size(hgt_matrix,2))
     if ((surface_radar == 1 .and. hgt_descending) .or.     &
          (surface_radar == 0 .and. (.not. hgt_descending))) then
-       radar_at_layer_one = .false.
+       rcfg%radar_at_layer_one = .false.
     else
-       radar_at_layer_one = .true.
+       rcfg%radar_at_layer_one = .true.
     endif
 
   END SUBROUTINE COSP_CLOUDSAT_INIT

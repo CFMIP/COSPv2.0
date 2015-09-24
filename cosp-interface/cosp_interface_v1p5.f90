@@ -88,8 +88,8 @@ MODULE MOD_COSP_INTERFACE_v1p5
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Initialization variables
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  type(radar_cfg)                          :: rcfg  ! Radar configuration
-  type(size_distribution)                  :: sd    ! Hydrometeor description
+  type(radar_cfg)                          :: rcfg_cloudsat  ! Radar configuration
+  type(size_distribution)                  :: sd             ! Hydrometeor description
   integer ::         & 
        overlap,      & !
        Npoints_it,   & ! Number of points per iteration
@@ -395,10 +395,10 @@ contains
     call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
 
     ! Initialize COSP simulators
-    call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs, &
-                   cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,          &
-                   hgt_matrix,hgt_matrix_half,surface_radar,rcfg,rttov_Nchannels,        &
-                   rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,       &
+    call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
+                   cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,           &
+                   hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,rttov_Nchannels,&
+                   rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,        &
                    lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
                    
   end subroutine cosp_interface_init
@@ -525,7 +525,7 @@ contains
     cospIN%tautot_S_ice                 = 0._wp
     cospIN%emsfc_lw                     = gbx%isccp_emsfc_lw
     cospIN%frac_out                     = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
-    cospIN%rcfg                         = rcfg
+    cospIN%rcfg_cloudsat                = rcfg_cloudsat
     cospgridIN%hgt_matrix               = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
     cospgridIN%hgt_matrix_half          = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
     cospgridIN%sunlit                   = gbx%sunlit(start_idx:end_idx)
@@ -832,7 +832,7 @@ contains
                           tautot_liq = cospIN%tautot_liq)
           
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! QUICKBEAM OPTICS
+    ! CLOUDSAT RADAR OPTICS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
     ! Allocate memory
     allocate(hm_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
@@ -844,13 +844,14 @@ contains
           re_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Reff(:,ij,:,i)*1.e6_wp  
           Np_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Np(:,ij,:,i)       
        enddo
-       call quickbeam_optics(sd, rcfg, npoints, gbx%Nlevels, R_UNDEF, hm_matrix,  &
+       call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF, hm_matrix,  &
                              re_matrix, Np_matrix,                                       &
                              gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
                              gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
                              gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),                 &
-                             cospIN%z_vol(1:npoints,ij,:),cospIN%kr_vol(1:npoints,ij,:), &
-                             cospIN%g_vol(1:npoints,ij,:))
+                             cospIN%z_vol_cloudsat(1:npoints,ij,:),                      &
+                             cospIN%kr_vol_cloudsat(1:npoints,ij,:),                     &
+                             cospIN%g_vol_cloudsat(1:npoints,ij,:))
     enddo
     ! Deallocate memory
     deallocate(hm_matrix,re_matrix,Np_matrix)
@@ -1416,7 +1417,7 @@ contains
     endif
     
     ! Save any updates to radar simulator LUT
-    if (local_save_LUT) call save_scale_LUTs(rcfg)
+    if (local_save_LUT) call save_scale_LUTs(rcfg_cloudsat)
     
     deallocate(y%mr_hydro, y%dist_prmts_hydro, y%conc_aero, y%dist_type_aero,            &
                y%dist_prmts_aero, y%Reff,y%Np,y%toffset)              
