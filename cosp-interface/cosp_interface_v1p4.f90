@@ -33,7 +33,7 @@
 MODULE MOD_COSP_INTERFACE_v1p4
   use COSP_KINDS,                 ONLY: wp,dp
   use MOD_COSP,                   ONLY: cosp_outputs,construct_cosp_outputs,             &
-                                        destroy_cosp_outputs
+                                        destroy_cosp_outputs,linitialization
   USE MOD_COSP_CONFIG,            ONLY: PARASOL_NREFL,R_UNDEF,                           &
                                         SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS,        &
                                         numMISRHgtBins,N_HYDRO,numMODISReffLiqBins,      &
@@ -467,17 +467,18 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Call cosp_init
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    call cosp_interface_init(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Npoints_it,overlap,       &
-                             gbxIN%use_precipitation_fluxes,gbxIN%radar_freq,            &
-                             cloudsat_micro_scheme,gbxIN%k2,gbxIN%use_gas_abs,           &
-                             gbxIN%do_ray,gbxIN%isccp_top_height,                        &
-                             gbxIN%isccp_top_height_direction,                           &
-                             gbxIN%zlev(:,gbxIN%Nlevels:1:-1),                           &
-                             gbxIN%zlev_half(:,gbxIN%Nlevels:1:-1),gbxIN%surface_radar,  &
-                             gbxIN%Nchan,gbxIN%Ichan,gbxIN%Plat,gbxIN%Sat,gbxIN%Inst,    &
-                             gbxIN%lidar_ice_type,vgrid%use_vgrid,vgrid%Nlvgrid,         &
-                             vgrid%csat_vgrid,cospvID)
-    
+    if (linitialization) then
+      call cosp_interface_init(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Npoints_it,overlap,     &
+                               gbxIN%use_precipitation_fluxes,gbxIN%radar_freq,          &
+                               cloudsat_micro_scheme,gbxIN%k2,gbxIN%use_gas_abs,         &
+                               gbxIN%do_ray,gbxIN%isccp_top_height,                      &
+                               gbxIN%isccp_top_height_direction,                         &
+                               gbxIN%zlev(:,gbxIN%Nlevels:1:-1),                         &
+                               gbxIN%zlev_half(:,gbxIN%Nlevels:1:-1),gbxIN%surface_radar,&
+                               gbxIN%Nchan,gbxIN%Ichan,gbxIN%Plat,gbxIN%Sat,gbxIN%Inst,  &
+                               gbxIN%lidar_ice_type,vgrid%use_vgrid,vgrid%Nlvgrid,       &
+                               vgrid%csat_vgrid,cospvID)
+    endif
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Call construct_cosp_outputs
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -43,7 +43,7 @@ PROGRAM COSPTEST_v1p5
                                         nc_cmor_associate_2d,nc_cmor_write_2d,           &
                                         nc_cmor_close,nc_cmor_write_1d_v1p5,var1d,var2d,var3d  
   USE COSP_KINDS,                 ONLY: wp,dp
-  USE MOD_COSP,                   ONLY: cosp_column_inputs,cosp_outputs,     &
+  USE MOD_COSP,                   ONLY: linitialization,cosp_column_inputs,cosp_outputs, &
                                         construct_cosp_outputs,destroy_cosp_outputs
   USE MOD_COSP_CONFIG,            ONLY: RTTOV_MAX_CHANNELS,N_HYDRO,PARASOL_NREFL
   USE COSP_PHYS_CONSTANTS,        ONLY: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
@@ -224,12 +224,16 @@ PROGRAM COSPTEST_v1p5
   call construct_cosp_subgrid(Npoints, Ncolumns, Nlevels, sgx)
 
   ! Call initialization
-  call cosp_interface_init(Npoints,Nlevels,Npoints_it,overlap,use_precipitation_fluxes,  &
-                           radar_freq,radar_micro_scheme,k2,use_gas_abs,do_ray,          &
-                           isccp_topheight,isccp_topheight_direction,                    &
-                           zlev(:,Nlevels:1:-1),zlev_half(:,Nlevels:1:-1),surface_radar, &
-                           Nchannels,Channels,platform,satellite,instrument,             &
-                           lidar_ice_type,use_vgrid,Nlvgrid,csat_vgrid,cospvID)
+  linitialization=.TRUE.
+  if (linitialization) then
+    call cosp_interface_init(Npoints,Nlevels,Npoints_it,overlap,use_precipitation_fluxes,&
+                             radar_freq,radar_micro_scheme,k2,use_gas_abs,do_ray,        &
+                             isccp_topheight,isccp_topheight_direction,                  &
+                             zlev(:,Nlevels:1:-1),zlev_half(:,Nlevels:1:-1),             &
+                             surface_radar,Nchannels,Channels,platform,satellite,        &
+                             instrument,lidar_ice_type,use_vgrid,Nlvgrid,csat_vgrid,     &
+                             cospvID)
+  endif                        
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived types.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

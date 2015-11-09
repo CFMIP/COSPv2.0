@@ -187,7 +187,7 @@ MODULE MOD_COSP_CONFIG
     ! For the MODIS simulator we want to preserve the ability for cospV1.4.0 to use the
     ! old histogram bin boundaries for optical depth, so these are set up in initialization.
     integer,parameter :: &
-       numMODISPresBins = npres                      ! Number of pressure bins for joint-histogram    
+         numMODISPresBins = npres                    ! Number of pressure bins for joint-histogram    
     real(wp),parameter,dimension(numMODISPresBins + 1) :: & 
          modis_histPres = 100*pres_binBounds         ! Joint-histogram boundaries (cloud pressure)
     real(wp),parameter,dimension(2, numMODISPresBins) :: &
