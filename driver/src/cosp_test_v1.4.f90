@@ -66,7 +66,7 @@ PROGRAM COSPTEST_trunk
                                      construct_cosp_subgrid,cosp_config,cosp_subgrid,    &
                                      I_CVCLIQ,I_LSCLIQ,I_CVCICE,I_LSCICE,I_LSRAIN,       &
                                      I_LSSNOW,I_LSGRPL,I_CVRAIN,I_CVSNOW
-                                      
+  USE MOD_COSP,                ONLY: linitialization
   IMPLICIT NONE
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -186,6 +186,9 @@ PROGRAM COSPTEST_trunk
                       Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,     &
                       use_precipitation_fluxes,use_reff,platform,satellite,      &
                       Instrument,Nchannels,Channels,Surfem,ZenAng,co2,ch4,n2o,co
+
+  ! Initialization switch. Set to false after cosp_init is called.
+  linitialization = .true.
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read COSP namelists
