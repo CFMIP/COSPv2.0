@@ -524,7 +524,7 @@ contains
     cospIN%tautot_S_liq                 = 0._wp
     cospIN%tautot_S_ice                 = 0._wp
     cospIN%emsfc_lw                     = gbx%isccp_emsfc_lw
-    cospIN%frac_out                     = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
+!    cospIN%frac_out                     = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
     cospIN%rcfg_cloudsat                = rcfg_cloudsat
     cospgridIN%hgt_matrix               = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
     cospgridIN%hgt_matrix_half          = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
@@ -573,7 +573,7 @@ contains
        else
           sgx%frac_out(start_idx:end_idx,:,:) = 1  
        endif
-       
+
        ! Sum up precipitation rates
        allocate(ls_p_rate(npoints,gbx%Nlevels),cv_p_rate(npoints,gbx%Nlevels))
        if(use_precipitation_fluxes) then
@@ -638,6 +638,7 @@ contains
             sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
        sgx%prec_frac(start_idx:end_idx,:,1:gbx%Nlevels) =                                &
             sgx%prec_frac(start_idx:end_idx,:,gbx%Nlevels:1:-1)
+       cospIN%frac_out = sgx%frac_out(start_idx:end_idx,:,1:gbx%Nlevels)
        
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Compute mixing ratios, effective radii and precipitation fluxes for clouds

@@ -49,12 +49,14 @@ MODULE MOD_COSP
   USE MOD_COSP_CALIPSO_INTERFACE,  ONLY: cosp_calipso_init,   calipso_IN
   USE MOD_COSP_PARASOL_INTERFACE,  ONLY: cosp_parasol_init,   parasol_in
   USE MOD_COSP_CLOUDSAT_INTERFACE, ONLY: cosp_cloudsat_init,  cloudsat_IN
+  USE MOD_COSP_CLARA_INTERFACE,    ONLY: cosp_clara_init,     clara_IN
   USE quickbeam,                   ONLY: quickbeam_subcolumn, quickbeam_column, radar_cfg
   USE MOD_ICARUS,                  ONLY: icarus_subcolumn,    icarus_column
   USE MOD_MISR_SIMULATOR,          ONLY: misr_subcolumn,      misr_column
   USE MOD_LIDAR_SIMULATOR,         ONLY: lidar_subcolumn,     lidar_column
   USE MOD_MODIS_SIM,               ONLY: modis_subcolumn,     modis_column
   USE MOD_PARASOL,                 ONLY: parasol_subcolumn,   parasol_column, ntetas
+  USE MOD_CLARA_SIM,               ONLY: clara_subcolumn,     clara_column
   use mod_cosp_rttov,              ONLY: rttov_subcolumn
   USE mod_quickbeam_optics,        ONLY: size_distribution,quickbeam_optics_init
   USE MOD_COSP_STATS,              ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID
@@ -232,6 +234,18 @@ MODULE MOD_COSP
      real(wp),pointer :: &
           rttov_tbs(:,:) ! Brightness Temperature	    
      
+     ! CLARA outputs
+     real(wp),pointer,dimension(:,:) :: &
+        clara_tau,       & ! CLARA subcolumn optical-depth
+        clara_ctp,       & ! CLARA subcolumn cloud-top pressure
+        clara_ctt          ! CLARA subcolumn cloud-top temperature
+     real(wp),pointer,dimension(:) :: &
+        clara_meantau,   & ! CLARA column optical-depth
+        clara_meanctp,   & ! CLARA column cloud-top pressure
+        clara_meanctt      ! CLARA column cloud-top temperature
+     real(wp),pointer,dimension(:,:,:) :: &
+        clara_hist2D   ! CLARA joint-histogram on cloud-top pressure and optical depth (p_tau_clara)
+     
   end type cosp_outputs
 
 CONTAINS
@@ -250,6 +264,7 @@ CONTAINS
     type(cloudsat_IN) :: cloudsatIN ! Input to the CLOUDSAT radar simulator
     type(modis_IN)    :: modisIN    ! Input to the MODIS simulator
     type(rttov_IN)    :: rttovIN    ! Input to the RTTOV simulator
+    type(clara_IN)    :: claraIN    ! Input to the CLARA simulator
     integer,optional  :: start_idx,stop_idx
     
     ! Outputs from the simulators (nested simulator output structure)
@@ -267,6 +282,7 @@ CONTAINS
          Lparasol_subcolumn,  & ! On/Off switch for subcolumn PARASOL simulator
          Lcloudsat_subcolumn, & ! On/Off switch for subcolumn CLOUDSAT simulator
          Lmodis_subcolumn,    & ! On/Off switch for subcolumn MODIS simulator
+         Lclara_subcolumn,    & ! On/Off switch for subcolumn CLARA simulator
          Lrttov_subcolumn,    & ! On/Off switch for subcolumn RTTOV simulator
          Lisccp_column,       & ! On/Off switch for column ISCCP simulator
          Lmisr_column,        & ! On/Off switch for column MISR simulator
@@ -274,6 +290,7 @@ CONTAINS
          Lparasol_column,     & ! On/Off switch for column PARASOL simulator
          Lcloudsat_column,    & ! On/Off switch for column CLOUDSAT simulator
          Lmodis_column,       & ! On/Off switch for column MODIS simulator
+         Lclara_column,       & ! On/Off switch for column CLARA simulator
          Lrttov_column          ! On/Off switch for column RTTOV simulator (not used)      
     logical :: ok_lidar_cfad = .false.
     
@@ -315,6 +332,11 @@ CONTAINS
     !    - If any of the column fields are allocated, then compute the statistics for that
     !      simulator, but only save the requested fields.
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    ! CLARA subcolumn
+    Lclara_subcolumn = .true.
+    Lclara_column    = .true.
+    
     ! CLOUDSAT subcolumn
     if (associated(cospOUT%cloudsat_Ze_tot)) Lcloudsat_subcolumn = .true.
     ! MODIS subcolumn
@@ -553,6 +575,18 @@ CONTAINS
                 modisJointHistogramLiq(modisIN%nSunlit,numModisTauBins,numMODISReffLiqBins))
 
     endif
+    
+    if (Lclara_subcolumn) then
+       claraIN%Ncolumns  => cospIN%Ncolumns
+       claraIN%Nlevels   => cospIN%Nlevels
+       claraIN%Npoints   => Npoints
+       claraIN%tautot    => cospIN%tautot
+       claraIN%tautotice => cospIN%tautot_liq
+       claraIN%tautotliq => cospIN%tautot_ice       
+       claraIN%g         => cospIN%asym
+       claraIN%w0        => cospIN%ss_alb           
+    endif
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4) Call subcolumn simulators
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -629,6 +663,12 @@ CONTAINS
                          rttovIN%p_surf/100._wp,rttovIN%t_surf,rttovIN%q_surf,           &
                          rttovIN%lsmask,rttovIN%latitude,cospOUT%rttov_tbs(ij:ik,:))     
 
+    endif
+
+    if (Lclara_subcolumn) then
+       call clara_subcolumn(claraIN%Npoints,claraIN%Nlevels,claraIN%Ncolumns,            &
+                            claraIN%tautot,claraIN%tautotliq,claraIN%tautotice,claraIN%g,&
+                            claraIN%w0)
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1135,6 +1175,8 @@ CONTAINS
     call cosp_calipso_init()
     ! Initialize PARASOL
     call cosp_parasol_init()
+    ! Initialize CLARA
+    call cosp_clara_init()
     
     linitialization = .FALSE.
     
