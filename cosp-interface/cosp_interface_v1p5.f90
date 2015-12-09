@@ -40,7 +40,7 @@ MODULE MOD_COSP_INTERFACE_v1p5
                                   COSP_VERSION,numMODISTauBins,modis_histTau,            &
                                   modis_histTauEdges,modis_histTauCenters,ntau,          &
                                   tau_binBounds,tau_binEdges,tau_binCenters
-  USE cosp_optics,          ONLY: cosp_simulator_optics,lidar_optics,                &
+  USE cosp_optics,          ONLY: cosp_simulator_optics,lidar_optics,clara_optics,       &
                                   modis_optics_partition, num_trial_res,modis_optics
   USE MOD_COSP_UTILS,       ONLY: cosp_precip_mxratio
   USE quickbeam,            ONLY: radar_cfg,save_scale_LUTs
@@ -306,7 +306,17 @@ contains
                                  isccp_top_height_direction,hgt_matrix,hgt_matrix_half,  &
                                  surface_radar,rttov_Nchannels,rttov_Channels,           &
                                  rttov_platform,rttov_satellite,rttov_instrument,        &
-                                 lidarIceType,lusevgrid,Nvgrid,luseCSATvgrid,cospvID)
+                                 lidarIceType,lusevgrid,Nvgrid,luseCSATvgrid,cospvID,    &
+                                 CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque,     &
+                                 CLARA_RTTOVclr,claraRTTOV_coefdir,claraRTTOV_platform,  &
+                                 claraRTTOV_satellite,claraRTTOV_sensor,claraRTTOV_nchan,&
+                                 claraRTTOV_channels,claraRTTOV_addrefrac,               &
+                                 claraRTTOV_use_q2m,claraRTTOV_clw_data,                 &
+                                 claraRTTOV_addsolar,claraRTTOV_addclouds,               &
+                                 claraRTTOV_addaerosol,claraRTTOV_use_cld_opts_param,    &
+                                 claraRTTOV_ozone_data,claraRTTOV_co2,claraRTTOV_n2o,    &
+                                 claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,      &
+                                 claraRTTOV_calcemis,claraRTTOV_calcrefl)
     
     ! Inputs
     integer,intent(in) ::            & !
@@ -324,7 +334,16 @@ contains
          rttov_Nchannels,            & ! RTTOV: Number of channels
          rttov_platform,             & ! RTTOV: Satellite platform
          rttov_satellite,            & ! RTTOV: Satellite 
-         rttov_instrument              ! RTTOV: Instrument
+         rttov_instrument,           & ! RTTOV: Instrument
+         CLARA_Tb_subvis,            & ! Method for Tb (sub-visible clouds)
+         CLARA_Tb_semitrans,         & ! Method for Tb (semi-transparent clouds)
+         CLARA_Tb_opaque,            & ! Method for Tb (opaque clouds)
+         claraRTTOV_platform,        & ! Satellite platform
+         claraRTTOV_satellite,       & ! Satellite ID
+         claraRTTOV_sensor,          & ! Sensor ID
+         claraRTTOV_nchan              ! Number of channels         
+    integer,dimension(3) :: &
+         claraRTTOV_channels           ! Channel numbers
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          rttov_Channels                ! RTTOV: Channel numbers         
     real(wp),intent(in) ::           & !
@@ -337,9 +356,27 @@ contains
     logical,intent(in) :: &
          lusePrecip,      & ! True if precipitation fluxes are input to the algorithm
          lusevgrid,       & ! True if using new grid for L3 CALIPSO and CLOUDSAT 
-         luseCSATvgrid      ! True to use CLOUDSAT vertical grid spacing of 480m
+         luseCSATvgrid,   & ! True to use CLOUDSAT vertical grid spacing of 480m
+         CLARA_RTTOVclr,             & ! True => Use RTTOV for cloudy free scenes 
+         claraRTTOV_addrefrac,          & !
+         claraRTTOV_use_q2m,            & !
+         claraRTTOV_clw_data,           & !
+         claraRTTOV_addsolar,           & !
+         claraRTTOV_addclouds,          & !
+         claraRTTOV_addaerosol,         & !
+         claraRTTOV_use_cld_opts_param, & !
+         claraRTTOV_ozone_data,         & !
+         claraRTTOV_co2,                & !
+         claraRTTOV_n2o,                & !
+         claraRTTOV_ch4,                & !
+         claraRTTOV_co,                 & !
+         claraRTTOV_addinterp,          & !
+         claraRTTOV_calcemis,           & ! 
+         claraRTTOV_calcrefl              !
     character(len=64),intent(in) :: &
-         cloudsat_micro_scheme ! Microphysical scheme used in radar simulator
+         cloudsat_micro_scheme,         & ! Microphysical scheme used in radar simulator
+         claraRTTOV_coefdir               ! Location of RTTOV coefficient files
+
     character(len=32),intent(in) :: &
          cospvID
 
@@ -395,11 +432,19 @@ contains
     call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
 
     ! Initialize COSP simulators
-    call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
-                   cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,           &
-                   hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,rttov_Nchannels,&
-                   rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,        &
-                   lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
+    call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs, &
+                   cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,          &
+                   hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,               &
+                   rttov_Nchannels,rttov_Channels,rttov_platform,rttov_satellite,        &
+                   rttov_instrument,lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme,&
+                   CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque,CLARA_RTTOVclr,    &
+                   claraRTTOV_coefdir,claraRTTOV_platform,claraRTTOV_satellite,          &
+                   claraRTTOV_sensor,claraRTTOV_nchan,claraRTTOV_channels,               &
+                   claraRTTOV_addrefrac,claraRTTOV_use_q2m,claraRTTOV_clw_data,          &
+                   claraRTTOV_addsolar,claraRTTOV_addclouds,claraRTTOV_addaerosol,       &
+                   claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,claraRTTOV_co2,   &
+                   claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,     &
+                   claraRTTOV_calcemis,claraRTTOV_calcrefl)
                    
   end subroutine cosp_interface_init
   
@@ -792,8 +837,79 @@ contains
        Np(:,1,:,:)       = gbx%Np(start_idx:end_idx,:,:)
        where(gbx%dtau_s(start_idx:end_idx,:) .gt. 0)
           sgx%frac_out(start_idx:end_idx,1,:) = 1
-       endwhere
+       end where
+       cospIN%frac_out = sgx%frac_out(start_idx:end_idx,:,1:gbx%Nlevels)
     endif
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Generare cloud liquid and ice concentration sorted by cloud-type definitions used 
+    ! by RTTOV.
+    ! Where the 6 types are:
+    ! 1) Stratus Continental
+    ! 2) Stratus Maritime
+    ! 3) Cumulus Continental Clean
+    ! 4) Cumulus Continental Polluted
+    ! 5) Cumulus Maritime
+    ! 6) Cirrus (ice)
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    do j=1,gbx%nColumns
+       ! Stratiform (continental)
+       where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 1 .and.              &
+             cospIN%frac_out(:,j,:) .eq. 1 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
+            cospIN%cldLiqRTTOV(:,j,1,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCLIQ)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
+            cospIN%cldIceRTTOV(:,j,1,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCICE)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp)
+       end where                                       
+       ! Stratiform (maritime)
+       where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 0 .and.              &
+             cospIN%frac_out(:,j,:) .eq. 1 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
+            cospIN%cldLiqRTTOV(:,j,2,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCLIQ)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp)
+            cospIN%cldIceRTTOV(:,j,2,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCICE)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
+       end where                                               
+       ! Cumulus (continental)
+       where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 1 .and.              &
+             cospIN%frac_out(:,j,:) .eq. 2 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
+            cospIN%cldLiqRTTOV(:,j,3,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCLIQ)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
+            cospIN%cldIceRTTOV(:,j,3,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCICE)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp)        
+       end where
+       ! Cumulus (maritime)
+       where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 0 .and.              &
+             cospIN%frac_out(:,j,:) .eq. 2 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
+            cospIN%cldLiqRTTOV(:,j,5,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCLIQ)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
+            cospIN%cldIceRTTOV(:,j,5,:) =                                                &
+               (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCICE)*                  &
+                gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
+               (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
+                gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
+       end where
+    enddo
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 11 micron emissivity
@@ -887,16 +1003,29 @@ contains
                                sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCICE), &
                                reff(:,:,:,I_LSCICE),                                     &
                                MODIS_iceSize(:, :, gbx%Nlevels:1:-1))
+                               
     ! Partition optical thickness into liquid and ice parts
     call modis_optics_partition(npoints,gbx%Nlevels,gbx%Ncolumns,                        &
                                 MODIS_cloudWater,MODIS_cloudIce,MODIS_waterSize,         &
                                 MODIS_iceSize,cospIN%tau_067,MODIS_opticalThicknessLiq,  &
                                 MODIS_opticalThicknessIce)
-    ! Compute assymetry parameter and single scattering albedo 
+    ! Compute assymetry parameter and single scattering albedo for MODIS
     call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,num_trial_res,                    &
                       MODIS_opticalThicknessLiq, MODIS_waterSize*1.0e6_wp,               &
                       MODIS_opticalThicknessIce, MODIS_iceSize*1.0e6_wp,                 &
                       cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
+                      
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! CLARA optics.
+    ! The computation of the input optical fields (asymmetry parameter and single-
+    ! scattering albedo for CLARA are analogous to the MODIS simulator.
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                      
+    ! Compute assymetry parameter and single scattering albedo for CLARA
+    call clara_optics(npoints,gbx%Nlevels,gbx%Ncolumns,MODIS_opticalThicknessLiq,        &
+                      MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,                &
+                      MODIS_iceSize*1.0e6_wp,cospIN%fracLiq,cospIN%asym_AVHRR,           &
+                      cospIN%ss_alb_AVHRR)
+
     ! Deallocate memory
     deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,            &
                MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,             &

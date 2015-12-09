@@ -156,7 +156,7 @@ contains
     ! It should agree with the ISCCP values after min values have been excluded.
     ! ########################################################################################
     retrievedTau(1:nSubCols) = sum(optical_thickness(1:nSubCols,1:nLevels), dim = 2)
-
+    
     ! ########################################################################################
     !                                 Cloud detection
     ! does optical thickness exceed detection threshold? 

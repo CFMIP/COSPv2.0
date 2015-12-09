@@ -125,7 +125,16 @@ PROGRAM COSPTEST_v1p5
        platform,                  & ! RTTOV: Satellite platform
        satellite,                 & ! RTTOV: Satellite
        instrument,                & ! RTTOV: Instrument
-       Nchannels                    ! RTTOV: Number of channels to be computed
+       Nchannels ,                & ! RTTOV: Number of channels to be computed
+       CLARA_Tb_subvis,           & ! Method for Tb (sub-visible clouds)
+       CLARA_Tb_semitrans,        & ! Method for Tb (semi-transparent clouds)
+       CLARA_Tb_opaque,           & ! Method for Tb (opaque clouds)
+       claraRTTOV_platform,       & ! Satellite platform
+       claraRTTOV_satellite,      & ! Satellite ID
+       claraRTTOV_sensor,         & ! Sensor ID
+       claraRTTOV_nchan             ! Number of channels
+  integer,dimension(3) :: &
+       claraRTTOV_channels          ! Channel numbers
   real(wp) ::                     & !
        radar_freq,                & ! CloudSat radar frequency (GHz)
        k2,                        & ! |K|^2, -1=use frequency dependent default
@@ -139,14 +148,31 @@ PROGRAM COSPTEST_v1p5
        csat_vgrid,                & ! CloudSat vertical grid? 
        use_precipitation_fluxes,  & ! True if precipitation fluxes are input to the 
                                     ! algorithm 
-       use_reff                     ! True if you want effective radius to be used by 
+       use_reff,                  & ! True if you want effective radius to be used by 
                                     ! radar simulator (always used by lidar)
+       CLARA_RTTOVclr,            & ! True => Use RTTOV for cloudy free scenes 
+       claraRTTOV_addrefrac,          & !
+       claraRTTOV_use_q2m,            & !
+       claraRTTOV_clw_data,           & !
+       claraRTTOV_addsolar,           & !
+       claraRTTOV_addclouds,          & !
+       claraRTTOV_addaerosol,         & !
+       claraRTTOV_use_cld_opts_param, & !
+       claraRTTOV_ozone_data,         & !
+       claraRTTOV_co2,                & !
+       claraRTTOV_n2o,                & !
+       claraRTTOV_ch4,                & !
+       claraRTTOV_co,                 & !
+       claraRTTOV_addinterp,          & !
+       claraRTTOV_calcemis,           & ! 
+       claraRTTOV_calcrefl              !
   integer,dimension(RTTOV_MAX_CHANNELS) :: &
        Channels                     ! RTTOV: Channel numbers
   real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
        Surfem                       ! RTTOV: Surface emissivity
   character(len=64) :: &
-       radar_micro_scheme           ! Microphysical scheme used in radar simulator
+       radar_micro_scheme,        & ! Microphysical scheme used in radar simulator
+       claraRTTOV_coefdir           ! Location of RTTOV coefficient files
   character(len=64),dimension(N_MAX_INPUT_FILES) :: &
        finput                       ! List input NetCDF files
   character(len=512) :: &
@@ -158,17 +184,25 @@ PROGRAM COSPTEST_v1p5
                       use_gas_abs,do_ray,melt_lay,k2,radar_micro_scheme,                 &
                       Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,             &
                       use_precipitation_fluxes,use_reff,platform,satellite,              &
-                      Instrument,Nchannels,Channels,Surfem,ZenAng,co2,ch4,n2o,co
+                      Instrument,Nchannels,Channels,Surfem,ZenAng,co2,ch4,n2o,co,        &
+                      CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque,CLARA_RTTOVclr, &
+                      claraRTTOV_coefdir,claraRTTOV_platform,claraRTTOV_satellite,       &
+                      claraRTTOV_sensor,claraRTTOV_nchan,claraRTTOV_channels,            &
+                      claraRTTOV_addrefrac,claraRTTOV_use_q2m,claraRTTOV_clw_data,       &
+                      claraRTTOV_addsolar,claraRTTOV_addclouds,claraRTTOV_addaerosol,    &
+                      claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,claraRTTOV_co2,&
+                      claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,  &
+                      claraRTTOV_calcemis,claraRTTOV_calcrefl
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in namelist
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Input namelist
   finput(:) = ''
-  open(10,file=cosp_input_namelist,status='old')
-  read(10,nml=cosp_input)
+  open(10,file=trim(cosp_input_namelist),status='old')
+  read(10,nml=COSP_INPUT)
   close(10)
-  
+
   ! Output namelist contains only logical switches that go directly into the derived type
   ! for the configuration settings, cosp_config 
   
@@ -196,7 +230,7 @@ PROGRAM COSPTEST_v1p5
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat)
+                          emsfc_lw,geomode,Nlon,Nlat)                      
   
   ! Time information
   time           = 8*1._wp/8._wp  ! First time step
@@ -232,7 +266,15 @@ PROGRAM COSPTEST_v1p5
                              zlev(:,Nlevels:1:-1),zlev_half(:,Nlevels:1:-1),             &
                              surface_radar,Nchannels,Channels,platform,satellite,        &
                              instrument,lidar_ice_type,use_vgrid,Nlvgrid,csat_vgrid,     &
-                             cospvID)
+                             cospvID,CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque, &
+                             CLARA_RTTOVclr,claraRTTOV_coefdir,claraRTTOV_platform,      &
+                             claraRTTOV_satellite,claraRTTOV_sensor,claraRTTOV_nchan,    &
+                             claraRTTOV_channels,claraRTTOV_addrefrac,claraRTTOV_use_q2m,&
+                             claraRTTOV_clw_data,claraRTTOV_addsolar,                    &
+                             claraRTTOV_addclouds,claraRTTOV_addaerosol,                 &
+                             claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,        &
+                             claraRTTOV_co2,claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co, &
+                             claraRTTOV_addinterp,claraRTTOV_calcemis,claraRTTOV_calcrefl)
   endif                        
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived types.

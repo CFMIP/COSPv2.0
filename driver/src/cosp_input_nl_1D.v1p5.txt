@@ -26,8 +26,8 @@
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
   CMOR_NL='../cmor/cosp_cmor_nl_1D.txt', ! CMOR namelist
-  NPOINTS=153,! Number of gridpoints 153,27840,7081,6912
-  NPOINTS_IT=500,! Max number of gridpoints to be processed in one iteration
+  NPOINTS=153,!27840,! Number of gridpoints 153,27840,7081,6912
+  NPOINTS_IT=2000,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=38,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
@@ -37,6 +37,8 @@
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
   FINPUT='../data/inputs/v1.4.0/cosp_input_um.nc', ! List input NetCDF files
+!  FINPUT='../data/inputs/cosp_input_2d.aearc.2006.10.15.03.30.nc', ! List input NetCDF files
+
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
@@ -98,7 +100,61 @@
   CO2=5.241e-04, ! Mixing ratios of trace gases
   CH4=9.139e-07,
   N2O=4.665e-07,
-  CO=2.098e-07
+  CO=2.098e-07,
+  !----------------------------------------------------------------------------------
+  ! CLARA simulator inputs
+  ! 
+  ! CLARA_Tb_subvis               - 1=rttov w/o scattering, 2=rttov w/ scatering, 3=clear-sky
+  ! CLARA_Tb_semitrans            - 1=rttov w/o scattering, 2=rttov w/ scatering, 3=CDK
+  ! CLARA_Tb_opaque               - 1=rttov w/o scattering, 2=rttov w/ scatering, 3=CDK
+  ! CLARA_RTTOVclr                - Logical switch to use RTTOV for clear-sky Tb  
+  ! claraRTTOV_coefdir            - Directory for RTTOV coefficient files.
+  ! claraRTTOV_platform           - Platform type (1=NOAA)
+  ! claraRTTOV_satellite          - Satellite number (i.e. 18 for NOAA-18)
+  ! claraRTTOV_sensor             - Sensor ID (5=AVHRR)
+  ! claraRTTOV_nchan              - Number of channels
+  ! claraRTTOV_channels           - Channels
+  ! claraRTTOV_addrefrac          - Include atmospheric refraction in path calc 
+  ! claraRTTOV_use_q2m            - Use surface humidity
+  ! claraRTTOV_clw_data           - If true, user is supplying cloud liquid water profiles
+  ! claraRTTOV_addsolar           - Add solar radiation when .TRUE.
+  ! claraRTTOV_addclouds          - User provides clouds to RTTOV when .TRUE.
+  ! claraRTTOV_addaerosol         - User provides aerosols to RTTOV when .TRUE.
+  ! claraRTTOV_use_cld_opts_param - User provides optical properties when .TRUE.
+  ! claraRTTOV_ozone_data         - User provides o3 values when .TRUE.
+  ! claraRTTOV_co2                - User provides co2 values when .TRUE.
+  ! claraRTTOV_n2o                - User provides n2o values when .TRUE.
+  ! claraRTTOV_ch4                - User provides ch4 values when .TRUE.
+  ! claraRTTOV_co                 - User provides co values when .TRUE.
+  ! claraRTTOV_addinterp          - Internal interpolation of vertical files internally performed by RTTOV.
+  ! claraRTTOV_calcemis           - Logical switch for RTTOV to calculate its own emissivity
+  ! claraRTTOV_calcrefl           - Logical switch for RTTOV to calculate its own surface reflectivity  
+  !----------------------------------------------------------------------------------
+  CLARA_Tb_subvis               = 3,
+  CLARA_Tb_semitrans            = 2,
+  CLARA_Tb_opaque               = 1,
+  CLARA_RTTOVclr                = .true.,  
+  claraRTTOV_coefdir            = '/home/sm_dussw/tools/rttov11.3',
+  claraRTTOV_platform           = 1,
+  claraRTTOV_satellite          = 18,
+  claraRTTOV_sensor             = 5,
+  claraRTTOV_nchan              = 3,
+  claraRTTOV_channels           = 1,2,3,
+  claraRTTOV_addrefrac          = .false.,
+  claraRTTOV_use_q2m            = .false.,
+  claraRTTOV_clw_data           = .false.,
+  claraRTTOV_addsolar           = .false.,
+  claraRTTOV_addclouds          = .true.,
+  claraRTTOV_addaerosol         = .false.,
+  claraRTTOV_use_cld_opts_param = .false.,
+  claraRTTOV_ozone_data         = .false.,
+  claraRTTOV_co2                = .false.,
+  claraRTTOV_n2o                = .false.,
+  claraRTTOV_ch4                = .false.,
+  claraRTTOV_co                 = .false.,
+  claraRTTOV_addinterp          = .true.,
+  claraRTTOV_calcemis           = .true.,
+  claraRTTOV_calcrefl           = .true. 
 /
 
 

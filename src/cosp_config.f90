@@ -205,6 +205,25 @@ MODULE MOD_COSP_CONFIG
          modis_histTauCenters     ! Joint-histogram bin centers (optical depth)
 
     ! ####################################################################################
+    ! CLARA simulator tau/CTP joint-histogram information
+    ! ####################################################################################
+    integer,parameter :: &
+       numCLARATauBins  = ntau, & ! Number of optical depth bins
+       numCLARAPresBins = npres   ! Number of pressure bins     
+    real(wp),parameter,dimension(ntau+1) :: &
+       clara_histTau = tau_binBounds           ! Joint-histogram boundaries (optical depth)
+    real(wp),parameter,dimension(npres+1) :: &
+       clara_histPres = pres_binBounds         ! Joint-histogram boundaries (cloud pressure)
+    real(wp),parameter,dimension(ntau) :: &
+       clara_histTauCenters = tau_binCenters   ! Joint histogram bin centers (optical depth)
+    real(wp),parameter,dimension(npres) :: &   
+       clara_histPresCenters = pres_binCenters ! Joint histogram bin centers (cloud pressure) 
+    real(wp),parameter,dimension(2,ntau) :: &
+       clara_histTauEdges = tau_binEdges       ! Joint histogram bin edges (optical depth)
+    real(wp),parameter,dimension(2,npres) :: &    
+       clara_histPresEdges = pres_binEdges     ! Joint histogram bin edges (cloud pressure)   
+
+    ! ####################################################################################
     ! MODIS simulator tau/ReffICE and tau/ReffLIQ joint-histogram information
     ! ####################################################################################
     ! Ice
@@ -236,19 +255,11 @@ MODULE MOD_COSP_CONFIG
        DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
        CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
        CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
-!    real(wp),parameter :: &
-!       DBZE_MIN      = -100.0, & ! Minimum value for radar reflectivity
-!       DBZE_MAX      =   80.0, & ! Maximum value for radar reflectivity
-!       CFAD_ZE_MIN   =  -50.0, & ! Lower value of the first CFAD Ze bin
-!       CFAD_ZE_WIDTH =    5.0    ! Bin width (dBZe)
     real(wp),parameter,dimension(SR_BINS+1) :: &
        cloudsat_histRef = (/DBZE_MIN,(/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),             &
                             int(CFAD_ZE_MIN+(SR_BINS-1)*CFAD_ZE_WIDTH),                  &
                             int(CFAD_ZE_WIDTH))/),DBZE_MAX/)
-!        cloudsat_histRef = (/DBZE_MIN,                                          &
-!                       real((/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),             &
-!                       int(CFAD_ZE_MIN+(SR_BINS-1)*CFAD_ZE_WIDTH),              &
-!                       int(CFAD_ZE_WIDTH))/),wp),DBZE_MAX/)
+
     ! ####################################################################################
     ! CALISPO backscatter histogram bins 
     ! ####################################################################################

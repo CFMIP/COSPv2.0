@@ -294,7 +294,7 @@ contains
 
        ! Clear Sky brightness temperature
        meantbclr(1:npoints) = 1307.27_wp/(log(1._wp+(1._wp/fluxtop_clrsky(1:npoints))))
-       
+    
        ! #################################################################################
        !                        All-sky radiance calculation
        ! #################################################################################

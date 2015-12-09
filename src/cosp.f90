@@ -41,7 +41,8 @@ MODULE MOD_COSP
                                          mgrid_zl,mgrid_zu,mgrid_z,numMODISTauBins,      &
                                          numMODISPresBins,numMODISReffIceBins,           &
                                          numMODISReffLiqBins,numISCCPTauBins,            &
-                                         numISCCPPresBins,numMISRTauBins
+                                         numISCCPPresBins,numMISRTauBins,                &
+                                         numCLARATauBins,numCLARAPresBins
   USE MOD_COSP_MODIS_INTERFACE,    ONLY: cosp_modis_init,     modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,    ONLY: cosp_rttov_init,     rttov_IN
   USE MOD_COSP_MISR_INTERFACE,     ONLY: cosp_misr_init,      misr_IN
@@ -49,7 +50,8 @@ MODULE MOD_COSP
   USE MOD_COSP_CALIPSO_INTERFACE,  ONLY: cosp_calipso_init,   calipso_IN
   USE MOD_COSP_PARASOL_INTERFACE,  ONLY: cosp_parasol_init,   parasol_in
   USE MOD_COSP_CLOUDSAT_INTERFACE, ONLY: cosp_cloudsat_init,  cloudsat_IN
-  USE MOD_COSP_CLARA_INTERFACE,    ONLY: cosp_clara_init,     clara_IN
+  USE MOD_COSP_CLARA_INTERFACE,    ONLY: cosp_clara_init,     clara_IN,                  &
+                                         cosp_clara_rttov_init
   USE quickbeam,                   ONLY: quickbeam_subcolumn, quickbeam_column, radar_cfg
   USE MOD_ICARUS,                  ONLY: icarus_subcolumn,    icarus_column
   USE MOD_MISR_SIMULATOR,          ONLY: misr_subcolumn,      misr_column
@@ -76,7 +78,6 @@ MODULE MOD_COSP
           Nlevels                ! Number of levels.
      integer,allocatable,dimension(:) :: &
           sunlit                 ! Sunlit flag
-
      real(wp),allocatable,dimension(:,:) :: &
           at,                  & ! Temperature
           pfull,               & ! Pressure
@@ -117,14 +118,18 @@ MODULE MOD_COSP
      real(wp) :: &
           emsfc_lw               ! 11 micron surface emissivity
      real(wp),allocatable,dimension(:,:,:,:) :: &
-          taupart
+          taupart,             & !
+          cldLiqRTTOV,         & ! Cloud liquid concentration (RTTOV cloud classification)
+          cldIceRTTOV            ! Cloud liquid concentration (RTTOV cloud classification)          
      real(wp),allocatable,dimension(:,:,:) :: &
-          frac_out,            & ! Cloud fraction
+          frac_out,            & ! Subcolumn Cloud fraction
           tau_067,             & ! Optical depth
           fracLiq,             & ! Cloud fraction
           emiss_11,            & ! Emissivity
           asym,                & ! Assymetry parameter
           ss_alb,              & ! Single-scattering albedo
+          asym_AVHRR,          & ! Assymetry parameter
+          ss_alb_AVHRR,        & ! Single-scattering albedo          
           betatot,             & ! Backscatter coefficient for polarized optics (total)
           betatot_ice,         & ! Backscatter coefficient for polarized optics (ice)
           betatot_liq,         & ! Backscatter coefficient for polarized optics (liquid)
@@ -233,18 +238,20 @@ MODULE MOD_COSP
      ! RTTOV outputs
      real(wp),pointer :: &
           rttov_tbs(:,:) ! Brightness Temperature	    
-     
      ! CLARA outputs
-     real(wp),pointer,dimension(:,:) :: &
-        clara_tau,       & ! CLARA subcolumn optical-depth
-        clara_ctp,       & ! CLARA subcolumn cloud-top pressure
-        clara_ctt          ! CLARA subcolumn cloud-top temperature
      real(wp),pointer,dimension(:) :: &
-        clara_meantau,   & ! CLARA column optical-depth
-        clara_meanctp,   & ! CLARA column cloud-top pressure
-        clara_meanctt      ! CLARA column cloud-top temperature
+        clara_tau,     & ! CLARA optical-depth
+        clara_ctp,     & ! CLARA cloud-top pressure
+        clara_cth,     & ! CLARA cloud-top height
+        clara_ctt,     & ! CLARA cloud-top temperature
+        clara_sizeLIQ, & ! CLARA particle size (liquid)
+        clara_sizeICE, & ! CLARA particle size (ice)
+        clara_cfrac,   & ! CLARA cloud fraction
+        clara_LWP,     & ! CLARA liquid water path
+        clara_IWP        ! CLARA ice water path
+
      real(wp),pointer,dimension(:,:,:) :: &
-        clara_hist2D   ! CLARA joint-histogram on cloud-top pressure and optical depth (p_tau_clara)
+        clara_fq       ! CLARA joint-histogram on cloud-top pressure and optical depth (p_tau_clara)
      
   end type cosp_outputs
 
@@ -295,7 +302,7 @@ CONTAINS
     logical :: ok_lidar_cfad = .false.
     
     integer, dimension(:,:),allocatable  :: &
-         modisRetrievedPhase,isccpLEVMATCH
+         modisRetrievedPhase,isccpLEVMATCH,claraSC_phase
     real(wp), dimension(:),  allocatable  :: &
          modisCfTotal,modisCfLiquid,                                            &                         
          modisCfIce, modisCfHigh, modisCfMid, modisCfLow,modisMeanTauTotal,     &       
@@ -306,7 +313,8 @@ CONTAINS
     REAL(WP), dimension(:,:),allocatable  :: &
          cloudsatZe_non,cloudsatZe_ray,cloudsatH_atten_to_vol,cloudsatG_atten_to_vol,    &
          cloudsatDBZe, modisRetrievedCloudTopPressure, modisRetrievedTau,                &
-         modisRetrievedSize,boxttop,boxtau,boxztop
+         modisRetrievedSize,boxttop,boxtau,boxztop,claraSC_tau,claraSC_ctp,claraSC_size, &
+         claraSC_ctt,claraSC_cth
     REAL(WP), dimension(:,:,:),allocatable :: &
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq
     real(wp),dimension(:),allocatable,target :: &
@@ -577,16 +585,35 @@ CONTAINS
     endif
     
     if (Lclara_subcolumn) then
+       allocate(claraSC_tau(nPoints,cospIN%Ncolumns),                                    &
+                claraSC_ctp(nPoints,cospIN%Ncolumns),                                    &
+                claraSC_ctt(nPoints,cospIN%Ncolumns),                                    &
+                claraSC_size(nPoints,cospIN%Ncolumns),                                   &
+                claraSC_cth(nPoints,cospIN%Ncolumns),                                    &
+                claraSC_phase(nPoints,cospIN%Ncolumns))
        claraIN%Ncolumns  => cospIN%Ncolumns
        claraIN%Nlevels   => cospIN%Nlevels
        claraIN%Npoints   => Npoints
-       claraIN%tautot    => cospIN%tautot
+       claraIN%emsfc_lw  => cospIN%emsfc_lw
+       claraIN%skt       => cospgridIN%skt
+       claraIN%tautot    => cospIN%tau_067
        claraIN%tautotice => cospIN%tautot_liq
        claraIN%tautotliq => cospIN%tautot_ice       
-       claraIN%g         => cospIN%asym
-       claraIN%w0        => cospIN%ss_alb           
+       claraIN%g         => cospIN%asym_AVHRR
+       claraIN%w0        => cospIN%ss_alb_AVHRR  
+       claraIN%liqFrac   => cospIN%fracLiq    
+       claraIN%qv        => cospgridIN%qv
+       claraIN%at        => cospgridIN%at
+       claraIN%phalf     => cospgridIN%phalf
+       claraIN%pfull     => cospgridIN%pfull
+       claraIN%at2m      => cospgridIN%at(:,cospIN%Nlevels)
+       claraIN%p2m       => cospgridIN%pfull(:,cospIN%Nlevels)
+       claraIN%lsmask    => cospgridIN%land
+       claraIN%latitude  => cospgridIN%lat
+       claraIN%cldLiqRTTOV => cospIN%cldLiqRTTOV
+       claraIN%cldIceRTTOV => cospIN%cldIceRTTOV
     endif
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4) Call subcolumn simulators
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -599,7 +626,7 @@ CONTAINS
                              cospOUT%isccp_boxptop(ij:ik,:), boxttop(ij:ik,:),           &
                              cospOUT%isccp_meantbclr(ij:ik))
     endif
-    
+        
     if (Lmisr_subcolumn) then
        call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                        misrIN%zfull,misrIN%at,misrIN%sunlit,boxtau,                      &
@@ -667,8 +694,13 @@ CONTAINS
 
     if (Lclara_subcolumn) then
        call clara_subcolumn(claraIN%Npoints,claraIN%Nlevels,claraIN%Ncolumns,            &
-                            claraIN%tautot,claraIN%tautotliq,claraIN%tautotice,claraIN%g,&
-                            claraIN%w0)
+                            claraIN%pfull,claraIN%phalf,claraIN%qv,claraIN%at,           &
+                            claraIN%skt,claraIN%at2m,claraIN%p2m,claraIN%emsfc_lw,       &
+                            claraIN%lsmask,claraIN%latitude,claraIN%cldLiqRTTOV,         &
+                            claraIN%cldIceRTTOV,claraIN%tautot,claraIN%tautotliq,        &
+                            claraIN%tautotice,claraIN%g,claraIN%w0,claraIN%liqFrac,      &
+                            claraSC_tau,claraSC_ctp,claraSC_ctt,claraSC_cth,             &
+                            claraSC_size,claraSC_phase)                 
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -745,7 +777,7 @@ CONTAINS
        if (.not. associated(cospOUT%misr_fq)) then
           allocate(out1D_3(Npoints*numMISRTauBins*numMISRHgtBins))
           cospOUT%misr_fq(ij:ik,1:numMISRTauBins,1:numMISRHgtBins) => out1D_3     
-        endif   
+       endif   
     
        ! Call simulator
        call misr_column(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,boxztop,           &
@@ -1024,6 +1056,17 @@ CONTAINS
                   modisJointHistogramLiq)       
     endif
     
+    ! CLARA
+    if (Lclara_column) then
+       call clara_column(claraIN%Npoints,claraIN%Ncolumns,claraSC_tau,claraSC_ctp,       &
+                         claraSC_ctt,claraSC_cth,claraSC_size,claraSC_phase,             &
+                         cospOUT%clara_tau,       &
+                         cospOUT%clara_ctp,cospOUT%clara_cth,cospOUT%clara_ctt,          &
+                         cospOUT%clara_sizeLIQ,cospOUT%clara_sizeICE,cospOUT%clara_cfrac,&
+                         cospOUT%clara_IWP,cospOUT%clara_LWP,cospOUT%clara_fq)
+       deallocate(claraSC_tau,claraSC_ctp,claraSC_ctt,claraSC_size,claraSC_phase,        &
+                  claraSC_cth)    
+    endif
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1093,7 +1136,15 @@ CONTAINS
                        isccp_top_height_direction,hgt_matrix,hgt_matrix_half,            &
                        surface_radar,rcfg,rttov_Nchannels,rttov_Channels,rttov_platform, &
                        rttov_satellite,rttov_instrument,lusevgrid,luseCSATvgrid,Nvgrid,  &
-                       cloudsat_micro_scheme)
+                       cloudsat_micro_scheme,CLARA_Tb_subvis,CLARA_Tb_semitrans,         &
+                       CLARA_Tb_opaque,CLARA_RTTOVclr,claraRTTOV_coefdir,                &
+                       claraRTTOV_platform,claraRTTOV_satellite,claraRTTOV_sensor,       &
+                       claraRTTOV_nchan,claraRTTOV_channels,claraRTTOV_addrefrac,        &
+                       claraRTTOV_use_q2m,claraRTTOV_clw_data,claraRTTOV_addsolar,       &
+                       claraRTTOV_addclouds,claraRTTOV_addaerosol,                       &
+                       claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,              &
+                       claraRTTOV_co2,claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,       &
+                       claraRTTOV_addinterp,claraRTTOV_calcemis,claraRTTOV_calcrefl)
     
     ! INPUTS
     integer,intent(in)  :: &
@@ -1108,7 +1159,16 @@ CONTAINS
          rttov_Nchannels,            & ! Number of RTTOV channels
          rttov_platform,             & ! RTTOV platform
          rttov_satellite,            & ! RTTOV satellite
-         rttov_instrument              ! RTTOV instrument
+         rttov_instrument,           & ! RTTOV instrument
+         CLARA_Tb_subvis,            & ! Method for Tb (sub-visible clouds)
+         CLARA_Tb_semitrans,         & ! Method for Tb (semi-transparent clouds)
+         CLARA_Tb_opaque,            & ! Method for Tb (opaque clouds)
+         claraRTTOV_platform,        & ! Satellite platform
+         claraRTTOV_satellite,       & ! Satellite ID
+         claraRTTOV_sensor,          & ! Sensor ID
+         claraRTTOV_nchan              ! Number of channels           
+    integer,dimension(3) :: &
+         claraRTTOV_channels           ! Channel numbers
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          rttov_channels                ! RTTOV channels    
     real(wp),intent(in) :: &
@@ -1119,12 +1179,29 @@ CONTAINS
     real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
          hgt_matrix_half     
     logical,intent(in) :: &
-         lusevgrid,                  & ! Switch to use different vertical grid
-         luseCSATvgrid                 ! Switch to use CLOUDSAT grid spacing for new  
-                                       ! vertical grid
+         lusevgrid,                     & ! Switch to use different vertical grid
+         luseCSATvgrid,                 & ! Switch to use CLOUDSAT grid spacing for new  
+                                          ! vertical grid
+         CLARA_RTTOVclr,                & ! True => Use RTTOV for cloudy free scenes 
+         claraRTTOV_addrefrac,          & !
+         claraRTTOV_use_q2m,            & !
+         claraRTTOV_clw_data,           & !
+         claraRTTOV_addsolar,           & !
+         claraRTTOV_addclouds,          & !
+         claraRTTOV_addaerosol,         & !
+         claraRTTOV_use_cld_opts_param, & !
+         claraRTTOV_ozone_data,         & !
+         claraRTTOV_co2,                & !
+         claraRTTOV_n2o,                & !
+         claraRTTOV_ch4,                & !
+         claraRTTOV_co,                 & !
+         claraRTTOV_addinterp,          & !
+         claraRTTOV_calcemis,           & ! 
+         claraRTTOV_calcrefl              !
     character(len=64),intent(in) :: &
-       cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
-    
+         cloudsat_micro_scheme,        & ! Microphysical scheme used by CLOUDSAT
+         claraRTTOV_coefdir              ! Location of RTTOV coefficient files
+
     ! OUTPUTS
     type(radar_cfg) :: rcfg
   
@@ -1158,26 +1235,43 @@ CONTAINS
     
     ! Initialize ISCCP
     call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
+    
     ! Initialize MODIS
     call cosp_modis_init()
+    
     ! Initialize MISR
     call cosp_misr_init()
+    
     ! Initialize RTTOV
     call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,rttov_instrument,&
          rttov_channels)
+    
     ! Initialize quickbeam_optics
     call quickbeam_optics_init()
+    
     ! Initialize radar
     call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,        &
          cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,hgt_matrix,surface_radar,rcfg,  &
          cloudsat_micro_scheme)
+    
     ! Initialize lidar
     call cosp_calipso_init()
+    
     ! Initialize PARASOL
     call cosp_parasol_init()
-    ! Initialize CLARA
-    call cosp_clara_init()
     
+    ! Initialize CLARA
+    call cosp_clara_init(CLARA_RTTOVclr,CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque)
+    
+    ! Initialize RTTOV used by CLARA
+    call cosp_clara_rttov_init(claraRTTOV_coefdir,claraRTTOV_addrefrac,                  &
+                               claraRTTOV_use_q2m,claraRTTOV_clw_data,                   &
+                               claraRTTOV_addsolar,claraRTTOV_addclouds,                 &
+                               claraRTTOV_addaerosol,claraRTTOV_use_cld_opts_param,      &
+                               claraRTTOV_ozone_data,claraRTTOV_co2,claraRTTOV_n2o,      &
+                               claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,        &
+                               claraRTTOV_calcemis,claraRTTOV_calcrefl,1,18,5,3,[1,2,3],0)   
+  
     linitialization = .FALSE.
     
   END SUBROUTINE COSP_INIT
@@ -1212,7 +1306,11 @@ CONTAINS
              y%z_vol_cloudsat(npoints,Ncolumns,nlevels),                                 &
              y%kr_vol_cloudsat(npoints,Ncolumns,nlevels),                                &
              y%g_vol_cloudsat(npoints,Ncolumns,nlevels),                                 &
-             y%asym(npoints,nColumns,nlevels),       y%ss_alb(npoints,nColumns,nlevels))
+             y%asym(npoints,nColumns,nlevels),y%ss_alb(npoints,nColumns,nlevels) ,       &
+             y%asym_AVHRR(npoints,nColumns,nlevels),                                     &
+             y%ss_alb_AVHRR(npoints,nColumns,nlevels) ,                                  &
+             y%cldIceRTTOV(npoints,ncolumns,6,nlevels),                                  &
+             y%cldLiqRTTOV(npoints,ncolumns,6,nlevels))
   end subroutine construct_cospIN
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1434,6 +1532,11 @@ CONTAINS
     ! RTTOV
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
 
+    ! CLARA
+    allocate(x%clara_tau(Npoints),x%clara_ctp(Npoints),x%clara_ctt(Npoints),             &
+             x%clara_cth(Npoints),x%clara_sizeLIQ(Npoints),x%clara_sizeICE(Npoints),     &
+             x%clara_cfrac(Npoints),x%clara_LWP(Npoints),x%clara_IWP(Npoints),           &
+             x%clara_fq(Npoints,numCLARATauBins,numCLARAPresBins))
   end subroutine construct_cosp_outputs
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1444,7 +1547,8 @@ CONTAINS
     deallocate(y%tau_067,y%emiss_11,y%frac_out,y%beta_mol,y%tau_mol,y%betatot,           &
                y%betatot_ice,y%betatot_liq,y%tautot,y%tautot_ice,y%tautot_liq,           &
                y%tautot_S_liq,y%tautot_S_ice,y%z_vol_cloudsat,y%kr_vol_cloudsat,         &
-               y%g_vol_cloudsat,y%asym,y%ss_alb,y%fracLiq,y%taupart)
+               y%g_vol_cloudsat,y%asym,y%ss_alb,y%fracLiq,y%taupart,y%cldIceRTTOV,       &
+               y%cldLiqRTTOV,y%asym_AVHRR,y%ss_alb_AVHRR)
 
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1452,7 +1556,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine destroy_cospstateIN(y)
     type(cosp_column_inputs),intent(inout) :: y
-    deallocate(y%sunlit,y%skt,y%land,y%at,y%pfull,y%phalf,y%qv,y%o3,y%hgt_matrix,       &
+    deallocate(y%sunlit,y%skt,y%land,y%at,y%pfull,y%phalf,y%qv,y%o3,y%hgt_matrix,        &
          y%u_sfc,y%v_sfc,y%t_sfc,y%lat,y%emis_sfc,y%hgt_matrix_half)
   end subroutine destroy_cospstateIN
   
@@ -1495,6 +1599,16 @@ CONTAINS
      if (associated(y%misr_meanztop))             deallocate(y%misr_meanztop)     
      if (associated(y%misr_cldarea))              deallocate(y%misr_cldarea)      
      if (associated(y%rttov_tbs))                 deallocate(y%rttov_tbs)     
+     if (associated(y%clara_tau))                 deallocate(y%clara_tau)
+     if (associated(y%clara_ctp))                 deallocate(y%clara_ctp)
+     if (associated(y%clara_cth))                 deallocate(y%clara_cth)
+     if (associated(y%clara_ctt))                 deallocate(y%clara_ctt)
+     if (associated(y%clara_sizeLIQ))             deallocate(y%clara_sizeLIQ)
+     if (associated(y%clara_sizeICE))             deallocate(y%clara_sizeICE)
+     if (associated(y%clara_cfrac))               deallocate(y%clara_cfrac)
+     if (associated(y%clara_LWP))                 deallocate(y%clara_LWP)
+     if (associated(y%clara_IWP))                 deallocate(y%clara_IWP)
+     if (associated(y%clara_fq))                  deallocate(y%clara_fq)
      if (associated(y%modis_Cloud_Fraction_Total_Mean))                                  &
         deallocate(y%modis_Cloud_Fraction_Total_Mean)       
      if (associated(y%modis_Cloud_Fraction_Ice_Mean))                                    &
@@ -1770,7 +1884,7 @@ CONTAINS
        if (associated(cospOUT%isccp_boxptop))       cospOUT%isccp_boxptop(:,:)     = R_UNDEF
        if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF                
     endif
-    if (any(cospgridIN%hgt_matrix .lt. 0)) then
+    if (any(cospgridIN%hgt_matrix .lt. -300)) then
        call errorMessage('ERROR: COSP input variable: cospgridIN%hgt_matrix contains values out of range')
        Lmisr_subcolumn     = .false.
        Lmisr_column        = .false.
@@ -1792,7 +1906,7 @@ CONTAINS
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF       
     endif
-    if (any(cospgridIN%hgt_matrix_half .lt. 0)) then
+    if (any(cospgridIN%hgt_matrix_half .lt. -300)) then
        call errorMessage('ERROR: COSP input variable: cospgridIN%hgt_matrix_half contains values out of range')
        Lrttov_subcolumn = .false.
        Lcloudsat_column = .false.

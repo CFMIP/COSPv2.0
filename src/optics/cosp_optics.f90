@@ -34,6 +34,8 @@ module cosp_optics
   USE COSP_KINDS, ONLY: wp,dp
   USE COSP_MATH_CONSTANTS,  ONLY: pi
   USE COSP_PHYS_CONSTANTS,  ONLY: rholiq,km,rd,grav
+  USE mod_modis_sim,        ONLY: modis_ssa=>get_ssa_nir, modis_g=>get_g_nir
+  USE mod_clara_sim,        ONLY: clara_ssa=>get_ssa_nir, clara_g=>get_g_nir
   implicit none
   
   real(wp),parameter ::        & !
@@ -118,35 +120,33 @@ contains
     
   end subroutine cosp_simulator_optics3D
   
-  ! ##############################################################################
-  !                           MODIS_OPTICS_PARTITION
+  ! ######################################################################################
+  ! SUBROUTINE modis_optics_partition
   !
-  ! For the MODIS simulator, there are times when only a sinlge optical depth
-  ! profile, cloud-ice and cloud-water are provided. In this case, the optical
-  ! depth is partitioned by phase.
-  ! ##############################################################################
+  ! For the MODIS simulator, there are times when only a sinlge optical depth profile, 
+  ! cloud-ice and cloud-water are provided. In this case, the optical depth is partitioned 
+  ! by phase.
+  ! ######################################################################################
   subroutine MODIS_OPTICS_PARTITION(npoints,nlev,ncolumns,cloudWater,cloudIce,waterSize, &
                                     iceSize,tau,tauL,tauI)
     ! INPUTS
     INTEGER,intent(in) :: &
-         npoints,   & ! Number of horizontal gridpoints
-         nlev,      & ! Number of levels
-         ncolumns     ! Number of subcolumns
+         npoints,    & ! Number of horizontal gridpoints
+         nlev,       & ! Number of levels
+         ncolumns      ! Number of subcolumns
     REAL(wp),intent(in),dimension(npoints,nlev,ncolumns) :: &
          cloudWater, & ! Subcolumn cloud water content
          cloudIce,   & ! Subcolumn cloud ice content
          waterSize,  & ! Subcolumn cloud water effective radius
          iceSize,    & ! Subcolumn cloud ice effective radius
          tau           ! Optical thickness
-    
     ! OUTPUTS
     real(wp),intent(out),dimension(npoints,nlev,ncolumns) :: &
          tauL,       & ! Partitioned liquid optical thickness.
          tauI          ! Partitioned ice optical thickness.
     ! LOCAL VARIABLES
     real(wp),dimension(nlev,ncolumns) :: fracL
-    integer                           :: i
-    
+    integer :: i
     
     do i=1,npoints
        where(cloudIce(i,:, :) <= 0.) 
@@ -165,10 +165,9 @@ contains
     enddo
     
   end subroutine MODIS_OPTICS_PARTITION
-  ! ########################################################################################
-  !                                   MODIS_OPTICS
-  ! 
-  ! ########################################################################################
+  ! ######################################################################################
+  ! SUBROUTINE modis_optics
+  ! ######################################################################################
   subroutine modis_optics(nPoints,nLevels,nSubCols,num_trial_res,tauLIQ,sizeLIQ,tauICE,sizeICE,&
                           fracLIQ, g, w0)
     ! INPUTS
@@ -186,10 +185,10 @@ contains
     
     do j =1,nPoints
        do i=1,nSubCols
-          water_g(1:nLevels)  = get_g_nir(  phaseIsLiquid, sizeLIQ(j,i,1:nLevels)) 
-          water_w0(1:nLevels) = get_ssa_nir(phaseIsLiquid, sizeLIQ(j,i,1:nLevels))
-          ice_g(1:nLevels)    = get_g_nir(  phaseIsIce,    sizeICE(j,i,1:nLevels))
-          ice_w0(1:nLevels)   = get_ssa_nir(phaseIsIce,    sizeICE(j,i,1:nLevels))
+          water_g(1:nLevels)  = modis_g(  phaseIsLiquid, sizeLIQ(j,i,1:nLevels)) 
+          water_w0(1:nLevels) = modis_ssa(phaseIsLiquid, sizeLIQ(j,i,1:nLevels))
+          ice_g(1:nLevels)    = modis_g(  phaseIsIce,    sizeICE(j,i,1:nLevels))
+          ice_w0(1:nLevels)   = modis_ssa(phaseIsIce,    sizeICE(j,i,1:nLevels))
           
           ! Combine ice and water optical properties
           tau(1:nLevels) = tauICE(j,i,1:nLevels) + tauLIQ(j,i,1:nLevels) 
@@ -213,6 +212,64 @@ contains
     enddo
     
   end subroutine modis_optics
+  
+  ! ######################################################################################
+  ! SUBROUTINE clara_optics
+  ! ######################################################################################
+  subroutine clara_optics(nPoints,nLevels,nSubCols,tauLIQ,sizeLIQ,tauICE,sizeICE,fracLIQ,&
+                          g,w0)
+    ! INPUTS
+    integer, intent(in) :: &
+       nPoints, & ! Number of points
+       nLevels, & ! Number of vertical levels
+       nSubCols   ! Number of sub-columns
+    real(wp),intent(in),dimension(nPoints,nSubCols,nLevels) ::&
+       tauLIQ,  & ! Liquid optical depth
+       sizeLIQ, & ! Liquid particle size
+       tauICE,  & ! Ice optical depth
+       sizeICE    ! Ice particle size
+    ! OUTPUTS
+    real(wp),intent(out),dimension(nPoints,nSubCols,nLevels) :: &
+       g,       & ! Asymmetry parameter
+       w0,      & ! Single-scattering albedo
+       fracLIQ    ! Fraction of optical thickness due to liquid water
+    ! LOCAL VARIABLES
+    real(wp), dimension(nLevels) :: water_g, water_w0, ice_g, ice_w0,tau
+    integer :: i,j  
+      
+    ! Initialize
+    g(1:nPoints,1:nSubCols,1:nLevels)  = 0._wp
+    w0(1:nPoints,1:nSubCols,1:nLevels) = 0._wp
+    
+    do j =1,nPoints
+       do i=1,nSubCols
+          water_g(1:nLevels)  = clara_g(sizeLIQ(j,i,1:nLevels),1) 
+          water_w0(1:nLevels) = clara_ssa(sizeLIQ(j,i,1:nLevels),1)
+          ice_g(1:nLevels)    = clara_g(sizeICE(j,i,1:nLevels),2)
+          ice_w0(1:nLevels)   = clara_ssa(sizeICE(j,i,1:nLevels),2)
+          
+          ! Combine ice and water optical properties
+          tau(1:nLevels) = tauICE(j,i,1:nLevels) + tauLIQ(j,i,1:nLevels) 
+          where (tau(1:nLevels) > 0) 
+             g(j,i,1:nLevels)  = (tauLIQ(j,i,1:nLevels)*water_g(1:nLevels) + tauICE(j,i,1:nLevels)*ice_g(1:nLevels)) / & 
+                  tau(1:nLevels) 
+             w0(j,i,1:nLevels) = (tauLIQ(j,i,1:nLevels)*water_g(1:nLevels)*water_w0(1:nLevels) + tauICE(j,i,1:nLevels) * &
+                  ice_g(1:nLevels) * ice_w0(1:nLevels)) / (g(j,i,1:nLevels) * tau(1:nLevels))
+          end where
+       enddo
+    enddo    
+    
+    ! Compute the total optical thickness and the proportion due to liquid in each cell
+    do i=1,npoints
+       where(tauLIQ(i,1:nSubCols,1:nLevels) + tauICE(i,1:nSubCols,1:nLevels) > 0.) 
+          fracLIQ(i,1:nSubCols,1:nLevels) = tauLIQ(i,1:nSubCols,1:nLevels)/ &
+               (tauLIQ(i,1:nSubCols,1:nLevels) + tauICE(i,1:nSubCols,1:nLevels))
+       elsewhere
+          fracLIQ(i,1:nSubCols,1:nLevels) = 0._wp
+       end  where
+    enddo    
+    
+  end subroutine clara_optics
   
   ! ######################################################################################
   ! SUBROUTINE lidar_optics
@@ -462,85 +519,5 @@ contains
     enddo
     
   end subroutine lidar_optics
-  
-  ! ########################################################################################
-  ! Optical functions used by MODIS_OPTICS
-  ! ########################################################################################
-  elemental function get_g_nir (phase, re)
-    ! Polynomial fit for asummetry parameter g in MODIS band 7 (near IR) as a function 
-    ! of size for ice and water
-    ! Fits from Steve Platnick
-    
-    ! INPUTS
-    integer, intent(in) :: phase
-    real(wp),intent(in) :: re
-    ! OUTPUTS
-    real(wp)            :: get_g_nir 
-    ! LOCAL VARIABLES(parameters)
-    real(wp), dimension(3), parameter :: &
-         ice_coefficients         = (/ 0.7432,  4.5563e-3, -2.8697e-5 /), & 
-         small_water_coefficients = (/ 0.8027, -1.0496e-2,  1.7071e-3 /), & 
-         big_water_coefficients   = (/ 0.7931,  5.3087e-3, -7.4995e-5 /) 
-    
-    ! approx. fits from MODIS Collection 5 LUT scattering calculations
-    if(phase == phaseIsLiquid) then
-       if(re < 8.) then 
-          get_g_nir = fit_to_quadratic(re, small_water_coefficients)
-          if(re < re_water_min) get_g_nir = fit_to_quadratic(re_water_min, small_water_coefficients)
-       else
-          get_g_nir = fit_to_quadratic(re,   big_water_coefficients)
-          if(re > re_water_max) get_g_nir = fit_to_quadratic(re_water_max, big_water_coefficients)
-       end if
-    else
-       get_g_nir = fit_to_quadratic(re, ice_coefficients)
-       if(re < re_ice_min) get_g_nir = fit_to_quadratic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_g_nir = fit_to_quadratic(re_ice_max, ice_coefficients)
-    end if
-    
-  end function get_g_nir
-  elemental function get_ssa_nir (phase, re)
-    ! Polynomial fit for single scattering albedo in MODIS band 7 (near IR) as a function 
-    !   of size for ice and water
-    ! Fits from Steve Platnick
-    
-    ! INPUTS
-    integer, intent(in) :: phase
-    real(wp),intent(in) :: re
-    ! OUTPUTS
-    real(wp)            :: get_ssa_nir
-    ! LOCAL VARIABLES (parameters)
-    real(wp), dimension(4), parameter :: ice_coefficients   = (/ 0.9994, -4.5199e-3, 3.9370e-5, -1.5235e-7 /)
-    real(wp), dimension(3), parameter :: water_coefficients = (/ 1.0008, -2.5626e-3, 1.6024e-5 /) 
-    
-    ! approx. fits from MODIS Collection 5 LUT scattering calculations
-    if(phase == phaseIsLiquid) then
-       get_ssa_nir = fit_to_quadratic(re, water_coefficients)
-       if(re < re_water_min) get_ssa_nir = fit_to_quadratic(re_water_min, water_coefficients)
-       if(re > re_water_max) get_ssa_nir = fit_to_quadratic(re_water_max, water_coefficients)
-    else
-       get_ssa_nir = fit_to_cubic(re, ice_coefficients)
-       if(re < re_ice_min) get_ssa_nir = fit_to_cubic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_ssa_nir = fit_to_cubic(re_ice_max, ice_coefficients)
-    end if
-    
-  end function get_ssa_nir
-  pure function fit_to_cubic(x, coefficients) 
-    ! INPUTS
-    real(wp),               intent(in) :: x
-    real(wp), dimension(4), intent(in) :: coefficients
-    ! OUTPUTS
-    real(wp)                           :: fit_to_cubic  
-    
-    fit_to_cubic = coefficients(1) + x * (coefficients(2) + x * (coefficients(3) + x * coefficients(4)))
-  end function fit_to_cubic
-  pure function fit_to_quadratic(x, coefficients) 
-    ! INPUTS
-    real(wp),               intent(in) :: x
-    real(wp), dimension(3), intent(in) :: coefficients
-    ! OUTPUTS
-    real(wp)                           :: fit_to_quadratic
-    
-    fit_to_quadratic = coefficients(1) + x * (coefficients(2) + x * (coefficients(3)))
-  end function fit_to_quadratic
-  
+
 end module cosp_optics
