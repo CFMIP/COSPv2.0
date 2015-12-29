@@ -37,7 +37,7 @@ MODULE MOD_COSP_CLARA_INTERFACE
                                    RTTOV_satLat,nChannels,CLARA_re_water_min,            &
                                    CLARA_re_water_max,CLARA_re_ice_min,CLARA_re_ice_max, &
                                    trial_re_w,trial_re_i,g_w,g_i,w0_i,w0_w,num_trial_res,&
-                                   get_g_nir,get_ssa_nir,CLARA_phaseThresh
+                                   get_g_nir,get_ssa_nir,CLARA_phaseThresh,CLARA_retSize
   USE clara_rttov_interface, ONLY: jplm,jpim,get_rttov_coeffs,R
   
   implicit none
@@ -69,7 +69,9 @@ MODULE MOD_COSP_CLARA_INTERFACE
           tautotice(:,:,:),  & ! TOA-2-SFC integrated subcolumn ice optical thickness @ 0.67 microns.
           g(:,:,:),          & ! Subcolumn assymetry parameter  
           w0(:,:,:),         & ! Subcolumn single-scattering albedo
-          liqFrac(:,:,:)       ! Fractional contribution to optical depth from liquid water
+          liqFrac(:,:,:),    & ! Fractional contribution to optical depth from liquid water
+          reffLiq(:,:,:),    & ! Model cloud water effective radius
+          reffIce(:,:,:)       ! Model cloud ice effective radius
      real(wp),pointer ::      &    
           cldLiqRTTOV(:,:,:,:), & ! RTTOV cloud liquid concentration.
           cldIceRTTOV(:,:,:,:)    ! RTTOV cloud ice concentration.
@@ -80,22 +82,23 @@ MODULE MOD_COSP_CLARA_INTERFACE
   ! SUBROUTINE cosp_clara_init
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE cosp_clara_init(CLARA_RTTOVclrIN,CLARA_Tb_subvisIN,CLARA_Tb_semitransIN,    &
-                             CLARA_Tb_opaqueIN)
+                             CLARA_Tb_opaqueIN,CLARA_retSizeIN)
      ! Inputs
      integer,intent(in) :: &
-        CLARA_Tb_subvisIN,CLARA_Tb_semitransIN,CLARA_Tb_opaqueIN   
+        CLARA_Tb_subvisIN,CLARA_Tb_semitransIN,CLARA_Tb_opaqueIN  
      logical,intent(in) :: &
-        CLARA_RTTOVclrIN    
+        CLARA_RTTOVclrIN,CLARA_retSizeIN
      ! Local variables
      integer :: i
      
      CLARA_upperCloudTauLim     = 1._wp  ! How many optical depths does AVHRR see into the cloud?
      CLARA_minOpticalThickness  = 0.2_wp ! Lower limit of optical sensitivity of AVHRR
      CLARA_STlimit              = 10._wp ! Optical depth limit for opaque cloud @ 3.7microns
-     CLARA_RTTOVclr             = CLARA_RTTOVclrIN! Use RTTOV for clear-sky brightness temperature
-     CLARA_Tb_subvis            = CLARA_Tb_subvisIN     ! RTTOV clear-sky
-     CLARA_Tb_semitrans         = CLARA_Tb_semitransIN      ! RTTOV w/ scattering
-     CLARA_Tb_opaque            = CLARA_Tb_opaqueIN      ! RTTOV w/o scattering (black-body)
+     CLARA_RTTOVclr             = CLARA_RTTOVclrIN     ! Use RTTOV for clear-sky brightness temperature
+     CLARA_Tb_subvis            = CLARA_Tb_subvisIN    ! RTTOV clear-sky
+     CLARA_Tb_semitrans         = CLARA_Tb_semitransIN ! RTTOV w/ scattering
+     CLARA_Tb_opaque            = CLARA_Tb_opaqueIN    ! RTTOV w/o scattering (black-body)
+     CLARA_retSize              = CLARA_retSizeIN      ! Method for size retrieval 
      CLARA_re_water_min         = 3._wp  ! Minimum effective radius (liquid)
      CLARA_re_water_max         = 34._wp ! Maximum effective radius (liquid)
      CLARA_re_ice_min           = 5._wp  ! Minimum effective radius (ice)

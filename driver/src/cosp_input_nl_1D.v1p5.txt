@@ -129,6 +129,7 @@
   ! claraRTTOV_addinterp          - Internal interpolation of vertical files internally performed by RTTOV.
   ! claraRTTOV_calcemis           - Logical switch for RTTOV to calculate its own emissivity
   ! claraRTTOV_calcrefl           - Logical switch for RTTOV to calculate its own surface reflectivity  
+  ! CLARR_retSize                 - If true, use TOA reflectance minimization for cloud particle size determination
   !----------------------------------------------------------------------------------
   CLARA_Tb_subvis               = 3,
   CLARA_Tb_semitrans            = 2,
@@ -154,7 +155,8 @@
   claraRTTOV_co                 = .false.,
   claraRTTOV_addinterp          = .true.,
   claraRTTOV_calcemis           = .true.,
-  claraRTTOV_calcrefl           = .true. 
+  claraRTTOV_calcrefl           = .true.,
+  CLARA_retSize                 = .false.
 /
 
 

@@ -151,6 +151,7 @@ PROGRAM COSPTEST_v1p5
        use_reff,                  & ! True if you want effective radius to be used by 
                                     ! radar simulator (always used by lidar)
        CLARA_RTTOVclr,            & ! True => Use RTTOV for cloudy free scenes 
+       CLARA_retSize,             & ! True => use TOA reflectance minimization to determine cloud particle size.
        claraRTTOV_addrefrac,          & !
        claraRTTOV_use_q2m,            & !
        claraRTTOV_clw_data,           & !
@@ -192,7 +193,7 @@ PROGRAM COSPTEST_v1p5
                       claraRTTOV_addsolar,claraRTTOV_addclouds,claraRTTOV_addaerosol,    &
                       claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,claraRTTOV_co2,&
                       claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,  &
-                      claraRTTOV_calcemis,claraRTTOV_calcrefl
+                      claraRTTOV_calcemis,claraRTTOV_calcrefl,CLARA_retSize
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in namelist
@@ -274,7 +275,8 @@ PROGRAM COSPTEST_v1p5
                              claraRTTOV_addclouds,claraRTTOV_addaerosol,                 &
                              claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,        &
                              claraRTTOV_co2,claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co, &
-                             claraRTTOV_addinterp,claraRTTOV_calcemis,claraRTTOV_calcrefl)
+                             claraRTTOV_addinterp,claraRTTOV_calcemis,                   &
+                             claraRTTOV_calcrefl,CLARA_retSize)
   endif                        
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived types.

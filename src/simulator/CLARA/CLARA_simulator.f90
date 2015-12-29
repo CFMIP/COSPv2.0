@@ -34,7 +34,7 @@ module mod_clara_sim
   USE COSP_KINDS,            ONLY: wp
   USE COSP_PHYS_CONSTANTS,   ONLY: amw,amd,grav,avo,rd
   USE clara_rttov_interface, ONLY: get_Tb_rttov_clear,rttov_simple,get_Tb_rttov_clouds
-  USE mod_modis_sim,         ONLY: compute_toa_reflectace,two_stream_reflectance,         &
+  USE mod_modis_sim,         ONLY: compute_toa_reflectace,two_stream_reflectance,        &
                                    interpolate_to_min
   USE mod_cosp_config,       ONLY: numCLARAtauBins,numCLARApresBins,clara_histTau,       &
                                    clara_histPres
@@ -65,7 +65,10 @@ module mod_clara_sim
      CLARA_re_ice_min,         & ! Minimum effective radius (ice)
      CLARA_re_ice_max            ! Minimum effective radius (ice)     
   logical :: & 
-     CLARA_RTTOVclr              ! Flag to use RTTOV for clear-sky brightness temperature
+     CLARA_RTTOVclr,           & ! Flag to use RTTOV for clear-sky brightness temperature
+     CLARA_retSize               ! If true, use TOA reflectance minimization (same as MODIS) 
+                                 ! for particle size retrieval. If false, use cloud top 
+                                 ! weighted-effective radius retrieval method.
   integer :: &
      nChannels,                & ! Number of channels used by RTTOV
      CLARA_Tb_subvis,          & ! Options for how to handle sub-visible clouds.
@@ -95,8 +98,8 @@ module mod_clara_sim
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine clara_subcolumn(nPoints,nLevels,nSubCols,pfull,phalf,qv,at,skt,t2m,p2m,     &
                              emsfc_lw,lsmask,lat,cldLiqRTTOV,cldIceRTTOV,tau,            &
-                             tautotliq,tautotice,g,w0,tauLiqFrac,clara_tau,clara_ctp,    &
-                             clara_ctt,clara_cth,clara_size,clara_phase)
+                             tautotliq,tautotice,reffLiq,reffIce,g,w0,tauLiqFrac,        &
+                             clara_tau,clara_ctp,clara_ctt,clara_cth,clara_size,clara_phase)
     ! Inputs
     integer,intent(in) :: &
       nPoints,      & ! Number of gridpoints
@@ -117,9 +120,11 @@ module mod_clara_sim
     real(wp),intent(in), dimension(nPoints,nLevels+1) :: &
       phalf           ! Pressure at model half-levels
     real(wp),dimension(nPoints,nSubCols,nLevels),intent(in) :: &
-      tau,          & ! TOA-2-SFC integrated total subcolumn optical thickness @ 0.67 microns.
-      tautotliq,    & ! TOA-2-SFC integrated liquid subcolumn optical thickness @ 0.67 microns.
-      tautotice,    & ! TOA-2-SFC integrated ice subcolumn optical thickness @ 0.67 microns.
+      tau,          & ! TOA-2-SFC level subcolumn optical thickness @ 0.67 microns (total).
+      tautotliq,    & ! TOA-2-SFC level subcolumn optical thickness @ 0.67 microns (liquid).
+      tautotice,    & ! TOA-2-SFC level subcolumn optical thickness @ 0.67 microns (ice).
+      reffLiq,      & ! TOA-2-SFC model cloud particle size profile (liquid)
+      reffIce,      & ! TOA-2-SFC model cloud particle size profile (ice)
       g,            & ! Subcolumn assymetry parameter @ 3.7 microns.
       w0,           & ! Subcolumn single-scattering albedo @ 3.7 microns.
       tauLiqFrac      ! Fractional contribution of optical depth due to liquid water
@@ -147,10 +152,10 @@ module mod_clara_sim
     real(wp),dimension(nPoints)                      :: rt_satzen,irradSfc,clara_tbClr
     real(wp),dimension(nPoints,nSubCols,6,nLevels-1) :: rt_cloud,cldLiqRTTOVl,cldIceRTTOVl
     real(wp),dimension(nPoints,nSubCols,nLevels-1)   :: rt_cfrac
-    real(wp),dimension(nPoints,nSubCols,nLevels  )   :: cfrac,tautot   
+    real(wp),dimension(nPoints,nSubCols,nLevels  )   :: cfrac,tautot 
     real(wp),dimension(nPoints,nLevels+1)            :: Thalf 
     real(wp),dimension(nPoints,nChannels)            :: rt_emis, TbTempClr
-    real(wp),dimension(nPoints,nSubCols)             :: clara_tbAll
+    real(wp),dimension(nPoints,nSubCols)             :: clara_tbAll,test1
     real(wp),dimension(nChannels)                    :: TbTempALL    
     real(wp),dimension(nPoints,nLevels)              :: irrad,emis_wv,atC
     real(wp),dimension(num_trial_res)                :: predicted_Refl_nir
@@ -310,29 +315,41 @@ module mod_clara_sim
           
           ! ##############################################################################
           ! Compute cloud particle size
+          ! At the moment there are two ways to retrieve phase and is set using the     
+          ! namelist parameter, CLARA_retSize.
           ! ##############################################################################
           obs_Refl_nir = compute_toa_reflectace(nLevels,tau(ij,ik,1:nLevels),         &
                                                 g(ij,ik,1:nLevels), w0(ij,ik,1:nLevels))
           ! Compute predicted reflectance
           if(any(clara_phase(ij,ik) == (/ CLARA_phaseIsLiquid, CLARA_phaseIsUndetermined,&
                                           CLARA_phaseIsIce /))) then 
-             if (clara_phase(ij,ik) == CLARA_phaseIsLiquid .OR. clara_phase(ij,ik) ==    &
-                 CLARA_phaseIsUndetermined) then
-                predicted_Refl_nir(1:num_trial_res) = two_stream_reflectance(clara_tau(ij,ik), &
-                     g_w(1:num_trial_res), w0_w(1:num_trial_res))
-                clara_size(ij,ik) = 1.0e-06_wp*interpolate_to_min(trial_re_w(1:num_trial_res), &
-                     predicted_Refl_nir(1:num_trial_res), obs_Refl_nir)
-             else
-                predicted_Refl_nir(1:num_trial_res) = two_stream_reflectance(clara_tau(ij,ik), &
-                     g_i(1:num_trial_res), w0_i(1:num_trial_res))
-                clara_size(ij,ik) = 1.0e-06_wp*interpolate_to_min(trial_re_i(1:num_trial_res), &
-                     predicted_Refl_nir(1:num_trial_res), obs_Refl_nir)
+             if (CLARA_retSize) then
+                ! Retrieve phase using TOA reflectance matching
+                if (clara_phase(ij,ik) == CLARA_phaseIsLiquid .OR. clara_phase(ij,ik) ==    &
+                    CLARA_phaseIsUndetermined) then
+                   predicted_Refl_nir(1:num_trial_res) = two_stream_reflectance(clara_tau(ij,ik), &
+                        g_w(1:num_trial_res), w0_w(1:num_trial_res))
+                   clara_size(ij,ik) = 1.0e-06_wp*interpolate_to_min(trial_re_w(1:num_trial_res), &
+                        predicted_Refl_nir(1:num_trial_res), obs_Refl_nir)
+                else
+                   predicted_Refl_nir(1:num_trial_res) = two_stream_reflectance(clara_tau(ij,ik), &
+                        g_i(1:num_trial_res), w0_i(1:num_trial_res))
+                   clara_size(ij,ik) = 1.0e-06_wp*interpolate_to_min(trial_re_i(1:num_trial_res), &
+                        predicted_Refl_nir(1:num_trial_res), obs_Refl_nir)
+                endif
+                if (clara_size(ij,ik) .lt. 0) clara_size(ij,ik)=-999._wp
+             else        
+                ! Retrieve particle size using cloud-top weighted effective radius method
+                call ctw_reff(nLevels,tau(ij,ik,1:nLevels),tautotliq(ij,ik,1:nLevels),   &
+                              tautotice(ij,ik,1:nLevels),cfrac(ij,ik,1:nLevels),         &
+                              clara_phase(ij,ik),reffLiq(ij,ik,1:nLevels),               &
+                              reffIce(ij,ik,1:nLevels),clara_size(ij,ik))              
              endif
-             if (clara_size(ij,ik) .lt. 0) clara_size(ij,ik)=-999._wp
+             
           else 
              clara_size(ij,ik) = -999._wp
           endif        
-       
+
           ! ##############################################################################
           ! Compute all-sky brightness temperature and cloud-top temperature
           ! There are 3 different types of clouds we need to account for and several 
@@ -468,7 +485,7 @@ module mod_clara_sim
            ! Compute cloud-top height
            clara_cth(ij,ik) = cloud_top_height(nLevels,clara_ctp(ij,ik),              &
                                                at(ij,1:nLevels),phalf(ij,1:nLevels+1))           
-           !WRITE(*,"(2i3,3f15.8)") ij,ik,clara_ctp(ij,ik),clara_cth(ij,ik),clara_ctt(ij,ik)
+           !WRITE(*,"(3i3,f15.8)") ij,ik,clara_phase(ij,ik),clara_size(ij,ik)
            endif
        enddo
     enddo
@@ -1516,6 +1533,76 @@ module mod_clara_sim
      if (ij .eq. nLevels) cloud_top_height = z(ij)*(pres(ij+1)-ctp)/(pres(ij+1)-pres(ij))
 
   end function cloud_top_height
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE ctw_reff
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine ctw_reff(nLevels,tau,tauL,tauI,cfrac,phase,reffL,reffI,retReff)
+     ! Inputs
+     integer, intent(in) :: &
+        nLevels,    & ! Number of vertical levels
+        phase
+     real(wp),intent(in),dimension(nLevels) :: &
+        tau,   & ! Optical depth (total)
+        tauI,  & ! Optical depth (ice)
+        tauL,  & ! Optical depth (liquid) 
+        cfrac, & ! Subcolumn cloud fraction
+        reffL, & ! Model effective radius (liquid)
+        reffI    ! Model effective radius (ice)
+     ! Outputs
+     real(wp),intent(out) :: &
+        retReff  ! Retrieved effective radius
+       
+     ! Local variables
+     integer :: ij,ik,il
+     real(wp),dimension(nLevels) :: tau_ac_prof,frac_in_upc
+     real(wp) :: num,den
+     
+     ! Initialize
+     tau_ac_prof(1:nLevels)  = 0._wp
+     frac_in_upc(1:nLevels)  = 0._wp
+
+     ! Find where in the cloud layer where tau > CLARR_upperCloudTauLim
+     do il = 2, nLevels 
+        ! First find the layers that belong to the upper layers of the cloud
+        if (sum(cfrac) > 0 ) then
+            tau_ac_prof(il)  = tau_ac_prof(il-1)  + tau (il)
+             if ( tau_ac_prof(il) < CLARA_upperCloudTauLim ) then
+                ! The whole layer is in the upper part of the cloud
+                frac_in_upc(il) = 1.0
+             else
+                if ( tau_ac_prof(il-1) < CLARA_upperCloudTauLim ) then
+                   ! The boundary is found in this layer
+                   frac_in_upc(il) = (1.0 - tau_ac_prof(il-1)) / &
+                        (tauL(il) + tauI(il))
+                endif
+             endif
+        else
+            ! Pass the value from the above layer
+            tau_ac_prof(il)  = tau_ac_prof(il-1)
+        endif
+     enddo  
+        
+     ! Fill sub grid variables if there is a cloud
+     if (tau_ac_prof(nLevels) > 0.0 ) THEN
+        ! Calculate COT, REFF and CWP
+        num = 0._wp
+        den = 0._wp
+        if ( phase .eq. 1) THEN
+           DO il = 1, nLevels
+              num = num + frac_in_upc(il) * reffL(il) * tauL(il)
+              den = den + frac_in_upc(il) * tauL(il)
+           END DO
+           retReff = num/den
+        else ! 2 == ice
+            DO il = 1, nLevels
+               num = num + frac_in_upc(il) * reffI(il) * tauI(il)
+               den = den + frac_in_upc(il) * tauI(il)
+            END DO
+            retReff = num/den
+        endif     
+     endif
+     
+  end subroutine ctw_reff
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE mod_clara_sim

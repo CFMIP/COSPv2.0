@@ -136,6 +136,10 @@ MODULE MOD_COSP
           tautot,              & ! Optical thickess integrated from top (total)
           tautot_ice,          & ! Optical thickess integrated from top (ice)
           tautot_liq,          & ! Optical thickess integrated from top (liquid)
+          tau_ice,             & ! Optical thickness for layer (ice)
+          tau_liq,             & ! Optical thickness for layer (liquid)
+          reff_liq,            & ! Particle size for layer (liquid)
+          reff_ice,            & ! Particle size for layer (ice)
           z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
           g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
@@ -597,8 +601,10 @@ CONTAINS
        claraIN%emsfc_lw  => cospIN%emsfc_lw
        claraIN%skt       => cospgridIN%skt
        claraIN%tautot    => cospIN%tau_067
-       claraIN%tautotice => cospIN%tautot_liq
-       claraIN%tautotliq => cospIN%tautot_ice       
+       claraIN%tautotice => cospIN%tau_ice
+       claraIN%tautotliq => cospIN%tau_liq
+       claraIN%reffLiq   => cospIN%reff_liq
+       claraIN%reffIce   => cospIN%reff_ice
        claraIN%g         => cospIN%asym_AVHRR
        claraIN%w0        => cospIN%ss_alb_AVHRR  
        claraIN%liqFrac   => cospIN%fracLiq    
@@ -698,7 +704,8 @@ CONTAINS
                             claraIN%skt,claraIN%at2m,claraIN%p2m,claraIN%emsfc_lw,       &
                             claraIN%lsmask,claraIN%latitude,claraIN%cldLiqRTTOV,         &
                             claraIN%cldIceRTTOV,claraIN%tautot,claraIN%tautotliq,        &
-                            claraIN%tautotice,claraIN%g,claraIN%w0,claraIN%liqFrac,      &
+                            claraIN%tautotice,claraIN%reffLiq,claraIN%reffIce,claraIN%g, &
+                            claraIN%w0,claraIN%liqFrac,                                  &
                             claraSC_tau,claraSC_ctp,claraSC_ctt,claraSC_cth,             &
                             claraSC_size,claraSC_phase)                 
     endif
@@ -1144,7 +1151,8 @@ CONTAINS
                        claraRTTOV_addclouds,claraRTTOV_addaerosol,                       &
                        claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,              &
                        claraRTTOV_co2,claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,       &
-                       claraRTTOV_addinterp,claraRTTOV_calcemis,claraRTTOV_calcrefl)
+                       claraRTTOV_addinterp,claraRTTOV_calcemis,claraRTTOV_calcrefl,     &
+                       CLARA_retSize)
     
     ! INPUTS
     integer,intent(in)  :: &
@@ -1183,6 +1191,7 @@ CONTAINS
          luseCSATvgrid,                 & ! Switch to use CLOUDSAT grid spacing for new  
                                           ! vertical grid
          CLARA_RTTOVclr,                & ! True => Use RTTOV for cloudy free scenes 
+         CLARA_retSize,                 & ! True => Use TOA reflectance minimization for particle size retrieval
          claraRTTOV_addrefrac,          & !
          claraRTTOV_use_q2m,            & !
          claraRTTOV_clw_data,           & !
@@ -1261,7 +1270,8 @@ CONTAINS
     call cosp_parasol_init()
     
     ! Initialize CLARA
-    call cosp_clara_init(CLARA_RTTOVclr,CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque)
+    call cosp_clara_init(CLARA_RTTOVclr,CLARA_Tb_subvis,CLARA_Tb_semitrans,              &
+                         CLARA_Tb_opaque,CLARA_retSize)
     
     ! Initialize RTTOV used by CLARA
     call cosp_clara_rttov_init(claraRTTOV_coefdir,claraRTTOV_addrefrac,                  &
@@ -1295,13 +1305,15 @@ CONTAINS
     y%Npart    = 4
     y%Nrefl    = PARASOL_NREFL
     
-    allocate(y%tau_067(npoints,ncolumns,nlevels),    y%emiss_11(npoints,ncolumns,nlevels),&
+    allocate(y%tau_067(npoints,ncolumns,nlevels),   y%emiss_11(npoints,ncolumns,nlevels),&
              y%frac_out(npoints,ncolumns,nlevels),   y%beta_mol(npoints,nlevels),        &
              y%tau_mol(npoints,nlevels),             y%betatot(npoints,ncolumns,nlevels),&
              y%betatot_ice(npoints,ncolumns,nlevels),y%fracLiq(npoints,nColumns,nlevels),&
              y%betatot_liq(npoints,ncolumns,nlevels),y%tautot(npoints,ncolumns,nlevels), &
              y%tautot_ice(npoints,ncolumns,nlevels), y%tautot_S_ice(npoints,nlevels),    &
              y%tautot_liq(npoints,ncolumns,nlevels), y%tautot_S_liq(npoints,nlevels),    &
+             y%tau_ice(npoints,ncolumns,nlevels),    y%tau_liq(npoints,ncolumns,nlevels),&
+             y%reff_ice(npoints,ncolumns,nlevels),  y%reff_liq(npoints,ncolumns,nlevels),&
              y%taupart(npoints,ncolumns,nlevels,4),                                      &
              y%z_vol_cloudsat(npoints,Ncolumns,nlevels),                                 &
              y%kr_vol_cloudsat(npoints,Ncolumns,nlevels),                                &
@@ -1548,7 +1560,8 @@ CONTAINS
                y%betatot_ice,y%betatot_liq,y%tautot,y%tautot_ice,y%tautot_liq,           &
                y%tautot_S_liq,y%tautot_S_ice,y%z_vol_cloudsat,y%kr_vol_cloudsat,         &
                y%g_vol_cloudsat,y%asym,y%ss_alb,y%fracLiq,y%taupart,y%cldIceRTTOV,       &
-               y%cldLiqRTTOV,y%asym_AVHRR,y%ss_alb_AVHRR)
+               y%cldLiqRTTOV,y%asym_AVHRR,y%ss_alb_AVHRR,y%tau_ice,y%tau_liq,y%reff_ice, &
+               y%reff_liq)
 
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

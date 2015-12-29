@@ -316,7 +316,7 @@ contains
                                  claraRTTOV_addaerosol,claraRTTOV_use_cld_opts_param,    &
                                  claraRTTOV_ozone_data,claraRTTOV_co2,claraRTTOV_n2o,    &
                                  claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,      &
-                                 claraRTTOV_calcemis,claraRTTOV_calcrefl)
+                                 claraRTTOV_calcemis,claraRTTOV_calcrefl,CLARA_retSize)
     
     ! Inputs
     integer,intent(in) ::            & !
@@ -357,7 +357,8 @@ contains
          lusePrecip,      & ! True if precipitation fluxes are input to the algorithm
          lusevgrid,       & ! True if using new grid for L3 CALIPSO and CLOUDSAT 
          luseCSATvgrid,   & ! True to use CLOUDSAT vertical grid spacing of 480m
-         CLARA_RTTOVclr,             & ! True => Use RTTOV for cloudy free scenes 
+         CLARA_RTTOVclr,  & ! True => Use RTTOV for cloudy free scenes 
+         CLARA_retSize,   & ! True => Use TOA reflectance minimization for particle size retrieval
          claraRTTOV_addrefrac,          & !
          claraRTTOV_use_q2m,            & !
          claraRTTOV_clw_data,           & !
@@ -444,7 +445,7 @@ contains
                    claraRTTOV_addsolar,claraRTTOV_addclouds,claraRTTOV_addaerosol,       &
                    claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,claraRTTOV_co2,   &
                    claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,     &
-                   claraRTTOV_calcemis,claraRTTOV_calcrefl)
+                   claraRTTOV_calcemis,claraRTTOV_calcrefl,CLARA_retSize)
                    
   end subroutine cosp_interface_init
   
@@ -856,12 +857,12 @@ contains
        ! Stratiform (continental)
        where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 1 .and.              &
              cospIN%frac_out(:,j,:) .eq. 1 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
-            cospIN%cldLiqRTTOV(:,j,1,:) =                                                &
+            cospIN%cldLiqRTTOV(:,j,1,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCLIQ)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
                 gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
-            cospIN%cldIceRTTOV(:,j,1,:) =                                                &
+            cospIN%cldIceRTTOV(:,j,1,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCICE)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
@@ -870,12 +871,12 @@ contains
        ! Stratiform (maritime)
        where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 0 .and.              &
              cospIN%frac_out(:,j,:) .eq. 1 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
-            cospIN%cldLiqRTTOV(:,j,2,:) =                                                &
+            cospIN%cldLiqRTTOV(:,j,2,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCLIQ)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
                 gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp)
-            cospIN%cldIceRTTOV(:,j,2,:) =                                                &
+            cospIN%cldIceRTTOV(:,j,2,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSCICE)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
@@ -884,12 +885,12 @@ contains
        ! Cumulus (continental)
        where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 1 .and.              &
              cospIN%frac_out(:,j,:) .eq. 2 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
-            cospIN%cldLiqRTTOV(:,j,3,:) =                                                &
+            cospIN%cldLiqRTTOV(:,j,3,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCLIQ)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
                 gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
-            cospIN%cldIceRTTOV(:,j,3,:) =                                                &
+            cospIN%cldIceRTTOV(:,j,3,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCICE)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
@@ -898,12 +899,12 @@ contains
        ! Cumulus (maritime)
        where(spread(gbx%land(start_idx:end_idx),2,gbx%nLevels) .eq. 0 .and.              &
              cospIN%frac_out(:,j,:) .eq. 2 .and. gbx%tca(start_idx:end_idx,:) .ne. 0)  
-            cospIN%cldLiqRTTOV(:,j,5,:) =                                                &
+            cospIN%cldLiqRTTOV(:,j,5,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCLIQ)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
                 gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
-            cospIN%cldIceRTTOV(:,j,5,:) =                                                &
+            cospIN%cldIceRTTOV(:,j,5,gbx%Nlevels:1:-1) =                                 &
                (gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVCICE)*                  &
                 gbx%p(start_idx:end_idx,1:gbx%Nlevels)*1e3)/                             &
                (gbx%tca(start_idx:end_idx,1:gbx%Nlevels)*                                &
@@ -1009,6 +1010,11 @@ contains
                                 MODIS_cloudWater,MODIS_cloudIce,MODIS_waterSize,         &
                                 MODIS_iceSize,cospIN%tau_067,MODIS_opticalThicknessLiq,  &
                                 MODIS_opticalThicknessIce)
+    cospIN%tau_liq  = MODIS_opticalThicknessLiq
+    cospIN%tau_ice  = MODIS_opticalThicknessIce
+    cospIN%reff_liq = MODIS_waterSize
+    cospIN%reff_ice = MODIS_iceSize
+                                
     ! Compute assymetry parameter and single scattering albedo for MODIS
     call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,num_trial_res,                    &
                       MODIS_opticalThicknessLiq, MODIS_waterSize*1.0e6_wp,               &
