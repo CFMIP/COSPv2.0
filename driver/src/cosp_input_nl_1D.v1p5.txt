@@ -135,7 +135,7 @@
   CLARA_Tb_semitrans            = 2,
   CLARA_Tb_opaque               = 1,
   CLARA_RTTOVclr                = .true.,  
-  claraRTTOV_coefdir            = '/home/sm_dussw/tools/rttov11.3',
+  claraRTTOV_coefdir            = '/Projects/Clouds/dswales/RTTOV/rttov_11.3',
   claraRTTOV_platform           = 1,
   claraRTTOV_satellite          = 18,
   claraRTTOV_sensor             = 5,

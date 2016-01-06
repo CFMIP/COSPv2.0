@@ -74,7 +74,7 @@ PROGRAM COSPTEST_trunk
   ! Parameters
   character(len=64),parameter :: &
        cosp_input_namelist  = 'cosp_input_nl_1D.v1p4.txt', &
-       cosp_output_namelist = 'cosp_output_nl.txt'
+       cosp_output_namelist = 'cosp_output_nl_v1.4.txt'
   integer,parameter :: &
        N_MAX_INPUT_FILES = 10000, &
        N_OUT_LIST = 63,           & ! Number of possible output variables

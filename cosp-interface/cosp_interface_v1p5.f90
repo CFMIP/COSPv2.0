@@ -41,7 +41,7 @@ MODULE MOD_COSP_INTERFACE_v1p5
                                   modis_histTauEdges,modis_histTauCenters,ntau,          &
                                   tau_binBounds,tau_binEdges,tau_binCenters
   USE cosp_optics,          ONLY: cosp_simulator_optics,lidar_optics,clara_optics,       &
-                                  modis_optics_partition, num_trial_res,modis_optics
+                                  modis_optics_partition,modis_optics
   USE MOD_COSP_UTILS,       ONLY: cosp_precip_mxratio
   USE quickbeam,            ONLY: radar_cfg,save_scale_LUTs
   USE mod_quickbeam_optics, ONLY: quickbeam_optics,size_distribution,hydro_class_init
@@ -95,6 +95,7 @@ MODULE MOD_COSP_INTERFACE_v1p5
        Npoints_it,   & ! Number of points per iteration
        lidar_ice_type  ! LIDAR ice type
   logical :: use_precipitation_fluxes
+  logical :: lclara=.false.
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !TYPE COSP_CONFIG
@@ -173,7 +174,17 @@ MODULE MOD_COSP_INTERFACE_v1p5
           Lclmodis,         & ! MODIS cloud area fraction
           LclMISR,          & ! MISR cloud fraction
           Lfracout,         & ! SCOPS Subcolumn output
-          Ltbrttov            ! RTTOV mean clear-sky brightness temperature
+          Ltbrttov,         & ! RTTOV mean clear-sky brightness temperature
+          Ltauclara,        & ! CLARA cloud optical thickness
+          Lpctclara,        & ! CLARA cloud-top presure
+          Ltctclara,        & ! CLARA cloud-top temperature
+          Lhctclara,        & ! CLARA cloud-top height
+          Lreffclwclara,    & ! CLARA liquid cloud particle size
+          Lreffcliclara,    & ! CLARA ice cloud particle size
+          Lcltclara,        & ! CLARA cloud fraction
+          Llwpclara,        & ! CLARA liquid water path
+          Liwpclara,        & ! CLARA ice water path
+          Lclclara            ! CLARA tau/ctp joint-histogram
      character(len=32),dimension(:),allocatable :: out_list
   END TYPE COSP_CONFIG
   
@@ -299,7 +310,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                      SUBROUTINE cosp_interface_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_interface_init(Npoints,Nlevels,Npointsit,cloud_overlap,lusePrecip,     &
+  subroutine cosp_interface_init_v1p5(Npoints,Nlevels,Npointsit,cloud_overlap,lusePrecip,&
                                  cloudsat_radar_freq,cloudsat_micro_scheme,              &
                                  cloudsat_k2,cloudsat_use_gas_abs,                       &
                                  cloudsat_do_ray,isccp_top_height,                       &
@@ -334,7 +345,8 @@ contains
          rttov_Nchannels,            & ! RTTOV: Number of channels
          rttov_platform,             & ! RTTOV: Satellite platform
          rttov_satellite,            & ! RTTOV: Satellite 
-         rttov_instrument,           & ! RTTOV: Instrument
+         rttov_instrument              ! RTTOV: Instrument
+    integer,intent(in),optional :: &
          CLARA_Tb_subvis,            & ! Method for Tb (sub-visible clouds)
          CLARA_Tb_semitrans,         & ! Method for Tb (semi-transparent clouds)
          CLARA_Tb_opaque,            & ! Method for Tb (opaque clouds)
@@ -342,7 +354,7 @@ contains
          claraRTTOV_satellite,       & ! Satellite ID
          claraRTTOV_sensor,          & ! Sensor ID
          claraRTTOV_nchan              ! Number of channels         
-    integer,dimension(3) :: &
+    integer,dimension(3),optional :: &
          claraRTTOV_channels           ! Channel numbers
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          rttov_Channels                ! RTTOV: Channel numbers         
@@ -356,7 +368,8 @@ contains
     logical,intent(in) :: &
          lusePrecip,      & ! True if precipitation fluxes are input to the algorithm
          lusevgrid,       & ! True if using new grid for L3 CALIPSO and CLOUDSAT 
-         luseCSATvgrid,   & ! True to use CLOUDSAT vertical grid spacing of 480m
+         luseCSATvgrid      ! True to use CLOUDSAT vertical grid spacing of 480m
+    logical,intent(in),optional :: &
          CLARA_RTTOVclr,  & ! True => Use RTTOV for cloudy free scenes 
          CLARA_retSize,   & ! True => Use TOA reflectance minimization for particle size retrieval
          claraRTTOV_addrefrac,          & !
@@ -375,17 +388,16 @@ contains
          claraRTTOV_calcemis,           & ! 
          claraRTTOV_calcrefl              !
     character(len=64),intent(in) :: &
-         cloudsat_micro_scheme,         & ! Microphysical scheme used in radar simulator
-         claraRTTOV_coefdir               ! Location of RTTOV coefficient files
-
+         cloudsat_micro_scheme            ! Microphysical scheme used in radar simulator
+    character(len=64),intent(in),optional :: &
+         claraRTTOV_coefdir               ! Location of RTTOV coefficient files for CLARA
     character(len=32),intent(in) :: &
          cospvID
 
     ! Local variables
     logical :: &
-       lsingle=.true., & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
-       ldouble=.false.    ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme    
-       
+       lsingle = .true., & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
+       ldouble = .false.   ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme    
     ! Optical depth axis used in cospV1.4.0 joint-histogram
     integer :: l,k
     integer,parameter :: &
@@ -397,7 +409,12 @@ contains
                                          k=2,ntauV1p4),100000._wp/),shape = (/2,ntauV1p4/)) 
     real(wp),parameter,dimension(ntauV1p4) :: &
        tau_binCentersV1p4 = (tau_binEdgesV1p4(1,:)+tau_binEdgesV1p4(2,:))/2._wp  
-     
+
+    ! Determine if CLARA simulator is being run (Since the v1.4 version of COSP doesn't contain CLARA,
+    ! and v1.5 does, we need to account for this in the v1.5 initialization, which is used by the
+    ! v1.4 wrapper.
+    if (present(CLARA_Tb_subvis)) lclara=.true.
+    
     ! Initialization  
     overlap                  = cloud_overlap
     use_precipitation_fluxes = lusePrecip
@@ -410,18 +427,18 @@ contains
        print*,'Using cospV1.4.0 optical depth axis for MODIS tau/ctp joint-histogram'
        allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),                &
                 modis_histTauCenters(ntauV1p4))
-       numMODISTauBins      = ntauV1p4            ! Number of tau bins for joint-histogram
+       numMODISTauBins      = ntauV1p4+1          ! Number of tau bins for joint-histogram
        modis_histTau        = tau_binBoundsV1p4   ! Joint-histogram boundaries (optical depth)
        modis_histTauEdges   = tau_binEdgesV1p4    ! Joint-histogram bin edges (optical depth)
        modis_histTauCenters = tau_binCentersV1p4  ! Joint-histogram bin centers (optical depth)       
     else
-       allocate(modis_histTau(ntau+1),modis_histTauEdges(2,ntau),                        &
+       allocate(modis_histTau(ntau),modis_histTauEdges(2,ntau),                          &
                 modis_histTauCenters(ntau))
        numMODISTauBins      = ntau
        modis_histTau        = tau_binBounds
        modis_histTauEdges   = tau_binEdges
        modis_histTauCenters = tau_binCenters
-    endif   
+    endif
     
     ! If two-moment radar microphysics scheme is wanted
     if (cloudsat_micro_scheme == 'MMF_v3.5_two_moment')  then
@@ -433,21 +450,29 @@ contains
     call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
 
     ! Initialize COSP simulators
-    call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs, &
-                   cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,          &
-                   hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,               &
-                   rttov_Nchannels,rttov_Channels,rttov_platform,rttov_satellite,        &
-                   rttov_instrument,lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme,&
-                   CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque,CLARA_RTTOVclr,    &
-                   claraRTTOV_coefdir,claraRTTOV_platform,claraRTTOV_satellite,          &
-                   claraRTTOV_sensor,claraRTTOV_nchan,claraRTTOV_channels,               &
-                   claraRTTOV_addrefrac,claraRTTOV_use_q2m,claraRTTOV_clw_data,          &
-                   claraRTTOV_addsolar,claraRTTOV_addclouds,claraRTTOV_addaerosol,       &
-                   claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,claraRTTOV_co2,   &
-                   claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,     &
-                   claraRTTOV_calcemis,claraRTTOV_calcrefl,CLARA_retSize)
-                   
-  end subroutine cosp_interface_init
+    if (lclara) then
+       call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs, &
+                      cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,          &
+                      hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,               &
+                      rttov_Nchannels,rttov_Channels,rttov_platform,rttov_satellite,        &
+                      rttov_instrument,lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme,&
+                      CLARA_Tb_subvis,CLARA_Tb_semitrans,CLARA_Tb_opaque,CLARA_RTTOVclr,    &
+                      claraRTTOV_coefdir,claraRTTOV_platform,claraRTTOV_satellite,          &
+                      claraRTTOV_sensor,claraRTTOV_nchan,claraRTTOV_channels,               &
+                      claraRTTOV_addrefrac,claraRTTOV_use_q2m,claraRTTOV_clw_data,          &
+                      claraRTTOV_addsolar,claraRTTOV_addclouds,claraRTTOV_addaerosol,       &
+                      claraRTTOV_use_cld_opts_param,claraRTTOV_ozone_data,claraRTTOV_co2,   &
+                      claraRTTOV_n2o,claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,     &
+                      claraRTTOV_calcemis,claraRTTOV_calcrefl,CLARA_retSize)
+    else
+       call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs, &
+                      cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,          &
+                      hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,               &
+                      rttov_Nchannels,rttov_Channels,rttov_platform,rttov_satellite,        &
+                      rttov_instrument,lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
+    endif
+    
+  end subroutine cosp_interface_init_v1p5
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                            SUBROUTINE COSP_INTERFACE (v1.5)
@@ -516,7 +541,7 @@ contains
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%       
        ! Generate subcolumns and compute optical properties needed by simulators  
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       call subsample_and_optics_v1p4(gbx,sgx,Nptsperit,start_idx,end_idx,         &
+       call subsample_and_optics_v1p5(gbx,sgx,Nptsperit,start_idx,end_idx,         &
                                       cospIN,cospstateIN)
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! COSP engine 
@@ -533,9 +558,9 @@ contains
   end subroutine cosp_interface_v1p5
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !                      SUBROUTINE SUBSAMPLE_AND_OPTICS (cosp1.4)
+  !                      SUBROUTINE SUBSAMPLE_AND_OPTICS (cosp1.5)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine subsample_and_optics_v1p4(gbx,sgx,npoints,start_idx,end_idx,cospIN,cospgridIN)
+  subroutine subsample_and_optics_v1p5(gbx,sgx,npoints,start_idx,end_idx,cospIN,cospgridIN)
 
     ! Inputs
     type(cosp_gridbox),intent(in)    :: gbx   ! Grid box description
@@ -1016,7 +1041,7 @@ contains
     cospIN%reff_ice = MODIS_iceSize
                                 
     ! Compute assymetry parameter and single scattering albedo for MODIS
-    call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,num_trial_res,                    &
+    call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,                                  &
                       MODIS_opticalThicknessLiq, MODIS_waterSize*1.0e6_wp,               &
                       MODIS_opticalThicknessIce, MODIS_iceSize*1.0e6_wp,                 &
                       cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
@@ -1025,19 +1050,20 @@ contains
     ! CLARA optics.
     ! The computation of the input optical fields (asymmetry parameter and single-
     ! scattering albedo for CLARA are analogous to the MODIS simulator.
-    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                      
-    ! Compute assymetry parameter and single scattering albedo for CLARA
-    call clara_optics(npoints,gbx%Nlevels,gbx%Ncolumns,MODIS_opticalThicknessLiq,        &
-                      MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,                &
-                      MODIS_iceSize*1.0e6_wp,cospIN%fracLiq,cospIN%asym_AVHRR,           &
-                      cospIN%ss_alb_AVHRR)
-
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if (lclara) then
+       ! Compute assymetry parameter and single scattering albedo for CLARA
+       call clara_optics(npoints,gbx%Nlevels,gbx%Ncolumns,MODIS_opticalThicknessLiq,     &
+                         MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,             &
+                         MODIS_iceSize*1.0e6_wp,cospIN%fracLiq,cospIN%asym_AVHRR,        &
+                         cospIN%ss_alb_AVHRR)
+    endif
     ! Deallocate memory
     deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,            &
                MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,             &
                Reff,Np)
-    
-  end subroutine subsample_and_optics_v1p4
+ 
+  end subroutine subsample_and_optics_v1p5
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                          SUBROUTINE construct_cosp_config	
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1052,7 +1078,7 @@ contains
                Lparasol_sim,Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94,   &
                LcfadLidarsr532,Lclcalipso2,Lclcalipso,Lclhcalipso,Lclisccp,Lcllcalipso, &
                Lclmcalipso,Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Ltauisccp,      &
-               Lcltisccp,Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,clcalipsotmp,         &
+               Lcltisccp,Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,        &
                Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,Lcltcalipsoliq,        &
                Lcltcalipsoice,Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,&
                Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq,              &
@@ -1060,7 +1086,9 @@ contains
                Lmeantbclrisccp,Lfracout,LlidarBetaMol532,Ltbrttov,Lcltmodis,Lclwmodis,  &
                Lclimodis,Lclhmodis,Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,&
                Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,Lreffclimodis,   &
-               Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Lclcalipsotmp
+               Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltauclara,Lpctclara,Ltctclara,    &
+               Lhctclara,Lreffclwclara,Lreffcliclara,Lcltclara,Llwpclara,Liwpclara,     &
+               Lclclara
     
     namelist/COSP_OUTPUT/Lradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,         &
                          Lrttov_sim,Lparasol_sim,Lalbisccp,Latb532,Lboxptopisccp,       &
@@ -1077,7 +1105,9 @@ contains
                          Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,Lcllmodis,Ltautmodis,  &
                          Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,             &
                          Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis, &
-                         Liwpmodis,Lclmodis
+                         Liwpmodis,Lclmodis,Ltauclara,Lpctclara,Ltctclara,Lhctclara,    &
+                         Lreffclwclara,Lreffcliclara,Lcltclara,Llwpclara,Liwpclara,     &
+                         Lclclara
     
     allocate(cfg%out_list(N_OUT_LIST))
     do i=1,N_OUT_LIST
@@ -1258,6 +1288,16 @@ contains
     if (Llwpmodis)         cfg%out_list(61) = 'lwpmodis'
     if (Liwpmodis)         cfg%out_list(62) = 'iwpmodis'
     if (Lclmodis)          cfg%out_list(63) = 'clmodis'
+    if (Ltauclara)         cfg%out_list(64) = 'tauclara'
+    if (Lpctclara)         cfg%out_list(65) = 'pctclara'
+    if (Ltctclara)         cfg%out_list(66) = 'tctclara'
+    if (Lhctclara)         cfg%out_list(67) = 'hctclara'
+    if (Lreffclwclara)     cfg%out_list(68) = 'reffclwclara'
+    if (Lreffcliclara)     cfg%out_list(69) = 'reffcliclara'
+    if (Lcltclara)         cfg%out_list(70) = 'cltclara'
+    if (Llwpclara)         cfg%out_list(71) = 'lwpclara'
+    if (Liwpclara)         cfg%out_list(72) = 'iwpclara'
+    if (Lclclara)          cfg%out_list(73) = 'clclara'
     
     ! Copy diagnostic flags to cfg structure
     ! ISCCP simulator  
@@ -1336,6 +1376,18 @@ contains
     cfg%Llwpmodis        = Llwpmodis
     cfg%Liwpmodis        = Liwpmodis
     cfg%Lclmodis         = Lclmodis
+
+    ! CLARA simulator
+    cfg%Ltauclara     = Ltauclara
+    cfg%Lpctclara     = Lpctclara
+    cfg%Ltctclara     = Ltctclara
+    cfg%Lhctclara     = Lhctclara
+    cfg%Lreffclwclara = Lreffclwclara
+    cfg%Lreffcliclara = Lreffcliclara
+    cfg%Lcltclara     = Lcltclara
+    cfg%Llwpclara     = Llwpclara
+    cfg%Liwpclara     = Liwpclara
+    cfg%Lclclara      = Lclclara
     
   END SUBROUTINE construct_cosp_config
 

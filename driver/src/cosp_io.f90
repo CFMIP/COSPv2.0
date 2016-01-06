@@ -154,8 +154,8 @@ CONTAINS
     if (present(units)) y%units   =  units
     y%dimsid =  dimsid
     y%dimssz =  dimssz
-     y%pntr => pntr
-     
+    y%pntr => pntr
+
    END SUBROUTINE CONSTRUCT_VAR3D
    
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -246,6 +246,8 @@ CONTAINS
            stop
         endif
         if (Nj /= Mk) then
+           print*,shape(x3)
+           print*,shape(y4)
            print *, ' -- '//trim(proname)//': Nj /= Mk (opt 3)'
            stop
         endif
@@ -1021,10 +1023,10 @@ CONTAINS
      if (geomode == 1) then
         profile_axid = cmor_axis(table=table, table_entry='location', units='1', length=Npoints, coord_vals=profile_ax)
      else
+        lat_axid = cmor_axis(table=table, table_entry='latitude', units='degrees_north', length=Nlat, coord_vals=lat_ax, &
+             cell_bounds = lat_bounds)        
         lon_axid = cmor_axis(table=table, table_entry='longitude', units='degrees_east', length=Nlon, coord_vals=lon_ax, &
              cell_bounds = lon_bounds)
-        lat_axid = cmor_axis(table=table, table_entry='latitude', units='degrees_north', length=Nlat, coord_vals=lat_ax, &
-             cell_bounds = lat_bounds)
      endif
      column_axid  = cmor_axis(table=table, table_entry='column', units='1', length=Ncolumns, coord_vals=column_ax)
      channel_axid = cmor_axis(table=table, table_entry='channel', units='1', length=Nchannels, coord_vals=channel_ax)
@@ -1458,7 +1460,7 @@ CONTAINS
      Ncolumns  = gb%Ncolumns
      Nlevels   = gb%Nlevels
      Nchannels = gb%Nchan
-     
+ 
      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
      ! Fill in variable info and associate pointers
      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1506,6 +1508,16 @@ CONTAINS
      call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(39),units='%')
      call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(40),units='%')
      call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(41),units='%')
+     call construct_var1d('tauclara',       d3, d2, cospOUT%clara_tau,                            v1d(42),units='1')
+     call construct_var1d('pctclara',       d3, d2, cospOUT%clara_ctp,                            v1d(43),units='Pa')
+     call construct_var1d('tctclara',       d3, d2, cospOUT%clara_ctt,                            v1d(44),units='K')
+     call construct_var1d('hctclara',       d3, d2, cospOUT%clara_cth,                            v1d(45),units='m')
+     call construct_var1d('reffclwclara',   d3, d2, cospOUT%clara_sizeLIQ,                        v1d(46),units='m')
+     call construct_var1d('reffcliclara',   d3, d2, cospOUT%clara_sizeICE,                        v1d(47),units='m')
+     call construct_var1d('cltclara',       d3, d2, cospOUT%clara_cfrac,                          v1d(48),units='1')
+     call construct_var1d('lwpclara',       d3, d2, cospOUT%clara_LWP,                            v1d(49),units='kg m-2')
+     call construct_var1d('iwpclara',       d3, d2, cospOUT%clara_IWP,                            v1d(50),units='kg m-2')
+     
      ! 2D variables
      d4 = (/grid_id,height_axid,0,0/)
      d3 = (/Npoints,Nlvgrid,0/)
@@ -1562,7 +1574,10 @@ CONTAINS
      ! reshape d5 = (/profile_axid,tau_axid,MISR_CTH_axid,time_axid,0/)
      d5 = (/grid_id,tau_axid,MISR_CTH_axid,0,0/)
      d4 = (/Npoints,7,numMISRHgtBins,0/)
-     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,v3d(8),units='%')
+     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq, v3d(8),units='%')
+     d5 = (/grid_id,tau_axid,pressure2_axid,0,0/)
+     d4 = (/Npoints,7,7,0/)
+     call construct_var3d('clclara',        d5, d4, cospOUT%clara_fq,v3d(9),units='%')
      
    END SUBROUTINE NC_CMOR_ASSOCIATE_1D_V1P5
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1779,6 +1794,16 @@ CONTAINS
      call construct_var1d('clmcalipsoun',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),v1d(38),units='%')
      call construct_var1d('clhcalipsoun',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),v1d(39),units='%')
      call construct_var1d('cltcalipsoun',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),v1d(40),units='%')
+     call construct_var1d('tauclara',       d3, d2, cospOUT%clara_tau,                  v1d(41),units='1')
+     call construct_var1d('pctclara',       d3, d2, cospOUT%clara_ctp,                  v1d(42),units='Pa')
+     call construct_var1d('tctclara',       d3, d2, cospOUT%clara_ctt,                  v1d(43),units='K')
+     call construct_var1d('hctclara',       d3, d2, cospOUT%clara_cth,                  v1d(44),units='m')
+     call construct_var1d('reffclwclara',   d3, d2, cospOUT%clara_sizeLIQ,              v1d(45),units='m')
+     call construct_var1d('reffcliclara',   d3, d2, cospOUT%clara_sizeICE,              v1d(46),units='m')
+     call construct_var1d('cltclara',       d3, d2, cospOUT%clara_cfrac,                v1d(47),units='1')
+     call construct_var1d('lwpclara',       d3, d2, cospOUT%clara_LWP,                  v1d(48),units='kg m-2')
+     call construct_var1d('iwpclara',       d3, d2, cospOUT%clara_IWP,                  v1d(49),units='kg m-2')
+     
      ! 2D variables
      d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
      d3 = (/Nlon,Nlat,Nlvgrid/)
@@ -1828,6 +1853,10 @@ CONTAINS
      d5 = (/lon_axid,lat_axid,tau_axid,MISR_CTH_axid,time_axid/)
      d4 = (/Nlon,Nlat,7,numMISRHgtBins/)
      call construct_var3d('clMISR', d5, d4, cospOUT%misr_fq,v3d(8),units='%')
+     d5 = (/lon_axid,lat_axid,tau_axid,pressure2_axid,time_axid/)
+     d4 = (/Nlon,Nlat,7,7/)
+     call construct_var3d('clclara',d5, d4, cospOUT%clara_fq,v3d(9),units='%')
+
    END SUBROUTINE NC_CMOR_ASSOCIATE_2D_V1P5
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

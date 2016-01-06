@@ -30,8 +30,8 @@
 ! May 2015 - D. Swales - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 PROGRAM COSPTEST_v1p5
-  USE MOD_COSP_INTERFACE_v1p5,    ONLY: cosp_interface => cosp_interface_v1p5,           &
-                                        cosp_interface_init,                             &
+  USE MOD_COSP_INTERFACE_v1p5,    ONLY: cosp_interface      => cosp_interface_v1p5,      &
+                                        cosp_interface_init => cosp_interface_init_v1p5, &
                                         cosp_config,cosp_gridbox,cosp_subgrid,& 
                                         construct_cosp_gridbox,  destroy_cosp_gridbox,   &
                                         construct_cosp_subgrid,  destroy_cosp_subgrid,   &
@@ -53,22 +53,22 @@ PROGRAM COSPTEST_v1p5
   ! Parameters
   character(len=64),parameter :: &
        cosp_input_namelist  = 'cosp_input_nl_1D.v1p5.txt', &
-       cosp_output_namelist = 'cosp_output_nl.txt'
+       cosp_output_namelist = 'cosp_output_nl_v1.5.txt'
   character(len=32),parameter :: &
        cospvID = 'COSP v1.5'        ! COSP version ID
   integer,parameter :: &
        N_MAX_INPUT_FILES = 10000, &
-       N_OUT_LIST = 63,           & ! Number of possible output variables
-       N3D        = 8,            & ! Number of 3D output variables
+       N_OUT_LIST = 73,           & ! Number of possible output variables
+       N3D        = 9,            & ! Number of 3D output variables
        N2D        = 14,           & ! Number of 2D output variables
-       N1D        = 40              ! Number of 1D output variables  
+       N1D        = 49              ! Number of 1D output variables  
 
   ! Local variables
   type(cosp_gridbox)       :: gbx        ! Gridbox information. Input for COSP
   type(cosp_subgrid)       :: sgx        ! Subgrid outputs
   type(cosp_config)        :: cfg        ! Configuration options
   type(cosp_column_inputs) :: cospgridIN ! Model state needed by cospv1.5
-  type(cosp_outputs)       :: cospOUT   ! COSP simulator outputs (flat)
+  type(cosp_outputs)       :: cospOUT    ! COSP simulator outputs (flat)
   
   ! Sample input data variables
   integer :: &
@@ -301,6 +301,9 @@ PROGRAM COSPTEST_v1p5
                               cfg%Lclmcalipsoliq,cfg%Lclmcalipsoice,cfg%Lclmcalipsoun,   &
                               cfg%Lcllcalipsoliq,cfg%Lcllcalipsoice,cfg%Lcllcalipsoun,   &
                               cfg%LcfadDbze94,cfg%Ldbze94,cfg%Lparasolrefl,cfg%Ltbrttov, &
+                              cfg%Ltauclara,cfg%Lpctclara,cfg%Ltctclara,cfg%Lhctclara,   &
+                              cfg%Lreffclwclara,cfg%Lreffcliclara,cfg%Lcltclara,         &
+                              cfg%Llwpclara,cfg%Liwpclara,cfg%Lclclara,                  &
                               Npoints,Ncolumns,Nlevels,Nlvgrid,Nchannels,cospOUT)
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -331,6 +334,7 @@ PROGRAM COSPTEST_v1p5
         call nc_cmor_write_1d_v1p5(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,         &
                                    v1d(1:N1),v2d,v3d)
      elseif (geomode >  1) then
+        print*,shape(v3d(7)%pntr)
         call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,               &
                                   height_mlev_axid,column_axid,sza_axid,temp_axid,       &
                                   channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,      &

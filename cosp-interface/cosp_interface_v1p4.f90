@@ -33,19 +33,28 @@
 MODULE MOD_COSP_INTERFACE_v1p4
   use COSP_KINDS,                 ONLY: wp,dp
   use MOD_COSP,                   ONLY: cosp_outputs,construct_cosp_outputs,             &
-                                        destroy_cosp_outputs,linitialization
-  USE MOD_COSP_CONFIG,            ONLY: PARASOL_NREFL,R_UNDEF,                           &
+                                        destroy_cosp_outputs,linitialization,            &
+                                        construct_cospstateIN, destroy_cospstateIN,      &
+                                        construct_cospIN,      destroy_cospIN,           &
+                                        cosp_optical_inputs,cosp_column_inputs
+  USE MOD_COSP_CONFIG,            ONLY: PARASOL_NREFL,R_UNDEF,RTTOV_MAX_CHANNELS,        &
                                         SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS,        &
                                         numMISRHgtBins,N_HYDRO,numMODISReffLiqBins,      &
                                         numMODISReffIceBins,numMODISTauBins,             &
                                         numMODISPresBins
-  USE MOD_COSP_INTERFACE_v1p5,    ONLY: cosp_config,cosp_subgrid,cosp_gridbox,&
-                                        cosp_interface_init,cosp_interface_v1p5,         &
-                                        construct_cosp_gridbox,destroy_cosp_gridbox,     &
+  USE MOD_COSP_INTERFACE_v1p5,    ONLY: cosp_config,cosp_subgrid,cosp_gridbox,           &
+                                        cosp_interface_v1p5,cosp_interface_init_v1p5,    &
                                         I_LSCLIQ,I_LSCICE,I_CVCICE,I_CVCLIQ,I_LSRAIN
   USE quickbeam,                  ONLY: maxhclass,nRe_types,nd,mt_ntt,Re_BIN_LENGTH,     &
-                                        Re_MAX_BIN
-
+                                        Re_MAX_BIN,radar_cfg,save_scale_LUTs
+  USE cosp_optics,          ONLY: cosp_simulator_optics,lidar_optics,clara_optics,       &
+                                  modis_optics_partition,modis_optics
+  USE MOD_COSP_UTILS,       ONLY: cosp_precip_mxratio
+  USE mod_quickbeam_optics, ONLY: quickbeam_optics,size_distribution,hydro_class_init
+  USE mod_rng,              ONLY: rng_state, init_rng
+  USE mod_scops,            ONLY: scops
+  USE mod_prec_scops,       ONLY: prec_scops
+  
   implicit none
   
   character(len=120),parameter :: &
@@ -468,16 +477,16 @@ contains
     ! Call cosp_init
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if (linitialization) then
-      !call cosp_interface_init(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Npoints_it,overlap,     &
-      !                         gbxIN%use_precipitation_fluxes,gbxIN%radar_freq,          &
-      !                         cloudsat_micro_scheme,gbxIN%k2,gbxIN%use_gas_abs,         &
-      !                         gbxIN%do_ray,gbxIN%isccp_top_height,                      &
-      !                         gbxIN%isccp_top_height_direction,                         &
-      !                         gbxIN%zlev(:,gbxIN%Nlevels:1:-1),                         &
-      !                         gbxIN%zlev_half(:,gbxIN%Nlevels:1:-1),gbxIN%surface_radar,&
-      !                         gbxIN%Nchan,gbxIN%Ichan,gbxIN%Plat,gbxIN%Sat,gbxIN%Inst,  &
-      !                         gbxIN%lidar_ice_type,vgrid%use_vgrid,vgrid%Nlvgrid,       &
-      !                         vgrid%csat_vgrid,cospvID)
+      call cosp_interface_init_v1p5(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Npoints_it,overlap,     &
+                               gbxIN%use_precipitation_fluxes,gbxIN%radar_freq,          &
+                               cloudsat_micro_scheme,gbxIN%k2,gbxIN%use_gas_abs,         &
+                               gbxIN%do_ray,gbxIN%isccp_top_height,                      &
+                               gbxIN%isccp_top_height_direction,                         &
+                               gbxIN%zlev(:,gbxIN%Nlevels:1:-1),                         &
+                               gbxIN%zlev_half(:,gbxIN%Nlevels:1:-1),gbxIN%surface_radar,&
+                               gbxIN%Nchan,gbxIN%Ichan,gbxIN%Plat,gbxIN%Sat,gbxIN%Inst,  &
+                               gbxIN%lidar_ice_type,vgrid%use_vgrid,vgrid%Nlvgrid,       &
+                               vgrid%csat_vgrid,cospvID)
     endif
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Call construct_cosp_outputs
@@ -502,7 +511,9 @@ contains
                                 cfg%Lclmcalipsoliq,cfg%Lclmcalipsoice,cfg%Lclmcalipsoun, &
                                 cfg%Lcllcalipsoliq,cfg%Lcllcalipsoice,cfg%Lcllcalipsoun, &
                                 cfg%LcfadDbze94,cfg%Ldbze94,cfg%Lparasolrefl,            &
-                                cfg%Ltbrttov,gbxIN%Npoints,gbxIN%Ncolumns,gbxIN%Nlevels, &
+                                cfg%Ltbrttov,.false.,.false.,.false.,.false.,.false.,    &
+                                .false.,.false.,.false.,.false.,.false.,                 &
+                                gbxIN%Npoints,gbxIN%Ncolumns,gbxIN%Nlevels, &
                                 vgrid%Nlvgrid,gbxIN%Nchan,cospOUT)    
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1486,9 +1497,7 @@ contains
     type(cosp_vgrid),intent(inout) :: x
     deallocate(x%z, x%zl, x%zu, x%mz, x%mzl, x%mzu)
   end subroutine destroy_cosp_vgrid
-
-
-    
+ 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                                    END MODULE
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -242,6 +242,7 @@ MODULE MOD_COSP
      ! RTTOV outputs
      real(wp),pointer :: &
           rttov_tbs(:,:) ! Brightness Temperature	    
+
      ! CLARA outputs
      real(wp),pointer,dimension(:) :: &
         clara_tau,     & ! CLARA optical-depth
@@ -345,12 +346,20 @@ CONTAINS
     !      simulator, but only save the requested fields.
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    ! CLARA subcolumn
-    Lclara_subcolumn = .true.
-    Lclara_column    = .true.
-    
+    ! CLARA subcolumn and column
+    if (associated(cospOUT%clara_tau)     .or. associated(cospOUT%clara_ctp)     .or.     &
+        associated(cospOUT%clara_cth)     .or. associated(cospOUT%clara_ctt)     .or.     &
+        associated(cospOUT%clara_sizeLIQ) .or. associated(cospOUT%clara_sizeICE) .or.     &
+        associated(cospOUT%clara_cfrac)   .or. associated(cospOUT%clara_LWP)     .or.     &
+        associated(cospOUT%clara_IWP)     .or. associated(cospOUT%clara_fq)) then
+       Lclara_subcolumn = .true.
+       Lclara_column    = .true.
+    endif
+    ! print*,Lclara_subcolumn,Lclara_column
+
     ! CLOUDSAT subcolumn
     if (associated(cospOUT%cloudsat_Ze_tot)) Lcloudsat_subcolumn = .true.
+     
     ! MODIS subcolumn
     if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean)                .or.          &
         associated(cospOUT%modis_Cloud_Fraction_Total_Mean)                .or.          &
@@ -371,13 +380,16 @@ CONTAINS
         associated(cospOUT%modis_Ice_Water_Path_Mean)                      .or.          &
         associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))               &
        Lmodis_subcolumn    = .true.
+
     ! ISCCP subcolumn
     if (associated(cospOUT%isccp_boxtau)                                   .or.          &
         associated(cospOUT%isccp_boxptop))                                               &                 
        Lisccp_subcolumn    = .true.
+
     ! MISR subcolumn
     if (associated(cospOUT%misr_dist_model_layertops))                                   &
        Lmisr_subcolumn     = .true.
+
     ! CALIPOSO subcolumn
     if (associated(cospOUT%calipso_tau_tot)                                .or.          &
         associated(cospOUT%calipso_beta_mol)                               .or.          &
@@ -385,12 +397,15 @@ CONTAINS
         associated(cospOUT%calipso_betaperp_tot)                           .or.          &
         associated(cospOUT%calipso_beta_tot))                                            &
        Lcalipso_subcolumn  = .true.
+
     ! PARASOL subcolumn
     if (associated(cospOUT%parasolPix_refl))                                             &
        Lparasol_subcolumn  = .true.
+
     ! RTTOV subcolumn
     if (associated(cospOUT%rttov_tbs))                                                   &
        Lrttov_subcolumn    = .true.
+
     ! ISCCP column
     if (associated(cospOUT%isccp_fq)                                       .or.          &
         associated(cospOUT%isccp_meanalbedocld)                            .or.          &
@@ -399,11 +414,13 @@ CONTAINS
         associated(cospOUT%isccp_totalcldarea)                             .or.          &
         associated(cospOUT%isccp_meantb))                                                &
        Lisccp_column    = .true.
+
     ! MISR column
     if (associated(cospOUT%misr_cldarea)                                   .or.          &
         associated(cospOUT%misr_meanztop)                                  .or.          &
         associated(cospOUT%misr_fq))                                                     &
        Lmisr_column    = .true.
+
     ! CALIPSO column
     if (associated(cospOUT%calipso_cfad_sr)                                .or.          &
         associated(cospOUT%calipso_lidarcld)                               .or.          &
@@ -412,14 +429,17 @@ CONTAINS
         associated(cospOUT%calipso_cldlayerphase)                          .or.          &
         associated(cospOUT%calipso_lidarcldtmp))                                         &
        Lcalipso_column    = .true.
+
     ! PARASOL column
     if (associated(cospOUT%parasolGrid_refl))                                            &
        Lparasol_column    = .true.
+
     ! CLOUDSAT column
     if (associated(cospOUT%cloudsat_cfad_ze)                               .or.          &
         associated(cospOUT%lidar_only_freq_cloud)                          .or.          &
         associated(cospOUT%radar_lidar_tcc))                                             &
        Lcloudsat_column    = .true.
+
     ! MODIS column
     if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean)                .or.          &
         associated(cospOUT%modis_Cloud_Fraction_Water_Mean)                .or.          &
@@ -960,17 +980,20 @@ CONTAINS
           endif        
           if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+            &
-                  int(modisIN%sunlit(:))-1, 2:numModisTauBins+1, :) = modisJointHistogram(:, :, :)           
+                  int(modisIN%sunlit(:))-1, 1:numModisTauBins, :) = modisJointHistogram(:, :, :)           
+!ds                  int(modisIN%sunlit(:))-1, 2:numModisTauBins+1, :) = modisJointHistogram(:, :, :)           
              ! Reorder pressure bins in joint histogram to go from surface to TOA 
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,:) = &
                   cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,numMODISPresBins:1:-1)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
+             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1,1:numMODISTauBins,:) = &
+!ds             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
                 modisJointHistogramIce(:,:,:)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
+             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
+!ds             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
                 modisJointHistogramLiq(:,:,:)
           endif
                     
@@ -1167,7 +1190,8 @@ CONTAINS
          rttov_Nchannels,            & ! Number of RTTOV channels
          rttov_platform,             & ! RTTOV platform
          rttov_satellite,            & ! RTTOV satellite
-         rttov_instrument,           & ! RTTOV instrument
+         rttov_instrument              ! RTTOV instrument
+    integer,intent(in),optional :: &
          CLARA_Tb_subvis,            & ! Method for Tb (sub-visible clouds)
          CLARA_Tb_semitrans,         & ! Method for Tb (semi-transparent clouds)
          CLARA_Tb_opaque,            & ! Method for Tb (opaque clouds)
@@ -1175,7 +1199,7 @@ CONTAINS
          claraRTTOV_satellite,       & ! Satellite ID
          claraRTTOV_sensor,          & ! Sensor ID
          claraRTTOV_nchan              ! Number of channels           
-    integer,dimension(3) :: &
+    integer,dimension(3),optional :: &
          claraRTTOV_channels           ! Channel numbers
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          rttov_channels                ! RTTOV channels    
@@ -1188,8 +1212,9 @@ CONTAINS
          hgt_matrix_half     
     logical,intent(in) :: &
          lusevgrid,                     & ! Switch to use different vertical grid
-         luseCSATvgrid,                 & ! Switch to use CLOUDSAT grid spacing for new  
+         luseCSATvgrid                    ! Switch to use CLOUDSAT grid spacing for new  
                                           ! vertical grid
+    logical,intent(in),optional :: &
          CLARA_RTTOVclr,                & ! True => Use RTTOV for cloudy free scenes 
          CLARA_retSize,                 & ! True => Use TOA reflectance minimization for particle size retrieval
          claraRTTOV_addrefrac,          & !
@@ -1208,7 +1233,8 @@ CONTAINS
          claraRTTOV_calcemis,           & ! 
          claraRTTOV_calcrefl              !
     character(len=64),intent(in) :: &
-         cloudsat_micro_scheme,        & ! Microphysical scheme used by CLOUDSAT
+         cloudsat_micro_scheme            ! Microphysical scheme used by CLOUDSAT
+    character(len=64),intent(in),optional :: &
          claraRTTOV_coefdir              ! Location of RTTOV coefficient files
 
     ! OUTPUTS
@@ -1217,7 +1243,13 @@ CONTAINS
     ! Local variables
     integer  :: i
     real(wp) :: zstep
-
+    logical  :: lclara=.false.
+    
+    ! Determine if CLARA simulator is being run (Since the v1.4 version of COSP doesn't contain CLARA,
+    ! and v1.5 does, we need to account for this in the v1.5 initialization, which is used by the
+    ! v1.4 wrapper.
+    if (present(CLARA_Tb_subvis)) lclara=.true.
+    
     ! Set up vertical grid used by CALIPSO and CLOUDSAT L3
     use_vgrid = lusevgrid
     
@@ -1269,19 +1301,20 @@ CONTAINS
     ! Initialize PARASOL
     call cosp_parasol_init()
     
-    ! Initialize CLARA
-    call cosp_clara_init(CLARA_RTTOVclr,CLARA_Tb_subvis,CLARA_Tb_semitrans,              &
-                         CLARA_Tb_opaque,CLARA_retSize)
+    if (lclara) then
+       ! Initialize CLARA
+       call cosp_clara_init(CLARA_RTTOVclr,CLARA_Tb_subvis,CLARA_Tb_semitrans,              &
+                            CLARA_Tb_opaque,CLARA_retSize)
     
-    ! Initialize RTTOV used by CLARA
-    call cosp_clara_rttov_init(claraRTTOV_coefdir,claraRTTOV_addrefrac,                  &
-                               claraRTTOV_use_q2m,claraRTTOV_clw_data,                   &
-                               claraRTTOV_addsolar,claraRTTOV_addclouds,                 &
-                               claraRTTOV_addaerosol,claraRTTOV_use_cld_opts_param,      &
-                               claraRTTOV_ozone_data,claraRTTOV_co2,claraRTTOV_n2o,      &
-                               claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,        &
-                               claraRTTOV_calcemis,claraRTTOV_calcrefl,1,18,5,3,[1,2,3],0)   
-  
+       ! Initialize RTTOV used by CLARA
+       call cosp_clara_rttov_init(claraRTTOV_coefdir,claraRTTOV_addrefrac,                  &
+                                  claraRTTOV_use_q2m,claraRTTOV_clw_data,                   &
+                                  claraRTTOV_addsolar,claraRTTOV_addclouds,                 &
+                                  claraRTTOV_addaerosol,claraRTTOV_use_cld_opts_param,      &
+                                  claraRTTOV_ozone_data,claraRTTOV_co2,claraRTTOV_n2o,      &
+                                  claraRTTOV_ch4,claraRTTOV_co,claraRTTOV_addinterp,        &
+                                  claraRTTOV_calcemis,claraRTTOV_calcrefl,1,18,5,3,[1,2,3],0)   
+    endif
     linitialization = .FALSE.
     
   END SUBROUTINE COSP_INIT
@@ -1366,10 +1399,14 @@ CONTAINS
                                     Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,         &
                                     Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,         &
                                     Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,         & 
-                                    LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov, &
+                                    LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,           &
+                                    Ltauclara,Lpctclara,Ltctclara,Lhctclara,             &
+                                    Lreffclwclara,Lreffcliclara,Lcltclara,Llwpclara,     &
+                                    Liwpclara,Lclclara,                                  &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
-     ! Inputs
-     logical,intent(in) :: &
+    
+    ! Inputs
+    logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
          Lclisccp,         & ! ISCCP cloud area fraction
          Lboxptopisccp,    & ! ISCCP CTP in each column
@@ -1430,8 +1467,17 @@ CONTAINS
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
-         Ltbrttov            ! RTTOV mean clear-sky brightness temperature
-     
+         Ltbrttov,         & ! RTTOV mean clear-sky brightness temperature
+         Ltauclara,        & ! CLARA cloud optical thickness
+         Lpctclara,        & ! CLARA cloud-top presure
+         Ltctclara,        & ! CLARA cloud-top temperature
+         Lhctclara,        & ! CLARA cloud-top height
+         Lreffclwclara,    & ! CLARA liquid cloud particle size
+         Lreffcliclara,    & ! CLARA ice cloud particle size
+         Lcltclara,        & ! CLARA cloud fraction
+         Llwpclara,        & ! CLARA liquid water path
+         Liwpclara,        & ! CLARA ice water path
+         Lclclara            ! CLARA tau/ctp joint-histogram     
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
           Ncolumns,        & ! Number of subgrid columns
@@ -1484,9 +1530,9 @@ CONTAINS
     if (Llwpmodis)     allocate(x%modis_Liquid_Water_Path_Mean(Npoints))
     if (Liwpmodis)     allocate(x%modis_Ice_Water_Path_Mean(Npoints))
     if (Lclmodis) then
-        allocate(x%modis_Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,numModisTauBins+1,numMODISPresBins))
-        allocate(x%modis_Optical_thickness_vs_ReffLIQ(nPoints,numMODISTauBins+1,numMODISReffLiqBins))   
-        allocate(x%modis_Optical_Thickness_vs_ReffICE(nPoints,numMODISTauBins+1,numMODISReffIceBins))
+        allocate(x%modis_Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,numModisTauBins,numMODISPresBins))
+        allocate(x%modis_Optical_thickness_vs_ReffLIQ(nPoints,numMODISTauBins,numMODISReffLiqBins))   
+        allocate(x%modis_Optical_Thickness_vs_ReffICE(nPoints,numMODISTauBins,numMODISReffIceBins))
     endif
     
     ! LIDAR simulator
@@ -1545,10 +1591,17 @@ CONTAINS
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
 
     ! CLARA
-    allocate(x%clara_tau(Npoints),x%clara_ctp(Npoints),x%clara_ctt(Npoints),             &
-             x%clara_cth(Npoints),x%clara_sizeLIQ(Npoints),x%clara_sizeICE(Npoints),     &
-             x%clara_cfrac(Npoints),x%clara_LWP(Npoints),x%clara_IWP(Npoints),           &
-             x%clara_fq(Npoints,numCLARATauBins,numCLARAPresBins))
+    if (Ltauclara)     allocate(x%clara_tau(Npoints))
+    if (Lpctclara)     allocate(x%clara_ctp(Npoints))
+    if (Ltctclara)     allocate(x%clara_ctt(Npoints))
+    if (Lhctclara)     allocate(x%clara_cth(Npoints))
+    if (Lreffclwclara) allocate(x%clara_sizeLIQ(Npoints))
+    if (Lreffcliclara) allocate(x%clara_sizeICE(Npoints))
+    if (Lcltclara)     allocate(x%clara_cfrac(Npoints))
+    if (Llwpclara)     allocate(x%clara_LWP(Npoints))
+    if (Liwpclara)     allocate(x%clara_IWP(Npoints))
+    if (Lclclara)      allocate(x%clara_fq(Npoints,numCLARATauBins,numCLARAPresBins))
+
   end subroutine construct_cosp_outputs
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

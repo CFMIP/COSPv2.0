@@ -3820,3 +3820,203 @@ long_name:     Mean clear-sky brightness temperature as calculated by RTTOV
 dimensions:    longitude latitude channel time1
 !----------------------------------
 !
+
+!============
+variable_entry: tauclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: atmosphere_optical_thickness_due_to_cloud
+units:         1
+long_name:     Mean Optical Depth as Calculated by the CLARA Simulator
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  tauclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: pctclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  air_pressure_at_cloud_top
+units:         Pa 
+long_name:          CLARA Mean Cloud Top Pressure
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  pctclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: tctclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  air_temperature_at_cloud_top
+units:         K
+long_name:          CLARA Mean Cloud Top Temperature
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  tctclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: hctclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  height_at_cloud_top
+units:         m
+long_name:          CLARA Mean Cloud Top Height
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  hctclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: reffclwclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  effective_radius_of_cloud_liquid_particle
+units:         m
+long_name:          CLARA Liquid Cloud Particle Size
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  reffclwclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: reffcliclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  effective_radius_of_cloud_ice_particle
+units:         m
+long_name:          CLARA Ice Cloud Particle Size
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  reffcliclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: cltclara
+!============
+modeling_realm:  atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  cloud_area_fraction
+units:         %
+long_name:          CLARA Total Cloud Fraction
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  cltclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: lwpclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  atmosphere_cloud_liquid_water_content
+units:         kg m-2
+long_name:          CLARA Cloud Liquid Water Path
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  lwpclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: iwpclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  atmosphere_cloud_ice_water_content
+units:         kg m-2
+long_name:          CLARA Cloud Ice Water Path
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  iwpclara
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: clclara
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  cloud_area_fraction_in_atmosphere_layer
+units:         %
+long_name:          CLARA Cloud Area Fraction
+comment:      7 levels x 7 tau
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude tau plev7 time1
+out_name:  clclara
+type:      real
+!----------------------------------
+!
