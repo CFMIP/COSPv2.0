@@ -52,7 +52,7 @@ PROGRAM COSPTEST_v1p5
   
   ! Parameters
   character(len=64),parameter :: &
-       cosp_input_namelist  = 'cosp_input_nl_1D.v1p5.txt', &
+       cosp_input_namelist  = 'cosp_input_nl.v1p5.txt', &
        cosp_output_namelist = 'cosp_output_nl.txt'
   character(len=32),parameter :: &
        cospvID = 'COSP v1.5'        ! COSP version ID
@@ -75,6 +75,7 @@ PROGRAM COSPTEST_v1p5
        Nlon,Nlat,geomode,k
   real(wp) :: &
        emsfc_lw
+  real(wp),dimension(10) :: driver_time
   real(wp),dimension(:),    allocatable        :: &
        lon,lat,skt,landmask,u_wind,v_wind,sunlit
   real(wp),dimension(:,:),  allocatable,target :: &
@@ -159,6 +160,9 @@ PROGRAM COSPTEST_v1p5
                       Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,             &
                       use_precipitation_fluxes,use_reff,platform,satellite,              &
                       Instrument,Nchannels,Channels,Surfem,ZenAng,co2,ch4,n2o,co
+
+  ! Start timer
+  call cpu_time(driver_time(1))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in namelist
@@ -203,7 +207,8 @@ PROGRAM COSPTEST_v1p5
   time_step      = 3._wp/24._wp!3.D0/24.D0
   half_time_step = 0.5_wp*time_step
   time_bnds      = (/time-half_time_step,time+half_time_step/) 
-  
+  call cpu_time(driver_time(2))
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct input derived types to use an input into COSP.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -258,21 +263,21 @@ PROGRAM COSPTEST_v1p5
                               cfg%Lcllcalipsoliq,cfg%Lcllcalipsoice,cfg%Lcllcalipsoun,   &
                               cfg%LcfadDbze94,cfg%Ldbze94,cfg%Lparasolrefl,cfg%Ltbrttov, &
                               Npoints,Ncolumns,Nlevels,Nlvgrid,Nchannels,cospOUT)
-  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Call COSP
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
   ! Call main cosp engine
   call cosp_interface(Npoints,gbx,sgx,cospOUT)
- 
+  call cpu_time(driver_time(3))
+   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Write outputs to CMOR-compliant netCDF format.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if (cfg%Lwrite_output) then
      N1 = N1D
      if (geomode == 1) N1 = N1D+1
-     call nc_cmor_init(cmor_nl,'replace',cfg,gbx,sgx,cospOUT,                     &
+     call nc_cmor_init(cmor_nl,'replace',cfg,gbx,sgx,cospOUT,                            &
                        geomode,Nlon,Nlat,N1,N2D,N3D,N_OUT_LIST,lon_axid,lat_axid,        &
                        time_axid,height_axid,                                            &
                        height_mlev_axid,grid_id,lonvar_id,latvar_id, column_axid,        &
@@ -282,7 +287,7 @@ PROGRAM COSPTEST_v1p5
         call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,        &
                                   column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
                                   sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,&
-                                  Nlat,gbx,sgx,                                    &
+                                  Nlat,gbx,sgx,                                          &
                                   cospOUT,N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
         call nc_cmor_write_1d_v1p5(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,         &
                                    v1d(1:N1),v2d,v3d)
@@ -290,13 +295,14 @@ PROGRAM COSPTEST_v1p5
         call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,               &
                                   height_mlev_axid,column_axid,sza_axid,temp_axid,       &
                                   channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,      &
-                                  tau_axid,pressure2_axid,Nlon,Nlat,gbx,sgx,       &
+                                  tau_axid,pressure2_axid,Nlon,Nlat,gbx,sgx,             &
                                   cospOUT,N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
-        call nc_cmor_write_2d(time,time_bnds,geomode,Nlon,Nlat,N1,N2D,N3D,v1d(1:N1),v2d,&
+        call nc_cmor_write_2d(time,time_bnds,geomode,Nlon,Nlat,N1,N2D,N3D,v1d(1:N1),v2d, &
                               v3d)
      endif
      call nc_cmor_close()
   endif
+  call cpu_time(driver_time(4))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Deallocate local arrays from memory
@@ -311,7 +317,12 @@ PROGRAM COSPTEST_v1p5
   call destroy_cosp_gridbox(gbx)
   call destroy_cosp_subgrid(sgx)
   call destroy_cosp_outputs(cospOUT)
-  
+
+  call cpu_time(driver_time(5))
+  print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
+  print*,'Time to run COSP:         ',driver_time(3)-driver_time(2)
+  print*,'Time to write output:     ',driver_time(4)-driver_time(3)
+  print*,'Total time to run driver: ',driver_time(5)-driver_time(1)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END PROGRAM
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

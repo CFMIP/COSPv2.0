@@ -1046,6 +1046,7 @@ CONTAINS
      MISR_CTH_axid = cmor_axis(table=table, table_entry='cth16', units='m', length=numMISRHgtBins, &
           coord_vals=misr_histHgtCenters,cell_bounds=misr_histHgtEdges)
      time_axid  = cmor_axis(table=table, table_entry='time1', units='days since '//trim(start_date), length=maxtsteps)
+
      
      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
      ! Define grid
@@ -1726,7 +1727,6 @@ CONTAINS
      ! Local variables
      integer :: Npoints,Nlevels,Ncolumns,Nchannels
      integer :: d2(2),d3(3),d4(4),d5(5)
-     
      
      Npoints   = gb%Npoints
      Ncolumns  = gb%Ncolumns

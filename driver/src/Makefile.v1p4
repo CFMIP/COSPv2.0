@@ -3,7 +3,7 @@
 #              Adapt these variables to your environment
 ########################################################################
 F90      = ifort
-F90FLAGS = -g -p -check bounds -fpp -traceback -O3 -stand #-prof-gen=srcpos -prof-dir Coverage/v1p4/ # -profile-functions
+F90FLAGS = -g -p -check bounds -fpp -traceback -O3 -stand -pg #-prof-gen=srcpos -prof-dir Coverage/v1p4/ # -profile-functions
 NCDF_INC = /usr/local/ifort/include
 NCDF_LIB = /usr/local/ifort/lib
 
@@ -21,9 +21,10 @@ UUID_INC = /usr/local/ifort/include
 
 # COSP source directory
 SRC_F90    = /home/dswales/Projects/COSP/local_branch/src
+SRC_F90    = /home/dswales/Projects/COSP/COSPv2.0/src
 
 # COSPv1.4 model interface directory
-COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/local_branch/cosp-interface
+COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/COSPv2.0/cosp-interface
 PROG = cosp_test_v1.4
 
 # Non-optional simulators. You should not need to change this
@@ -60,7 +61,7 @@ all: $(PROG)
 $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
 	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
-	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff \
+	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff -lnetcdf \
 	-L${RTTOV_LIB_PATH} -lrttov9.3 \
 	-L${UDUNITS_LIB} -Wl,-rpath=${UDUNITS_LIB} -ludunits2 -lexpat -I${UDUNITS_INC} \
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \

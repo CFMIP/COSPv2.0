@@ -32,7 +32,7 @@
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 module math_lib
-  USE COSP_KINDS, ONLY: wp,dp
+  USE COSP_KINDS, ONLY: wp
   implicit none
 
 contains
@@ -93,7 +93,7 @@ contains
             s_rev(i1),s_rev(i2), val)
        path_integral = val
     else
-       sumo = 0.
+       sumo = 0._wp
        do j=i1,i2
           deltah = abs(s(i1+1)-s(i1))
           sumo = sumo + f(j)*deltah
@@ -190,8 +190,8 @@ contains
 
     ! Internal varaibles
     real(wp) :: a, atemp, b, btemp,ca,cb,cc,ctemp,sum1,syl,term1,term2,term3,x1,x2,x3
-    integer i,ihi,ilo,ind
-    logical lerror
+    integer  :: i,ihi,ilo,ind
+    logical  :: lerror
   
     lerror = .false.
     a = a_in
@@ -221,7 +221,8 @@ contains
        stop  
     end if
     
-    result = 0.0D+00
+!ds    result = 0.0D+00
+    result = 0._wp
     
     if ( a == b ) then
        write ( *, '(a)' ) ' '
@@ -266,7 +267,8 @@ contains
     ihi = max ( ilo, ihi - 1 )
     
     !  Carry out approximate integration from XTAB(ILO) to XTAB(IHI).
-    sum1 = 0.0D+00
+    sum1 = 0._wp
+!ds    sum1 = 0.0D+00
     
     do i = ilo, ihi
        
@@ -291,15 +293,18 @@ contains
           cb = btemp
           cc = ctemp
        else
-          ca = 0.5D+00 * ( atemp + ca )
-          cb = 0.5D+00 * ( btemp + cb )
-          cc = 0.5D+00 * ( ctemp + cc )
+          ca = 0.5_wp * ( atemp + ca )
+          cb = 0.5_wp * ( btemp + cb )
+          cc = 0.5_wp * ( ctemp + cc )
+!ds          ca = 0.5D+00 * ( atemp + ca )
+!ds          cb = 0.5D+00 * ( btemp + cb )
+!ds          cc = 0.5D+00 * ( ctemp + cc )
        end if
        
-       sum1 = sum1 &
-            + ca * ( x2**3 - syl**3 ) / 3.0D+00 &
-            + cb * 0.5D+00 * ( x2**2 - syl**2 ) &
-            + cc * ( x2 - syl )
+       sum1 = sum1 + ca * ( x2**3 - syl**3 ) / 3._wp &
+            + cb * 0.5_wp * ( x2**2 - syl**2 ) + cc * ( x2 - syl )
+!ds       sum1 = sum1 + ca * ( x2**3 - syl**3 ) / 3.0D+00 &
+!ds            + cb * 0.5D+00 * ( x2**2 - syl**2 ) + cc * ( x2 - syl )
        
        ca = atemp
        cb = btemp
@@ -308,11 +313,11 @@ contains
        syl = x2
        
     end do
-    
-    result = sum1 &
-         + ca * ( b**3 - syl**3 ) / 3.0D+00 &
-         + cb * 0.5D+00 * ( b**2 - syl**2 ) &
-         + cc * ( b - syl )
+
+    result = sum1 + ca * ( b**3 - syl**3 ) / 3._wp &
+         + cb * 0.5_wp * ( b**2 - syl**2 ) + cc * ( b - syl )
+!ds    result = sum1 + ca * ( b**3 - syl**3 ) / 3.0D+00 &
+!ds         + cb * 0.5D+00 * ( b**2 - syl**2 ) + cc * ( b - syl )
 
     !  Restore original values of A and B, reverse sign of integral
     !  because of earlier switch.
@@ -350,17 +355,24 @@ contains
     
     ! Local variables
     real(wp) :: pi,ga,z,r,gr
-    integer :: k,m1,m  
+    integer  :: k,m1,m  
     
     ! Parameters
     real(wp),dimension(26),parameter :: &
-         g = (/1.0d0,0.5772156649015329d0, -0.6558780715202538d0, -0.420026350340952d-1,     &
-               0.1665386113822915d0,-0.421977345555443d-1,-0.96219715278770d-2,              &
-               0.72189432466630d-2,-0.11651675918591d-2, -0.2152416741149d-3,                &
-               0.1280502823882d-3, -0.201348547807d-4, -0.12504934821d-5, 0.11330272320d-5,  &
-               -0.2056338417d-6, 0.61160950d-8,0.50020075d-8, -0.11812746d-8, 0.1043427d-9,   &
-               0.77823d-11, -0.36968d-11, 0.51d-12, -0.206d-13, -0.54d-14, 0.14d-14, 0.1d-15/)  
-       
+         g = (/1.0,0.5772156649015329, -0.6558780715202538, -0.420026350340952e-1,     &
+               0.1665386113822915,-0.421977345555443e-1,-0.96219715278770e-2,              &
+               0.72189432466630e-2,-0.11651675918591e-2, -0.2152416741149e-3,                &
+               0.1280502823882e-3, -0.201348547807e-4, -0.12504934821e-5, 0.11330272320e-5,  &
+               -0.2056338417e-6, 0.61160950e-8,0.50020075e-8, -0.11812746e-8, 0.1043427e-9,   &
+               0.77823e-11, -0.36968e-11, 0.51e-12, -0.206e-13, -0.54e-14, 0.14e-14, 0.1e-15/)  
+!ds    real(wp),dimension(26),parameter :: &
+!ds         g = (/1.0d0,0.5772156649015329d0, -0.6558780715202538d0, -0.420026350340952d-1,     &
+!ds               0.1665386113822915d0,-0.421977345555443d-1,-0.96219715278770d-2,              &
+!ds               0.72189432466630d-2,-0.11651675918591d-2, -0.2152416741149d-3,                &
+!ds               0.1280502823882d-3, -0.201348547807d-4, -0.12504934821d-5, 0.11330272320d-5,  &
+!ds               -0.2056338417d-6, 0.61160950d-8,0.50020075d-8, -0.11812746d-8, 0.1043427d-9,   &
+!ds               0.77823d-11, -0.36968d-11, 0.51d-12, -0.206d-13, -0.54d-14, 0.14d-14, 0.1d-15/)  
+    
     pi = acos(-1._wp)    
     if (x ==int(x)) then
        if (x > 0.0) then
