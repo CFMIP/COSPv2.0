@@ -76,7 +76,6 @@ contains
                           ! introduce some statistical bias in the results, particularly for 
                           ! low values of NCOL.
     
-!    boxpos = spread(([1:ncol]-0.5)/ncol,1,npoints)
     boxpos = spread(([(i, i=1,ncol)]-0.5)/ncol,1,npoints)
 
     ! #######################################################################
@@ -151,7 +150,15 @@ contains
        
        DO ibox=1,ncol
           ! All versions
-          maxocc(1:npoints,ibox) = merge(1,0,boxpos(1:npoints,ibox) .le. conv(1:npoints,ilev))
+          !maxocc(1:npoints,ibox) = merge(1,0,boxpos(1:npoints,ibox) .le. conv(1:npoints,ilev))
+          !maxocc(1:npoints,ibox) = merge(1,0, conv(1:npoints,ilev) .gt. boxpos(1:npoints,ibox))
+          do j=1,npoints
+             if (boxpos(j,ibox).le.conv(j,ilev)) then
+                maxocc(j,ibox) = 1
+             else
+                maxocc(j,ibox) = 0
+             end if
+          enddo
           
           ! Max overlap
           if (overlap.eq.1) then 

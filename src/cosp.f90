@@ -565,7 +565,6 @@ CONTAINS
                              cospOUT%isccp_boxptop(ij:ik,:), boxttop(ij:ik,:),           &
                              cospOUT%isccp_meantbclr(ij:ik))
     endif
-    
     if (Lmisr_subcolumn) then
        call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                        misrIN%zfull,misrIN%at,misrIN%sunlit,boxtau,                      &
@@ -580,8 +579,7 @@ CONTAINS
                         cospOUT%calipso_beta_mol(ij:ik,:),                               &
                         cospOUT%calipso_beta_tot(ij:ik,:,:),                             &
                         cospOUT%calipso_betaperp_tot(ij:ik,:,:))
-    endif
-  
+    endif  
     if (Lparasol_subcolumn) then
        do icol=1,parasolIN%Ncolumns
           call parasol_subcolumn(parasolIN%npoints, PARASOL_NREFL,                       &
@@ -589,16 +587,16 @@ CONTAINS
                              parasolIN%tautot_S_ice(1:parasolIN%Npoints,icol),           &
                              cospOUT%parasolPix_refl(ij:ik,icol,1:PARASOL_NREFL))
        ENDDO
-    endif
-    
+    endif    
     if (Lcloudsat_subcolumn) then
        do icol=1,cloudsatIN%ncolumns
           call quickbeam_subcolumn(cloudsatIN%rcfg,cloudsatIN%Npoints,cloudsatIN%Nlevels,&
-                               cloudsatIN%hgt_matrix/1000._wp,                           &
-                               cloudsatIN%z_vol(:,icol,:),cloudsatIN%kr_vol(:,icol,:),   &
-                               cloudsatIN%g_vol(:,icol,:),cloudsatH_atten_to_vol,        &
-                               cloudsatG_atten_to_vol,cloudsatDBze,cloudsatZe_non,       &
-                               cloudsatZe_ray)
+                                   cloudsatIN%hgt_matrix/1000._wp,                       &
+                                   cloudsatIN%z_vol(:,icol,:),                           &
+                                   cloudsatIN%kr_vol(:,icol,:),                          &
+                                   cloudsatIN%g_vol(:,1,:),cloudsatH_atten_to_vol,    &
+                                   cloudsatG_atten_to_vol,cloudsatDBze,cloudsatZe_non,   &
+                                   cloudsatZe_ray)
           
           ! Store caluculated dBZe values for later output/processing
           cospOUT%cloudsat_Ze_tot(ij:ik,icol,:) = cloudsatDBZe
@@ -619,7 +617,7 @@ CONTAINS
           end do
        endif
     endif
-    
+        
     if (Lrttov_subcolumn) then
         call rttov_subcolumn(rttovIN%surfem,npoints,rttovIN%Nlevels,rttovIN%zenang,      &
                          rttovIN%p/100._wp,rttovIN%t,                                    &
@@ -628,7 +626,6 @@ CONTAINS
                          rttovIN%h_surf,rttovIN%u_surf,rttovIN%v_surf,rttovIN%t_skin,    &
                          rttovIN%p_surf/100._wp,rttovIN%t_surf,rttovIN%q_surf,           &
                          rttovIN%lsmask,rttovIN%latitude,cospOUT%rttov_tbs(ij:ik,:))     
-
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -690,7 +687,7 @@ CONTAINS
        if (allocated(out1D_5)) deallocate(out1D_5)
        if (allocated(out1D_6)) deallocate(out1D_6)
     endif
-    
+        
     ! MISR
     if (Lmisr_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -779,7 +776,7 @@ CONTAINS
                             cospgridIN%land(:),cospOUT%parasolPix_refl(ij:ik,:,:),       &
                             cospOUT%parasolGrid_refl(ij:ik,:))
     endif
-    
+
     ! CLOUDSAT
     if (Lcloudsat_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -796,7 +793,7 @@ CONTAINS
        ! Free up memory  (if necessary)
        if (allocated(out1D_1)) deallocate(out1D_1)
     endif
-    
+
     ! MODIS
     if (Lmodis_column) then
        if(modisiN%nSunlit > 0) then 
@@ -881,17 +878,20 @@ CONTAINS
           endif        
           if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+            &
-                  int(modisIN%sunlit(:))-1, 2:numModisTauBins+1, :) = modisJointHistogram(:, :, :)           
+                  int(modisIN%sunlit(:))-1, 1:numModisTauBins, :) = modisJointHistogram(:, :, :)           
+!ds                  int(modisIN%sunlit(:))-1, 2:numModisTauBins+1, :) = modisJointHistogram(:, :, :)           
              ! Reorder pressure bins in joint histogram to go from surface to TOA 
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,:) = &
                   cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,numMODISPresBins:1:-1)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
+             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
+!ds             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
                 modisJointHistogramIce(:,:,:)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
+             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
+!ds             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 2:numMODISTauBins+1,:) = &
                 modisJointHistogramLiq(:,:,:)
           endif
                     
@@ -983,7 +983,7 @@ CONTAINS
                   modisMeanIceWaterPath,modisJointHistogram,modisJointHistogramIce,      &
                   modisJointHistogramLiq)       
     endif
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1137,7 +1137,6 @@ CONTAINS
     call cosp_parasol_init()
     
     linitialization = .FALSE.
-    
   END SUBROUTINE COSP_INIT
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1291,7 +1290,7 @@ CONTAINS
      type(cosp_outputs),intent(out) :: &
           x           ! COSP output structure  
    
-    ! ISCCP simulator outputs
+     ! ISCCP simulator outputs
     if (Lboxtauisccp)    allocate(x%isccp_boxtau(Npoints,Ncolumns)) 
     if (Lboxptopisccp)   allocate(x%isccp_boxptop(Npoints,Ncolumns))
     if (Lclisccp)        allocate(x%isccp_fq(Npoints,numISCCPTauBins,numISCCPPresBins))
@@ -1332,9 +1331,12 @@ CONTAINS
     if (Llwpmodis)     allocate(x%modis_Liquid_Water_Path_Mean(Npoints))
     if (Liwpmodis)     allocate(x%modis_Ice_Water_Path_Mean(Npoints))
     if (Lclmodis) then
-        allocate(x%modis_Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,numModisTauBins+1,numMODISPresBins))
-        allocate(x%modis_Optical_thickness_vs_ReffLIQ(nPoints,numMODISTauBins+1,numMODISReffLiqBins))   
-        allocate(x%modis_Optical_Thickness_vs_ReffICE(nPoints,numMODISTauBins+1,numMODISReffIceBins))
+        allocate(x%modis_Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,numModisTauBins,numMODISPresBins))
+        allocate(x%modis_Optical_thickness_vs_ReffLIQ(nPoints,numMODISTauBins,numMODISReffLiqBins))   
+        allocate(x%modis_Optical_Thickness_vs_ReffICE(nPoints,numMODISTauBins,numMODISReffIceBins))
+!ds        allocate(x%modis_Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,numModisTauBins+1,numMODISPresBins))
+!ds        allocate(x%modis_Optical_thickness_vs_ReffLIQ(nPoints,numMODISTauBins+1,numMODISReffLiqBins))   
+!ds        allocate(x%modis_Optical_Thickness_vs_ReffICE(nPoints,numMODISTauBins+1,numMODISReffIceBins))
     endif
     
     ! LIDAR simulator
@@ -1391,7 +1393,7 @@ CONTAINS
         
     ! RTTOV
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
-
+ 
   end subroutine construct_cosp_outputs
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1728,7 +1730,7 @@ CONTAINS
        if (associated(cospOUT%isccp_boxptop))       cospOUT%isccp_boxptop(:,:)     = R_UNDEF
        if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF                
     endif
-    if (any(cospgridIN%hgt_matrix .lt. 0)) then
+    if (any(cospgridIN%hgt_matrix .lt. -300)) then
        call errorMessage('ERROR: COSP input variable: cospgridIN%hgt_matrix contains values out of range')
        Lmisr_subcolumn     = .false.
        Lmisr_column        = .false.
@@ -1750,7 +1752,7 @@ CONTAINS
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF       
     endif
-    if (any(cospgridIN%hgt_matrix_half .lt. 0)) then
+    if (any(cospgridIN%hgt_matrix_half .lt. -300)) then
        call errorMessage('ERROR: COSP input variable: cospgridIN%hgt_matrix_half contains values out of range')
        Lrttov_subcolumn = .false.
        Lcloudsat_column = .false.

@@ -372,12 +372,14 @@ contains
        print*,'Using cospV1.4.0 optical depth axis for MODIS tau/ctp joint-histogram'
        allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),                &
                 modis_histTauCenters(ntauV1p4))
-       numMODISTauBins      = ntauV1p4            ! Number of tau bins for joint-histogram
+       numMODISTauBins      = ntauV1p4+1            ! Number of tau bins for joint-histogram
+!ds       numMODISTauBins      = ntauV1p4            ! Number of tau bins for joint-histogram
        modis_histTau        = tau_binBoundsV1p4   ! Joint-histogram boundaries (optical depth)
        modis_histTauEdges   = tau_binEdgesV1p4    ! Joint-histogram bin edges (optical depth)
        modis_histTauCenters = tau_binCentersV1p4  ! Joint-histogram bin centers (optical depth)       
     else
-       allocate(modis_histTau(ntau+1),modis_histTauEdges(2,ntau),                        &
+       allocate(modis_histTau(ntau),modis_histTauEdges(2,ntau),                        &
+!ds       allocate(modis_histTau(ntau+1),modis_histTauEdges(2,ntau),                        &
                 modis_histTauCenters(ntau))
        numMODISTauBins      = ntau
        modis_histTau        = tau_binBounds
@@ -400,7 +402,6 @@ contains
                    hgt_matrix,hgt_matrix_half,surface_radar,rcfg_cloudsat,rttov_Nchannels,&
                    rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,        &
                    lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
-                   
   end subroutine cosp_interface_init
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -427,7 +428,7 @@ contains
          end_idx,    & ! Ending index when looping over points
          Nptsperit     ! Number of points for current iteration
     integer :: i
-    
+
     ! Number of calls to COSP to make
     num_chunks = Npoints/Npoints_it+1
     print*,'Number of COSP iterations:',num_chunks
@@ -517,6 +518,7 @@ contains
     real(wp),dimension(:,:,:,:),allocatable :: mr_hydro,Reff,Np
     type(rng_state),allocatable,dimension(:) :: rngs  ! Seeds for random number generator
     integer,dimension(:),allocatable :: seed
+    logical :: cmpGases=.true.
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize COSP inputs
@@ -547,7 +549,7 @@ contains
     cospgridIN%zenang                   = gbx%zenang
     cospgridIN%phalf(:,1)               = 0._wp
     cospgridIN%phalf(:,2:gbx%Nlevels+1) = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
-
+    
     if (gbx%Ncolumns .gt. 1) then
        
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -559,7 +561,7 @@ contains
        if (Npoints .gt. 1) seed=int((gbx%psfc(start_idx:end_idx)-minval(gbx%psfc))/      &
             (maxval(gbx%psfc)-minval(gbx%psfc))*100000) + 1
        call init_rng(rngs, seed)  
-       
+
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Generate subcolumns for clouds (SCOPS) and precipitation type (PREC_SCOPS)
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -597,7 +599,7 @@ contains
                        sgx%frac_out(start_idx:end_idx,:,:),                              &
                        sgx%prec_frac(start_idx:end_idx,:,:))
        deallocate(ls_p_rate,cv_p_rate)
-       
+
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Compute precipitation fraction in each gridbox
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -632,7 +634,7 @@ contains
              prec_cv(j,k)=prec_cv(j,k)/gbx%Ncolumns
           enddo
        enddo
-       
+
        ! Flip SCOPS output from TOA-to-SFC to SFC-to-TOA
        sgx%frac_out(start_idx:end_idx,:,1:gbx%Nlevels)  =                                &
             sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
@@ -690,7 +692,7 @@ contains
              Np(:,k,:,I_CVSNOW)   = gbx%Np(start_idx:end_idx,:,I_CVSNOW)
           end where
        enddo
-
+       
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Convert the mixing ratio and precipitation fluxes from gridbox mean to
        ! the fraction-based values
@@ -793,7 +795,7 @@ contains
           sgx%frac_out(start_idx:end_idx,1,:) = 1
        endwhere
     endif
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 11 micron emissivity
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -802,7 +804,7 @@ contains
                                gbx%dem_c(start_idx:end_idx,gbx%Nlevels:1:-1),            &
                                gbx%dem_s(start_idx:end_idx,gbx%Nlevels:1:-1),            &
                                cospIN%emiss_11)
-    
+ 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 0.67 micron optical depth
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -819,7 +821,7 @@ contains
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCLIQ),                    &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCICE),                    &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCLIQ),                    &
-                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                    &                              
+                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                    &
                           gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCLIQ),      &
                           gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCICE),      &
                           gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCLIQ),      &
@@ -830,14 +832,15 @@ contains
                           cospIN%tautot_S_ice, betatot_ice = cospIN%betatot_ice,         &
                           betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,   &
                           tautot_liq = cospIN%tautot_liq)
-          
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! CLOUDSAT RADAR OPTICS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
     ! Allocate memory
     allocate(hm_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
              re_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
-             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))        
+             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))           
+
     do ij=1,gbx%Ncolumns
        do i=1,N_HYDRO
           hm_matrix(i,1:npoints,gbx%Nlevels:1:-1) = mr_hydro(:,ij,:,i)*1000._wp 
@@ -848,14 +851,15 @@ contains
                              re_matrix, Np_matrix,                                       &
                              gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
                              gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
-                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),                 &
+                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,        &
                              cospIN%z_vol_cloudsat(1:npoints,ij,:),                      &
                              cospIN%kr_vol_cloudsat(1:npoints,ij,:),                     &
                              cospIN%g_vol_cloudsat(1:npoints,ij,:))
     enddo
+    
     ! Deallocate memory
     deallocate(hm_matrix,re_matrix,Np_matrix)
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MODIS optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -896,6 +900,7 @@ contains
                       MODIS_opticalThicknessLiq, MODIS_waterSize*1.0e6_wp,               &
                       MODIS_opticalThicknessIce, MODIS_iceSize*1.0e6_wp,                 &
                       cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
+    
     ! Deallocate memory
     deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,            &
                MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,             &
@@ -1314,7 +1319,7 @@ contains
     
     ! Local variables
     integer :: k
-    
+
     ! Dimensions and scalars
     y%Npoints           => Npoints
     y%Nlevels           => Nlevels

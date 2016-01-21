@@ -98,8 +98,8 @@ contains
   ! ######################################################################################
   ! SUBROUTINE quickbeam_subcolumn
   ! ######################################################################################
-  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,a_to_vol,&
-                                 g_to_vol,dBZe,Ze_non,Ze_ray)
+  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,&
+                                 a_to_vol,g_to_vol,dBZe,Ze_non,Ze_ray)
 
     ! INPUTS
     type(radar_cfg),intent(inout) :: &
@@ -112,7 +112,7 @@ contains
          z_vol,         & ! Effective reflectivity factor (mm^6/m^3)
          kr_vol,        & ! Attenuation coefficient hydro (dB/km)
          g_vol            ! Attenuation coefficient gases (dB/km)
-
+    
     ! OUTPUTS
     real(wp), intent(out),dimension(nprof,ngate) :: &
          Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
@@ -174,15 +174,9 @@ contains
                 a_to_vol(pr,k)= kr_vol(pr,k)*(hgt_matrix(pr,k)-hgt_matrix(pr,k-1))
              endif
           endif
-       enddo   ! End loop over pr (profile)
-    enddo ! End loop of k (range gate)
           
-    do k=start_gate,end_gate,d_gate
-       ! Loop over each profile (nprof)
-       do pr=1,nprof
           ! Attenuation due to gaseous absorption between radar and volume
-          if ( (rcfg%use_gas_abs == 1) .or. ((rcfg%use_gas_abs == 2) .and. (pr == 1)) ) then
-             !DS MOVED UP  g_vol(pr,k) = gases(p_matrix(pr,k),t_kelvin,rh_matrix(pr,k),rcfg%freq)
+          if (rcfg%use_gas_abs == 1 .or. rcfg%use_gas_abs == 2 .and. pr .eq. 1) then
              if (d_gate==1) then
                 if (k>1) then
                    ! Add to previous value to half of above layer + half of current layer

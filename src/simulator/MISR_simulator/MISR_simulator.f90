@@ -62,60 +62,52 @@ contains
          at            ! Temperature (K)
 
     ! OUTPUTS
-    REAL(WP),intent(inout),dimension(npoints,ncol) :: &
+    REAL(WP),intent(out),dimension(npoints,ncol) :: &
          box_MISR_ztop,     & ! Cloud-top height in each column
          tauOUT               ! Optical depth in each column
-    REAL(WP),intent(inout),dimension(npoints,numMISRHgtBins) :: &
+    REAL(WP),intent(out),dimension(npoints,numMISRHgtBins) :: &
          dist_model_layertops ! 
 
     ! INTERNAL VARIABLES
     INTEGER :: ilev,j,loop,ibox,thres_crossed_MISR
-    INTEGER, dimension(npoints) :: iMISR_ztop
-    REAL(WP) :: cloud_dtau,MISR_penetration_height
-    REAL(WP),dimension(npoints,nlev) :: ztest
-    REAL(WP),dimension(npoints,ncol,nlev) :: tau
+    INTEGER :: iMISR_ztop
+    REAL(WP) :: cloud_dtau,MISR_penetration_height,ztest
 
     ! ############################################################################
-    ! Compute optical depth as a cummulative distribution in the vertical (nlev).
-    tau(1:npoints,1:ncol,1:nlev)=0._wp
-    do ilev=1,nlev
-       tau(1:npoints,1:ncol,ilev)=sum(dtau(1:npoints,1:ncol,1:ilev),dim=3)
-    enddo
-    tauOUT(1:npoints,1:ncol) = tau(1:npoints,1:ncol,nlev)
-
     ! Initialize
-    box_MISR_ztop(1:npoints,1:ncol)              = 0._wp  
-    dist_model_layertops(1:npoints,1:numMISRHgtBins) = 0._wp
+    box_MISR_ztop(1:npoints,1:ncol) = 0._wp  
 
     do j=1,npoints
+
        ! Estimate distribution of Model layer tops
        dist_model_layertops(j,:)=0
        do ilev=1,nlev
           ! Define location of "layer top"
           if(ilev.eq.1 .or. ilev.eq.nlev) then
-             ztest(j,ilev)=zfull(j,ilev)
+             ztest=zfull(j,ilev)
           else
-             ztest(j,ilev)=0.5_wp*(zfull(j,ilev)+zfull(j,ilev-1))
+             ztest=0.5_wp*(zfull(j,ilev)+zfull(j,ilev-1))
           endif
-          
+
           ! Find MISR layer that contains this level
           ! *NOTE* the first MISR level is "no height" level
           iMISR_ztop=2
           do loop=2,numMISRHgtBins
-             if ( ztest(j,ilev) .gt. 1000*misr_histHgt(loop+1) ) then
+             if ( ztest .gt. 1000*misr_histHgt(loop+1) ) then
                 iMISR_ztop=loop+1
              endif
           enddo
+          
           dist_model_layertops(j,iMISR_ztop) = dist_model_layertops(j,iMISR_ztop)+1
        enddo
-    enddo
 
-    ! For each GCM cell or horizontal model grid point
-    do j=1,npoints    
-       do ibox=1,ncol     
+       ! For each GCM cell or horizontal model grid point   
+       do ibox=1,ncol
+          ! Compute optical depth as a cummulative distribution in the vertical (nlev).
+          tauOUT(j,ibox)=sum(dtau(j,ibox,1:nlev))
+
           thres_crossed_MISR=0
           do ilev=1,nlev
-
              ! If there a cloud, start the counter and store this height
              if(thres_crossed_MISR .eq. 0 .and. dtau(j,ibox,ilev) .gt. 0.) then
                 ! First encountered a "cloud"
@@ -156,7 +148,7 @@ contains
                 
                 ! If the total column optical depth is "large" than MISR can't see
                 ! anything else. Set current point as CTH level
-                if(tau(j,ibox,ilev) .gt. 5) then
+                if(sum(dtau(j,ibox,1:ilev)) .gt. 5) then
                    thres_crossed_MISR=99           
                 endif
              endif
@@ -169,9 +161,9 @@ contains
              ! than ~ 0.5 MISR will still likely pick up this cloud
              ! with a height near the true cloud top
              ! otherwise there should be no CTH
-             if(tau(j,ibox,nlev) .gt. 0.5) then
+             if(sum(dtau(j,ibox,1:nlev)) .gt. 0.5) then
                 ! keep MISR detected CTH
-             elseif(tau(j,ibox,nlev) .gt. 0.2) then
+             elseif(sum(dtau(j,ibox,1:nlev)) .gt. 0.2) then
                 ! MISR may detect but wont likley have a good height
                 box_MISR_ztop(j,ibox)=-1
              else
@@ -181,6 +173,7 @@ contains
              endif
           endif
        enddo  ! loop of subcolumns
+       
     enddo    ! loop of gridpoints
     
     ! Modify MISR CTH for satellite spatial / pattern matcher effects
