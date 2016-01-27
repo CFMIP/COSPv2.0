@@ -34,9 +34,11 @@ MODULE mod_rng
   USE cosp_kinds, ONLY: dp, sp, wp 
   IMPLICIT NONE 
   
-  INTEGER, parameter :: huge32 = 2147483647
-  INTEGER, parameter :: i2_16  = 65536
+!  INTEGER, parameter :: huge32 = 2147483647
+!  INTEGER, parameter :: i2_16  = 65536
   INTEGER, parameter :: ki9    = selected_int_kind(R=9)
+  integer :: testInt
+  integer :: itest
   
   TYPE rng_state
      INTEGER(ki9) :: seed ! 32 bit integer
@@ -80,8 +82,15 @@ CONTAINS
   FUNCTION get_rng_1(s)  
     TYPE(rng_state), INTENT(INOUT) :: s
     REAL(WP)                       :: get_rng_1
-    
     REAL(SP)                       :: r
+
+    real(wp) :: testA
+    real(dp) :: testB
+    integer(kind=1) :: testC
+    integer(kind=2) :: testD
+    integer(kind=4) :: testE
+    integer(kind=8) :: testF
+    
     ! Return the next random numbers 
     
     ! Marsaglia CONG algorithm
@@ -90,8 +99,21 @@ CONTAINS
     s%seed=mod(s%seed,2_ki9**30_ki9)   
     r = s%seed*0.931322574615479E-09
     
+    !print*,'sizeof(real(wp))        ',sizeof(testA),'digits(testA)',digits(testA)
+    !print*,'sizeof(real(dp))        ',sizeof(testB),'digits(testB)',digits(testB)
+    !print*,'sizeof(integer(kind=1)) ',sizeof(testC),'digits(testC)',digits(testC)
+    !print*,'sizeof(integer(kind=2)) ',sizeof(testD),'digits(testD)',digits(testD)
+    !print*,'sizeof(integer(kind=4)) ',sizeof(testE),'digits(testE)',digits(testE)
+    !print*,'sizeof(integer(kind=8)) ',sizeof(testF),'digits(testF)',digits(testF)
     ! convert to range 0-1 (32 bit only)
-    if ( i2_16*i2_16 .le. huge32 ) then
+    ! DJS2016: What is being done here is an intentional integer overflow and a test to
+    !          see if this occured. Some compilers check for integer overflows during
+    !          compilation (ie. gfortan), while others do not (ie. pgi and ifort). When
+    !          using gfortran, you cannot use the overflow and test for overflow method,
+    !          so we use sizeof(someInt) to determine wheter it is on 32 bit.
+    !    if ( i2_16*i2_16 .le. huge32 ) then
+    !if (digits(testInt) .le. 31) then
+    if (sizeof(testInt) .eq. 4) then
        r=r+1
        r=r-int(r)
     endif

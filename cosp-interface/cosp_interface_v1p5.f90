@@ -331,9 +331,9 @@ contains
          cloudsat_radar_freq,        & ! Cloudsat radar frequency
          cloudsat_k2                   !
     real(wp),intent(in),dimension(Npoints,Nlevels) :: & 
-         hgt_matrix     
-    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
-         hgt_matrix_half     
+         hgt_matrix,hgt_matrix_half     
+!ds    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
+!ds         hgt_matrix_half     
     logical,intent(in) :: &
          lusePrecip,      & ! True if precipitation fluxes are input to the algorithm
          lusevgrid,       & ! True if using new grid for L3 CALIPSO and CLOUDSAT 
@@ -549,7 +549,6 @@ contains
     cospgridIN%zenang                   = gbx%zenang
     cospgridIN%phalf(:,1)               = 0._wp
     cospgridIN%phalf(:,2:gbx%Nlevels+1) = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
-    
     if (gbx%Ncolumns .gt. 1) then
        
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -832,7 +831,7 @@ contains
                           cospIN%tautot_S_ice, betatot_ice = cospIN%betatot_ice,         &
                           betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,   &
                           tautot_liq = cospIN%tautot_liq)
-
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! CLOUDSAT RADAR OPTICS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
@@ -1371,15 +1370,15 @@ contains
     y%dtau_c                 => dtau_c
     y%dem_s                  => dem_s
     y%dem_c                  => dem_c   
-    y%dlev                   = 0._wp               
-    y%dist_prmts_hydro       = 0._wp
-    y%conc_aero              = 0._wp
-    y%dist_type_aero         = 0   
-    y%dist_prmts_aero        = 0._wp 
-    y%Np                     = 0._wp     
+!    y%dlev                   = 0._wp               
+!    y%dist_prmts_hydro       = 0._wp
+!    y%conc_aero              = 0._wp
+!    y%dist_type_aero         = 0   
+!    y%dist_prmts_aero        = 0._wp 
+!    y%Np                     = 0._wp     
     y%Reff                   = Reff
     y%Reff(:,:,I_LSRAIN)     = 0.0   
-    y%mr_hydro               = 0._wp     
+!    y%mr_hydro               = 0._wp     
     y%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
     y%mr_hydro(:,:,I_LSCICE) = mr_lsice
     y%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
@@ -1395,7 +1394,10 @@ contains
     y%co     => co  
       
     ! Toffset. This assumes that time is the mid-point of the interval.
-    y%toffset = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*([1:Npoints]-0.5)/Npoints
+    do k=1,Npoints
+       y%toffset(k) = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*(real(k)-0.5)/Npoints
+    enddo
+!ds    y%toffset = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*([1:Npoints]-0.5)/Npoints
     
   END SUBROUTINE CONSTRUCT_COSP_GRIDBOX
   

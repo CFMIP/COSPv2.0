@@ -945,7 +945,7 @@ CONTAINS
         column_ax(i) = i
      enddo
      ! Channels
-     channel_ax = float(ichan_in)
+     channel_ax = float(ichan_in(1:Nchannels))
      ! Radar Ze
      do i=1,DBZE_BINS
         dbze_ax(i) = CFAD_ZE_MIN + CFAD_ZE_WIDTH*(i - 0.5)

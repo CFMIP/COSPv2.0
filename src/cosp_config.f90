@@ -259,6 +259,9 @@ MODULE MOD_COSP_CONFIG
     real(wp),dimension(SR_BINS+1) :: &
        calipso_histBsct = (/0.0,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0, &
                             60.0,80.0,100000.0/)         ! Backscatter histogram bins
+!    real(wp),dimension(SR_BINS) :: &
+!       calipso_histBsct = (/0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0, &
+!                            60.0,80.0,100000.0/)         ! Backscatter histogram bins
 
     ! ####################################################################################
     ! Parameters used by the lidar simulator

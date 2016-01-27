@@ -181,7 +181,7 @@ PROGRAM COSPTEST_v1p5
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Allocate space
   allocate(lon(Npoints),lat(Npoints),p(Npoints,Nlevels),ph(Npoints,Nlevels),             &
-           zlev(Npoints,Nlevels),zlev_half(Npoints,Nlevels+1),T(Npoints,Nlevels),        &
+           zlev(Npoints,Nlevels),zlev_half(Npoints,Nlevels),T(Npoints,Nlevels),        &
            sh(Npoints,Nlevels),rh(Npoints,Nlevels),tca(Npoints,Nlevels),                 &
            cca(Npoints,Nlevels),mr_lsliq(Npoints,Nlevels),mr_lsice(Npoints,Nlevels),     &
            mr_ccliq(Npoints,Nlevels),mr_ccice(Npoints,Nlevels),                          &
