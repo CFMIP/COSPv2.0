@@ -1075,9 +1075,9 @@ CONTAINS
          cloudsat_radar_freq,        & !
          cloudsat_k2                   !
     real(wp),intent(in),dimension(Npoints,Nlevels) :: &
-         hgt_matrix                    !
-    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
-         hgt_matrix_half     
+         hgt_matrix,hgt_matrix_half                    !
+!ds    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
+!ds         hgt_matrix_half     
     logical,intent(in) :: &
          lusevgrid,                  & ! Switch to use different vertical grid
          luseCSATvgrid                 ! Switch to use CLOUDSAT grid spacing for new  
@@ -1113,8 +1113,10 @@ CONTAINS
     allocate(mgrid_z(Nlevels),mgrid_zl(Nlevels),mgrid_zu(Nlevels))
     mgrid_z             = hgt_matrix(1,:)
     mgrid_zl            = hgt_matrix_half(1,:)
-    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,:)
-    mgrid_zu(1)         = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))    
+    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,1:Nlevels-1)
+    mgrid_zu(1)     = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))
+!    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,:)
+!    mgrid_zu(1)         = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))    
     
     ! Initialize ISCCP
     call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
