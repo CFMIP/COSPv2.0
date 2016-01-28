@@ -30,9 +30,13 @@
 ! May 2015 - D. Swales - Modified for COSPv2.0
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module mod_scops
-  USE COSP_KINDS, ONLY: wp
-  USE MOD_RNG!,    ONLY: rng_state,get_rng
+  USE COSP_KINDS,     ONLY: wp
+  USE MOD_RNG!,        ONLY: rng_state,get_rng
+  use mod_cosp_error, ONLY: errorMessage
+
   implicit none
+
+  integer,parameter :: default_overlap = 3 ! Used when invalid overlap assumption is provided.
   
 contains
   subroutine scops(npoints,nlev,ncol,seed,rngs,cc,conv,overlap,frac_out,ncolprint)
@@ -75,9 +79,15 @@ contains
                           ! possible that the choice of the same seed value every time may
                           ! introduce some statistical bias in the results, particularly for 
                           ! low values of NCOL.
-    
-    boxpos = spread(([(i, i=1,ncol)]-0.5)/ncol,1,npoints)
 
+    ! Test for valid input overlap assumption
+    if (overlap .ne. 1 .and. overlap .ne. 2 .and. overlap .ne. 3) then
+       overlap=default_overlap
+       call errorMessage('ERROR(scops): Invalid overlap assumption provided. Using default overlap assumption (max/ran)')
+    endif
+
+    boxpos = spread(([(i, i=1,ncol)]-0.5)/ncol,1,npoints)
+    
     ! #######################################################################
     ! Initialize working variables
     ! #######################################################################
