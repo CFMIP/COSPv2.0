@@ -47,7 +47,7 @@ contains
     type(rng_state),dimension(npoints) :: rngs            
     INTEGER, parameter :: huge32 = 2147483647
     INTEGER, parameter :: i2_16  = 65536
-    INTEGER :: i,j,ilev,ibox,ncolprint,ilev2,irand,overflow_32
+    INTEGER :: i,j,ilev,ibox,ncolprint,ilev2
 
     REAL(WP), dimension(npoints,nlev) ::  &
          cc,         &    ! Input cloud cover in each model level (fraction)

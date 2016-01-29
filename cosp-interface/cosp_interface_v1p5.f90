@@ -523,32 +523,32 @@ contains
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize COSP inputs
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    cospIN%tautot_S_liq                 = 0._wp
-    cospIN%tautot_S_ice                 = 0._wp
-    cospIN%emsfc_lw                     = gbx%isccp_emsfc_lw
-    cospIN%frac_out                     = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
-    cospIN%rcfg_cloudsat                = rcfg_cloudsat
-    cospgridIN%hgt_matrix               = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
-    cospgridIN%hgt_matrix_half          = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
-    cospgridIN%sunlit                   = gbx%sunlit(start_idx:end_idx)
-    cospgridIN%skt                      = gbx%skt(start_idx:end_idx)
-    cospgridIN%land                     = gbx%land(start_idx:end_idx)
-    cospgridIN%qv                       = gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1) 
-    cospgridIN%at                       = gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1) 
-    cospgridIN%pfull                    = gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1) 
-    cospgridIN%o3                       = gbx%mr_ozone(start_idx:end_idx,gbx%Nlevels:1:-1)*(amd/amO3)*1e6
-    cospgridIN%u_sfc                    = gbx%u_wind(start_idx:end_idx)
-    cospgridIN%v_sfc                    = gbx%v_wind(start_idx:end_idx)
-    cospgridIN%t_sfc                    = gbx%t(start_idx:end_idx,1)
-    cospgridIN%emis_sfc                 = gbx%surfem
-    cospgridIN%lat                      = gbx%latitude(start_idx:end_idx)
-    cospgridIN%co2                      = gbx%co2*(amd/amCO2)*1e6
-    cospgridIN%ch4                      = gbx%ch4*(amd/amCH4)*1e6  
-    cospgridIN%n2o                      = gbx%n2o*(amd/amN2O)*1e6
-    cospgridIN%co                       = gbx%co*(amd/amCO)*1e6
-    cospgridIN%zenang                   = gbx%zenang
-    cospgridIN%phalf(:,1)               = 0._wp
-    cospgridIN%phalf(:,2:gbx%Nlevels+1) = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
+    cospIN%tautot_S_liq                                 = 0._wp
+    cospIN%tautot_S_ice                                 = 0._wp
+    cospIN%emsfc_lw                                     = gbx%isccp_emsfc_lw
+    cospIN%frac_out(1:nPoints,:,1:gbx%Nlevels)           = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
+    cospIN%rcfg_cloudsat                                = rcfg_cloudsat
+    cospgridIN%hgt_matrix(1:nPoints,1:gbx%Nlevels)      = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
+    cospgridIN%hgt_matrix_half(1:nPoints,1:gbx%Nlevels) = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
+    cospgridIN%sunlit(1:nPoints)                        = gbx%sunlit(start_idx:end_idx)
+    cospgridIN%skt(1:nPoints)                           = gbx%skt(start_idx:end_idx)
+    cospgridIN%land(1:nPoints)                          = gbx%land(start_idx:end_idx)
+    cospgridIN%qv(1:nPoints,1:gbx%Nlevels)              = gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%at(1:nPoints,1:gbx%Nlevels)              = gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%pfull(1:nPoints,1:gbx%Nlevels)           = gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%o3(1:nPoints,1:gbx%Nlevels)              = gbx%mr_ozone(start_idx:end_idx,gbx%Nlevels:1:-1)*(amd/amO3)*1e6
+    cospgridIN%u_sfc(1:nPoints)                         = gbx%u_wind(start_idx:end_idx)
+    cospgridIN%v_sfc(1:nPoints)                         = gbx%v_wind(start_idx:end_idx)
+    cospgridIN%t_sfc(1:nPoints)                         = gbx%t(start_idx:end_idx,1)
+    cospgridIN%emis_sfc                                 = gbx%surfem
+    cospgridIN%lat(1:nPoints)                           = gbx%latitude(start_idx:end_idx)
+    cospgridIN%co2                                      = gbx%co2*(amd/amCO2)*1e6
+    cospgridIN%ch4                                      = gbx%ch4*(amd/amCH4)*1e6  
+    cospgridIN%n2o                                      = gbx%n2o*(amd/amN2O)*1e6
+    cospgridIN%co                                       = gbx%co*(amd/amCO)*1e6
+    cospgridIN%zenang                                   = gbx%zenang
+    cospgridIN%phalf(:,1)                               = 0._wp
+    cospgridIN%phalf(:,2:gbx%Nlevels+1)                 = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
     if (gbx%Ncolumns .gt. 1) then
        
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

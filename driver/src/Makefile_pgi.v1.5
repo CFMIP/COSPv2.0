@@ -3,15 +3,15 @@
 #              Adapt these variables to your environment
 ########################################################################
 F90      = pgf90
-F90FLAGS = -Mpreprocess -Mbounds -O3 -traceback  # -stand
+F90FLAGS = -Mpreprocess -O0 -g
 NCDF_INC = /usr/local/pgf90/include
 NCDF_LIB = /usr/local/pgf90/lib
 
 CMOR_INC = /usr/local/pgf90/include
 CMOR_LIB = /usr/local/pgf90/lib
 
-INC = /usr/local/pgf90/include
-LIB = /usr/local/pgf90/lib
+INC = /usr/local/include
+LIB = /usr/local/lib
 
 UDUNITS_LIB = /usr/local/pgf90/lib
 UDUNITS_INC = /usr/local/pgf90/include
@@ -133,7 +133,7 @@ mrgrnk.o                  : cosp_kinds.o
 prec_scops.o	          : cosp_kinds.o
 cosp_optics.o             : cosp_kinds.o cosp_constants.o 
 parasol.o                 : cosp_kinds.o cosp_constants.o cosp_config.o
-scops.o                   : cosp_kinds.o mo_rng.o
+scops.o                   : cosp_kinds.o mo_rng.o cosp_errorHandling.o
 mo_rng.o                  : cosp_kinds.o
 cosp_errorHandling.o      : cosp_kinds.o
 
