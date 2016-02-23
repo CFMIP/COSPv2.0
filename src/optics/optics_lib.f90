@@ -32,7 +32,7 @@
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 module optics_lib
-  USE COSP_KINDS, ONLY: wp,dp
+  USE COSP_KINDS, ONLY: wp
   implicit none
 
 contains
@@ -72,8 +72,8 @@ contains
          n_i     ! Imaginary part of index of refraction
 
     ! Internal variables
-    real(wp) ld,es,ei,a,ls,sg,tm1,cos1,sin1,e_r,e_i,pi,tc
-    complex(16) e_comp, sq
+    real(wp) :: ld,es,ei,a,ls,sg,tm1,cos1,sin1,e_r,e_i,pi,tc
+    complex(wp) :: e_comp, sq
 
     tc = tk - 273.15_wp
 
@@ -94,7 +94,8 @@ contains
     e_i = (((es-ei)*tm1*cos1)/(1._wp+2*tm1*sin1+tm1**2)) &
          +((sg*ld)/1.885E11_wp)
     
-    e_comp = cmplx(e_r,e_i,Kind=Kind(0d0))
+!ds    e_comp = cmplx(e_r,e_i,Kind=Kind(0d0))
+    e_comp = cmplx(e_r,e_i,Kind=wp)
     sq = sqrt(e_comp)
     
     n_r = real(sq)
@@ -138,7 +139,7 @@ contains
          n_i     ! Imaginary part of index of refraction
 
     ! Internal variables
-    integer(2) :: i,lt1,lt2,j
+    integer  :: i,lt1,lt2,j
     real(wp) :: alam,pi,t1,t2, &
          x,x1,x2,y,y1,y2,ylo,yhi,tk
 
@@ -607,11 +608,11 @@ contains
          Dx !
     real(wp),intent(in),dimension(Inp) :: &
          Dqv
-    Complex(dp),intent(in) :: &
-         SCm
+    Complex(wp),intent(in) :: &
+         SCm!
 
     ! OUTPUTS
-    Complex(dp),intent(out),dimension(InP) :: &
+    Complex(wp),intent(out),dimension(InP) :: &
          Xs1,  & !
          Xs2     !
     real(wp),intent(out) :: &
@@ -622,10 +623,10 @@ contains
     real(wp),intent(out),dimension(InP) :: &
          DPh
     integer :: &
-         Error   !
+         Error   !!
 
     ! PARAMETERS
-    Integer(2),parameter :: &
+    Integer,parameter :: &
          Imaxx   = 12000, & !
          Itermax = 30000, & ! Must be large enough to cope with the
                             ! largest possible nmx = x * abs(scm) + 15
@@ -636,21 +637,19 @@ contains
          IRIMax = -2        ! Largest imaginary part of refractive index
 
     ! Internal variables
-    Integer(2) :: I, NStop, NmX
-    Integer :: N, Inp2
+    Integer :: I, NStop, NmX, N, Inp2
     Real(wp)  :: Chi,Chi0,Chi1,APsi,APsi0,APsi1,Psi,Psi0,Psi1
     Real(wp),dimension(Imaxnp) :: Pi0,Pi1,Taun
-    Complex(8) :: Ir
-    Complex(16) :: Cm,A,ANM1,APB,B,BNM1,AMB,Xi,Xi0,Xi1,Y
-    Complex(16),dimension(Itermax) :: D
-    Complex(16),dimension(Imaxnp) :: Sp,Sm
+    Complex(wp) :: Ir,Cm,A,ANM1,APB,B,BNM1,AMB,Xi,Xi0,Xi1,Y
+    Complex(wp),dimension(Itermax) :: D
+    Complex(wp),dimension(Imaxnp) :: Sp,Sm!
 
     ! ACCELERATOR VARIABLES
-    Integer(2) :: Tnp1,Tnm1
+    Integer :: Tnp1,Tnm1
     Real(wp) :: Dn, Rnx,Turbo,A2
     real(wp),dimension(Imaxnp) :: S,T
-    Complex(16) :: A1
-      
+    Complex(wp) :: A1
+    
     If ((Dx.Gt.Imaxx) .Or. (InP.Gt.ImaxNP)) Then
        Error = 1
        Return
@@ -677,14 +676,17 @@ contains
        Return
     End If
     Inp2 = Inp+1
-    D(NmX) = cmplx(0,0,Kind=Kind(0d0))
+!ds    D(NmX) = cmplx(0,0,Kind=Kind(0d0))
+    D(NmX) = cmplx(0,0,Kind=wp)
     Do N = Nmx-1,1,-1
        A1 = (N+1) / Y
        D(N) = A1 - 1/(A1+D(N+1))
     End Do
     Do I =1,Inp2
-       Sm(I) = cmplx(0,0,Kind=Kind(0d0))
-       Sp(I) = cmplx(0,0,Kind=Kind(0d0))
+       Sm(I) = cmplx(0,0,Kind=wp)
+!ds       Sm(I) = cmplx(0,0,Kind=Kind(0d0))
+       Sp(I) = cmplx(0,0,Kind=wp)
+!ds       Sp(I) = cmplx(0,0,Kind=Kind(0d0))
        Pi0(I) = 0
        Pi1(I) = 1
     End Do
@@ -694,8 +696,10 @@ contains
     Chi1 = Cos(Dx)
     APsi0 = Psi0
     APsi1 = Psi1
-    Xi0 = cmplx(APsi0,Chi0,Kind=Kind(0d0))
-    Xi1 = cmplx(APsi1,Chi1,Kind=Kind(0d0))
+    Xi0 = cmplx(APsi0,Chi0,Kind=wp)
+!ds    Xi0 = cmplx(APsi0,Chi0,Kind=Kind(0d0))
+    Xi1 = cmplx(APsi1,Chi1,Kind=wp)
+!ds    Xi1 = cmplx(APsi1,Chi1,Kind=Kind(0d0))
     Dg = 0
     Dqsc = 0
     Dqxt = 0
@@ -704,19 +708,25 @@ contains
        DN = N
        Tnp1 = Tnp1 + 2
        Tnm1 = Tnp1 - 2
-       A2 = Tnp1 / (DN*(DN+1D0))
-       Turbo = (DN+1D0) / DN
+       A2 = Tnp1 / (DN*(DN+1._wp))
+!ds       A2 = Tnp1 / (DN*(DN+1D0))
+       Turbo = (DN+1._wp) / DN
+!ds       Turbo = (DN+1D0) / DN
        Rnx = DN/Dx
-       Psi = Dble(Tnm1)*Psi1/Dx - Psi0
+       Psi = Tnm1*Psi1/Dx - Psi0
+!ds       Psi = Dble(Tnm1)*Psi1/Dx - Psi0
        APsi = Psi
        Chi = Tnm1*Chi1/Dx       - Chi0
-       Xi = cmplx(APsi,Chi,Kind=Kind(0d0))
+       Xi = cmplx(APsi,Chi,Kind=wp)
+!ds       Xi = cmplx(APsi,Chi,Kind=Kind(0d0))
        A = ((D(N)*Ir+Rnx)*APsi-APsi1) / ((D(N)*Ir+Rnx)*  Xi-  Xi1)
        B = ((D(N)*Cm+Rnx)*APsi-APsi1) / ((D(N)*Cm+Rnx)*  Xi-  Xi1)
-       Dqxt = Tnp1 *      Dble(A + B)          + Dqxt
+       Dqxt = Tnp1*(A + B)+ Dqxt
+!ds       Dqxt = Tnp1 *      Dble(A + B)          + Dqxt
        Dqsc = Tnp1 * (A*Conjg(A) + B*Conjg(B)) + Dqsc
        If (N.Gt.1) then
-          Dg = Dg + (dN*dN - 1) * Dble(ANM1*Conjg(A) + BNM1 * Conjg(B)) / dN + TNM1 * Dble(ANM1*Conjg(BNM1)) / (dN*dN - dN)
+          Dg = Dg + (dN*dN - 1) * (ANM1*Conjg(A) + BNM1 * Conjg(B)) / dN + TNM1 *(ANM1*Conjg(BNM1)) / (dN*dN - dN)
+!ds          Dg = Dg + (dN*dN - 1) * Dble(ANM1*Conjg(A) + BNM1 * Conjg(B)) / dN + TNM1 * Dble(ANM1*Conjg(BNM1)) / (dN*dN - dN)
        End If
        Anm1 = A
        Bnm1 = B
@@ -740,19 +750,21 @@ contains
        Apsi1 = Psi1
        Chi0 = Chi1
        Chi1 = Chi
-       Xi1 = cmplx(APsi1,Chi1,Kind=Kind(0d0))
+       Xi1 = cmplx(APsi1,Chi1,Kind=wp)
+!ds       Xi1 = cmplx(APsi1,Chi1,Kind=Kind(0d0))
     End Do
+
     If (Dg .GT.0) Dg = 2 * Dg / Dqsc
     Dqsc =  2 * Dqsc / Dx**2
     Dqxt =  2 * Dqxt / Dx**2
     Do I = 1,Inp
        Xs1(I) = (Sp(I)+Sm(I)) / 2
        Xs2(I) = (Sp(I)-Sm(I)) / 2
-       Dph(I) = 2 * Dble(Xs1(I)*Conjg(Xs1(I)) + Xs2(I)*Conjg(Xs2(I))) / (Dx**2 * Dqsc)
+       Dph(I) = 2 * (Xs1(I)*Conjg(Xs1(I)) + Xs2(I)*Conjg(Xs2(I))) / (Dx**2 * Dqsc)
+!ds       Dph(I) = 2 * Dble(Xs1(I)*Conjg(Xs1(I)) + Xs2(I)*Conjg(Xs2(I))) / (Dx**2 * Dqsc)
     End Do
     Dbsc = 4 * Abs(( (Sp(Inp2)+Sm(Inp2))/2 )**2) / Dx**2
     Error = 0
     Return
   End subroutine MieInt
-  
 end module optics_lib

@@ -947,7 +947,7 @@ CONTAINS
         column_ax(i) = i
      enddo
      ! Channels
-     channel_ax = float(ichan_in)
+     channel_ax = float(ichan_in(1:Nchannels))
      ! Radar Ze
      do i=1,DBZE_BINS
         dbze_ax(i) = CFAD_ZE_MIN + CFAD_ZE_WIDTH*(i - 0.5)
@@ -1048,6 +1048,7 @@ CONTAINS
      MISR_CTH_axid = cmor_axis(table=table, table_entry='cth16', units='m', length=numMISRHgtBins, &
           coord_vals=misr_histHgtCenters,cell_bounds=misr_histHgtEdges)
      time_axid  = cmor_axis(table=table, table_entry='time1', units='days since '//trim(start_date), length=maxtsteps)
+
      
      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
      ! Define grid
@@ -1741,7 +1742,6 @@ CONTAINS
      ! Local variables
      integer :: Npoints,Nlevels,Ncolumns,Nchannels
      integer :: d2(2),d3(3),d4(4),d5(5)
-     
      
      Npoints   = gb%Npoints
      Ncolumns  = gb%Ncolumns

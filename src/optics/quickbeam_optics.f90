@@ -78,7 +78,8 @@ contains
   ! SUBROUTINE QUICKBEAM_OPTICS
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
-                              Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol,g_vol)
+                              Np_matrix, p_matrix, t_matrix, sh_matrix,cmpGases,         &
+                              z_vol,kr_vol,g_vol)
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -88,7 +89,6 @@ contains
     integer,intent(in) :: &
          nprof,         & ! Number of hydrometeor profiles
          ngate            ! Number of vertical layers
-    
     real(wp),intent(in) :: &
          undef            ! Missing data value
     real(wp),intent(in),dimension(nprof,ngate) :: &
@@ -100,6 +100,9 @@ contains
     real(wp),intent(inout),dimension(rcfg%nhclass,nprof,ngate) :: &
          re_matrix,     & ! Table of hydrometeor effective radii.       0 ==> use defaults. (units=microns)
          Np_matrix        ! Table of hydrometeor number concentration.  0 ==> use defaults. (units = 1/kg)
+    logical,intent(inout) :: &
+         cmpGases         ! Compute gaseous attenuation for all profiles
+    
     ! OUTPUTS
     real(wp),intent(out), dimension(nprof, ngate) :: &
          z_vol,         & ! Effective reflectivity factor (mm^6/m^3)
@@ -111,16 +114,21 @@ contains
          phase, ns,tp,j,k,pr,itt, &
          iff,iRe_type,n,max_bin,i,ii    
     logical :: &
-         hydro           
+         hydro
     real(wp) :: &
-         rho_a,t_kelvin,half_g_atten_current,half_g_atten_above,half_a_atten_current,&
+         t_kelvin
+    real(wp) :: &
+         rho_a,half_g_atten_current,half_g_atten_above,half_a_atten_current,         &
          half_a_atten_above,kr,ze,zr,scale_factor,tc,Re,ld,tmp1,ze2,kr2,apm,bpm,Np,  &
-         base, step   
-    real(wp), dimension(nd) :: &
-         Di, Deq, & ! Discrete drop sizes (um)
+         base, step 
+
+    real(wp),dimension(:),allocatable :: &
+         Deq,     & ! Discrete drop sizes (um)
          Ni,      & ! Discrete concentrations (cm^-3 um^-1)
          rhoi,    & ! Discrete densities (kg m^-3)
-         xxa        !
+         xxa,     & !
+         Di         ! Discrete drop sizes (um)
+    
     real(wp), dimension(nprof, ngate) :: &
          z_ray      ! Reflectivity factor, Rayleigh only (mm^6/m^3)
     
@@ -128,29 +136,24 @@ contains
     logical, parameter ::       & !
          DO_LUT_TEST = .false., & !
          DO_NP_TEST  = .false.    !
-    
-    ! DS2014 START: Defining one_third as double precision results in a slight error in dbze94. 
-    !               This error occurs less than 0.01% of the time and has a relative
-    !               magnitude ranging from -2.77e-5 to -1.18e-5.
-    real(wp), parameter :: &
+     real(wp), parameter :: &
          one_third   = 1._wp/3._wp    !
-    ! DS2014 END
     
     ! Initialization
     z_vol    = 0._wp
     z_ray    = 0._wp
     kr_vol   = 0._wp
-    
-    ! Gas attenuation
-    do k=1,ngate       ! Loop over each profile (nprof)    
-       do pr=1,nprof
-          ! It would be cool to re-write gases() to operate on p, t, sh matrices
-          g_vol(pr,k) = gases(p_matrix(pr,k),t_matrix(pr,k),sh_matrix(pr,k),rcfg%freq)
-       end do
-    end do
-    
+
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
+
+          ! Gas attenuation (only need to do this for the first subcolumn (i.e. cmpGases=true)
+          if (cmpGases) then
+             if (rcfg%use_gas_abs == 1 .or. rcfg%use_gas_abs == 2 .and. pr .eq. 1) then
+                g_vol(pr,k) = gases(p_matrix(pr,k),t_matrix(pr,k),sh_matrix(pr,k),rcfg%freq)
+             endif
+          endif
+          
           ! Determine if hydrometeor(s) present in volume
           hydro = .false.
           do j=1,rcfg%nhclass
@@ -159,15 +162,7 @@ contains
                 exit
              endif
           enddo
-          
-          ! Would it make more sense to gather/scatter? 
-          !   This requires copies of re, Np, hm, temperature
-          !   Or figure out which cells had any hydrometeors and then work on only those? 
-          
-          ! Would it make sense to compute the scaling factors for all possible values at init? 
-          
-          ! We should certainly stop writing the tables to disk between COSP calls 
-          
+
           t_kelvin = t_matrix(pr,k)
           ! If there is hydrometeor in the volume
           if (hydro) then
@@ -227,26 +222,29 @@ contains
                       ! Set value in re_matrix to closest values in LUT
                       if (.not. DO_LUT_TEST) re_matrix(tp,pr,k)=Re
                    endif
-                   
                 endif
                 
                 ! Use Ze_scaled, Zr_scaled, and kr_scaled ... if know them
                 ! if not we will calculate Ze, Zr, and Kr from the distribution parameters
-                if( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. .not. DO_LUT_TEST)  then
-                   ! can use z scaling
-                   scale_factor=rho_a*hm_matrix(tp,pr,k)
-                   zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
-                   ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
-                   kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
-                else
+!                if( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. .not. DO_LUT_TEST)  then
+!                   ! can use z scaling
+!                   scale_factor=rho_a*hm_matrix(tp,pr,k)
+!                   zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
+!                   ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
+!                   kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
+!                else
+                if( (.not. rcfg%Z_scale_flag(tp,itt,iRe_type)) .or. DO_LUT_TEST)  then
                    ! Create a discrete distribution of hydrometeors within volume
                    select case(sd%dtype(tp))
                    case(4)
+                      print*,'In HERE!!!!!!!!!!!!'
                       ns = 1
-                      Di(1) = sd%p1(tp)
-                      Ni(1) = 0._wp
+                      allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
+                      Di = sd%p1(tp)
+                      Ni = 0._wp
                    case default
-                      ns = nd   ! constant defined in radar_simulator_types.f90
+                      ns = nd   ! constant defined in simulator/quickbeam.f90
+                      allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
                       Di = D
                       Ni = 0._wp
                    end select
@@ -287,14 +285,14 @@ contains
                       ! sd%rho should be ~ 1000  or sd%apm=524 .and. sd%bpm=3
                       Deq = Di
                    endif
-                   
+
                    ! Calculate effective reflectivity factor of volume
-                   ! xxa are unused (Mie scattering and extinction efficiencies)                    
+                   ! xxa are unused (Mie scattering and extinction efficiencies)
                    xxa(1:ns) = -9.9_wp
                    rhoi = rcfg%rho_eff(tp,1:ns,iRe_type)
                    call zeff(rcfg%freq,Deq,Ni,ns,rcfg%k2,t_kelvin,phase,rcfg%do_ray, &
                         ze,zr,kr,xxa,xxa,rhoi)
-                   
+
                    ! Test compares total number concentration with sum of discrete samples 
                    ! The second test, below, compares ab initio and "scaled" computations 
                    !    of reflectivity
@@ -314,7 +312,10 @@ contains
                          write(*,*)
                       endif
                    endif
-                   
+
+                   ! Clean up space
+                   deallocate(Di,Ni,rhoi,xxa,Deq)
+
                    ! LUT test code
                    ! This segment of code compares full calculation to scaling result
                    if ( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. DO_LUT_TEST )  then
@@ -329,6 +330,12 @@ contains
                          write(*,*)
                       endif
                    endif
+                else
+                   ! Use z scaling
+                   scale_factor=rho_a*hm_matrix(tp,pr,k)
+                   zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
+                   ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
+                   kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
                 endif  ! end z_scaling
                 
                 kr_vol(pr,k) = kr_vol(pr,k) + kr
@@ -350,13 +357,16 @@ contains
           endif
        enddo
     enddo
+
+    ! Only need to compute gaseous absorption for the first subcolumn, so turn off after first call.
+    cmpGases=.false.
     
     where(kr_vol(:,:) <= EPSILON(kr_vol)) 
        ! Volume is hydrometeor-free	
        !z_vol(:,:)  = undef
        z_ray(:,:)  = undef
     end where
-    
+
   end subroutine quickbeam_optics
   ! ##############################################################################################
   ! ##############################################################################################
@@ -916,21 +926,20 @@ contains
     ! Modified:
     !   12/18/14  Dustin Swales: Define type REALs as double precision (dustin.swales@noaa.gov)
     ! ##############################################################################################
-    
     ! Inputs
     integer,  intent(in) :: &
          ice,        & ! Indicates volume consists of ice
          xr,         & ! Perform Rayleigh calculations?
          nsizes        ! Number of discrete drop sizes
-    real(wp), intent(in) :: &
-         freq,       & ! Radar frequency (GHz)
-         tt            ! Hydrometeor temperature (K)
     real(wp), intent(in),dimension(nsizes) :: &
-         D(nsizes),  & ! Discrete drop sizes (um)
-         N(nsizes),  & ! Discrete concentrations (cm^-3 um^-1)
-         qe(nsizes), & ! Extinction efficiency, when using Mie tables
-         qs(nsizes), & ! Scatering efficiency, when using Mie tables
-         rho_e(nsizes) ! Medium effective density (kg m^-3) (-1 = pure)
+         D,     & ! Discrete drop sizes (um)
+         N,     & ! Discrete concentrations (cm^-3 um^-1)
+         rho_e, & ! Medium effective density (kg m^-3) (-1 = pure)
+         qe,    & ! Extinction efficiency, when using Mie tables
+         qs       ! Scatering efficiency, when using Mie tables
+    real(wp),intent(in) :: &
+         freq,  & ! Radar frequency (GHz)
+         tt       ! Hydrometeor temperature (K)
     real(wp), intent(inout) :: &
          k2            ! |K|^2, -1=use frequency dependent default 
     
@@ -952,7 +961,7 @@ contains
          xtemp           !
     real(wp) :: &
          wl, cr,eta_sum,eta_mie,const,z0_eff,z0_ray,k_sum,n_r,n_i,dqv(1),dqsc,dg,dph(1)
-    complex(dp)         :: &
+    complex(wp)         :: &
          m,                  &    ! Complex index of refraction of bulk form
          Xs1(1), Xs2(1)           !
     integer          :: &
@@ -963,8 +972,9 @@ contains
          conv_d  = 1e-6,     &    ! Conversion factor for drop sizes (to m)
          conv_n  = 1e12,     &    ! Conversion factor for drop concentrations (to m^-3)
          conv_f  = 0.299792458    ! Conversion for radar frequency (to m)
-    complex(dp),dimension(nsizes) ::&
-         m0             ! Complex index of refraction  
+    complex(wp),dimension(nsizes) ::&
+         m0             ! Complex index of refraction
+    real(wp) :: count0,count1,tblock1,tblock2,tblock3
     
     ! Initialize
     z0_ray = 0._wp
@@ -1009,7 +1019,7 @@ contains
           call mieint(sizep(i), m0(i), one, dqv, qext(i), dqsc, qbsca(i), &
                dg, xs1, xs2, dph, err)
        end do
-       
+
     else
        ! Mie table used
        qext  = qe
@@ -1109,7 +1119,7 @@ contains
          pth3,eth35,aux1,aux2,aux3, aux4,gm,delt,x,y,  &
          gm2,fpp_o2,fpp_h2o,s_o2,s_h2o,w,ws,es
     integer :: i
-    
+
     ! Table1 parameters  v0, a1, a2, a3, a4, a5, a6  
     real(wp),dimension(nbands_o2),parameter ::                                          &
          v0 = (/49.4523790,49.9622570,50.4742380,50.9877480,51.5033500,                 &
@@ -1188,13 +1198,13 @@ contains
                 0.0182000,0.0198000,0.0249000,0.0115000,0.0119000,0.0300000,0.0223000,   &
                 0.0300000,0.0286000,0.0141000,0.0286000,0.0286000,0.0264000,0.0234000,   &
                 0.0253000,0.0240000,0.0286000/)
-    
+
     ! Conversions
     th     = 300._wp/T                                             ! unitless
 
-    ! DS2014 START: Using _dp for the exponential in the denominator results in slight errors
+    ! DS2014 START: Using _wp for the exponential in the denominator results in slight errors
     !               for dBze94. 0.01 % of values differ, relative range: 1.03e-05 to  1.78e-04
-    !e      = (RH*th*th*th*th*th)/(41.45_dp*10**(9.834_dp*th-10))   ! kPa
+    !e      = (RH*th*th*th*th*th)/(41.45_wp*10**(9.834_wp*th-10))   ! kPa
     !e = (RH*th*th*th*th*th)/(41.45_wp*10**(9.834_wp*th-10))   ! kPa
     e = SH*PRES_mb/(SH+0.622_wp)/1000._wp !kPa
     ! DS2014 END

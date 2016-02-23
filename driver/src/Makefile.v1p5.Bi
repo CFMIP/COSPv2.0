@@ -112,7 +112,7 @@ cosp_interface_v1p5.o     : cosp_kinds.o cosp_utils.o cosp.o cosp_constants.o co
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o prec_scops.o         \
                             cosp_rttov_interface.o cosp_misr_interface.o cosp_isccp_interface.o       \
                             cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_parasol_interface.o \
-                            icarus.o cosp_rttovSTUB.o cosp_rttov_interface.o  cosp_stats.o modis_simulator.o\
+                            icarus.o cosp_rttovSTUB.o cosp_stats.o modis_simulator.o\
                             quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o cosp_rttovSTUB.o     \
                             quickbeam_optics.o cosp_errorHandling.o cosp_clara_interface.o CLARA_simulator.o
 cosp_config.o             : cosp_kinds.o

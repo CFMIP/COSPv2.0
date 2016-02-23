@@ -73,8 +73,8 @@ PROGRAM COSPTEST_trunk
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Parameters
   character(len=64),parameter :: &
-       cosp_input_namelist  = 'cosp_input_nl_1D.v1p4.txt', &
-       cosp_output_namelist = 'cosp_output_nl_v1.4.txt'
+       cosp_input_namelist  = 'cosp_input_nl.v1p4.txt', &
+       cosp_output_namelist = 'cosp_output_nl.txt'
   integer,parameter :: &
        N_MAX_INPUT_FILES = 10000, &
        N_OUT_LIST = 63,           & ! Number of possible output variables
@@ -110,6 +110,7 @@ PROGRAM COSPTEST_trunk
        Reff
   character(len=600) :: &
        dfinput ! Input file
+  real(wp),dimension(10) :: driver_time
 
   ! Variables for hydrometeor description
   double precision :: time,time_bnds(2),time_step,half_time_step
@@ -186,7 +187,9 @@ PROGRAM COSPTEST_trunk
                       Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,     &
                       use_precipitation_fluxes,use_reff,platform,satellite,      &
                       Instrument,Nchannels,Channels,Surfem,ZenAng,co2,ch4,n2o,co
-
+  ! Start timer
+  call cpu_time(driver_time(1))
+  
   ! Initialization switch. Set to false after cosp_init is called.
   linitialization = .true.
 
@@ -233,7 +236,8 @@ PROGRAM COSPTEST_trunk
   time_step      = 3._wp/24._wp
   half_time_step = 0.5_wp*time_step
   time_bnds      = (/time-half_time_step,time+half_time_step/) 
-  
+  call cpu_time(driver_time(2))
+
   do i=1,Nfiles
      dfinput=trim(dinput)//trim(finput(i))
      time_bnds = (/time-half_time_step,time+half_time_step/) ! This may need to be adjusted, 
@@ -301,7 +305,8 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      call cosp(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,isccp,misr,modis,rttov,&
                stradar,stlidar)
-             
+     call cpu_time(driver_time(3))
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Write outputs to CMOR-compliant netCDF format.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -339,6 +344,7 @@ PROGRAM COSPTEST_trunk
            call nc_cmor_close()
         endif
      endif
+     call cpu_time(driver_time(4))
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      ! Deallocate memory in derived types
@@ -362,4 +368,12 @@ PROGRAM COSPTEST_trunk
   deallocate(lon,lat,p,ph,zlev,zlev_half,T,sh,rh,tca,cca, mr_lsliq,mr_lsice,mr_ccliq,    &
              mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,     &
              dtau_c,dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit)
+
+
+
+  call cpu_time(driver_time(5))
+  print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
+  print*,'Time to run COSP:         ',driver_time(3)-driver_time(2)
+  print*,'Time to write output:     ',driver_time(4)-driver_time(3)
+  print*,'Total time to run driver: ',driver_time(5)-driver_time(1)
 END PROGRAM COSPTEST_trunk

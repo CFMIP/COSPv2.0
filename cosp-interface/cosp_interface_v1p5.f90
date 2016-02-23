@@ -362,9 +362,9 @@ contains
          cloudsat_radar_freq,        & ! Cloudsat radar frequency
          cloudsat_k2                   !
     real(wp),intent(in),dimension(Npoints,Nlevels) :: & 
-         hgt_matrix     
-    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
-         hgt_matrix_half     
+         hgt_matrix,hgt_matrix_half     
+!ds    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
+!ds         hgt_matrix_half     
     logical,intent(in) :: &
          lusePrecip,      & ! True if precipitation fluxes are input to the algorithm
          lusevgrid,       & ! True if using new grid for L3 CALIPSO and CLOUDSAT 
@@ -498,7 +498,7 @@ contains
          end_idx,    & ! Ending index when looping over points
          Nptsperit     ! Number of points for current iteration
     integer :: i
-    
+
     ! Number of calls to COSP to make
     num_chunks = Npoints/Npoints_it+1
     print*,'Number of COSP iterations:',num_chunks
@@ -588,36 +588,37 @@ contains
     real(wp),dimension(:,:,:,:),allocatable :: mr_hydro,Reff,Np
     type(rng_state),allocatable,dimension(:) :: rngs  ! Seeds for random number generator
     integer,dimension(:),allocatable :: seed
+    logical :: cmpGases=.true.
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize COSP inputs
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    cospIN%tautot_S_liq                 = 0._wp
-    cospIN%tautot_S_ice                 = 0._wp
-    cospIN%emsfc_lw                     = gbx%isccp_emsfc_lw
-!    cospIN%frac_out                     = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
-    cospIN%rcfg_cloudsat                = rcfg_cloudsat
-    cospgridIN%hgt_matrix               = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
-    cospgridIN%hgt_matrix_half          = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
-    cospgridIN%sunlit                   = gbx%sunlit(start_idx:end_idx)
-    cospgridIN%skt                      = gbx%skt(start_idx:end_idx)
-    cospgridIN%land                     = gbx%land(start_idx:end_idx)
-    cospgridIN%qv                       = gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1) 
-    cospgridIN%at                       = gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1) 
-    cospgridIN%pfull                    = gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1) 
-    cospgridIN%o3                       = gbx%mr_ozone(start_idx:end_idx,gbx%Nlevels:1:-1)*(amd/amO3)*1e6
-    cospgridIN%u_sfc                    = gbx%u_wind(start_idx:end_idx)
-    cospgridIN%v_sfc                    = gbx%v_wind(start_idx:end_idx)
-    cospgridIN%t_sfc                    = gbx%t(start_idx:end_idx,1)
-    cospgridIN%emis_sfc                 = gbx%surfem
-    cospgridIN%lat                      = gbx%latitude(start_idx:end_idx)
-    cospgridIN%co2                      = gbx%co2*(amd/amCO2)*1e6
-    cospgridIN%ch4                      = gbx%ch4*(amd/amCH4)*1e6  
-    cospgridIN%n2o                      = gbx%n2o*(amd/amN2O)*1e6
-    cospgridIN%co                       = gbx%co*(amd/amCO)*1e6
-    cospgridIN%zenang                   = gbx%zenang
-    cospgridIN%phalf(:,1)               = 0._wp
-    cospgridIN%phalf(:,2:gbx%Nlevels+1) = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
+    cospIN%tautot_S_liq                                 = 0._wp
+    cospIN%tautot_S_ice                                 = 0._wp
+    cospIN%emsfc_lw                                     = gbx%isccp_emsfc_lw
+    cospIN%frac_out(1:nPoints,:,1:gbx%Nlevels)          = sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
+    cospIN%rcfg_cloudsat                                = rcfg_cloudsat
+    cospgridIN%hgt_matrix(1:nPoints,1:gbx%Nlevels)      = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
+    cospgridIN%hgt_matrix_half(1:nPoints,1:gbx%Nlevels) = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
+    cospgridIN%sunlit(1:nPoints)                        = gbx%sunlit(start_idx:end_idx)
+    cospgridIN%skt(1:nPoints)                           = gbx%skt(start_idx:end_idx)
+    cospgridIN%land(1:nPoints)                          = gbx%land(start_idx:end_idx)
+    cospgridIN%qv(1:nPoints,1:gbx%Nlevels)              = gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%at(1:nPoints,1:gbx%Nlevels)              = gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%pfull(1:nPoints,1:gbx%Nlevels)           = gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%o3(1:nPoints,1:gbx%Nlevels)              = gbx%mr_ozone(start_idx:end_idx,gbx%Nlevels:1:-1)*(amd/amO3)*1e6
+    cospgridIN%u_sfc(1:nPoints)                         = gbx%u_wind(start_idx:end_idx)
+    cospgridIN%v_sfc(1:nPoints)                         = gbx%v_wind(start_idx:end_idx)
+    cospgridIN%t_sfc(1:nPoints)                         = gbx%t(start_idx:end_idx,1)
+    cospgridIN%emis_sfc                                 = gbx%surfem
+    cospgridIN%lat(1:nPoints)                           = gbx%latitude(start_idx:end_idx)
+    cospgridIN%co2                                      = gbx%co2*(amd/amCO2)*1e6
+    cospgridIN%ch4                                      = gbx%ch4*(amd/amCH4)*1e6  
+    cospgridIN%n2o                                      = gbx%n2o*(amd/amN2O)*1e6
+    cospgridIN%co                                       = gbx%co*(amd/amCO)*1e6
+    cospgridIN%zenang                                   = gbx%zenang
+    cospgridIN%phalf(:,1)                               = 0._wp
+    cospgridIN%phalf(:,2:gbx%Nlevels+1)                 = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
 
     if (gbx%Ncolumns .gt. 1) then
        
@@ -630,7 +631,7 @@ contains
        if (Npoints .gt. 1) seed=int((gbx%psfc(start_idx:end_idx)-minval(gbx%psfc))/      &
             (maxval(gbx%psfc)-minval(gbx%psfc))*100000) + 1
        call init_rng(rngs, seed)  
-       
+
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Generate subcolumns for clouds (SCOPS) and precipitation type (PREC_SCOPS)
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -668,7 +669,7 @@ contains
                        sgx%frac_out(start_idx:end_idx,:,:),                              &
                        sgx%prec_frac(start_idx:end_idx,:,:))
        deallocate(ls_p_rate,cv_p_rate)
-       
+
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Compute precipitation fraction in each gridbox
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -703,7 +704,7 @@ contains
              prec_cv(j,k)=prec_cv(j,k)/gbx%Ncolumns
           enddo
        enddo
-       
+
        ! Flip SCOPS output from TOA-to-SFC to SFC-to-TOA
        sgx%frac_out(start_idx:end_idx,:,1:gbx%Nlevels)  =                                &
             sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
@@ -762,7 +763,7 @@ contains
              Np(:,k,:,I_CVSNOW)   = gbx%Np(start_idx:end_idx,:,I_CVSNOW)
           end where
        enddo
-
+       
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Convert the mixing ratio and precipitation fluxes from gridbox mean to
        ! the fraction-based values
@@ -936,7 +937,7 @@ contains
                 gbx%T(start_idx:end_idx,1:gbx%Nlevels)*287.058_wp) 
        end where
     enddo
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 11 micron emissivity
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -945,7 +946,7 @@ contains
                                gbx%dem_c(start_idx:end_idx,gbx%Nlevels:1:-1),            &
                                gbx%dem_s(start_idx:end_idx,gbx%Nlevels:1:-1),            &
                                cospIN%emiss_11)
-    
+ 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 0.67 micron optical depth
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -962,7 +963,7 @@ contains
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCLIQ),                    &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCICE),                    &
                           mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCLIQ),                    &
-                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                    &                              
+                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                    &
                           gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCLIQ),      &
                           gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCICE),      &
                           gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCLIQ),      &
@@ -973,14 +974,15 @@ contains
                           cospIN%tautot_S_ice, betatot_ice = cospIN%betatot_ice,         &
                           betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,   &
                           tautot_liq = cospIN%tautot_liq)
-          
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! CLOUDSAT RADAR OPTICS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
     ! Allocate memory
     allocate(hm_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
              re_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
-             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))        
+             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))           
+
     do ij=1,gbx%Ncolumns
        do i=1,N_HYDRO
           hm_matrix(i,1:npoints,gbx%Nlevels:1:-1) = mr_hydro(:,ij,:,i)*1000._wp 
@@ -991,14 +993,15 @@ contains
                              re_matrix, Np_matrix,                                       &
                              gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
                              gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
-                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),                 &
+                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,        &
                              cospIN%z_vol_cloudsat(1:npoints,ij,:),                      &
                              cospIN%kr_vol_cloudsat(1:npoints,ij,:),                     &
                              cospIN%g_vol_cloudsat(1:npoints,ij,:))
     enddo
+    
     ! Deallocate memory
     deallocate(hm_matrix,re_matrix,Np_matrix)
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MODIS optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1058,6 +1061,7 @@ contains
                          MODIS_iceSize*1.0e6_wp,cospIN%fracLiq,cospIN%asym_AVHRR,        &
                          cospIN%ss_alb_AVHRR)
     endif
+
     ! Deallocate memory
     deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,            &
                MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,             &
@@ -1116,7 +1120,7 @@ contains
     open(10,file=cosp_nl,status='old')
     read(10,nml=cosp_output)
     close(10)
-    
+
     ! Deal with dependencies
     if (.not.Lradar_sim) then
        LcfadDbze94    = .false.
@@ -1502,7 +1506,7 @@ contains
     
     ! Local variables
     integer :: k
-    
+
     ! Dimensions and scalars
     y%Npoints           => Npoints
     y%Nlevels           => Nlevels
@@ -1554,15 +1558,15 @@ contains
     y%dtau_c                 => dtau_c
     y%dem_s                  => dem_s
     y%dem_c                  => dem_c   
-    y%dlev                   = 0._wp               
-    y%dist_prmts_hydro       = 0._wp
-    y%conc_aero              = 0._wp
-    y%dist_type_aero         = 0   
-    y%dist_prmts_aero        = 0._wp 
-    y%Np                     = 0._wp     
+!    y%dlev                   = 0._wp               
+!    y%dist_prmts_hydro       = 0._wp
+!    y%conc_aero              = 0._wp
+!    y%dist_type_aero         = 0   
+!    y%dist_prmts_aero        = 0._wp 
+!    y%Np                     = 0._wp     
     y%Reff                   = Reff
     y%Reff(:,:,I_LSRAIN)     = 0.0   
-    y%mr_hydro               = 0._wp     
+!    y%mr_hydro               = 0._wp     
     y%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
     y%mr_hydro(:,:,I_LSCICE) = mr_lsice
     y%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
@@ -1578,7 +1582,10 @@ contains
     y%co     => co  
       
     ! Toffset. This assumes that time is the mid-point of the interval.
-    y%toffset = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*([1:Npoints]-0.5)/Npoints
+    do k=1,Npoints
+       y%toffset(k) = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*(real(k)-0.5)/Npoints
+    enddo
+!ds    y%toffset = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*([1:Npoints]-0.5)/Npoints
     
   END SUBROUTINE CONSTRUCT_COSP_GRIDBOX
   

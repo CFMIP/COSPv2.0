@@ -51,11 +51,10 @@ dim='1D'
 thresh = 1e-5
 
 ; Reference data location
-dirREF = '/home/dswales/Projects/COSP/v1.4.0/outputs_test.slev/'
-dirREF = '/home/dswales/Projects/COSP/local_branch/driver/data/output/refTRUNKwModwFlip/'
+dirREF = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/refTRUNKwModwFlip/'
 
 ; Data location
-dir = '/home/dswales/Projects/COSP/local_branch/driver/data/output/'+dim+'/'
+dir = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/'+dim+'/'
 
 ; Files to compare
 files = file_search(dir,'*'+dim+'*.nc')
@@ -104,7 +103,7 @@ for ij=0,n_elements(files)-1 do begin
       maxV(ij) = max(diff2(where(diff2 ne 0)))
    endif
 
-   ;if (ij eq 43) then stop
+   ;if (ij eq 5) then stop
 
 end
 

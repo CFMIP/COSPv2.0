@@ -355,8 +355,7 @@ CONTAINS
        Lclara_subcolumn = .true.
        Lclara_column    = .true.
     endif
-    ! print*,Lclara_subcolumn,Lclara_column
-
+  
     ! CLOUDSAT subcolumn
     if (associated(cospOUT%cloudsat_Ze_tot)) Lcloudsat_subcolumn = .true.
      
@@ -652,7 +651,7 @@ CONTAINS
                              cospOUT%isccp_boxptop(ij:ik,:), boxttop(ij:ik,:),           &
                              cospOUT%isccp_meantbclr(ij:ik))
     endif
-        
+
     if (Lmisr_subcolumn) then
        call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                        misrIN%zfull,misrIN%at,misrIN%sunlit,boxtau,                      &
@@ -667,8 +666,7 @@ CONTAINS
                         cospOUT%calipso_beta_mol(ij:ik,:),                               &
                         cospOUT%calipso_beta_tot(ij:ik,:,:),                             &
                         cospOUT%calipso_betaperp_tot(ij:ik,:,:))
-    endif
-  
+    endif  
     if (Lparasol_subcolumn) then
        do icol=1,parasolIN%Ncolumns
           call parasol_subcolumn(parasolIN%npoints, PARASOL_NREFL,                       &
@@ -676,16 +674,16 @@ CONTAINS
                              parasolIN%tautot_S_ice(1:parasolIN%Npoints,icol),           &
                              cospOUT%parasolPix_refl(ij:ik,icol,1:PARASOL_NREFL))
        ENDDO
-    endif
-    
+    endif    
     if (Lcloudsat_subcolumn) then
        do icol=1,cloudsatIN%ncolumns
           call quickbeam_subcolumn(cloudsatIN%rcfg,cloudsatIN%Npoints,cloudsatIN%Nlevels,&
-                               cloudsatIN%hgt_matrix/1000._wp,                           &
-                               cloudsatIN%z_vol(:,icol,:),cloudsatIN%kr_vol(:,icol,:),   &
-                               cloudsatIN%g_vol(:,icol,:),cloudsatH_atten_to_vol,        &
-                               cloudsatG_atten_to_vol,cloudsatDBze,cloudsatZe_non,       &
-                               cloudsatZe_ray)
+                                   cloudsatIN%hgt_matrix/1000._wp,                       &
+                                   cloudsatIN%z_vol(:,icol,:),                           &
+                                   cloudsatIN%kr_vol(:,icol,:),                          &
+                                   cloudsatIN%g_vol(:,1,:),cloudsatH_atten_to_vol,    &
+                                   cloudsatG_atten_to_vol,cloudsatDBze,cloudsatZe_non,   &
+                                   cloudsatZe_ray)
           
           ! Store caluculated dBZe values for later output/processing
           cospOUT%cloudsat_Ze_tot(ij:ik,icol,:) = cloudsatDBZe
@@ -706,7 +704,7 @@ CONTAINS
           end do
        endif
     endif
-    
+        
     if (Lrttov_subcolumn) then
         call rttov_subcolumn(rttovIN%surfem,npoints,rttovIN%Nlevels,rttovIN%zenang,      &
                          rttovIN%p/100._wp,rttovIN%t,                                    &
@@ -715,7 +713,6 @@ CONTAINS
                          rttovIN%h_surf,rttovIN%u_surf,rttovIN%v_surf,rttovIN%t_skin,    &
                          rttovIN%p_surf/100._wp,rttovIN%t_surf,rttovIN%q_surf,           &
                          rttovIN%lsmask,rttovIN%latitude,cospOUT%rttov_tbs(ij:ik,:))     
-
     endif
 
     if (Lclara_subcolumn) then
@@ -789,7 +786,7 @@ CONTAINS
        if (allocated(out1D_5)) deallocate(out1D_5)
        if (allocated(out1D_6)) deallocate(out1D_6)
     endif
-    
+        
     ! MISR
     if (Lmisr_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -878,7 +875,7 @@ CONTAINS
                             cospgridIN%land(:),cospOUT%parasolPix_refl(ij:ik,:,:),       &
                             cospOUT%parasolGrid_refl(ij:ik,:))
     endif
-    
+
     ! CLOUDSAT
     if (Lcloudsat_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -895,7 +892,7 @@ CONTAINS
        ! Free up memory  (if necessary)
        if (allocated(out1D_1)) deallocate(out1D_1)
     endif
-    
+
     ! MODIS
     if (Lmodis_column) then
        if(modisiN%nSunlit > 0) then 
@@ -1097,6 +1094,7 @@ CONTAINS
        deallocate(claraSC_tau,claraSC_ctp,claraSC_ctt,claraSC_size,claraSC_phase,        &
                   claraSC_cth)    
     endif
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1207,9 +1205,9 @@ CONTAINS
          cloudsat_radar_freq,        & !
          cloudsat_k2                   !
     real(wp),intent(in),dimension(Npoints,Nlevels) :: &
-         hgt_matrix                    !
-    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
-         hgt_matrix_half     
+         hgt_matrix,hgt_matrix_half                    !
+!ds    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
+!ds         hgt_matrix_half     
     logical,intent(in) :: &
          lusevgrid,                     & ! Switch to use different vertical grid
          luseCSATvgrid                    ! Switch to use CLOUDSAT grid spacing for new  
@@ -1271,8 +1269,10 @@ CONTAINS
     allocate(mgrid_z(Nlevels),mgrid_zl(Nlevels),mgrid_zu(Nlevels))
     mgrid_z             = hgt_matrix(1,:)
     mgrid_zl            = hgt_matrix_half(1,:)
-    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,:)
-    mgrid_zu(1)         = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))    
+    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,1:Nlevels-1)
+    mgrid_zu(1)     = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))
+!    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,:)
+!    mgrid_zu(1)         = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))    
     
     ! Initialize ISCCP
     call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
@@ -1316,7 +1316,6 @@ CONTAINS
                                   claraRTTOV_calcemis,claraRTTOV_calcrefl,1,18,5,3,[1,2,3],0)   
     endif
     linitialization = .FALSE.
-    
   END SUBROUTINE COSP_INIT
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1489,7 +1488,7 @@ CONTAINS
      type(cosp_outputs),intent(out) :: &
           x           ! COSP output structure  
    
-    ! ISCCP simulator outputs
+     ! ISCCP simulator outputs
     if (Lboxtauisccp)    allocate(x%isccp_boxtau(Npoints,Ncolumns)) 
     if (Lboxptopisccp)   allocate(x%isccp_boxptop(Npoints,Ncolumns))
     if (Lclisccp)        allocate(x%isccp_fq(Npoints,numISCCPTauBins,numISCCPPresBins))

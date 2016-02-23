@@ -33,10 +33,9 @@
 MODULE mod_rng
   USE cosp_kinds, ONLY: dp, sp, wp 
   IMPLICIT NONE 
-  
-  INTEGER, parameter :: huge32 = 2147483647
-  INTEGER, parameter :: i2_16  = 65536
+
   INTEGER, parameter :: ki9    = selected_int_kind(R=9)
+  integer :: testInt
   
   TYPE rng_state
      INTEGER(ki9) :: seed ! 32 bit integer
@@ -80,18 +79,24 @@ CONTAINS
   FUNCTION get_rng_1(s)  
     TYPE(rng_state), INTENT(INOUT) :: s
     REAL(WP)                       :: get_rng_1
-    
     REAL(SP)                       :: r
-    ! Return the next random numbers 
-    
+
+    ! Return the next random numbers     
     ! Marsaglia CONG algorithm
     s%seed=69069*s%seed+1234567
     ! mod 32 bit overflow
     s%seed=mod(s%seed,2_ki9**30_ki9)   
     r = s%seed*0.931322574615479E-09
-    
+
     ! convert to range 0-1 (32 bit only)
-    if ( i2_16*i2_16 .le. huge32 ) then
+    ! DJS2016: What is being done here is an intentional integer overflow and a test to
+    !          see if this occured. Some compilers check for integer overflows during
+    !          compilation (ie. gfortan), while others do not (ie. pgi and ifort). When
+    !          using gfortran, you cannot use the overflow and test for overflow method,
+    !          so we use sizeof(someInt) to determine wheter it is on 32 bit.
+    !if ( i2_16*i2_16 .le. huge32 ) then
+    !if (digits(testInt) .le. 31) then
+    if (sizeof(testInt) .eq. 4) then
        r=r+1
        r=r-int(r)
     endif

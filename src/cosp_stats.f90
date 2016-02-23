@@ -46,6 +46,123 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !---------- SUBROUTINE COSP_CHANGE_VERTICAL_GRID ----------------
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!  SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,Nglevels,&
+!                                       newgrid_bot,newgrid_top,r,log_units)
+!    ! Inputs
+!    integer,intent(in) :: &
+!         Npoints,     & ! Number of grid points
+!         Nlevels,     & ! Number of levels
+!         Ncolumns,    & ! Number of columns
+!         Nglevels       ! Number of levels in the new grid
+!    real(wp),dimension(Npoints,Nlevels),intent(in) :: &
+!         zfull,       & ! Height at model levels [m] (Bottom of model layer)
+!         zhalf          ! Height at half model levels [m] (Bottom of model layer)
+!    real(wp),dimension(Npoints,Ncolumns,Nlevels),intent(in) :: &
+!         y              ! Variable to be changed to a different grid
+!    real(wp),dimension(Nglevels),intent(in) :: &
+!         newgrid_bot, & ! Lower boundary of new levels  [m]
+!         newgrid_top    ! Upper boundary of new levels  [m]
+!    logical,optional,intent(in) :: &
+!         log_units      ! log units, need to convert to linear units
+!
+ !   ! Outputs
+ !   real(wp),dimension(Npoints,Ncolumns,Nglevels),intent(out) :: &
+ !        r              ! Variable on new grid
+ !   
+ !   ! Local variables
+ !   integer :: i,j,k,l,Nw
+ !   logical :: lunits
+ !   real(wp) :: w, dbb, dtb, dbt, dtt,wt,yp
+ !   real(wp),dimension(Nlevels) :: oldgrid_bot,oldgrid_top 
+ ! 
+ !   lunits=.false.
+ !   if (present(log_units)) lunits=log_units
+ !   
+ !   r = 0._wp
+ !   do i=1,Npoints
+ !      ! Calculate tops and bottoms of new and old grids
+ !      oldgrid_bot = zhalf(i,:)
+ !      oldgrid_top(1:Nlevels-1) = oldgrid_bot(2:Nlevels)
+ !      oldgrid_top(Nlevels) = zfull(i,Nlevels) +  zfull(i,Nlevels) - zhalf(i,Nlevels) ! Top level symmetric
+ !      l = 0 ! Index of level in the old grid
+ !      ! Loop over levels in the new grid
+ !      do k = 1,Nglevels
+ !         Nw = 0 ! Number of weigths
+ !         wt = 0._wp ! Sum of weights
+ !         ! Loop over levels in the old grid and accumulate total for weighted average
+ !         do
+ !            l = l + 1
+ !            w = 0._wp ! Initialise weight to 0
+ !            ! Distances between edges of both grids
+ !            dbb = oldgrid_bot(l) - newgrid_bot(k)
+ !            dtb = oldgrid_top(l) - newgrid_bot(k)
+ !            dbt = oldgrid_bot(l) - newgrid_top(k)
+ !            dtt = oldgrid_top(l) - newgrid_top(k)
+ !            if (dbt >= 0.0) exit ! Do next level in the new grid
+ !            if (dtb > 0.0) then
+ !               if (dbb <= 0.0) then
+ !                  if (dtt <= 0) then
+ !                     w = dtb
+ !                  else
+ !                     w = newgrid_top(k) - newgrid_bot(k)
+ !                  endif
+ !               else
+ !                  if (dtt <= 0) then
+ !                     w = oldgrid_top(l) - oldgrid_bot(l)
+ !                  else
+ !                     w = -dbt
+ !                  endif
+ !               endif
+ !               ! If layers overlap (w/=0), then accumulate
+ !               if (w /= 0.0) then
+ !                  Nw = Nw + 1
+ !                  wt = wt + w
+ !                  do j=1,Ncolumns
+ !                     if (lunits) then
+ !                        if (y(i,j,l) /= R_UNDEF) then
+ !                           yp = 10._wp**(y(i,j,l)/10._wp)
+ !                        else
+ !                           yp = 0._wp
+ !                        endif
+ !                     else
+ !                        yp = y(i,j,l)
+ !                     endif
+ !                     r(i,j,k) = r(i,j,k) + w*yp
+ !                  enddo
+ !               endif
+ !            endif
+ !        enddo
+ !         l = l - 2
+ !         if (l < 1) l = 0
+ !         ! Calculate average in new grid
+ !         if (Nw > 0) then
+ !            do j=1,Ncolumns
+ !               r(i,j,k) = r(i,j,k)/wt
+ !            enddo
+ !         endif
+ !      enddo
+ !   enddo
+ !  
+ !   ! Set points under surface to R_UNDEF, and change to dBZ if necessary
+ !   do k=1,Nglevels
+ !      do j=1,Ncolumns
+ !         do i=1,Npoints
+ !            if (newgrid_top(k) > zhalf(i,1)) then ! Level above model bottom level
+ !               if (lunits) then
+ !                  if (r(i,j,k) <= 0.0) then
+ !                     r(i,j,k) = R_UNDEF
+ !                  else
+ !                     r(i,j,k) = 10._wp*log10(r(i,j,k))
+ !                  endif
+ !               endif
+ !            else ! Level below surface
+ !               r(i,j,k) = R_GROUND
+ !            endif
+ !         enddo
+ !      enddo
+ !   enddo
+ !   
+ ! END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,M,zl,zu,r,log_units)
     ! Input arguments
     integer,intent(in) :: Npoints  !# of grid points
@@ -133,7 +250,6 @@ CONTAINS
        endif
     enddo
   END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
-  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !------------- SUBROUTINE COSP_LIDAR_ONLY_CLOUD -----------------
   ! (c) 2008, Lawrence Livermore National Security Limited Liability Corporation.

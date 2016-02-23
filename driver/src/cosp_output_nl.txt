@@ -32,7 +32,7 @@
   Lisccp_sim=.true.,
   Lmisr_sim=.true.,
   Lmodis_sim=.true.,
-  Lrttov_sim=.false.,
+  Lrttov_sim=.true.,
   Lparasol_sim=.true.,
   ! Output variables
   !- Variables unique in 1D (curtain) mode
@@ -108,4 +108,15 @@
   Lclmodis=.true.,
   !- RTTOV
   Ltbrttov=.true.,
+  ! - CLARA
+  Ltauclara=.true.,
+  Lpctclara=.true.,
+  Ltctclara=.true.,
+  Lhctclara=.true.,
+  Lreffclwclara=.true.,
+  Lreffcliclara=.true.,
+  Lcltclara=.true.,
+  Llwpclara=.true.,
+  Liwpclara=.true.,
+  Lclclara=.true.
 /

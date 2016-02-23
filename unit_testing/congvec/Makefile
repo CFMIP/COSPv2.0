@@ -41,8 +41,8 @@ DEBUG      = #-g #-C
 F90FLAGS   = # -O2 
 
 # Source file location
-ROOT       = /home/dswales/Projects/COSP/local_branch
-SRC        = $(ROOT)/src/simulator/icarus-scops-4.1-bsd
+ROOT = /home/dswales/Projects/COSP/COSPv2.0
+SRC  = $(ROOT)/src/simulator/icarus-scops-4.1-bsd
 
 ######################################################################## 
 PROG2 = test_congvec
@@ -63,7 +63,7 @@ congvec.o      : cosp_kinds.o
 clean:
 	rm -f *.o test_isccp_cloud_types ftn* test_congvec *.mod
 
-cosp_kinds.o : $(ROOT)/cosp-1.4-interface/hooks/cosp_kinds.f90
+cosp_kinds.o : $(ROOT)/src/hooks/cosp_kinds.f90
 	$(F90) $(F90FLAGS) -c $<
 
 

@@ -30,9 +30,13 @@
 ! May 2015 - D. Swales - Modified for COSPv2.0
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module mod_scops
-  USE COSP_KINDS, ONLY: wp
-  USE MOD_RNG!,    ONLY: rng_state,get_rng
+  USE COSP_KINDS,     ONLY: wp
+  USE MOD_RNG!,        ONLY: rng_state,get_rng
+  use mod_cosp_error, ONLY: errorMessage
+
   implicit none
+
+  integer,parameter :: default_overlap = 3 ! Used when invalid overlap assumption is provided.
   
 contains
   subroutine scops(npoints,nlev,ncol,seed,rngs,cc,conv,overlap,frac_out,ncolprint)
@@ -43,7 +47,7 @@ contains
     type(rng_state),dimension(npoints) :: rngs            
     INTEGER, parameter :: huge32 = 2147483647
     INTEGER, parameter :: i2_16  = 65536
-    INTEGER :: i,j,ilev,ibox,ncolprint,ilev2,irand,overflow_32
+    INTEGER :: i,j,ilev,ibox,ncolprint,ilev2
 
     REAL(WP), dimension(npoints,nlev) ::  &
          cc,         &    ! Input cloud cover in each model level (fraction)
@@ -75,10 +79,15 @@ contains
                           ! possible that the choice of the same seed value every time may
                           ! introduce some statistical bias in the results, particularly for 
                           ! low values of NCOL.
-    
-!    boxpos = spread(([1:ncol]-0.5)/ncol,1,npoints)
-    boxpos = spread(([(i, i=1,ncol)]-0.5)/ncol,1,npoints)
 
+    ! Test for valid input overlap assumption
+    if (overlap .ne. 1 .and. overlap .ne. 2 .and. overlap .ne. 3) then
+       overlap=default_overlap
+       call errorMessage('ERROR(scops): Invalid overlap assumption provided. Using default overlap assumption (max/ran)')
+    endif
+
+    boxpos = spread(([(i, i=1,ncol)]-0.5)/ncol,1,npoints)
+    
     ! #######################################################################
     ! Initialize working variables
     ! #######################################################################
@@ -151,7 +160,15 @@ contains
        
        DO ibox=1,ncol
           ! All versions
-          maxocc(1:npoints,ibox) = merge(1,0,boxpos(1:npoints,ibox) .le. conv(1:npoints,ilev))
+          !maxocc(1:npoints,ibox) = merge(1,0,boxpos(1:npoints,ibox) .le. conv(1:npoints,ilev))
+          !maxocc(1:npoints,ibox) = merge(1,0, conv(1:npoints,ilev) .gt. boxpos(1:npoints,ibox))
+          do j=1,npoints
+             if (boxpos(j,ibox).le.conv(j,ilev)) then
+                maxocc(j,ibox) = 1
+             else
+                maxocc(j,ibox) = 0
+             end if
+          enddo
           
           ! Max overlap
           if (overlap.eq.1) then 

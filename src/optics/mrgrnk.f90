@@ -31,7 +31,7 @@
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 Module m_mrgrnk
-  USE COSP_KINDS,          ONLY: wp,dp
+  USE COSP_KINDS,          ONLY: wp
   Integer, Parameter :: kdp = selected_real_kind(15)
   public :: mrgrnk
   private :: kdp
@@ -51,10 +51,10 @@ contains
     ! out of the standard loop, and use dedicated coding.
     ! __________________________________________________________
     ! __________________________________________________________
-    Real (dp), Dimension (:), Intent (In) :: XDONT
+    Real (wp), Dimension (:), Intent (In) :: XDONT
     Integer, Dimension (:), Intent (Out) :: IRNGT
     ! __________________________________________________________
-    Real (dp) :: XVALA, XVALB
+    Real (wp) :: XVALA, XVALB
     !
     Integer, Dimension (SIZE(IRNGT)) :: JWRKT
     Integer :: LMTNA, LMTNC, IRNG1, IRNG2
