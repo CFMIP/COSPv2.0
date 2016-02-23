@@ -1383,7 +1383,7 @@ module mod_clara_sim
        xi = [maxloc(re_liq-re,re_liq-re .le. 0),maxloc(re_liq-re,re_liq-re .le. 0)+1]
        if (minval(abs(re_liq-re)) .eq. 0) xi=[xi(1),xi(1)]
        ! Interpolate
-       if (re .ge. CLARA_re_water_min .and. re .le. CLARA_re_water_max) then
+       if (re .gt. CLARA_re_water_min .and. re .lt. CLARA_re_water_max) then
           get_g_nir = g0_liq(xi(1))+(g0_liq(xi(2))-g0_liq(xi(1)))*(re-re_liq(xi(1)))/    &
                                     (re_liq(xi(2))-re_liq(xi(1))) 
        endif                             
@@ -1397,7 +1397,7 @@ module mod_clara_sim
        xi = [maxloc(re_ice-re,re_ice-re .le. 0),maxloc(re_ice-re,re_ice-re .le. 0)+1]
        if (minval(abs(re_ice-re)) .eq. 0) xi=[xi(1),xi(1)]
        ! Interpolate
-       if (re .ge. CLARA_re_ice_min .and. re .le. CLARA_re_ice_max) then
+       if (re .gt. CLARA_re_ice_min .and. re .lt. CLARA_re_ice_max) then
           get_g_nir = g0_ice(xi(1))+(g0_ice(xi(2))-g0_ice(xi(1)))*(re-re_ice(xi(1)))/    &
                                     (re_ice(xi(2))-re_ice(xi(1)))  
        endif                             
@@ -1446,7 +1446,7 @@ module mod_clara_sim
        xi = [maxloc(re_liq-re,re_liq-re .le. 0),maxloc(re_liq-re,re_liq-re .le. 0)+1]
        if (minval(abs(re_liq-re)) .eq. 0) xi=[xi(1),xi(1)]
        ! Interpolate
-       if (re .ge. CLARA_re_water_min .and. re .le. CLARA_re_water_max) then
+       if (re .gt. CLARA_re_water_min .and. re .lt. CLARA_re_water_max) then
           get_ssa_nir = w0_liq(xi(1))+(w0_liq(xi(2))-w0_liq(xi(1)))*(re-re_liq(xi(1)))/  &
                                       (re_liq(xi(2))-re_liq(xi(1))) 
        endif                             
@@ -1460,7 +1460,7 @@ module mod_clara_sim
        xi = [maxloc(re_ice-re,re_ice-re .le. 0),maxloc(re_ice-re,re_ice-re .le. 0)+1]
        if (minval(abs(re_ice-re)) .eq. 0) xi=[xi(1),xi(1)]
        ! Interpolate
-       if (re .ge. CLARA_re_ice_min .and. re .le. CLARA_re_ice_max) then
+       if (re .gt. CLARA_re_ice_min .and. re .lt. CLARA_re_ice_max) then
           get_ssa_nir = w0_ice(xi(1))+(w0_ice(xi(2))-w0_ice(xi(1)))*(re-re_ice(xi(1)))/  &
                                       (re_ice(xi(2))-re_ice(xi(1)))  
        endif                             
