@@ -98,8 +98,9 @@ contains
   ! ######################################################################################
   ! SUBROUTINE quickbeam_subcolumn
   ! ######################################################################################
-  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,&
-                                 a_to_vol,g_to_vol,dBZe,Ze_non,Ze_ray)
+  !subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,&
+  !                               a_to_vol,g_to_vol,dBZe,Ze_non,Ze_ray)
+  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,dBZe)
 
     ! INPUTS
     type(radar_cfg),intent(inout) :: &
@@ -115,16 +116,20 @@ contains
     
     ! OUTPUTS
     real(wp), intent(out),dimension(nprof,ngate) :: &
-         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
-         Ze_ray,        & ! Rayleigh reflectivity (dBZ)
-         g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
-         a_to_vol,      & ! Hydromets attenuation, radar to vol (dB)
+!         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
+!         Ze_ray,        & ! Rayleigh reflectivity (dBZ)
+!         g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
+!         a_to_vol,      & ! Hydromets attenuation, radar to vol (dB)
          dBZe             ! Effective radar reflectivity factor (dBZ)
 
     ! LOCAL VARIABLES
     integer :: k,pr,start_gate,end_gate,d_gate
     real(wp),dimension(nprof,ngate) :: &
-         z_ray      ! Reflectivity factor, Rayleigh only (mm^6/m^3)
+         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
+         Ze_ray,        & ! Rayleigh reflectivity (dBZ)
+         g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
+         a_to_vol,      & ! Hydromets attenuation, radar to vol (dB) 
+         z_ray            ! Reflectivity factor, Rayleigh only (mm^6/m^3)
 
     ! Load scaling matricies from disk -- but only the first time this subroutine is called
     if(rcfg%load_scale_LUTs) then
