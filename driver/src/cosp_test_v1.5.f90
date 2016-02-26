@@ -53,7 +53,7 @@ PROGRAM COSPTEST_v1p5
   ! Parameters
   character(len=64),parameter :: &
        cosp_input_namelist  = 'cosp_input_nl.v1p5.txt', &
-       cosp_output_namelist = 'cosp_output_nl.txt'
+       cosp_output_namelist = 'cosp_output_nl_v1.5.txt'
   character(len=32),parameter :: &
        cospvID = 'COSP v1.5'        ! COSP version ID
   integer,parameter :: &

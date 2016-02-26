@@ -30,6 +30,7 @@
 ! May 2015 - D. Swales - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_INTERFACE_v1p5
+  use mod_cosp
   USE COSP_KINDS,           ONLY: wp
   USE MOD_COSP,             ONLY: cosp_simulator,cosp_optical_inputs,cosp_column_inputs, &
                                   cosp_init,cosp_outputs,                                &
@@ -916,8 +917,7 @@ contains
     
     ! Local variables
     integer :: i
-    logical :: Lradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,Lrttov_sim,        &
-               Lparasol_sim,Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94,   &
+    logical :: Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94,                &
                LcfadLidarsr532,Lclcalipso2,Lclcalipso,Lclhcalipso,Lclisccp,Lcllcalipso, &
                Lclmcalipso,Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Ltauisccp,      &
                Lcltisccp,Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,clcalipsotmp,         &
@@ -930,8 +930,7 @@ contains
                Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,Lreffclimodis,   &
                Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Lclcalipsotmp
     
-    namelist/COSP_OUTPUT/Lradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,         &
-                         Lrttov_sim,Lparasol_sim,Lalbisccp,Latb532,Lboxptopisccp,       &
+    namelist/COSP_OUTPUT/Lalbisccp,Latb532,Lboxptopisccp,                               &
                          Lboxtauisccp,LcfadDbze94,LcfadLidarsr532,Lclcalipso2,          &
                          Lclcalipso,Lclhcalipso,Lclisccp,Lcllcalipso,Lclmcalipso,       &
                          Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Ltauisccp,        &
@@ -954,112 +953,9 @@ contains
     open(10,file=cosp_nl,status='old')
     read(10,nml=cosp_output)
     close(10)
-    
-    ! Deal with dependencies
-    if (.not.Lradar_sim) then
-       LcfadDbze94    = .false.
-       Lclcalipso2    = .false.
-       Lcltlidarradar = .false. ! Needs radar & lidar
-       Ldbze94        = .false.
-       Lclcalipso2    = .false. ! Needs radar & lidar
-    endif
-    if (.not.Llidar_sim) then
-       Latb532 = .false.
-       LcfadLidarsr532  = .false.
-       Lclcalipso2      = .false. ! Needs radar & lidar
-       Lclcalipso       = .false.
-       Lclhcalipso      = .false.
-       Lcllcalipso      = .false.
-       Lclmcalipso      = .false.
-       Lcltcalipso      = .false.
-       Lcltlidarradar   = .false.
-       LparasolRefl     = .false.
-       LlidarBetaMol532 = .false.
-       Lcltlidarradar   = .false. ! Needs radar & lidar
-       Lclcalipsoliq    = .false.
-       Lclcalipsoice    = .false.
-       Lclcalipsoun     = .false.
-       Lclcalipsotmp    = .false.
-       Lclcalipsotmpun  = .false.
-       Lclcalipsotmpliq = .false.
-       Lclcalipsotmpice = .false.
-       Lclhcalipsoliq   = .false.
-       Lcllcalipsoliq   = .false.
-       Lclmcalipsoliq   = .false.
-       Lcltcalipsoliq   = .false.
-       Lclhcalipsoice   = .false.
-       Lcllcalipsoice   = .false.
-       Lclmcalipsoice   = .false.
-       Lcltcalipsoice   = .false.
-       Lclhcalipsoun    = .false.
-       Lcllcalipsoun    = .false.
-       Lclmcalipsoun    = .false.
-       Lcltcalipsoun    = .false.
-    endif
-    if (.not.Lisccp_sim) then
-       Lalbisccp        = .false.
-       Lboxptopisccp    = .false.
-       Lboxtauisccp     = .false.
-       Lclisccp         = .false.
-       Lpctisccp        = .false.
-       Ltauisccp        = .false.
-       Lcltisccp        = .false.
-       Lmeantbisccp     = .false.
-       Lmeantbclrisccp  = .false.
-    endif
-    if (.not.Lmisr_sim) then
-       LclMISR          = .false.
-    endif
-    if (.not.Lrttov_sim) then
-       Ltbrttov         = .false.
-    endif
-    if ((.not.Lradar_sim) .and. (.not.Llidar_sim) .and. (.not.Lisccp_sim) .and.         &
-         (.not.Lmisr_sim)) then
-       Lfracout         = .false.
-    endif
-    if (.not.Lmodis_sim) then
-       Lcltmodis        = .false.
-       Lclwmodis        = .false.
-       Lclimodis        = .false.
-       Lclhmodis        = .false.
-       Lclmmodis        = .false.
-       Lcllmodis        = .false.
-       Ltautmodis       = .false.
-       Ltauwmodis       = .false.
-       Ltauimodis       = .false.
-       Ltautlogmodis    = .false.
-       Ltauwlogmodis    = .false.
-       Ltauilogmodis    = .false.
-       Lreffclwmodis    = .false.
-       Lreffclimodis    = .false.
-       Lpctmodis        = .false.
-       Llwpmodis        = .false.
-       Liwpmodis        = .false.
-       Lclmodis         = .false.
-    endif
-    if (Lmodis_sim) then
-       Lisccp_sim       = .true.
-    endif
-    
-    cfg%Lstats = .false.
-    if ((Lradar_sim).or.(Llidar_sim).or.(Lisccp_sim)) then
-       cfg%Lstats = .true.
-    endif
-    
-    ! Copy instrument flags to cfg structure
-    cfg%Lradar_sim   = Lradar_sim
-    cfg%Llidar_sim   = Llidar_sim
-    cfg%Lisccp_sim   = Lisccp_sim
-    cfg%Lmodis_sim   = Lmodis_sim
-    cfg%Lmisr_sim    = Lmisr_sim
-    cfg%Lrttov_sim   = Lrttov_sim
-    cfg%Lparasol_sim = Lparasol_sim
-    
+
     ! Flag to control output to file
-    cfg%Lwrite_output = .false.
-    if (cfg%Lstats.or.cfg%Lmisr_sim.or.cfg%Lrttov_sim) then
-       cfg%Lwrite_output = .true.
-    endif
+    cfg%Lwrite_output = .true.
     
     ! Output diagnostics
     i = 1
