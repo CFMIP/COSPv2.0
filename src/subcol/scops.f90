@@ -39,7 +39,7 @@ module mod_scops
   integer,parameter :: default_overlap = 3 ! Used when invalid overlap assumption is provided.
   
 contains
-  subroutine scops(npoints,nlev,ncol,seed,rngs,cc,conv,overlap,frac_out,ncolprint)
+  subroutine scops(npoints,nlev,ncol,rngs,cc,conv,overlap,frac_out,ncolprint)
     INTEGER :: npoints,    &    ! Number of model points in the horizontal
                nlev,       &    ! Number of model levels in column
                ncol,       &    ! Number of subcolumns
@@ -72,13 +72,6 @@ contains
          threshold_min    ! minimum value to define range in with new threshold is chosen.
     REAL(WP), dimension(npoints) :: &
          ran              ! vector of random numbers
-    INTEGER, dimension(npoints) :: &
-         seed             ! Seed values for marsaglia random number generator. 
-                          ! It is recommended that the seed is set to a different value
-                          ! for each model gridbox it is called on, as it is
-                          ! possible that the choice of the same seed value every time may
-                          ! introduce some statistical bias in the results, particularly for 
-                          ! low values of NCOL.
 
     ! Test for valid input overlap assumption
     if (overlap .ne. 1 .and. overlap .ne. 2 .and. overlap .ne. 3) then

@@ -1,10 +1,16 @@
 .SUFFIXES : .F .f .c .o .a .f90 .f95 .F90
 ########################################################################
-# Makefile for cosp_test_v1.5 driver 
+# Makefile for cosp_test_v1.4 driver 
 ########################################################################
+# Intel (ifort)
 F90      = ifort
 F90FLAGS = -fpp -O3 -traceback
 F90_LIB  = /usr/local/ifort
+# Portland Group (pgf90)
+#F90      = pgf90
+#F90FLAGS = -Mpreprocess -O0 -g
+#F90_LIB  = /usr/local/pgf90
+
 INC      = /usr/local/include
 LIB      = /usr/local/lib
 
@@ -42,6 +48,7 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                \
 	cosp_interface_v1p5.o cosp_interface_v1p4.o cosp_io.o
 
 all: $(PROG)
+	mv *.mod *.o obj/
 $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
 	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
@@ -80,6 +87,9 @@ clean_all:
 
 clean:	
 	rm -f $(PROG) *.o *.mod fort.*
+
+cosp:
+	make -C ../../src/ install
 
 # Build COSP and then build driver and link
 install:

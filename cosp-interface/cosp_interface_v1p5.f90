@@ -30,7 +30,6 @@
 ! May 2015 - D. Swales - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_INTERFACE_v1p5
-  use mod_cosp
   USE COSP_KINDS,           ONLY: wp
   USE MOD_COSP,             ONLY: cosp_simulator,cosp_optical_inputs,cosp_column_inputs, &
                                   cosp_init,cosp_outputs,                                &
@@ -567,7 +566,7 @@ contains
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Call SCOPS
        if (gbx%Ncolumns .gt. 1) then
-          call scops(npoints,gbx%Nlevels,gbx%Ncolumns,seed,rngs,                         &
+          call scops(npoints,gbx%Nlevels,gbx%Ncolumns,rngs,                              &
                      gbx%tca(start_idx:end_idx,gbx%Nlevels:1:-1),                        &
                      gbx%cca(start_idx:end_idx,gbx%Nlevels:1:-1),overlap,                &
                      sgx%frac_out(start_idx:end_idx,:,:),0)

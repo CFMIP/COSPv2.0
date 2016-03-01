@@ -2,9 +2,19 @@
 ########################################################################
 # Makefile for cosp_test_v1.5 driver 
 ########################################################################
+# Intel (ifort)
 F90      = ifort
-F90FLAGS = -fpp -O3 -traceback
+F90FLAGS = -fpp -O3 -pg
 F90_LIB  = /usr/local/ifort
+# Portland Group (pgf90)
+#F90      = pgf90
+#F90FLAGS = -Mpreprocess -O0 -g
+#F90_LIB  = /usr/local/pgf90
+# Gfortran (gfortran)
+#F90      = gfortran
+#F90FLAGS = -cpp -O3 -fbacktrace -fbounds-check
+#F90_LIB  = /usr/local/gfortran
+
 INC = /usr/local/include
 LIB = /usr/local/lib
 
@@ -42,6 +52,8 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                \
 	cosp_interface_v1p5.o cosp_io.o
 
 all: $(PROG)
+	mv *.mod *.o obj/
+
 $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
 	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
@@ -76,8 +88,7 @@ clean_all:
 clean:	
 	rm -f $(PROG) *.o *.mod fort.*
 
-# Build COSP and then build driver and link
-install:
+cosp:
 	make -C ../../src/ install
 
 cosp_io.o: cosp_io.f90
