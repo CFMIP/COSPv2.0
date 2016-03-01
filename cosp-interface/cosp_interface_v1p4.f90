@@ -1388,7 +1388,10 @@ contains
   SUBROUTINE destroy_cosp_misr(x)
     type(cosp_misr),intent(inout) :: x
 
-    deallocate(x%fq_MISR,x%MISR_meanztop,x%MISR_cldarea,x%MISR_dist_model_layertops)
+    if (associated(x%fq_MISR))                   deallocate(x%fq_MISR)
+    if (associated(x%MISR_meanztop))             deallocate(x%MISR_meanztop)
+    if (associated(x%MISR_cldarea))              deallocate(x%MISR_cldarea)
+    if (associated(x%MISR_dist_model_layertops)) deallocate(x%MISR_dist_model_layertops)
 
   END SUBROUTINE destroy_cosp_misr
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

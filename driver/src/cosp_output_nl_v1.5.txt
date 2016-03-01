@@ -26,14 +26,6 @@
 ! the instrument simulators to run and the list of variables 
 ! to be written to file
 &COSP_OUTPUT
-  ! Simulator flags
-  Lradar_sim=.true.,
-  Llidar_sim=.true.,
-  Lisccp_sim=.true.,
-  Lmisr_sim=.true.,
-  Lmodis_sim=.true.,
-  Lrttov_sim=.true.,
-  Lparasol_sim=.true.,
   ! Output variables
   !- Variables unique in 1D (curtain) mode
   Ltoffset=.true.,
