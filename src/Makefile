@@ -3,16 +3,20 @@
 # COSP Makefile
 ########################################################################
 # Compiler and flags
+# Intel (ifort)
 F90      = ifort
-F90FLAGS = -fpp -O3
+F90FLAGS = -fpp -O3 -pg
+F90_LIB  = /usr/local/ifort
 
-# Build cosp as a library to link against.
-TARGET  = lib/libcosp.a
+# Portland Group (pgf90)
+#F90      = pgf90
+#F90FLAGS = -Mpreprocess -O0 -g
+#F90_LIB  = /usr/local/pgf90
+
 SRC_PATH = src/
 OBJ_PATH = obj/
 
 # Libraries
-F90_LIB  = /usr/local/ifort
 INC      = /usr/local/include
 LIB      = /usr/local/lib
 NCDF_INC    = $(F90_LIB)/include
@@ -52,11 +56,10 @@ OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
 	cosp_rttov_interface.o cosp_rttov11.3.o cosp_parasol_interface.o
 
 # To create cosp library, use this.
+#TARGET  = lib/libcosp.a
 #$(TARGET): $(OBJ_PATH)$(OBJS)
 #	rm -f $@
 #	ar cr $@ $^
-
-
 
 %.o: $(SIM_PATH)/%.f90
 	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
@@ -105,7 +108,7 @@ install:
 	make
 	mv *.mod *.o $(OBJ_PATH)
 clean:	
-	rm -f $(OBJ_PATH)$(OBJS) *.mod *.o fort.*
+	rm -f $(OBJ_PATH)*.mod $(OBJ_PATH)*.o fort.* *.mod *.o
 
 icarus.o : $(ISCCP_PATH)/icarus.f90
 	$(F90) $(F90FLAGS) -c $<

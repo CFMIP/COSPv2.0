@@ -73,7 +73,7 @@ PROGRAM COSPTEST_trunk
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Parameters
   character(len=64),parameter :: &
-       cosp_input_namelist  = 'cosp_input_nl.v1p4.txt', &
+       cosp_input_namelist  = 'cosp_input_nl.v1.4.txt', &
        cosp_output_namelist = 'cosp_output_nl_v1.4.txt'
   integer,parameter :: &
        N_MAX_INPUT_FILES = 10000, &
@@ -134,7 +134,7 @@ PROGRAM COSPTEST_trunk
        Nlevels,                   & ! Number of model vertical levels
        Npoints_it,                & ! Number of gridpoints to be processed in one 
                                     ! iteration
-       Nlr,                       & ! Number of vertical levels for statistical outputs 
+       Nlvgrid,                   & ! Number of vertical levels for statistical outputs 
                                     ! (USE_VGRID=.true.)
        surface_radar,             & ! surface=1/spaceborne=0
        use_mie_tables,            & ! Use a precomputed lookup-table (1=yes/0=no)
@@ -181,7 +181,7 @@ PROGRAM COSPTEST_trunk
        cmor_nl                      ! CMOR namelist
   
   namelist/COSP_INPUT/cmor_nl,overlap,isccp_topheight,isccp_topheight_direction, &
-                      npoints,npoints_it,ncolumns,nlevels,use_vgrid,nlr,         &
+                      npoints,npoints_it,ncolumns,nlevels,use_vgrid,nlvgrid,     &
                       csat_vgrid,dinput,finput,radar_freq,surface_radar,         &
                       use_mie_tables,use_gas_abs,do_ray,melt_lay,k2,             &
                       Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,     &
@@ -274,7 +274,7 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      ! Define new vertical grid
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-     call construct_cosp_vgrid(gbx,Nlr,use_vgrid,csat_vgrid,vgrid)
+     call construct_cosp_vgrid(gbx,Nlvgrid,use_vgrid,csat_vgrid,vgrid)
   
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      ! Subgrid information

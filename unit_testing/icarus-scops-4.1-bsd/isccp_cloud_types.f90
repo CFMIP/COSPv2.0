@@ -79,7 +79,7 @@ SUBROUTINE ISCCP_CLOUD_TYPES(debug,debugcol,npoints,sunlit,nlev,ncol,seed,pfull,
       character*1,parameter,dimension(6) :: cchar_realtops=(/ ' ',' ','1','1','I','I'/)
 
       call init_rng(rngs, seed)  
-      CALL SCOPS(npoints,nlev,ncol,seed,rngs,cc,conv,overlap,frac_out,ncolprint)
+      CALL SCOPS(npoints,nlev,ncol,rngs,cc,conv,overlap,frac_out,ncolprint)
       
       CALL ICARUS(debug,debugcol,npoints,sunlit,nlev,ncol,pfull,phalf,qv,&
                   cc,conv,dtau_s,dtau_c,top_height,top_height_direction, &

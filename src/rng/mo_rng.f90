@@ -95,8 +95,8 @@ CONTAINS
     !          using gfortran, you cannot use the overflow and test for overflow method,
     !          so we use sizeof(someInt) to determine wheter it is on 32 bit.
     !if ( i2_16*i2_16 .le. huge32 ) then
-    !if (digits(testInt) .le. 31) then
-    if (sizeof(testInt) .eq. 4) then
+    if (digits(testInt) .le. 31) then
+    !if (sizeof(testInt) .eq. 4) then
        r=r+1
        r=r-int(r)
     endif

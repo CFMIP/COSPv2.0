@@ -41,13 +41,14 @@ DEBUG      = #-g #-C
 F90FLAGS   = -O2 -fpp
 
 # Source file location
-ROOT       = /home/dswales/Projects/COSP/local_branch
+ROOT       = /home/dswales/Projects/COSP/COSPv2.0
 SRC        = $(ROOT)/src/simulator/icarus-scops-4.1-bsd
 
 ######################################################################## 
 PROG1 = test_isccp_cloud_types
 OBJS1 = cosp_kinds.o cosp_constants.o isccp_cloud_types.o scops.o \
-        icarus.o cosp_optics.o cosp_stats.o cosp_config.o mo_rng.o
+        icarus.o cosp_optics.o cosp_stats.o cosp_config.o mo_rng.o\
+	cosp_errorHandling.o
 
 all: $(PROG1)
 
@@ -59,9 +60,11 @@ $(PROG1): $(OBJS1)
 	${F90} ${F90FLAGS} -c $<
 
 $(PROG1).o               : cosp_kinds.o
+cosp_errorHandling.o     : cosp_kinds.o
 isccp_cloud_types.o      : cosp_kinds.o icarus.o mo_rng.o
-scops.o                  : cosp_kinds.o mo_rng.o
-icarus.o	             : cosp_kinds.o cosp_constants.o cosp_optics.o cosp_stats.o scops.o cosp_config.o
+scops.o                  : cosp_kinds.o mo_rng.o cosp_errorHandling.o
+icarus.o	         : cosp_kinds.o cosp_constants.o cosp_optics.o \
+			   cosp_stats.o scops.o cosp_config.o
 mo_rng.o                 : cosp_kinds.o
 cosp_stats.o             : cosp_kinds.o cosp_config.o
 
@@ -71,6 +74,9 @@ test:
 	./test_isccp_cloud_types.ksh
 
 cosp_kinds.o : $(ROOT)/src/hooks/cosp_kinds.f90
+	$(F90) $(F90FLAGS) -c $<
+
+cosp_errorHandling.o : $(ROOT)/src/hooks/cosp_errorHandling.f90
 	$(F90) $(F90FLAGS) -c $<
 
 cosp_constants.o :  $(ROOT)/src/hooks/cosp_constants.f90

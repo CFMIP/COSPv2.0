@@ -33,7 +33,7 @@
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=38,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
-  NLR=40,       ! Number of levels in statistical outputs (only used if USE_VGRID=.true.)
+  NLVGRID=40,       ! Number of levels in statistical outputs (only used if USE_VGRID=.true.)
   CSAT_VGRID=.true., ! CloudSat vertical grid? (if .true. then the CloudSat standard grid is used for the outputs.
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
