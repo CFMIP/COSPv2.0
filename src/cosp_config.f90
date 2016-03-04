@@ -35,7 +35,7 @@
 ! May 2015 - D. Swales        - Tidied up. Set up appropriate fields during initialization. 
 ! June 2015- D. Swales        - Moved hydrometeor class variables to hydro_class_init in
 !                               the module quickbeam_optics.
-! 
+! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MODULE MOD_COSP_CONFIG
@@ -46,16 +46,19 @@ MODULE MOD_COSP_CONFIG
    ! Common COSP information
    ! #####################################################################################
     character(len=32) ::   &
-       COSP_VERSION          ! COSP Version ID (set in cosp_interface_init)
+       COSP_VERSION              ! COSP Version ID (set in cosp_interface_init)
     real(wp),parameter ::  &
-       R_UNDEF  = -1.0E30, & ! Missing value
-       R_GROUND = -1.0E20    ! Flag for below ground results
-    logical :: &
-       use_vgrid             ! True=Use new grid for L3 CLOUDAT and CALIPSO
+       R_UNDEF      = -1.0E30, & ! Missing value
+       R_GROUND     = -1.0E20, & ! Flag for below ground results
+       scops_ccfrac = 0.05       ! Fraction of column (or subcolumn) covered with convective
+                                 ! precipitation (default is 5%). *NOTE* This quantity may vary
+                                 ! between modeling centers.
+       logical :: &
+       use_vgrid                 ! True=Use new grid for L3 CLOUDAT and CALIPSO
     integer,parameter ::   &
-       SR_BINS = 15,       & ! Number of bins in backscatter histogram bin
-       N_HYDRO = 9           ! Number of hydrometeor classes used by quickbeam_optics
-       
+       SR_BINS = 15,           & ! Number of bins in backscatter histogram bin
+       N_HYDRO = 9               ! Number of hydrometeor classes used by quickbeam_optics
+
     ! ####################################################################################  
     ! Joint histogram bin-boundaries
     ! tau is used by ISCCP and MISR

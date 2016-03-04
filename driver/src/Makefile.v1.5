@@ -47,7 +47,7 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                \
 	$(OBJ_PATH)/cosp_isccp_interface.o $(OBJ_PATH)/cosp_misr_interface.o  \
 	$(OBJ_PATH)/MISR_simulator.o $(OBJ_PATH)/cosp_modis_interface.o       \
 	$(OBJ_PATH)/modis_simulator.o $(OBJ_PATH)/cosp_rttov_interface.o      \
-	$(OBJ_PATH)/cosp_rttov11.3.o $(OBJ_PATH)/mrgrnk.o                     \
+	$(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/mrgrnk.o                     \
 	$(OBJ_PATH)/cosp_parasol_interface.o mo_rng.o scops.o cosp_utils.o    \
 	cosp_interface_v1p5.o cosp_io.o
 
@@ -67,7 +67,7 @@ $(PROG).o     	          : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.
 			    cosp_interface_v1p5.o
 cosp_io.o  	          : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
 			    cosp_interface_v1p5.o cosp_interface_v1p4.o              \
-                            $(OBJ_PATH)/cosp_rttov11.3.o $(OBJ_PATH)/cosp.o          \
+                            $(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/cosp.o          \
 			    $(OBJ_PATH)/cosp_parasol_interface.o
 cosp_interface_v1p5.o     : $(OBJ_PATH)/cosp_kinds.o cosp_utils.o $(OBJ_PATH)/cosp.o \
 			    $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
