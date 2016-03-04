@@ -36,7 +36,8 @@ contains
       
       subroutine prec_scops(npoints,nlev,ncol,ls_p_rate,cv_p_rate,frac_out,prec_frac)
 
-      USE COSP_KINDS, ONLY: wp
+        USE COSP_KINDS, ONLY: wp
+        use mod_cosp_config, ONLY: scops_ccfrac
 
       INTEGER npoints       !  number of model points in the horizontal
       INTEGER nlev          !  number of model levels in column
@@ -61,7 +62,7 @@ contains
       INTEGER frac_out_ls(npoints,ncol),frac_out_cv(npoints,ncol) !flag variables for 
                        ! stratiform cloud and convective cloud in the vertical column
 
-      cv_col = 0.05*ncol
+      cv_col = scops_ccfrac*ncol
       if (cv_col .eq. 0) cv_col=1
  
       do ilev=1,nlev
