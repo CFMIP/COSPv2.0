@@ -19,14 +19,6 @@ OBJ_PATH = obj/
 # Libraries
 INC      = /usr/local/include
 LIB      = /usr/local/lib
-NCDF_INC    = $(F90_LIB)/include
-NCDF_LIB    = $(F90_LIB)/lib
-CMOR_INC    = $(F90_LIB)/include
-CMOR_LIB    = $(F90_LIB)/lib
-UDUNITS_LIB = $(F90_LIB)/lib
-UDUNITS_INC = $(F90_LIB)/include
-UUID_LIB    = $(F90_LIB)/lib
-UUID_INC    = $(F90_LIB)/include
 
 # Simulator directories
 SIM_PATH     = simulator
@@ -49,12 +41,12 @@ RTTOV_LIBS       = -lrttov11_coef_io_789 -lrttov11_coef_io -lrttov11_main \
                    -lrttov11_mw_scatt -lrttov11_mw_scatt_coef -lrttov11_other
 
 OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
-        prec_scops.o cosp.o cosp_stats.o quickbeam.o cosp_optics.o\
+        prec_scops.o cosp.o cosp_stats.o quickbeam.o cosp_optics.o             \
 	array_lib.o mo_rng.o quickbeam_optics.o scops.o math_lib.o optics_lib.o\
         parasol.o mrgrnk.o lidar_simulator.o icarus.o cosp_calipso_interface.o \
         cosp_errorHandling.o cosp_isccp_interface.o cosp_misr_interface.o      \
         MISR_simulator.o cosp_modis_interface.o modis_simulator.o              \
-	cosp_rttov_interface.o cosp_rttov11.3.o cosp_parasol_interface.o       \
+	cosp_rttov_interface.o cosp_rttovSTUB.o cosp_parasol_interface.o       \
 	clara_rttov_interface.o CLARA_simulator.o cosp_clara_interface.o
 
 # To create cosp library, use this.
@@ -64,20 +56,20 @@ OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
 #	ar cr $@ $^ 
 
 %.o: $(SIM_PATH)/%.f90
-	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
-	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	@echo $(F90) $(F90FLAGS) -c $<
+	$(F90) $(F90FLAGS) -c $<
 	@echo "-----------------------------"
 
 %.o: %.f90
-	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
-	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
+	@echo $(F90) $(F90FLAGS) -c $<
+	$(F90) $(F90FLAGS) -c $<
 	@echo "-----------------------------"
 
 # Dependencies
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o prec_scops.o      \
                             cosp_rttov_interface.o cosp_misr_interface.o cosp_isccp_interface.o    \
                             cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_stats.o        \
-			    cosp_parasol_interface.o cosp_rttov11.3.o cosp_rttov_interface.o       \
+			    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interface.o       \
                             quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o      \
 			    quickbeam_optics.o cosp_errorHandling.o cosp_clara_interface.o         \
 			    CLARA_simulator.o clara_rttov_interface.o
@@ -88,10 +80,10 @@ cosp_cloudsat_interface.o : cosp_kinds.o cosp_config.o quickbeam.o
 cosp_isccp_interface.o    : cosp_kinds.o icarus.o
 cosp_misr_interface.o     : cosp_kinds.o 
 cosp_modis_interface.o    : cosp_kinds.o cosp_config.o modis_simulator.o
-cosp_rttov_interface.o    : cosp_kinds.o cosp_config.o cosp_rttov11.3.o
 cosp_clara_interface.o    : cosp_kinds.o CLARA_simulator.o clara_rttov_interface.o
+cosp_rttov_interface.o    : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
 cosp_parasol_interface.o  : cosp_kinds.o 
-cosp_rttov11.3.o          : cosp_kinds.o cosp_config.o
+cosp_rttovSTUB.o          : cosp_kinds.o cosp_config.o
 optics_lib.o	          : cosp_kinds.o
 array_lib.o   	          : cosp_kinds.o
 math_lib.o                : cosp_kinds.o array_lib.o mrgrnk.o
@@ -106,7 +98,7 @@ CLARA_simulator.o         : cosp_kinds.o cosp_config.o cosp_constants.o clara_rt
 			    modis_simulator.o cosp_stats.o
 clara_rttov_interface.o   : cosp_kinds.o
 mrgrnk.o                  : cosp_kinds.o
-prec_scops.o	          : cosp_kinds.o
+prec_scops.o	          : cosp_kinds.o cosp_config.o
 cosp_optics.o             : cosp_kinds.o cosp_constants.o CLARA_simulator.o
 parasol.o                 : cosp_kinds.o cosp_config.o cosp_constants.o
 cosp_errorHandling.o      : cosp_kinds.o
@@ -135,7 +127,7 @@ CLARA_simulator.o : $(CLARA_PATH)/CLARA_simulator.f90
 clara_rttov_interface.o : $(CLARA_PATH)/clara_rttov_interface.f90 
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
-cosp_rttov11.3.o : $(RT_PATH)/cosp_rttov11.3.F90 
+cosp_rttovSTUB.o : $(RT_PATH)/cosp_rttovSTUB.F90 
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
 lidar_simulator.o : $(CS_PATH)/lidar_simulator.f90
