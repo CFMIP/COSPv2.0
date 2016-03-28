@@ -19,11 +19,6 @@ OBJ_PATH = obj/
 # Libraries
 INC      = /usr/local/include
 LIB      = /usr/local/lib
-#NCDF_INC    = $(F90_LIB)/include
-#NCDF_LIB    = $(F90_LIB)/lib
-#CMOR_INC    = $(F90_LIB)/include
-#CMOR_LIB    = $(F90_LIB)/lib
-
 # Simulator directories
 SIM_PATH     = simulator
 RT_PATH      = $(SIM_PATH)/rttov
@@ -44,29 +39,12 @@ RTTOV_LIBS       = -lrttov11_coef_io_789 -lrttov11_coef_io -lrttov11_main \
                    -lrttov11_mw_scatt -lrttov11_mw_scatt_coef -lrttov11_other
 
 OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
-        prec_scops.o cosp.o cosp_stats.o quickbeam.o cosp_optics.o\
-	array_lib.o mo_rng.o quickbeam_optics.o scops.o math_lib.o optics_lib.o\
-        parasol.o mrgrnk.o lidar_simulator.o icarus.o cosp_calipso_interface.o \
-        cosp_errorHandling.o cosp_isccp_interface.o cosp_misr_interface.o      \
-        MISR_simulator.o cosp_modis_interface.o modis_simulator.o              \
-	cosp_rttov_interface.o cosp_rttovSTUB.o cosp_parasol_interface.o
+        prec_scops.o cosp.o cosp_stats.o quickbeam.o parasol.o                 \
+        lidar_simulator.o icarus.o cosp_calipso_interface.o                    \
+        cosp_isccp_interface.o cosp_misr_interface.o MISR_simulator.o          \
+        cosp_modis_interface.o modis_simulator.o cosp_rttov_interface.o        \
+        cosp_rttovSTUB.o cosp_parasol_interface.o
 
-# To create cosp library, use this.
-#TARGET  = lib/libcosp.a
-#$(TARGET): $(OBJ_PATH)$(OBJS)
-#	rm -f $@
-#	ar cr $@ $^
-
-#%.o: $(SIM_PATH)/%.f90
-#	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
-#	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
-#	@echo "-----------------------------"
-#
-#%.o: %.f90
-#	@echo $(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
-#	$(F90) $(F90FLAGS) -c -I$(NCDF_INC) -I$(CMOR_INC) $<
-#	@echo "-----------------------------"
-#
 %.o: $(SIM_PATH)/%.f90
 	@echo $(F90) $(F90FLAGS) -c $<
 	$(F90) $(F90FLAGS) -c $<
@@ -78,12 +56,11 @@ OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
 	@echo "-----------------------------"
 
 # Dependencies
-cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o prec_scops.o      \
+cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o                   \
                             cosp_rttov_interface.o cosp_misr_interface.o cosp_isccp_interface.o    \
                             cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_stats.o        \
 			    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interface.o       \
-                            quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o      \
-			    quickbeam_optics.o cosp_errorHandling.o
+                            quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o
 cosp_config.o             : cosp_kinds.o
 cosp_stats.o              : cosp_kinds.o cosp_config.o
 cosp_calipso_interface.o  : cosp_kinds.o lidar_simulator.o
@@ -94,21 +71,11 @@ cosp_modis_interface.o    : cosp_kinds.o cosp_config.o modis_simulator.o
 cosp_rttov_interface.o    : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
 cosp_parasol_interface.o  : cosp_kinds.o 
 cosp_rttovSTUB.o          : cosp_kinds.o cosp_config.o
-optics_lib.o	          : cosp_kinds.o
-array_lib.o   	          : cosp_kinds.o
-math_lib.o                : cosp_kinds.o array_lib.o mrgrnk.o
 MISR_simulator.o          : cosp_kinds.o cosp_config.o cosp_stats.o
 modis_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
 lidar_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
-icarus.o	          : cosp_kinds.o cosp_constants.o cosp_optics.o cosp_stats.o
-quickbeam.o               : cosp_kinds.o cosp_config.o cosp_stats.o
-quickbeam_optics.o        : cosp_kinds.o cosp_config.o array_lib.o math_lib.o optics_lib.o         \
-                            cosp_constants.o quickbeam.o
-mrgrnk.o                  : cosp_kinds.o
-prec_scops.o	          : cosp_kinds.o cosp_config.o
-cosp_optics.o             : cosp_kinds.o cosp_constants.o 
+icarus.o	          : cosp_kinds.o cosp_constants.o  cosp_stats.o
 parasol.o                 : cosp_kinds.o cosp_config.o cosp_constants.o
-cosp_errorHandling.o      : cosp_kinds.o
 
 install:
 	make
@@ -137,28 +104,13 @@ lidar_simulator.o : $(CS_PATH)/lidar_simulator.f90
 parasol.o : $(PARASOL_PATH)/parasol.f90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_optics.o :  optics/cosp_optics.f90
-	$(F90) $(F90FLAGS) -c $<
-
-quickbeam_optics.o :  optics/quickbeam_optics.f90
-	$(F90) $(F90FLAGS) -c $<
-
 cosp_constants.o :  hooks/cosp_constants.f90
 	$(F90) $(F90FLAGS) -c $<
 
 cosp_kinds.o : hooks/cosp_kinds.f90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_errorHandling.o : hooks/cosp_errorHandling.f90
-	$(F90) $(F90FLAGS) -c $<
-
 mo_rng.o : rng/mo_rng.f90
-	$(F90) $(F90FLAGS) -c $<
-
-prec_scops.o : subcol/prec_scops.f90
-	$(F90) $(F90FLAGS) -c $<
-
-scops.o : subcol/scops.f90
 	$(F90) $(F90FLAGS) -c $<
 
 cosp_config.o :  cosp_config.f90
@@ -168,16 +120,4 @@ cosp.o :  cosp.f90
 	$(F90) $(F90FLAGS) -c $<
 
 cosp_stats.o :  cosp_stats.f90
-	$(F90) $(F90FLAGS) -c $<
-
-array_lib.o : optics/array_lib.f90
-	$(F90) $(F90FLAGS) -c $<
-
-math_lib.o : optics/math_lib.f90
-	$(F90) $(F90FLAGS) -c $<
-
-mrgrnk.o : optics/mrgrnk.f90
-	$(F90) $(F90FLAGS) -c $<
-
-optics_lib.o : optics/optics_lib.f90
 	$(F90) $(F90FLAGS) -c $<

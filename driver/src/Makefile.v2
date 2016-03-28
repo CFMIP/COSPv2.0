@@ -30,10 +30,8 @@ UUID_INC    = $(F90_LIB)/include
 # COSP source directory
 SRC_F90  = /home/dswales/Projects/COSP/COSPv2.0/src
 OBJ_PATH = ${SRC_F90}/obj
-
-# COSPv1.4 model interface directory
+PROG     = cosp_test_v2.0
 COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/COSPv2.0/cosp-interface
-PROG = cosp_test_v1.5
 
 # Object files
 OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                  \
@@ -46,9 +44,9 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                  
 	$(OBJ_PATH)/cosp_modis_interface.o $(OBJ_PATH)/modis_simulator.o        \
 	$(OBJ_PATH)/cosp_rttov_interface.o $(OBJ_PATH)/cosp_rttovSTUB.o         \
 	$(OBJ_PATH)/cosp_parasol_interface.o mo_rng.o scops.o cosp_utils.o      \
-	cosp_interface_v1p5.o cosp_io.o cosp_errorHandling.o mrgrnk.o           \
-	prec_scops.o array_lib.o quickbeam_optics.o math_lib.o optics_lib.o
-
+	cosp_io.v2.o cosp_errorHandling.o mrgrnk.o prec_scops.o array_lib.o     \
+	quickbeam_optics.o math_lib.o optics_lib.o
+	
 all: $(PROG)
 	mv *.mod *.o obj/
 
@@ -61,31 +59,24 @@ $(PROG): $(OBJS)
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \
 	-o $(PROG)
 
-$(PROG).o     	      : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.o   \
-			 cosp_interface_v1p5.o
-cosp_io.o  	      : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
-                        $(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/cosp.o          \
-  	                $(OBJ_PATH)/cosp_parasol_interface.o                     \
-	    	        cosp_interface_v1p5.o cosp_interface_v1p4.o              
-cosp_interface_v1p5.o : $(OBJ_PATH)/cosp_kinds.o cosp_utils.o $(OBJ_PATH)/cosp.o \
-			$(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
-		        cosp_optics.o $(OBJ_PATH)/quickbeam.o                    \
-			mo_rng.o scops.o quickbeam_optics.o prec_scops.o 
-cosp_utils.o          : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
-scops.o               : $(OBJ_PATH)/cosp_kinds.o mo_rng.o cosp_errorHandling.o
-mo_rng.o              : $(OBJ_PATH)/cosp_kinds.o
-
-optics_lib.o	      : $(OBJ_PATH)/cosp_kinds.o cosp_errorHandling.o
-array_lib.o   	      : $(OBJ_PATH)/cosp_kinds.o cosp_errorHandling.o
-math_lib.o            : $(OBJ_PATH)/cosp_kinds.o array_lib.o mrgrnk.o
-quickbeam.o           : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
-                        $(OBJ_PATH)/cosp_stats.o
-quickbeam_optics.o    : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
-                        $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/quickbeam.o     \
-			cosp_errorHandling.o array_lib.o math_lib.o optics_lib.o 
-mrgrnk.o              : $(OBJ_PATH)/cosp_kinds.o
-prec_scops.o	      : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
-cosp_optics.o         : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_constants.o 
+$(PROG).o          : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.v2.o   \
+                     $(OBJ_PATH)/quickbeam.o
+cosp_io.v2.o       : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp.o                 \
+                     $(OBJ_PATH)/cosp_config.o
+cosp_utils.o       : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
+scops.o            : $(OBJ_PATH)/cosp_kinds.o mo_rng.o cosp_errorHandling.o
+mo_rng.o           : $(OBJ_PATH)/cosp_kinds.o
+optics_lib.o	   : $(OBJ_PATH)/cosp_kinds.o cosp_errorHandling.o
+array_lib.o   	   : $(OBJ_PATH)/cosp_kinds.o cosp_errorHandling.o
+math_lib.o         : $(OBJ_PATH)/cosp_kinds.o array_lib.o mrgrnk.o
+quickbeam.o        : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o          \
+                     $(OBJ_PATH)/cosp_stats.o
+quickbeam_optics.o : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o          \
+                     $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/quickbeam.o        \
+	             cosp_errorHandling.o array_lib.o math_lib.o optics_lib.o 
+mrgrnk.o           : $(OBJ_PATH)/cosp_kinds.o
+prec_scops.o	   : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
+cosp_optics.o      : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_constants.o
 
 clean_objs:
 	rm -f $(OBJ_PATH) *.mod *.o
@@ -99,9 +90,6 @@ clean:
 cosp:
 	make -C ../../src/ install
 
-cosp_io.o: cosp_io.f90
-	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(OBJ_PATH) $<
-
 mo_rng.o : $(SRC_F90)/rng/mo_rng.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
@@ -110,15 +98,12 @@ scops.o : $(SRC_F90)/subcol/scops.f90
 
 prec_scops.o : $(SRC_F90)/subcol/prec_scops.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
-
+	
 cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
-
-cosp_interface_v1p5.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p5.f90
-	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
-
-cosp_interface_v1p4.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p4.f90
-	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<	
+	
+cosp_io.v2.o: cosp_io.v2.f90
+	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(OBJ_PATH) $<
 
 cosp_errorHandling.o : $(COSP_INTERFACE_F90)/cosp_errorHandling.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<

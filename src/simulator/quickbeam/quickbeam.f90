@@ -328,7 +328,7 @@ contains
     
 89  write(*,*) 'Error: Found but could NOT READ radar LUT file: ', &
          trim(rcfg%scale_LUT_file_name) // '_radar_Z_scale_LUT.dat'
-    stop
+    
   end subroutine load_scale_LUTs
   
   ! ##############################################################################################

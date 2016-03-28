@@ -44,7 +44,8 @@ MODULE MOD_COSP_INTERFACE_v1p5
                                   modis_optics_partition, num_trial_res,modis_optics
   USE MOD_COSP_UTILS,       ONLY: cosp_precip_mxratio
   USE quickbeam,            ONLY: radar_cfg,save_scale_LUTs
-  USE mod_quickbeam_optics, ONLY: quickbeam_optics,size_distribution,hydro_class_init
+  USE mod_quickbeam_optics, ONLY: quickbeam_optics,size_distribution,hydro_class_init,   &
+                                  quickbeam_optics_init
   USE mod_rng,              ONLY: rng_state, init_rng
   USE mod_scops,            ONLY: scops
   USE mod_prec_scops,       ONLY: prec_scops
@@ -396,6 +397,9 @@ contains
     ! Initialize the distributional parameters for hydrometeors in radar simulator
     call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
 
+    ! Initialize quickbeam_optics
+    call quickbeam_optics_init()
+
     ! Initialize COSP simulators
     call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
                    cloudsat_do_ray,isccp_top_height,isccp_top_height_direction,           &
@@ -416,6 +420,7 @@ contains
     
     ! Outputs
     type(cosp_outputs), intent(OUT) :: cospOUT   ! Nested COSP simulator output
+    character(len=256),dimension(100) :: cosp_status
     
     ! Local variables
     type(cosp_optical_inputs) :: &
@@ -427,18 +432,15 @@ contains
          start_idx,  & ! Starting index when looping over points
          end_idx,    & ! Ending index when looping over points
          Nptsperit     ! Number of points for current iteration
-    integer :: i
+    integer :: i,ij
 
     ! Number of calls to COSP to make
     num_chunks = Npoints/Npoints_it+1
     print*,'Number of COSP iterations:',num_chunks
-    
-    ! Figure out which simulators to run given what output fields are allocated
-    
+        
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Loop over each chunk
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
     DO i = 1, num_chunks    
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
        ! Compute indices to process
@@ -472,11 +474,12 @@ contains
        ! Generate subcolumns and compute optical properties needed by simulators  
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        call subsample_and_optics_v1p4(gbx,sgx,Nptsperit,start_idx,end_idx,         &
-                                      cospIN,cospstateIN)
+            cospIN,cospstateIN)
+          
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! COSP engine 
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       CALL COSP_SIMULATOR(cospIN, cospstateIN, cospOUT, start_idx,end_idx)   
+       cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT, start_idx,end_idx)   
     END DO
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

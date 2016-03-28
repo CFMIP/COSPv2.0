@@ -81,7 +81,20 @@ MODULE MOD_COSP_CONFIG
        tau_binEdges = reshape(source=(/0.0, 0.3,  0.3,  1.3,  1.3,  3.6,      3.6,      &
                                         9.4, 9.4, 23.0, 23.0, 60.0, 60.0, 100000.0/),    &
                                         shape=(/2,ntau/)) 
-                                        
+
+    ! Optical depth bin axes (ONLY USED BY MODIS SIMULATOR IN v1.4)
+    integer :: l,k
+    integer,parameter :: &
+         ntauV1p4 = 6
+    real(wp),parameter,dimension(ntauV1p4+1) :: &
+         tau_binBoundsV1p4 = (/0.3, 1.3, 3.6, 9.4, 23., 60., 10000./)
+    real(wp),parameter,dimension(2,ntauV1p4) :: &
+         tau_binEdgesV1p4 = reshape(source =(/tau_binBoundsV1p4(1),((tau_binBoundsV1p4(k),l=1,2),   &
+                                    k=2,ntauV1p4),100000._wp/),shape = (/2,ntauV1p4/)) 
+    real(wp),parameter,dimension(ntauV1p4) :: &
+         tau_binCentersV1p4 = (tau_binEdgesV1p4(1,:)+tau_binEdgesV1p4(2,:))/2._wp  
+
+    
     ! Cloud-top height pressure bin axis
     integer,parameter :: &
        npres = 7     
@@ -112,7 +125,7 @@ MODULE MOD_COSP_CONFIG
 
     ! Liquid and Ice particle bins for MODIS joint histogram of optical-depth and particle
     ! size
-    integer :: i,j,l,k
+    integer :: i,j
     integer,parameter :: &
        nReffLiq = 11, & ! Number of bins for tau/ReffLiq joint-histogram
        nReffIce = 11    ! Number of bins for tau/ReffICE joint-histogram

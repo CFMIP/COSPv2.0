@@ -56,9 +56,7 @@ MODULE MOD_COSP
   USE MOD_MODIS_SIM,               ONLY: modis_subcolumn,     modis_column
   USE MOD_PARASOL,                 ONLY: parasol_subcolumn,   parasol_column, ntetas
   use mod_cosp_rttov,              ONLY: rttov_subcolumn
-  USE mod_quickbeam_optics,        ONLY: size_distribution,quickbeam_optics_init
   USE MOD_COSP_STATS,              ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID
-  use mod_cosp_error,              ONLY: errorMessage
   
   IMPLICIT NONE
   
@@ -236,9 +234,10 @@ MODULE MOD_COSP
 
 CONTAINS
   ! ######################################################################################
-  ! SUBROUTINE cosp_simulator
+  ! FUNCTION cosp_simulator
   ! ######################################################################################
-  SUBROUTINE COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
+!  SUBROUTINE COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
+  function COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
     type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
     type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
     
@@ -254,6 +253,7 @@ CONTAINS
     
     ! Outputs from the simulators (nested simulator output structure)
     type(cosp_outputs), intent(inout) :: cospOUT
+    character(len=256),dimension(100) :: cosp_simulator
     
     ! Local variables
     integer :: &
@@ -296,6 +296,9 @@ CONTAINS
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
     real(wp),dimension(:,:,:),allocatable :: &
        t_in,betamol_in,tmpFlip,betamolFlip,pnormFlip,pnorm_perpFlip,ze_totFlip
+
+    ! Initialize error reporting for output
+    cosp_simulator(:)=''
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1) Determine if using full inputs or subset
@@ -456,7 +459,7 @@ CONTAINS
                          Lmisr_subcolumn,Lmisr_column,Lmodis_subcolumn,Lmodis_column,    &
                          Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,        &
                          Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
-                         Lparasol_subcolumn,Lparasol_column,cospOUT)
+                         Lparasol_subcolumn,Lparasol_column,cospOUT,cosp_simulator)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -1140,7 +1143,7 @@ CONTAINS
        endif
     endif
 
-  end SUBROUTINE COSP_SIMULATOR
+  end function COSP_SIMULATOR
   ! ######################################################################################
   ! SUBROUTINE cosp_init
   ! ######################################################################################
@@ -1211,8 +1214,6 @@ CONTAINS
     mgrid_zl            = hgt_matrix_half(1,:)
     mgrid_zu(2:Nlevels) = hgt_matrix_half(1,1:Nlevels-1)
     mgrid_zu(1)     = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))
-!    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,:)
-!    mgrid_zu(1)         = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))    
     
     ! Initialize ISCCP
     call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
@@ -1223,8 +1224,7 @@ CONTAINS
     ! Initialize RTTOV
     call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,rttov_instrument,&
          rttov_channels)
-    ! Initialize quickbeam_optics
-    call quickbeam_optics_init()
+
     ! Initialize radar
     call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,        &
          cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,hgt_matrix,surface_radar,rcfg,  &
@@ -1598,7 +1598,7 @@ CONTAINS
   subroutine cosp_errorCheck(cospgridIN,cospIN,Lisccp_subcolumn,Lisccp_column,Lmisr_subcolumn,Lmisr_column,    &
                              Lmodis_subcolumn,Lmodis_column,Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,  &
                              Lcalipso_column,Lrttov_subcolumn,Lrttov_column,Lparasol_subcolumn,Lparasol_column,    &
-                             cospOUT)
+                             cospOUT,errorMessage)
   ! Inputs
   type(cosp_column_inputs),intent(in) :: &
      cospgridIN       ! Model grid inputs to COSP
@@ -1622,81 +1622,86 @@ CONTAINS
       Lrttov_subcolumn,    & ! RTTOV subcolumn simulator on/off switch
       Lrttov_column          ! RTTOV column simulator on/off switch       
   type(cosp_outputs),intent(inout) :: &
-      cospOUT                ! COSP Outputs   
+       cospOUT                ! COSP Outputs
+  character(len=256),dimension(100) :: errorMessage
   
   ! Local variables
-  character(len=100) :: parasolErrorMessage    
-                   
+  character(len=100) :: parasolErrorMessage
+  integer :: nError
+
+  nError = 0
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! PART 1: Check input array values for out-of-bounds values. When an out-of-bound value
   !         is encountered, COSP outputs that are dependent on that input are filled with
   !         an undefined value (set in cosp_config.f90) and if necessary, that simulator 
   !         is turned off.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if (any(cospgridIN%sunlit .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%sunlit contains values out of range')
-       Lisccp_subcolumn = .false.
-       Lisccp_column    = .false.
-       Lmisr_subcolumn  = .false.
-       Lmisr_column     = .false.
-       Lmodis_subcolumn = .false.
-       Lmodis_column    = .false.
-       if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
-       if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
-       if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
-       if (associated(cospOUT%isccp_meanptop))      cospOUT%isccp_meanptop(:)      = R_UNDEF
-       if (associated(cospOUT%isccp_meantaucld))    cospOUT%isccp_meantaucld(:)    = R_UNDEF
-       if (associated(cospOUT%isccp_meanalbedocld)) cospOUT%isccp_meanalbedocld(:) = R_UNDEF
-       if (associated(cospOUT%isccp_boxtau))        cospOUT%isccp_boxtau(:,:)      = R_UNDEF
-       if (associated(cospOUT%isccp_boxptop))       cospOUT%isccp_boxptop(:,:)     = R_UNDEF
-       if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF 
-       if (associated(cospOUT%misr_fq))                   cospOUT%misr_fq(:,:,:)                 = R_UNDEF
-       if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(:,:) = R_UNDEF
-       if (associated(cospOUT%misr_meanztop))             cospOUT%misr_meanztop(:)               = R_UNDEF
-       if (associated(cospOUT%misr_cldarea))              cospOUT%misr_cldarea(:)                = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                          &
-            cospOUT%modis_Cloud_Fraction_Total_Mean(:)                   = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean))                          &
-            cospOUT%modis_Cloud_Fraction_Water_Mean(:)                   = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Fraction_Ice_Mean))                            &
-            cospOUT%modis_Cloud_Fraction_Ice_Mean(:)                     = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Fraction_High_Mean))                           &
-            cospOUT%modis_Cloud_Fraction_High_Mean(:)                    = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Fraction_Mid_Mean))                            &
-            cospOUT%modis_Cloud_Fraction_Mid_Mean(:)                     = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Fraction_Low_Mean))                            &
-            cospOUT%modis_Cloud_Fraction_Low_Mean(:)                     = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_Total_Mean))                       &
-            cospOUT%modis_Optical_Thickness_Total_Mean(:)                = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_Water_Mean))                       &
-            cospOUT%modis_Optical_Thickness_Water_Mean(:)                = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_Ice_Mean))                         &
-            cospOUT%modis_Optical_Thickness_Ice_Mean(:)                  = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_Total_LogMean))                    &
-            cospOUT%modis_Optical_Thickness_Total_LogMean(:)             = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_Water_LogMean))                    &
-            cospOUT%modis_Optical_Thickness_Water_LogMean(:)             = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_Ice_LogMean))                      &
-            cospOUT%modis_Optical_Thickness_Ice_LogMean(:)               = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Particle_Size_Water_Mean))                     &
-            cospOUT%modis_Cloud_Particle_Size_Water_Mean(:)              = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean))                       &
-            cospOUT%modis_Cloud_Particle_Size_Ice_Mean(:)                = R_UNDEF
-       if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean))                      &
-            cospOUT%modis_Cloud_Top_Pressure_Total_Mean(:)               = R_UNDEF
-       if (associated(cospOUT%modis_Liquid_Water_Path_Mean))                             &
-            cospOUT%modis_Liquid_Water_Path_Mean(:)                      = R_UNDEF
-       if (associated(cospOUT%modis_Ice_Water_Path_Mean))                                &
-            cospOUT%modis_Ice_Water_Path_Mean(:)                         = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))            &
-            cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(:,:,:) = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_vs_ReffICE))                       &
-            cospOUT%modis_Optical_Thickness_vs_ReffICE(:,:,:)            = R_UNDEF
-       if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ))                       &
-            cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
-    endif
-    if (any(cospgridIN%at .lt. 0)) then   
-       call errorMessage('ERROR: COSP input variable: cospgridIN%at contains values out of range')
+  if (any(cospgridIN%sunlit .lt. 0)) then
+     nError=nError+1
+     errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%sunlit contains values out of range (0 or 1)'
+     Lisccp_subcolumn = .false.
+     Lisccp_column    = .false.
+     Lmisr_subcolumn  = .false.
+     Lmisr_column     = .false.
+     Lmodis_subcolumn = .false.
+     Lmodis_column    = .false.
+     if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
+     if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
+     if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
+     if (associated(cospOUT%isccp_meanptop))      cospOUT%isccp_meanptop(:)      = R_UNDEF
+     if (associated(cospOUT%isccp_meantaucld))    cospOUT%isccp_meantaucld(:)    = R_UNDEF
+     if (associated(cospOUT%isccp_meanalbedocld)) cospOUT%isccp_meanalbedocld(:) = R_UNDEF
+     if (associated(cospOUT%isccp_boxtau))        cospOUT%isccp_boxtau(:,:)      = R_UNDEF
+     if (associated(cospOUT%isccp_boxptop))       cospOUT%isccp_boxptop(:,:)     = R_UNDEF
+     if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF 
+     if (associated(cospOUT%misr_fq))                   cospOUT%misr_fq(:,:,:)                 = R_UNDEF
+     if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(:,:) = R_UNDEF
+     if (associated(cospOUT%misr_meanztop))             cospOUT%misr_meanztop(:)               = R_UNDEF
+     if (associated(cospOUT%misr_cldarea))              cospOUT%misr_cldarea(:)                = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                          &
+          cospOUT%modis_Cloud_Fraction_Total_Mean(:)                   = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean))                          &
+          cospOUT%modis_Cloud_Fraction_Water_Mean(:)                   = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Fraction_Ice_Mean))                            &
+          cospOUT%modis_Cloud_Fraction_Ice_Mean(:)                     = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Fraction_High_Mean))                           &
+          cospOUT%modis_Cloud_Fraction_High_Mean(:)                    = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Fraction_Mid_Mean))                            &
+          cospOUT%modis_Cloud_Fraction_Mid_Mean(:)                     = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Fraction_Low_Mean))                            &
+          cospOUT%modis_Cloud_Fraction_Low_Mean(:)                     = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_Total_Mean))                       &
+          cospOUT%modis_Optical_Thickness_Total_Mean(:)                = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_Water_Mean))                       &
+          cospOUT%modis_Optical_Thickness_Water_Mean(:)                = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_Ice_Mean))                         &
+          cospOUT%modis_Optical_Thickness_Ice_Mean(:)                  = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_Total_LogMean))                    &
+          cospOUT%modis_Optical_Thickness_Total_LogMean(:)             = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_Water_LogMean))                    &
+          cospOUT%modis_Optical_Thickness_Water_LogMean(:)             = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_Ice_LogMean))                      &
+          cospOUT%modis_Optical_Thickness_Ice_LogMean(:)               = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Particle_Size_Water_Mean))                     &
+          cospOUT%modis_Cloud_Particle_Size_Water_Mean(:)              = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean))                       &
+          cospOUT%modis_Cloud_Particle_Size_Ice_Mean(:)                = R_UNDEF
+     if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean))                      &
+          cospOUT%modis_Cloud_Top_Pressure_Total_Mean(:)               = R_UNDEF
+     if (associated(cospOUT%modis_Liquid_Water_Path_Mean))                             &
+          cospOUT%modis_Liquid_Water_Path_Mean(:)                      = R_UNDEF
+     if (associated(cospOUT%modis_Ice_Water_Path_Mean))                                &
+          cospOUT%modis_Ice_Water_Path_Mean(:)                         = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))            &
+          cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(:,:,:) = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffICE))                       &
+          cospOUT%modis_Optical_Thickness_vs_ReffICE(:,:,:)            = R_UNDEF
+     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ))                       &
+          cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
+  endif
+  if (any(cospgridIN%at .lt. 0)) then   
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%at contains values out of range (at<0), expected units (K)'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.
        Lmisr_subcolumn  = .false.
@@ -1729,7 +1734,8 @@ CONTAINS
        if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF       
     endif
     if (any(cospgridIN%pfull .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%pfull contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%pfull contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.     
        Lrttov_subcolumn = .false.
@@ -1745,7 +1751,8 @@ CONTAINS
        if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF      
     endif
     if (any(cospgridIN%phalf .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%phalf contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%phalf contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.     
        Lrttov_subcolumn = .false.
@@ -1810,7 +1817,8 @@ CONTAINS
        if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF      
     endif
     if (any(cospgridIN%qv .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%qv contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%qv contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.     
        Lrttov_subcolumn = .false.
@@ -1826,7 +1834,8 @@ CONTAINS
        if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF                
     endif
     if (any(cospgridIN%hgt_matrix .lt. -300)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%hgt_matrix contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%hgt_matrix contains values out of range'
        Lmisr_subcolumn     = .false.
        Lmisr_column        = .false.
        Lcloudsat_subcolumn = .false.
@@ -1848,7 +1857,8 @@ CONTAINS
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF       
     endif
     if (any(cospgridIN%hgt_matrix_half .lt. -300)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%hgt_matrix_half contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%hgt_matrix_half contains values out of range'
        Lrttov_subcolumn = .false.
        Lcloudsat_column = .false.
        Lcalipso_column  = .false.
@@ -1864,7 +1874,8 @@ CONTAINS
        if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF                 
     endif
     if (any(cospgridIN%land .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%land contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%land contains values out of range'
        Lrttov_subcolumn = .false.
        Lcalipso_column  = .false.       
        Lparasol_column  = .false.
@@ -1878,7 +1889,8 @@ CONTAINS
        if (associated(cospOUT%parasolGrid_refl))      cospOUT%parasolGrid_refl(:,:)        = R_UNDEF
     endif
     if (any(cospgridIN%skt .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%skt contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%skt contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.     
        Lrttov_subcolumn = .false.
@@ -1896,64 +1908,76 @@ CONTAINS
 
 	! RTTOV Inputs
     if (cospgridIN%zenang .lt. -90. .OR. cospgridIN%zenang .gt. 90) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%zenang contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%zenang contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (cospgridIN%co2 .lt. 0) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%co2 contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (cospgridIN%ch4 .lt. 0) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%ch4 contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%ch4 contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (cospgridIN%n2o .lt. 0) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%n2o contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%n2o contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (cospgridIN%co.lt. 0) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%co contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (any(cospgridIN%o3 .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%o3 contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%o3 contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (any(cospgridIN%emis_sfc .lt. 0. .OR. cospgridIN%emis_sfc .gt. 1)) then
-       call errorMessage('ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (any(cospgridIN%u_sfc .lt. -100. .OR. cospgridIN%u_sfc .gt. 100.)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%u_sfc contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%u_sfc contains values out of range'
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
        Lrttov_subcolumn = .false.
     endif
     if (any(cospgridIN%v_sfc .lt. -100. .OR. cospgridIN%v_sfc .gt. 100.)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%v_sfc contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%v_sfc contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (any(cospgridIN%t_sfc .lt. 150 .OR. cospgridIN%t_sfc .gt. 350.)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%t_sfc contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%t_sfc contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
     if (any(cospgridIN%lat .lt. -90 .OR. cospgridIN%lat .gt. 90)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%lat contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%lat contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
 
     ! COSP_INPUTS
     if (cospIN%emsfc_lw .lt. 0. .OR. cospIN%emsfc_lw .gt. 1.) then
-       call errorMessage('ERROR: COSP input variable: cospIN%emsfc_lw contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%emsfc_lw contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.
        if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -1968,7 +1992,8 @@ CONTAINS
        
     endif
     if (any(cospIN%tau_067 .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tau_067 contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tau_067 contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.
        Lmisr_subcolumn  = .false.
@@ -2032,7 +2057,8 @@ CONTAINS
        
     endif
     if (any(cospIN%emiss_11 .lt. 0. .OR. cospIN%emiss_11 .gt. 1)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%emiss_11 contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%emiss_11 contains values out of range'
        Lisccp_subcolumn = .false.
        Lisccp_column    = .false.
        if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -2047,7 +2073,8 @@ CONTAINS
          
     endif
     if (any(cospIN%asym .lt. -1. .OR. cospIN%asym .gt. 1)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%asym contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%asym contains values out of range'
        Lmodis_subcolumn = .false.
        Lmodis_column    = .false.
        if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                          &
@@ -2092,7 +2119,8 @@ CONTAINS
             cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF             
     endif
     if (any(cospIN%ss_alb .lt. 0 .OR. cospIN%ss_alb .gt. 1)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%ss_alb contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%ss_alb contains values out of range'
        Lmodis_subcolumn = .false.
        Lmodis_column    = .false.
        if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                          &
@@ -2137,7 +2165,8 @@ CONTAINS
             cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF                 
     endif
     if (any(cospIN%betatot .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%betatot contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot contains values out of range'
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2149,7 +2178,8 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
     endif
     if (any(cospIN%betatot_liq .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%betatot_liq contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = ('ERROR: COSP input variable: cospIN%betatot_liq contains values out of range')
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2161,10 +2191,11 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF       
     endif
     if (any(cospIN%betatot_ice .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%betatot_ice contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot_ice contains values out of range'
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
-      if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
+       if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
        if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
        if (associated(cospOUT%calipso_lidarcldphase)) cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
        if (associated(cospOUT%calipso_cldlayer))      cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
@@ -2173,7 +2204,8 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
     endif 
     if (any(cospIN%beta_mol .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%beta_mol contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%beta_mol contains values out of range'
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        Lcloudsat_column   = .false.
@@ -2189,7 +2221,8 @@ CONTAINS
        if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF          
     endif    
     if (any(cospIN%tautot .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tautot contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot contains values out of range'
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2201,7 +2234,8 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF      
     endif
     if (any(cospIN%tautot_liq .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tautot_liq contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = ('ERROR: COSP input variable: cospIN%tautot_liq contains values out of range')
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2213,7 +2247,8 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF       
     endif
     if (any(cospIN%tautot_ice .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tautot_ice contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_ice contains values out of range'
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2225,7 +2260,8 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF        
     endif
     if (any(cospIN%tau_mol .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tau_mol contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tau_mol contains values out of range'
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2237,21 +2273,24 @@ CONTAINS
        if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF         
     endif    
     if (any(cospIN%tautot_S_liq .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tautot_S_liq contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_S_liq contains values out of range'
        Lparasol_subcolumn = .false.
        Lparasol_column    = .false.
        if (associated(cospOUT%parasolPix_refl))  cospOUT%parasolPix_refl(:,:,:) = R_UNDEF      
        if (associated(cospOUT%parasolGrid_refl)) cospOUT%parasolGrid_refl(:,:)  = R_UNDEF
     endif
     if (any(cospIN%tautot_S_ice .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%tautot_S_ice contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_S_ice contains values out of range'
        Lparasol_subcolumn = .false.
        Lparasol_column    = .false.
        if (associated(cospOUT%parasolPix_refl))  cospOUT%parasolPix_refl(:,:,:) = R_UNDEF      
        if (associated(cospOUT%parasolGrid_refl)) cospOUT%parasolGrid_refl(:,:)  = R_UNDEF       
     endif    
     if (any(cospIN%z_vol_cloudsat .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%z_vol_cloudsat contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%z_vol_cloudsat contains values out of range'
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
@@ -2260,7 +2299,8 @@ CONTAINS
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF     
     endif
     if (any(cospIN%kr_vol_cloudsat .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%kr_vol_cloudsat contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%kr_vol_cloudsat contains values out of range'
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
@@ -2269,7 +2309,8 @@ CONTAINS
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF      
     endif    
     if (any(cospIN%g_vol_cloudsat .lt. 0)) then
-       call errorMessage('ERROR: COSP input variable: cospIN%g_vol_cloudsat contains values out of range')
+       nError=nError+1
+       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%g_vol_cloudsat contains values out of range'
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
@@ -2293,14 +2334,16 @@ CONTAINS
       size(cospgridIN%pfull,1) .ne. cospIN%Npoints) then
       Lisccp_subcolumn = .false.
       Lisccp_column    = .false.
-      call errorMessage('ERROR(isccp_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(isccp_simulator): The number of points in the input fields are inconsistent'
   endif
   if (size(cospIN%frac_out,2) .ne. cospIN%Ncolumns .OR. &
       size(cospIN%tau_067,2)  .ne. cospIN%Ncolumns .OR. &
       size(cospIN%emiss_11,2) .ne. cospIN%Ncolumns) then
       Lisccp_subcolumn = .false.
       Lisccp_column    = .false.
-      call errorMessage('ERROR(isccp_simulator): The number of sub-columns in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(isccp_simulator): The number of sub-columns in the input fields are inconsistent'
   endif
   if (size(cospIN%frac_out,3)  .ne. cospIN%Nlevels .OR. &
       size(cospIN%tau_067,3)   .ne. cospIN%Nlevels .OR. &
@@ -2311,7 +2354,8 @@ CONTAINS
       size(cospgridIN%phalf,2) .ne. cospIN%Nlevels+1) then
       Lisccp_subcolumn = .false.
       Lisccp_column    = .false.
-      call errorMessage('ERROR(isccp_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(isccp_simulator): The number of levels in the input fields are inconsistent'
   endif
       
   ! MISR
@@ -2321,19 +2365,22 @@ CONTAINS
       size(cospgridIN%at,1)         .ne. cospIN%Npoints) then
       Lmisr_subcolumn = .false.
       Lmisr_column    = .false.
-      call errorMessage('ERROR(misr_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(misr_simulator): The number of points in the input fields are inconsistent'
   endif
   if (size(cospIN%tau_067,2) .ne. cospIN%Ncolumns) then
       Lmisr_subcolumn = .false.
       Lmisr_column    = .false.
-      call errorMessage('ERROR(misr_simulator): The number of sub-columns in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(misr_simulator): The number of sub-columns in the input fields are inconsistent'
   endif
   if (size(cospIN%tau_067,3)        .ne. cospIN%Nlevels .OR. &
       size(cospgridIN%hgt_matrix,2) .ne. cospIN%Nlevels .OR. &
       size(cospgridIN%at,2)         .ne. cospIN%Nlevels) then
       Lmisr_subcolumn = .false.
       Lmisr_column    = .false.
-      call errorMessage('ERROR(misr_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(misr_simulator): The number of levels in the input fields are inconsistent'
   endif    
 
   ! MODIS
@@ -2343,7 +2390,8 @@ CONTAINS
       size(cospIN%ss_alb,1)  .ne. cospIN%Npoints) then
       Lmodis_subcolumn = .false.
       Lmodis_column    = .false.
-      call errorMessage('ERROR(modis_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(modis_simulator): The number of points in the input fields are inconsistent'
   endif
   if (size(cospIN%fracLiq,2) .ne. cospIN%Ncolumns .OR. &
       size(cospIN%tau_067,2) .ne. cospIN%Ncolumns .OR. &
@@ -2351,7 +2399,8 @@ CONTAINS
       size(cospIN%ss_alb,2)  .ne. cospIN%Ncolumns) then
       Lmodis_subcolumn = .false.
       Lmodis_column    = .false.
-      call errorMessage('ERROR(modis_simulator): The number of sub-columns in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(modis_simulator): The number of sub-columns in the input fields are inconsistent'
   endif        
   if (size(cospIN%fracLiq,3) .ne. cospIN%Nlevels .OR. &
       size(cospIN%tau_067,3) .ne. cospIN%Nlevels .OR. &
@@ -2359,7 +2408,8 @@ CONTAINS
       size(cospIN%ss_alb,3)  .ne. cospIN%Nlevels) then
       Lmodis_subcolumn = .false.
       Lmodis_column    = .false.
-      call errorMessage('ERROR(modis_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(modis_simulator): The number of levels in the input fields are inconsistent'
   endif  
   
   ! CLOUDSAT    
@@ -2369,14 +2419,16 @@ CONTAINS
       size(cospgridIN%hgt_matrix,1)   .ne. cospIN%Npoints) then
       Lcloudsat_subcolumn = .false.
       Lcloudsat_column    = .false.
-      call errorMessage('ERROR(cloudsat_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(cloudsat_simulator): The number of points in the input fields are inconsistent'
   endif
   if (size(cospIN%z_vol_cloudsat,2)  .ne. cospIN%Ncolumns .OR. &
       size(cospIN%kr_vol_cloudsat,2) .ne. cospIN%Ncolumns .OR. &
       size(cospIN%g_vol_cloudsat,2)  .ne. cospIN%Ncolumns) then
       Lcloudsat_subcolumn = .false.
       Lcloudsat_column    = .false.
-      call errorMessage('ERROR(cloudsat_simulator): The number of sub-columns in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(cloudsat_simulator): The number of sub-columns in the input fields are inconsistent'
   endif       
   if (size(cospIN%z_vol_cloudsat,3)  .ne. cospIN%Nlevels .OR. &
       size(cospIN%kr_vol_cloudsat,3) .ne. cospIN%Nlevels .OR. &
@@ -2384,7 +2436,8 @@ CONTAINS
       size(cospgridIN%hgt_matrix,2)  .ne. cospIN%Nlevels) then
       Lcloudsat_subcolumn = .false.
       Lcloudsat_column    = .false.
-      call errorMessage('ERROR(cloudsat_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(cloudsat_simulator): The number of levels in the input fields are inconsistent'
   endif
 
   ! CALIPSO
@@ -2398,7 +2451,8 @@ CONTAINS
       size(cospIN%tautot_ice,1)  .ne. cospIN%Npoints) then
       Lcalipso_subcolumn = .false.
       Lcalipso_column    = .false.
-      call errorMessage('ERROR(calipso_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(calipso_simulator): The number of points in the input fields are inconsistent'
   endif          
    if (size(cospIN%betatot,2)     .ne. cospIN%Ncolumns .OR. &
        size(cospIN%betatot_liq,2) .ne. cospIN%Ncolumns .OR. &
@@ -2408,7 +2462,8 @@ CONTAINS
        size(cospIN%tautot_ice,2)  .ne. cospIN%Ncolumns) then
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
-      call errorMessage('ERROR(calipso_simulator): The number of sub-columns in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(calipso_simulator): The number of sub-columns in the input fields are inconsistent'
   endif       
   if (size(cospIN%beta_mol,2)    .ne. cospIN%Nlevels .OR. &
       size(cospIN%betatot,3)     .ne. cospIN%Nlevels .OR. &
@@ -2420,7 +2475,8 @@ CONTAINS
       size(cospIN%tautot_ice,3)  .ne. cospIN%Nlevels) then
       Lcalipso_subcolumn = .false.
       Lcalipso_column    = .false.
-      call errorMessage('ERROR(calipso_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(calipso_simulator): The number of levels in the input fields are inconsistent'
   endif 
   
   ! PARASOL
@@ -2428,13 +2484,15 @@ CONTAINS
       size(cospIN%tautot_S_ice,1) .ne. cospIN%Npoints) then
       Lparasol_subcolumn = .false.
       Lparasol_column    = .false.
-      call errorMessage('ERROR(parasol_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(parasol_simulator): The number of points in the input fields are inconsistent'
   endif
   if (size(cospIN%tautot_S_liq,2) .ne. cospIN%Nlevels .OR. &
       size(cospIN%tautot_S_ice,2) .ne. cospIN%Nlevels) then
       Lparasol_subcolumn = .false.
       Lparasol_column    = .false.
-      call errorMessage('ERROR(parasol_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(parasol_simulator): The number of levels in the input fields are inconsistent'
   endif  
   
   ! RTTOV
@@ -2452,7 +2510,8 @@ CONTAINS
       size(cospgridIN%lat)               .ne. cospIN%Npoints) then
       Lrttov_subcolumn = .false.
       Lrttov_column    = .false.
-      call errorMessage('ERROR(rttov_simulator): The number of points in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(rttov_simulator): The number of points in the input fields are inconsistent'
   endif      
   if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
       size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
@@ -2462,7 +2521,8 @@ CONTAINS
       size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
       Lrttov_subcolumn = .false.
       Lrttov_column    = .false.
-      call errorMessage('ERROR(rttov_simulator): The number of levels in the input fields are inconsistent')
+      nError=nError+1
+      errorMessage(nError) = 'ERROR(rttov_simulator): The number of levels in the input fields are inconsistent'
   endif       
              
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2472,8 +2532,9 @@ CONTAINS
   ! PARASOL Simulator
   if (Lparasol_subcolumn) then
       IF (PARASOL_NREFL .gt. ntetas ) THEN
-      write(parasolErrorMessage,"(a50,i2,a4,i2)") 'ERROR(lidar_simulator): nrefl should be less then ',ntetas,' not',PARASOL_NREFL
-         call errorMessage(parasolErrorMessage)
+         write(parasolErrorMessage,"(a50,i2,a4,i2)") 'ERROR(lidar_simulator): nrefl should be less then ',ntetas,' not',PARASOL_NREFL
+         nError=nError+1
+         errorMessage(nError) = parasolErrorMessage
       ENDIF
       Lparasol_subcolumn = .false.
       Lparasol_column    = .false.
