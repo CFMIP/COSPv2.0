@@ -40,6 +40,7 @@ module mod_quickbeam_optics
   use quickbeam,           ONLY: radar_cfg,dmin,dmax,Re_BIN_LENGTH,  &
                                  Re_MAX_BIN,nRe_types,nd,maxhclass
   use mod_cosp_config,     ONLY: N_HYDRO
+  use mod_cosp_error,      ONLY: errorMessage
   implicit none
 
   ! Derived type for particle size distribution
@@ -189,8 +190,7 @@ contains
                    re_matrix(tp,pr,k)=Re
                 else
                    if (Np_matrix(tp,pr,k) > 0) then
-                      print *, 'Warning: Re and Np set for the same ', &
-                           'volume & hydrometeor type.  Np is being ignored.'
+                      call errorMessage('WARNING(optics/quickbeam_optics.f90): Re and Np set for the same volume & hydrometeor type.  Np is being ignored.')
                    endif
                    Re = re_matrix(tp,pr,k)
                 endif
@@ -237,7 +237,6 @@ contains
                    ! Create a discrete distribution of hydrometeors within volume
                    select case(sd%dtype(tp))
                    case(4)
-                      print*,'In HERE!!!!!!!!!!!!'
                       ns = 1
                       allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
                       Di = sd%p1(tp)
@@ -306,10 +305,7 @@ contains
                       Np = path_integral(Ni,Di,1,ns-1)/rho_a*1.E6_wp
                       ! Note: Representation is not great or small Re < 2 
                       if( (Np_matrix(tp,pr,k)-Np)/Np_matrix(tp,pr,k)>0.1 ) then
-                         write(*,*) 'Error: Np input does not match sum(N)'
-                         write(*,*) tp,pr,k,Re,Ni(1),Ni(ns),10*log10(ze)
-                         write(*,*) Np_matrix(tp,pr,k),Np,(Np_matrix(tp,pr,k)-Np)/Np_matrix(tp,pr,k)
-                         write(*,*)
+                         call errorMessage('ERROR(optics/quickbeam_optics.f90): Error: Np input does not match sum(N)')
                       endif
                    endif
 
@@ -323,11 +319,7 @@ contains
                       ! if more than 2 dBZe difference print error message/parameters.
                       if ( abs(10*log10(ze) - 10*log10(rcfg%Ze_scaled(tp,itt,iRe_type) * &
                            scale_factor)) > 2 ) then
-                         write(*,*) 'Roj Error: ',tp,itt,iRe_type,rcfg%Z_scale_flag(tp,itt,iRe_type),n,step,base
-                         write(*,*) 10*log10(ze),10*log10(rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor)
-                         write(*,*) rcfg%Ze_scaled(tp,itt,iRe_type),scale_factor
-                         write(*,*) re_matrix(tp,pr,k),Re
-                         write(*,*)
+                         call errorMessage('ERROR(optics/quickbeam_optics.f90): ERROR: Roj Error?')
                       endif
                    endif
                 else
@@ -451,17 +443,16 @@ contains
              ! fixed Roj. Dec. 2010 -- after comment by S. Mcfarlane
              vu = (1/(0.2714_wp + 0.00057145_wp*Np*rho_a*1E-6))**2 ! units of Nt = Np*rhoa = #/cm^3
           else
-             print *, 'Error: Must specify a value for Np in each volume', &
-                  ' with Morrison/Martin Scheme.'
-             stop    
+             call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for Np in each volume with Morrison/Martin Scheme.')
+             return
           endif
        elseif (abs(local_p3+1) > 1E-8) then
           ! vu is fixed in hp structure  
           vu = local_p3 
        else
           ! vu isn't specified
-          print *, 'Error: Must specify a value for vu for Modified Gamma distribution'
-          stop    
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for vu for Modified Gamma distribution')
+          return
        endif
        
        if( Np.eq.0 .and. p2+1 > 1E-8) then     ! use default value for MEAN diameter as first default  
@@ -472,10 +463,8 @@ contains
              if( abs(p1+1) > 1E-8 ) then  !   use default number concentration   
                 local_Np = p1 ! total number concentration / pa --- units kg^-1
              else
-                print *, 'Error: Must specify Np or default value ', &
-                     '(p1=Dm [um] or p2=Np [1/kg]) for ', &
-                     'Modified Gamma distribution'
-                stop
+                call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p1=Dm [um] or p2=Np [1/kg]) for Modified Gamma distribution')
+                return
              endif
           else
              local_Np=Np;    
@@ -500,9 +489,8 @@ contains
        elseif (abs(p2+1) > 1E-8) then  ! lambda=ld has been specified as default
           ld = p2     ! should have units of microns^-1 
        else
-          print *, 'Error: Must specify Np or default value ', &
-               '(p1=No or p2=lambda) for Exponential distribution'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p1=No or p2=lambda) for Exponential distribution')
+          return
        endif
        Re = 1.5_wp/ld 
        
@@ -517,9 +505,8 @@ contains
        
        Re=0._wp  ! Not supporting LUT approach for power-law ...
        if(Np>0) then
-          print *, 'Variable Np not supported for ', &
-               'Power Law distribution'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Variable Np not supported for Power Law distribution')
+          return
        endif
        
        ! ---------------------------------------------------------!
@@ -530,9 +517,8 @@ contains
        
        Re = p1
        if(Np>0) then
-          print *, 'Variable Np not supported for ', &
-               'Monodispersed distribution'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Variable Np not supported for Monodispersed distribution')
+          return
        endif
        
        ! ---------------------------------------------------------!
@@ -548,9 +534,8 @@ contains
           !set natural log width
           log_sigma_g = local_p3 
        else
-          print *, 'Error: Must specify a value for sigma_g ', &
-               'when using a Log-Normal distribution'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for sigma_g when using a Log-Normal distribution')
+          return
        endif
        
        ! get rg ... 
@@ -562,8 +547,7 @@ contains
           elseif(abs(p2+1) < 1E-8) then
              local_Np=p1
           else
-             print *, 'Error: Must specify Np or default value ', &
-                  '(p2=Rg or p1=Np) for Log-Normal distribution'
+             call errorMessage('ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p2=Rg or p1=Np) for Log-Normal distribution')
           endif
           log_sigma_g = p3
           tmp1        = (Q*1E-3)/(2._wp**bpm*apm*local_Np)
@@ -699,17 +683,16 @@ contains
              ! fixed Roj. Dec. 2010 -- after comment by S. Mcfarlane
              vu = (1/(0.2714_wp + 0.00057145_wp*Np*rho_a*1E-6))**2._wp ! units of Nt = Np*rhoa = #/cm^3
           else
-             print *, 'Error: Must specify a value for Np in each volume', &
-                  ' with Morrison/Martin Scheme.'
-             stop    
+             call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for Np in each volume with Morrison/Martin Scheme.')
+             return
           endif
        elseif (abs(p3+1) > 1E-8) then
           ! vu is fixed in hp structure  
           vu = p3 
        else
           ! vu isn't specified
-          print *, 'Error: Must specify a value for vu for Modified Gamma distribution'
-          stop    
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for vu for Modified Gamma distribution')
+          return
        endif
        
        if(Re>0) then
@@ -730,8 +713,8 @@ contains
           N        = ((rho_a*local_np*fc*(D*1E-6)**(-1._wp))/(gamma(vu)*tmp1**vu) * &
                exp(-1._wp*fc**(1._wp/vu)/tmp1)) * 1E-12
        else
-          print *, 'Error:  No default value for Dm or Np provided!  '
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): No default value for Dm or Np provided!')
+          return
        endif
        
        ! ---------------------------------------------------------!
@@ -773,13 +756,11 @@ contains
     case(3)
        
        if(Re>0) then
-          print *, 'Variable Re not supported for ', &
-               'Power-Law distribution'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Variable Re not supported for Power-Law distribution')
+          return
        elseif(Np>0) then
-          print *, 'Variable Np not supported for ', &
-               'Power-Law distribution'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Variable Np not supported for Power-Law distribution')
+          return
        endif
        
        ! br parameter
@@ -889,8 +870,8 @@ contains
           N = 0.5_wp*(N0 / ((2._wp*pi)**(0.5_wp)*log_sigma_g*D*0.5_wp*1E-6) * &
                exp((-0.5_wp*(log(0.5_wp*D/rg)/log_sigma_g)**2._wp)))*1E-12      
        else
-          print *, 'Error: Must specify a value for sigma_g'
-          stop
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for sigma_g')
+          return
        endif
     end select
   end subroutine dsd

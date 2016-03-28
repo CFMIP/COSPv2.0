@@ -32,7 +32,8 @@
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 module optics_lib
-  USE COSP_KINDS, ONLY: wp
+  USE COSP_KINDS,     ONLY: wp
+  use mod_cosp_error, ONLY: errorMessage
   implicit none
 
 contains
@@ -531,8 +532,8 @@ contains
     ! Convert frequency to wavelength (um)
     alam=3E5_wp/freq
     if((alam < wlmin) .or. (alam > wlmax)) then
-       print *, 'm_ice: wavelength out of bounds'
-       stop
+       call errorMessage('FATAL ERROR(optics/optics_lib.f90:m_ice): wavelength out of bounds')
+       return
     endif
     
     if (alam < cutice) then

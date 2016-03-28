@@ -32,7 +32,6 @@
 MODULE MOD_ICARUS
   USE COSP_KINDS,          ONLY: wp
   USE COSP_PHYS_CONSTANTS, ONLY: amd,amw,avo,grav
-  USE COSP_OPTICS,         ONLY: cosp_simulator_optics
   use MOD_COSP_STATS,      ONLY: hist2D
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,numISCCPTauBins,numISCCPPresBins,isccp_histTau, &
                                  isccp_histPres
@@ -607,6 +606,33 @@ contains
     
     
   end SUBROUTINE ICARUS_column
-
+  
+  subroutine cosp_simulator_optics(dim1,dim2,dim3,flag,varIN1,varIN2,varOUT)
+    ! INPUTS
+    integer,intent(in) :: &
+         dim1,   & ! Dimension 1 extent (Horizontal)
+         dim2,   & ! Dimension 2 extent (Subcolumn)
+         dim3      ! Dimension 3 extent (Vertical)
+    real(wp),intent(in),dimension(dim1,dim2,dim3) :: &
+         flag      ! Logical to determine the of merge var1IN and var2IN
+    real(wp),intent(in),dimension(dim1,     dim3) :: &
+         varIN1, & ! Input field 1
+         varIN2    ! Input field 2
+    ! OUTPUTS
+    real(wp),intent(out),dimension(dim1,dim2,dim3) :: &
+         varOUT    ! Merged output field
+    ! LOCAL VARIABLES
+    integer :: j
+    
+    varOUT(1:dim1,1:dim2,1:dim3) = 0._wp
+    do j=1,dim2
+       where(flag(:,j,:) .eq. 1)
+          varOUT(:,j,:) = varIN2
+       endwhere
+       where(flag(:,j,:) .eq. 2)
+          varOUT(:,j,:) = varIN1
+       endwhere
+    enddo
+  end subroutine cosp_simulator_optics
 end module MOD_ICARUS
 

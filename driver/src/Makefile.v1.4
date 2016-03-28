@@ -34,19 +34,16 @@ PROG = cosp_test_v1.4
 # Object files
 OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                \
 	$(OBJ_PATH)/cosp_cloudsat_interface.o $(OBJ_PATH)/cosp_config.o       \
-        $(OBJ_PATH)/prec_scops.o $(OBJ_PATH)/cosp.o $(OBJ_PATH)/cosp_stats.o  \
-	$(OBJ_PATH)/quickbeam.o $(OBJ_PATH)/cosp_optics.o                     \
-	$(OBJ_PATH)/array_lib.o $(OBJ_PATH)/quickbeam_optics.o                \
-	$(OBJ_PATH)/math_lib.o $(OBJ_PATH)/optics_lib.o $(OBJ_PATH)/parasol.o \
-	$(OBJ_PATH)/lidar_simulator.o $(OBJ_PATH)/icarus.o                    \
-	$(OBJ_PATH)/cosp_calipso_interface.o $(OBJ_PATH)/cosp_errorHandling.o \
+        $(OBJ_PATH)/cosp.o $(OBJ_PATH)/cosp_stats.o $(OBJ_PATH)/parasol.o     \
+	$(OBJ_PATH)/quickbeam.o $(OBJ_PATH)/lidar_simulator.o                 \
+	$(OBJ_PATH)/icarus.o $(OBJ_PATH)/cosp_calipso_interface.o             \
 	$(OBJ_PATH)/cosp_isccp_interface.o $(OBJ_PATH)/cosp_misr_interface.o  \
 	$(OBJ_PATH)/MISR_simulator.o $(OBJ_PATH)/cosp_modis_interface.o       \
 	$(OBJ_PATH)/modis_simulator.o $(OBJ_PATH)/cosp_rttov_interface.o      \
-	$(OBJ_PATH)/cosp_rttov11.3.o $(OBJ_PATH)/mrgrnk.o                     \
-	$(OBJ_PATH)/cosp_parasol_interface.o mo_rng.o scops.o cosp_utils.o    \
-	cosp_interface_v1p5.o cosp_interface_v1p4.o cosp_io.o
-
+	$(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/cosp_parasol_interface.o     \
+	mo_rng.o scops.o cosp_utils.o cosp_interface_v1p5.o mrgrnk.o          \
+	cosp_interface_v1p4.o cosp_io.o prec_scops.o math_lib.o optics_lib.o  \
+        cosp_optics.o array_lib.o quickbeam_optics.o cosp_errorHandling.o 
 all: $(PROG)
 	mv *.mod *.o obj/
 $(PROG): $(OBJS)
@@ -58,26 +55,36 @@ $(PROG): $(OBJS)
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \
 	-o $(PROG)
 
-$(PROG).o     	          : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.o   \
-			    cosp_interface_v1p5.o
-cosp_io.o  	          : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
-			    cosp_interface_v1p5.o cosp_interface_v1p4.o              \
-                            $(OBJ_PATH)/cosp_rttov11.3.o $(OBJ_PATH)/cosp.o          \
-			    $(OBJ_PATH)/cosp_parasol_interface.o
-cosp_interface_v1p4.o     : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp.o              \
-			    $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
-			    $(OBJ_PATH)/cosp_optics.o $(OBJ_PATH)/quickbeam.o        \
-			    $(OBJ_PATH)/quickbeam.o $(OBJ_PATH)/modis_simulator.o    \
-			    scops.o cosp_interface_v1p5.o cosp_utils.o
-cosp_interface_v1p5.o     : $(OBJ_PATH)/cosp_kinds.o cosp_utils.o $(OBJ_PATH)/cosp.o \
-			    $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
-                            $(OBJ_PATH)/cosp_optics.o $(OBJ_PATH)/quickbeam.o        \
-			    $(OBJ_PATH)/quickbeam_optics.o mo_rng.o scops.o          \
-			    $(OBJ_PATH)/quickbeam_optics.o $(OBJ_PATH)/prec_scops.o 
-cosp_utils.o              : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
-scops.o                   : $(OBJ_PATH)/cosp_kinds.o mo_rng.o                        \
-			    $(OBJ_PATH)/cosp_errorHandling.o
-mo_rng.o                  : $(OBJ_PATH)/cosp_kinds.o
+$(PROG).o     	      : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.o   \
+			cosp_interface_v1p5.o
+cosp_io.o  	      : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
+			cosp_interface_v1p5.o cosp_interface_v1p4.o              \
+                        $(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/cosp.o          \
+			$(OBJ_PATH)/cosp_parasol_interface.o
+cosp_interface_v1p4.o : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp.o              \
+		        $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
+			$(OBJ_PATH)/quickbeam.o $(OBJ_PATH)/quickbeam.o          \
+			$(OBJ_PATH)/modis_simulator.o cosp_interface_v1p5.o      \
+			scops.o cosp_utils.o cosp_optics.o
+cosp_interface_v1p5.o : $(OBJ_PATH)/cosp_kinds.o cosp_utils.o $(OBJ_PATH)/cosp.o \
+		        $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
+                        $(OBJ_PATH)/quickbeam.o quickbeam_optics.o mo_rng.o      \
+			scops.o prec_scops.o cosp_optics.o 
+cosp_utils.o          : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
+scops.o               : $(OBJ_PATH)/cosp_kinds.o mo_rng.o                        \
+			cosp_errorHandling.o
+mo_rng.o              : $(OBJ_PATH)/cosp_kinds.o
+optics_lib.o	      : $(OBJ_PATH)/cosp_kinds.o cosp_errorHandling.o
+array_lib.o   	      : $(OBJ_PATH)/cosp_kinds.o cosp_errorHandling.o
+math_lib.o            : $(OBJ_PATH)/cosp_kinds.o array_lib.o mrgrnk.o
+quickbeam.o           : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
+                        $(OBJ_PATH)/cosp_stats.o
+quickbeam_optics.o    : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
+                        $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/quickbeam.o     \
+			cosp_errorHandling.o array_lib.o math_lib.o optics_lib.o 
+mrgrnk.o              : $(OBJ_PATH)/cosp_kinds.o
+prec_scops.o	      : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
+cosp_optics.o         : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_constants.o 
 
 clean_objs:
 	rm -f $(OBJ_PATH) *.mod *.o
@@ -104,6 +111,9 @@ mo_rng.o : $(SRC_F90)/rng/mo_rng.f90
 scops.o : $(SRC_F90)/subcol/scops.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
+prec_scops.o : $(SRC_F90)/subcol/prec_scops.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+
 cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
@@ -111,4 +121,25 @@ cosp_interface_v1p5.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p5.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
 cosp_interface_v1p4.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p4.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<	
+
+cosp_errorHandling.o : $(COSP_INTERFACE_F90)/cosp_errorHandling.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+	
+quickbeam_optics.o :  $(SRC_F90)/optics/quickbeam_optics.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+
+cosp_optics.o :  $(SRC_F90)/optics/cosp_optics.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+
+array_lib.o : $(SRC_F90)/optics/array_lib.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+
+math_lib.o : $(SRC_F90)/optics/math_lib.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+
+mrgrnk.o : $(SRC_F90)/optics/mrgrnk.f90
+	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
+
+optics_lib.o : $(SRC_F90)/optics/optics_lib.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<	

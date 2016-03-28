@@ -7,15 +7,20 @@ This directory contains source code to test COSP
 Contents:
 cosp_test_v1.4.f90:      Code to test COSPv1.4.0 interface
 cosp_test_v1.5.f90:      Code to test COSPv1.5.0 interface
-cosp_io.f90:             Input/Output subroutines used by drivers.
+cosp_test_v2.0.f90:      Code to test COSPv2.0 direct implementation by GCM
+cosp_io.f90:             Input/Output subroutines used by v1.4 and v1.5 drivers.
+cosp_io.v2.f90:          Input/Output subroutines used by v2.0 driver.
 Makefile.v1p4:           Makefile for test code that uses COSP v1.4.0
 		         interface
 Makefile.v1p5:           Makefile for test code that uses COSP v1.5.0
 		         interface
+Makefile.v2              Makefile for test code that uses COSP v2.0
+                         directly			 
 cosp_input_nl.v1.4.txt:  Input namelist for v1.4.0 driver.
 cosp_input_nl.v1.5.txt:  Input namelist for v1.5.0 driver.
+cosp_input_nl.v2.0.txt:  Input namelist for v2.0.0 driver.
 cosp_output_nl.v1.4.txt: Output namelist for v1.4.0 driver.
 cosp_output_nl.v1.5.txt: Output namelist for v1.5.0 driver.
-
+cosp_output_nl.v2.0.txt: Output namelist for v2.0.0 driver.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

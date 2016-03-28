@@ -32,7 +32,8 @@
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 module math_lib
-  USE COSP_KINDS, ONLY: wp
+  USE COSP_KINDS,     ONLY: wp
+  use mod_cosp_error, ONLY: errorMessage
   implicit none
 
 contains
@@ -198,10 +199,8 @@ contains
     b = b_in  
   
     if ( ntab < 3 ) then
-       write ( *, '(a)' ) ' '
-       write ( *, '(a)' ) 'AVINT - Fatal error!'
-       write ( *, '(a,i6)' ) '  NTAB is less than 3.  NTAB = ', ntab
-       stop
+       call errorMessage('FATAL ERROR(optics/math_lib.f90:AVINT): Ntab is less than 3.')
+       return
     end if
     
     do i = 2, ntab
@@ -212,22 +211,15 @@ contains
     end do
     
     if (lerror) then
-       write ( *, '(a)' ) ' '
-       write ( *, '(a)' ) 'AVINT - Fatal error!'
-       write ( *, '(a)' ) '  XTAB(I) is not greater than XTAB(I-1).'
-       write ( *, '(a,i6)' ) '  Here, I = ', i
-       write ( *, '(a,g14.6)' ) '  XTAB(I-1) = ', xtab(i-1)
-       write ( *, '(a,g14.6)' ) '  XTAB(I) =   ', xtab(i)
-       stop  
+       call errorMessage('FATAL ERROR(optics/math_lib.f90:AVINT): Xtab(i) is not greater than Xtab(i-1).')
+       return
     end if
     
 !ds    result = 0.0D+00
     result = 0._wp
     
     if ( a == b ) then
-       write ( *, '(a)' ) ' '
-       write ( *, '(a)' ) 'AVINT - Warning!'
-       write ( *, '(a)' ) '  A = B, integral=0.'
+       call errorMessage('WARNING(optics/math_lib.f90:AVINT): A=B => integral=0')
        return
     end if
     
