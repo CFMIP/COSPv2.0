@@ -36,27 +36,21 @@
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
-  FINPUT='../data/inputs/v1.4.0/cosp_input_um.nc', ! List input NetCDF files
+  FINPUT='../data/inputs/v1.4.0/cosp_input_um_2d.nc', ! List input NetCDF files
 !  FINPUT='../data/inputs/cosp_input_2d.aearc.2006.10.15.03.30.nc', ! List input NetCDF files  
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
   cloudsat_RADAR_FREQ=94.0, ! CloudSat radar frequency (GHz)
   SURFACE_RADAR=0, ! surface=1, spaceborne=0
-  cloudsat_use_mie_tables=0,! use a precomputed lookup table? yes=1,no=0
   cloudsat_use_gas_abs=1,   ! include gaseous absorption? yes=1,no=0
   cloudsat_do_ray=0,        ! calculate/output Rayleigh refl=1, not=0
-  cloudsat_melt_lay=0,      ! melting layer model off=0, on=1
   cloudsat_k2=-1,           ! |K|^2, -1=use frequency dependent default
-  cloudsat_use_reff=.true., ! True if you want effective radius to be used by radar simulator (always used by lidar)
   use_precipitation_fluxes=.true.,  ! True if precipitation fluxes are input to the algorithm 
   cloudsat_micro_scheme='MMF_v3_single_moment', !'MMF_v3.5_two_moment'
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to lidar simulations
   !----------------------------------------------------------------------------------
-  Nprmts_max_hydro=12, ! Max number of parameters for hydrometeor size distributions
-  Naero=1,             ! Number of aerosol species (Not used)
-  Nprmts_max_aero=1,   ! Max number of parameters for aerosol size distributions (Not used)
   lidar_ice_type=0,    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
   OVERLAP=3,           !  overlap assumption used by scops: 1=max, 2=rand, 3=max/rand
   !----------------------------------------------------------------------------------

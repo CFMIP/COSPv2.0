@@ -27,8 +27,6 @@
 ! to be written to file
 &COSP_OUTPUT
   ! Output variables
-  !- Variables unique in 1D (curtain) mode
-  Ltoffset=.true.,
   !- CloudSat
   Lcfaddbze94=.true.,
   Ldbze94=.true.,

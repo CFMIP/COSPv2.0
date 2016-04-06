@@ -52,7 +52,8 @@ program cosp_test_v2
                                  modis_optics_partition,num_trial_res
   ! OUTPUT ONLY
   use mod_cosp_io,         only: var1d,var2d,var3d,construct_cospOutList,nc_cmor_init,    &
-                                 nc_cmor_associate_1d,nc_cmor_write_1d,nc_cmor_close
+                                 nc_cmor_associate_1d,nc_cmor_write_1d,nc_cmor_close,     &
+                                 nc_cmor_associate_2d,nc_cmor_write_2d
   
   implicit none
 
@@ -113,15 +114,8 @@ program cosp_test_v2
        Nlvgrid,                   & ! Number of vertical levels for statistical outputs 
                                     ! (USE_VGRID=.true.)
        surface_radar,             & ! surface=1/spaceborne=0
-       cloudsat_use_mie_tables,   & ! Use a precomputed lookup-table (1=yes/0=no)
        cloudsat_use_gas_abs,      & ! Include gaseous absorption (1=yes/0=no)
        cloudsat_do_ray,           & ! Calculate output Rayleigh (1=yes/0=no)
-       cloudsat_melt_lay,         & ! Melting layer model (1=on/0=off)
-       Nprmts_max_hydro,          & ! Max number of parameters for hydrometeor size 
-                                    ! distributions
-       Naero,                     & ! Number of aerosol species (Not used)
-       Nprmts_max_aero,           & ! Max number of parameters for aerosol size 
-                                    ! distributions (Not used)
        lidar_ice_type,            & ! Ice particle shape in lidar calculations 
                                     ! (0=ice-spheres/1=ice-non-spherical)
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
@@ -142,10 +136,9 @@ program cosp_test_v2
   logical ::                      & !
        use_vgrid,                 & ! Use fixed vertical grid for outputs?
        csat_vgrid,                & ! CloudSat vertical grid? 
-       use_precipitation_fluxes,  & ! True if precipitation fluxes are input to the 
+       use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
                                     ! algorithm 
-       cloudsat_use_reff            ! True if you want effective radius to be used by 
-                                    ! radar simulator (always used by lidar)
+
   integer,dimension(RTTOV_MAX_CHANNELS) :: &
        rttov_Channels               ! RTTOV: Channel numbers
   real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
@@ -158,13 +151,13 @@ program cosp_test_v2
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
        fileIN                       ! dinput+finput
-  namelist/COSP_INPUT/overlap,isccp_topheight,isccp_topheight_direction,                 &
-                      npoints,npoints_it,ncolumns,nlevels,use_vgrid,Nlvgrid,csat_vgrid,  &
-                      dinput,finput,cloudsat_radar_freq,surface_radar,cloudsat_use_mie_tables,             &
-                      cloudsat_use_gas_abs,cloudsat_do_ray,cloudsat_melt_lay,cloudsat_k2,cloudsat_micro_scheme,      &
-                      Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,             &
-                      use_precipitation_fluxes,cloudsat_use_reff,rttov_platform,rttov_satellite,              &
-                      rttov_Instrument,rttov_Nchannels,rttov_Channels,rttov_Surfem,rttov_ZenAng,co2,ch4,n2o,co
+  namelist/COSP_INPUT/overlap,isccp_topheight,isccp_topheight_direction,npoints,         &
+                      npoints_it,ncolumns,nlevels,use_vgrid,Nlvgrid,csat_vgrid,dinput,   &
+                      finput,cloudsat_radar_freq,surface_radar,cloudsat_use_gas_abs,     &
+                      cloudsat_do_ray,cloudsat_k2,cloudsat_micro_scheme,lidar_ice_type,  &
+                      use_precipitation_fluxes,rttov_platform,rttov_satellite,           &
+                      rttov_Instrument,rttov_Nchannels,rttov_Channels,rttov_Surfem,      &
+                      rttov_ZenAng,co2,ch4,n2o,co
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -263,7 +256,7 @@ program cosp_test_v2
        N2D        = 14,           & ! Number of 2D output variables
        N1D        = 40              ! Number of 1D output variables  
   character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
-  integer :: N1,lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
+  integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
              latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
              MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid 
   type(var1d) :: v1d(N1D+1) ! Structures needed by output routines for 1D variables
@@ -747,7 +740,6 @@ program cosp_test_v2
   print*,'Time to run COSP:         ',driver_time(7)-driver_time(6)
   print*,'Total time:               ',driver_time(7)-driver_time(1)
 
-  stop
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Output
   ! *Currently only implemented to work with 1D input data.*
@@ -774,23 +766,40 @@ program cosp_test_v2
   time_step      = 3._wp/24._wp
   half_time_step = 0.5_wp*time_step
   time_bnds      = (/time-half_time_step,time+half_time_step/)
-  
-  call nc_cmor_init('../cmor/cosp_cmor_nl_1D.txt','replace',nPoints,nColumns,nLevels,    &
-                    rttov_nChannels,nLvgrid,lon,lat,cospOUT,geomode,Nlon,Nlat,N1+1,N2D,  &
-                    N3D,N_OUT_LIST,out_list,lon_axid,lat_axid,time_axid,height_axid,     &
-                    height_mlev_axid,grid_id,lonvar_id,latvar_id, column_axid,sza_axid,  &
-                    temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid, &
-                    pressure2_axid,v1d(1:N1+1),v2d,v3d)
 
-  call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,column_axid,  &
-                            sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,       &
-                            MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,Nlat,nPoints,     &
-                            nColumns,nLevels,rttov_nChannels,nLvgrid,cospOUT,N1D,N2D,N3D,&
-                            v1d,v2d,v3d)
-  call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1+1,N2D,N3D,      &
-                        v1d(1:N1+1),v2d,v3d)
+  if (geomode .eq. 1) then
+     call nc_cmor_init('../cmor/cosp_cmor_nl_1D.txt','replace',nPoints,nColumns,nLevels, &
+                       rttov_nChannels,nLvgrid,lon,lat,cospOUT,geomode,Nlon,Nlat,N1D+1,   &
+                       N2D,N3D,N_OUT_LIST,out_list,lon_axid,lat_axid,time_axid,          &
+                       height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id,         &
+                       column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
+                       MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D+1),v2d,v3d)
+     call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,           &
+                               column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
+                               sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
+                               Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid,    &
+                               cospOUT,N1D+1,N2D,N3D,v1d,v2d,v3d)
+     call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1D+1,N2D,N3D,   &
+                           v1d(1:N1D+1),v2d,v3d)
+  endif
+  if (geomode .gt. 1) then
+     call nc_cmor_init('../cmor/cosp_cmor_nl_2D.txt','replace',nPoints,nColumns,nLevels, &
+                       rttov_nChannels,nLvgrid,lon,lat,cospOUT,geomode,Nlon,Nlat,N1D,   &
+                       N2D,N3D,N_OUT_LIST,out_list,lon_axid,lat_axid,time_axid,          &
+                       height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id,         &
+                       column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
+                       MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D),v2d,v3d)
+     call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid, &
+                               column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
+                               sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
+                               Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid,    &
+                               cospOUT,N1D,N2D,N3D,v1d(1:N1D),v2d,v3d)
+     call nc_cmor_write_2d(time_bnds,geomode,Nlon,Nlat,N1D,N2D,N3D,v1d(1:N1D),v2d,v3d)
+  endif     
   call nc_cmor_close()
-  
+  call cpu_time(driver_time(8))
+  print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

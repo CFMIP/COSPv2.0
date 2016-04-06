@@ -35,8 +35,6 @@
   Lrttov_sim=.true.,
   Lparasol_sim=.true.,
   ! Output variables
-  !- Variables unique in 1D (curtain) mode
-  Ltoffset=.true.,
   !- CloudSat
   Lcfaddbze94=.true.,
   Ldbze94=.true.,

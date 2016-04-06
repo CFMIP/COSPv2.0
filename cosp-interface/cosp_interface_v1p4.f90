@@ -516,10 +516,7 @@ contains
     gbxOUT%Naero            => gbxIN%Naero
     gbxOUT%Nprmts_max_aero  => gbxIN%Nprmts_max_aero
     gbxOUT%Npoints_it       => gbxIN%Npoints_it
-    gbxOUT%time             => gbxIN%time
-    gbxOUT%time_bnds        => gbxIN%time_bnds
     gbxOUT%nsizes           => gbxIN%nsizes
-    gbxOUT%toffset          => gbxIN%toffset
     gbxOUT%longitude        => gbxIN%longitude
     gbxOUT%latitude         => gbxIN%latitude
     gbxOUT%zlev             => gbxIN%zlev
@@ -547,10 +544,6 @@ contains
     gbxOUT%snow_ls          => gbxIN%snow_ls
     gbxOUT%snow_cv          => gbxIN%snow_cv
     gbxOUT%grpl_ls          => gbxIN%grpl_ls
-    gbxOUT%dist_prmts_hydro => gbxIN%dist_prmts_hydro
-    gbxOUT%conc_aero        => gbxIN%conc_aero
-    gbxOUT%dist_type_aero   => gbxIN%dist_type_aero
-    gbxOUT%dist_prmts_aero  => gbxIN%dist_prmts_aero
     gbxOUT%isccp_emsfc_lw   => gbxIN%isccp_emsfc_lw
     gbxOUT%Nchan            => gbxIN%Nchan
     gbxOUT%Surfem           => gbxIN%Surfem
@@ -738,12 +731,12 @@ contains
                                          isccp_overlap,isccp_emsfc_lw,                    &
                                          use_precipitation_fluxes,use_reff,Plat,Sat,Inst, &
                                          Nchan,ZenAng,Ichan,SurfEm,co2,ch4,n2o,co,        &
-                                         y,                                               &
-                                         lon,lat,p, ph,zlev,zlev_half,T,rh,sh,cca,tca,skt,&
-                                         landmask,mr_ozone,u_wind,v_wind,sunlit,fl_lsrain,&
-                                         fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,dtau_s,  &
-                                         dtau_c,dem_s,dem_c,Reff,mr_lsliq,mr_lsice,       &
-                                         mr_ccliq,mr_ccice,load_LUT)
+                                         y,load_LUT)!,                                               &
+                                         !lon,lat,p, ph,zlev,zlev_half,T,rh,sh,cca,tca,skt,&
+                                         !landmask,mr_ozone,u_wind,v_wind,sunlit,fl_lsrain,&
+                                         !fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,dtau_s,  &
+                                         !dtau_c,dem_s,dem_c,Reff,mr_lsliq,mr_lsice,       &
+                                         !mr_ccliq,mr_ccice,load_LUT)
     
     ! Inputs
     double precision,intent(in) :: &
@@ -793,41 +786,41 @@ contains
     logical,intent(in),optional :: load_LUT
     
     ! RTTOV inputs
-    real(wp),intent(in),dimension(Npoints),optional :: &
-         lon,        &
-         lat,        &
-         u_wind,     &
-         v_wind,     &
-         skt,        &
-         landmask,   &
-         sunlit   
-    real(wp),intent(in),dimension(Npoints,Nlevels),optional :: &
-         p,          &
-         ph,         &
-         zlev,       &
-         T,          & 
-         rh,         &
-         sh,         &
-         cca,        &
-         tca,        &
-         mr_ozone,   &
-         fl_lsrain,  &
-         fl_lssnow,  &
-         fl_lsgrpl,  &
-         fl_ccrain,  &
-         fl_ccsnow,  &
-         dtau_c,     &
-         dtau_s,     &
-         dem_c,      &
-         dem_s,      &
-         mr_lsice,   &
-         mr_lsliq,   &
-         mr_ccliq,   &
-         mr_ccice
-    real(wp),intent(in),dimension(Npoints,Nlevels+1),optional ::&
-         zlev_half
-    real(wp),intent(in),dimension(Npoints,Nlevels,N_HYDRO),optional :: &
-         Reff    
+!    real(wp),intent(in),dimension(Npoints),optional :: &
+!         lon,        &
+!         lat,        &
+!         u_wind,     &
+!         v_wind,     &
+!         skt,        &
+!         landmask,   &
+!         sunlit   
+!    real(wp),intent(in),dimension(Npoints,Nlevels),optional :: &
+!         p,          &
+!         ph,         &
+!         zlev,       &
+!         T,          & 
+!         rh,         &
+!         sh,         &
+!         cca,        &
+!         tca,        &
+!         mr_ozone,   &
+!         fl_lsrain,  &
+!         fl_lssnow,  &
+!         fl_lsgrpl,  &
+!         fl_ccrain,  &
+!         fl_ccsnow,  &
+!         dtau_c,     &
+!         dtau_s,     &
+!         dem_c,      &
+!         dem_s,      &
+!         mr_lsice,   &
+!         mr_lsliq,   &
+!         mr_ccliq,   &
+!         mr_ccice
+!    real(wp),intent(in),dimension(Npoints,Nlevels+1),optional ::&
+!         zlev_half
+!    real(wp),intent(in),dimension(Npoints,Nlevels,N_HYDRO),optional :: &
+!         Reff    
     
     ! Outputs
     type(cosp_gridbox_v1p4),intent(out) :: y
@@ -844,20 +837,20 @@ contains
     endif
     
     ! Check to see if RTTOV inputs are provided (default is no RTTOV)
-    rttovInputs = .false.
-    if (present(lon)       .and. present(lat)       .and.                                &
-        present(ph)        .and. present(zlev)      .and. present(zlev_half) .and.       &
-        present(rh)        .and. present(sh)        .and. present(cca)       .and.       &
-        present(p)         .and. present(T)         .and. present(tca)       .and.       &
-        present(skt)       .and. present(landmask)  .and. present(mr_ozone)  .and.       &
-        present(u_wind)    .and. present(v_wind)    .and. present(sunlit)    .and.       &
-        present(fl_lsrain) .and. present(fl_lssnow) .and. present(fl_lsgrpl) .and.       &
-        present(fl_ccrain) .and. present(fl_ccsnow) .and. present(dtau_s)    .and.       &
-        present(dtau_c)    .and. present(dem_s)     .and. present(dem_c)     .and.       &
-        present(Reff)      .and. present(mr_lsliq)  .and. present(mr_lsice)  .and.       &
-        present(mr_ccliq)  .and. present(mr_ccice)) then 
-        rttovInputs = .true.
-    endif
+    !rttovInputs = .false.
+    !if (present(lon)       .and. present(lat)       .and.                                &
+    !    present(ph)        .and. present(zlev)      .and. present(zlev_half) .and.       &
+    !    present(rh)        .and. present(sh)        .and. present(cca)       .and.       &
+    !    present(p)         .and. present(T)         .and. present(tca)       .and.       &
+    !    present(skt)       .and. present(landmask)  .and. present(mr_ozone)  .and.       &
+    !    present(u_wind)    .and. present(v_wind)    .and. present(sunlit)    .and.       &
+    !    present(fl_lsrain) .and. present(fl_lssnow) .and. present(fl_lsgrpl) .and.       &
+    !    present(fl_ccrain) .and. present(fl_ccsnow) .and. present(dtau_s)    .and.       &
+    !    present(dtau_c)    .and. present(dem_s)     .and. present(dem_c)     .and.       &
+    !    present(Reff)      .and. present(mr_lsliq)  .and. present(mr_lsice)  .and.       &
+    !    present(mr_ccliq)  .and. present(mr_ccice)) then 
+    !    rttovInputs = .true.
+    !endif
     
     ! Dimensions and scalars
     y%radar_freq       = radar_freq
@@ -961,49 +954,49 @@ contains
     y%dist_type_aero   = 0   
     y%dist_prmts_aero  = 0.0 
 
-    ! Toffset. This assumes that time is the mid-point of the interval.
-    do k=1,Npoints
-       y%toffset(k) = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*(k-0.5)/Npoints
-    enddo
-    
-    ! Setup RTTOV inputs (if provided)
-    if (rttovInputs) then
-       y%longitude = lon
-       y%latitude  = lat
-       y%ichan     = ichan
-       y%surfem    = surfem
-       y%p         = p
-       y%ph        = ph
-       y%zlev      = zlev
-       y%zlev_half = zlev_half
-       y%T         = T 
-       y%q         = rh
-       y%sh        = sh
-       y%cca       = cca
-       y%tca       = tca
-       y%psfc      = ph(:,1)
-       y%skt       = skt
-       y%land      = landmask
-       y%mr_ozone  = mr_ozone
-       y%u_wind    = u_wind
-       y%v_wind    = v_wind
-       y%sunlit    = sunlit
-       y%rain_ls   = fl_lsrain
-       y%snow_ls   = fl_lssnow
-       y%grpl_ls   = fl_lsgrpl
-       y%rain_cv   = fl_ccrain
-       y%snow_cv   = fl_ccsnow
-       y%dtau_s    = dtau_s
-       y%dtau_c    = dtau_c
-       y%dem_s     = dem_s
-       y%dem_c     = dem_c
-       y%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
-       y%mr_hydro(:,:,I_LSCICE) = mr_lsice
-       y%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
-       y%mr_hydro(:,:,I_CVCICE) = mr_ccice
-       y%Reff = Reff
-       y%Reff(:,:,I_LSRAIN) = 0.0
-    endif      
+ !   ! Toffset. This assumes that time is the mid-point of the interval.
+ !   do k=1,Npoints
+ !      y%toffset(k) = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*(k-0.5)/Npoints
+ !   enddo
+ !   
+ !   ! Setup RTTOV inputs (if provided)
+ !   if (rttovInputs) then
+ !      y%longitude = lon
+ !      y%latitude  = lat
+ !      y%ichan     = ichan
+ !      y%surfem    = surfem
+ !      y%p         = p
+ !      y%ph        = ph
+ !      y%zlev      = zlev
+ !      y%zlev_half = zlev_half
+ !      y%T         = T 
+ !      y%q         = rh
+ !      y%sh        = sh
+ !      y%cca       = cca
+ !      y%tca       = tca
+ !      y%psfc      = ph(:,1)
+ !      y%skt       = skt
+ !      y%land      = landmask
+ !      y%mr_ozone  = mr_ozone
+ !      y%u_wind    = u_wind
+ !      y%v_wind    = v_wind
+ !      y%sunlit    = sunlit
+ !      y%rain_ls   = fl_lsrain
+ !      y%snow_ls   = fl_lssnow
+ !      y%grpl_ls   = fl_lsgrpl
+ !      y%rain_cv   = fl_ccrain
+ !      y%snow_cv   = fl_ccsnow
+ !      y%dtau_s    = dtau_s
+ !      y%dtau_c    = dtau_c
+ !      y%dem_s     = dem_s
+ !      y%dem_c     = dem_c
+ !      y%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
+ !      y%mr_hydro(:,:,I_LSCICE) = mr_lsice
+ !      y%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
+ !      y%mr_hydro(:,:,I_CVCICE) = mr_ccice
+ !      y%Reff = Reff
+ !      y%Reff(:,:,I_LSRAIN) = 0.0
+ !   endif      
     
   END SUBROUTINE CONSTRUCT_COSP_GRIDBOX_v1p4
     

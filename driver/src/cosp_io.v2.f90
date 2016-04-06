@@ -618,7 +618,153 @@ contains
        call cosp_error(routine_name,errmsg,errcode=errst)
     endif 
   END SUBROUTINE NC_READ_INPUT_FILE
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE map_point_to_ll
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE MAP_POINT_TO_LL(Nx,Ny,geomode,x1,x2,x3,x4,y2,y3,y4,y5)
+    ! Input arguments
+    integer,intent(in) :: Nx,Ny,geomode
+    real(wp),intent(in),optional :: x1(:),x2(:,:),x3(:,:,:), &
+         x4(:,:,:,:)
+    real(wp),intent(out),optional :: y2(:,:),y3(:,:,:), &
+         y4(:,:,:,:),y5(:,:,:,:,:)
+    ! Local variables
+    integer :: Npoints
+    integer :: px(Nx*Ny),py(Nx*Ny)
+    integer :: i,j,k,l,m
+    integer :: Ni,Nj,Nk,Nl
+    integer :: Mi,Mj,Mk,Ml,Mm
+     character(len=128) :: proname='MAP_POINT_TO_LL'
+     
+     Npoints = Nx*Ny
+     
+     px=0
+     py=0
+     ! Obtain pointers to do the mapping
+     if (geomode == 2) then ! (lon,lat) mode
+        do j=1,Ny
+           do i=1,Nx
+              k = (j-1)*Nx+i
+              px(k) = i  
+              py(k) = j  
+           enddo
+        enddo
+     else if (geomode == 3) then ! (lon,lat) mode
+        do j=1,Nx
+           do i=1,Ny
+              k = (j-1)*Ny+i
+              px(k) = j
+              py(k) = i  
+           enddo
+        enddo
+     else
+        print *, ' -- '//trim(proname)//': geomode not supported, ',geomode
+        stop
+     endif
+     
+     if (present(x1).and.present(y2)) then
+        Ni = size(x1,1)
+        Mi = size(y2,1)
+        Mj = size(y2,2)
+        if (Mi*Mj /= Ni) then
+           print *, ' -- '//trim(proname)//': Nlon*Nlat /= Npoints (opt 1)'
+           stop
+        endif
+        do i=1,Npoints
+           y2(px(i),py(i)) = x1(i)
+        enddo
+     else if (present(x2).and.present(y3)) then
+        Ni = size(x2,1)
+        Nj = size(x2,2)
+        Mi = size(y3,1)
+        Mj = size(y3,2)
+        Mk = size(y3,3)
+        if (Mi*Mj /= Ni) then
+           print *, ' -- '//trim(proname)//': Nlon*Nlat /= Npoints (opt 2)'
+           stop
+        endif
+        if (Nj /= Mk) then
+           print *, ' -- '//trim(proname)//': Nj /= Mk (opt 2)'
+           print *, Ni,Nj,Mi,Mj,Mk
+           stop
+        endif
+        do k=1,Mk
+           do i=1,Npoints
+              y3(px(i),py(i),k) = x2(i,k)
+           enddo
+        enddo
+     else if (present(x3).and.present(y4)) then
+        Ni = size(x3,1)
+        Nj = size(x3,2)
+        Nk = size(x3,3)
+        Mi = size(y4,1)
+        Mj = size(y4,2)
+        Mk = size(y4,3)
+        Ml = size(y4,4)
+        if (Mi*Mj /= Ni) then
+           print *, ' -- '//trim(proname)//': Nlon*Nlat /= Npoints (opt 3)'
+           stop
+        endif
+        if (Nj /= Mk) then
+           print *, ' -- '//trim(proname)//': Nj /= Mk (opt 3)'
+           stop
+        endif
+        if (Nk /= Ml) then
+           print *, ' -- '//trim(proname)//': Nk /= Ml (opt 3)'
+           stop
+        endif
+        do l=1,Ml
+           do k=1,Mk
+              do i=1,Npoints
+                 y4(px(i),py(i),k,l) = x3(i,k,l)
+              enddo
+           enddo
+        enddo
+     else if (present(x4).and.present(y5)) then
+        Ni = size(x4,1)
+        Nj = size(x4,2)
+        Nk = size(x4,3)
+        Nl = size(x4,4)
+        Mi = size(y5,1)
+        Mj = size(y5,2)
+        Mk = size(y5,3)
+        Ml = size(y5,4)
+        Mm = size(y5,5)
+        if (Mi*Mj /= Ni) then
+           print *, ' -- '//trim(proname)//': Nlon*Nlat /= Npoints (opt 4)'
+           stop
+        endif
+        if (Nj /= Mk) then
+           print *, ' -- '//trim(proname)//': Nj /= Mk (opt 4)'
+           stop
+        endif
+        if (Nk /= Ml) then
+           print *, ' -- '//trim(proname)//': Nk /= Ml (opt 4)'
+           stop
+        endif
+        if (Nl /= Mm) then
+           print *, ' -- '//trim(proname)//': Nl /= Mm (opt 4)'
+           stop
+        endif
+        do m=1,Mm
+           do l=1,Ml
+              do k=1,Mk
+                 do i=1,Npoints
+                    y5(px(i),py(i),k,l,m) = x4(i,k,l,m)
+                 enddo
+              enddo
+           enddo
+        enddo
+     else
+        print *, ' -- '//trim(proname)//': wrong option'
+        stop
+     endif
+     
+     
+   END SUBROUTINE MAP_POINT_TO_LL
+
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE map_ll_to_point
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE MAP_LL_TO_POINT(Nx,Ny,Np,x2,x3,x4,x5,y1,y2,y3,y4)
@@ -946,9 +1092,11 @@ contains
 
 
     else
-!       call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
-!            temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-!            Nlon,Nlat,gb,sg,cospOUT,N1,N2,N3,v1d,v2d,v3d)
+       call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,               &
+                                 height_mlev_axid,column_axid,sza_axid,temp_axid,       &
+                                 channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,      &
+                                 tau_axid,pressure2_axid,Nlon,Nlat,nPoints,nColumns,    &
+                                 nLevels,nChannels,nLvgrid,cospOUT,N1,N2,N3,v1d,v2d,v3d)
     endif
     v1d(:)%lout = .false.
     v2d(:)%lout = .false.
@@ -1019,6 +1167,7 @@ contains
          vgrid_bounds,mgrid_bounds,lon_bounds,lat_bounds)
     
   END SUBROUTINE NC_CMOR_INIT
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE nc_cmor_associate_1D
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1034,7 +1183,6 @@ contains
                           MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,Nlat,N1D,N2D,N3D,   &
                           nPoints,nColumns,nLevels,nChannels,Nlvgrid
     type(cosp_outputs),intent(in) :: cospOUT
-!    real(wp),intent(in) :: frac_out
     type(var1d),intent(inout) :: v1d(N1D+1)
     type(var2d),intent(inout) :: v2d(N2D)
     type(var3d),intent(inout) :: v3d(N3D)
@@ -1123,7 +1271,6 @@ contains
     d4 = (/Npoints,Ncolumns,Nlevels,0/)
     call construct_var3d('dbze94',         d5, d4, cospOUT%cloudsat_Ze_tot,                      v3d(1),units='1')
     call construct_var3d('atb532',         d5, d4, cospOUT%calipso_beta_tot,                     v3d(2),units='m-1 sr-1')
-!    call construct_var3d('fracout',        d5, d4, frac_out,v3d(3),units='1')
     d5 = (/grid_id,dbze_axid,height_axid,0,0/)
     d4 = (/Npoints,DBZE_BINS,Nlvgrid,0/)
     call construct_var3d('cfadDbze94',     d5, d4, cospOUT%cloudsat_cfad_ze,                      v3d(4),units='1')
@@ -1139,6 +1286,127 @@ contains
     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,v3d(8),units='%')
     
   END SUBROUTINE NC_CMOR_ASSOCIATE_1D
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE nc_cmor_associate_2D
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE NC_CMOR_ASSOCIATE_2D(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,&
+                                  column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,   &
+                                  sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,  &
+                                  Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,cospOUT, &
+                                  N1D,N2D,N3D,v1d,v2d,v3d)
+     
+    ! Arguments
+    integer,intent(in) :: lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,         &
+                          column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
+                          MISR_CTH_axid,tau_axid,pressure2_axid,nPoints,nColumns,nLevels,   &
+                          nChannels,nLvgrid
+    integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
+    type(cosp_outputs),intent(in)   :: cospOUT
+    type(var1d),intent(inout) :: v1d(N1D)
+    type(var2d),intent(inout) :: v2d(N2D)
+    type(var3d),intent(inout) :: v3d(N3D)
+
+    ! Local variables
+    integer :: d2(2),d3(3),d4(4),d5(5)
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Fill in variable info and associate pointers
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     ! 1D variables
+     d3 = (/lon_axid,lat_axid,time_axid/)
+     d2 = (/Nlon,Nlat/)
+     call construct_var1d('cllcalipso',     d3, d2, cospOUT%calipso_cldlayer(:,1),                v1d(1), units='%')
+     call construct_var1d('clmcalipso',     d3, d2, cospOUT%calipso_cldlayer(:,2),                v1d(2), units='%')
+     call construct_var1d('clhcalipso',     d3, d2, cospOUT%calipso_cldlayer(:,3),                v1d(3), units='%')
+     call construct_var1d('cltcalipso',     d3, d2, cospOUT%calipso_cldlayer(:,4),                v1d(4), units='%')
+     call construct_var1d('cltlidarradar',  d3, d2, cospOUT%radar_lidar_tcc,                      v1d(5), units='%')
+     call construct_var1d('cltisccp',       d3, d2, cospOUT%isccp_totalcldarea,                   v1d(6), units='%')
+     call construct_var1d('pctisccp',       d3, d2, cospOUT%isccp_meanptop,                       v1d(7), units='Pa')
+     call construct_var1d('tauisccp',       d3, d2, cospOUT%isccp_meantaucld,                     v1d(8), units='1')
+     call construct_var1d('albisccp',       d3, d2, cospOUT%isccp_meanalbedocld,                  v1d(9), units='1')
+     call construct_var1d('meantbisccp',    d3, d2, cospOUT%isccp_meantb,                         v1d(10),units='K')
+     call construct_var1d('meantbclrisccp', d3, d2, cospOUT%isccp_meantbclr,                      v1d(11),units='K')
+     call construct_var1d('cltmodis',       d3, d2, cospOUT%modis_Cloud_Fraction_Total_Mean,      v1d(12),units='%')
+     call construct_var1d('clwmodis',       d3, d2, cospOUT%modis_Cloud_Fraction_Water_Mean,      v1d(13),units='%')
+     call construct_var1d('climodis',       d3, d2, cospOUT%modis_Cloud_Fraction_Ice_Mean,        v1d(14),units='%')
+     call construct_var1d('clhmodis',       d3, d2, cospOUT%modis_Cloud_Fraction_High_Mean,       v1d(15),units='%')
+     call construct_var1d('clmmodis',       d3, d2, cospOUT%modis_Cloud_Fraction_Mid_Mean,        v1d(16),units='%')
+     call construct_var1d('cllmodis',       d3, d2, cospOUT%modis_Cloud_Fraction_Low_Mean,        v1d(17),units='%')
+     call construct_var1d('tautmodis',      d3, d2, cospOUT%modis_Optical_Thickness_Total_Mean,   v1d(18),units='1')
+     call construct_var1d('tauwmodis',      d3, d2, cospOUT%modis_Optical_Thickness_Water_Mean,   v1d(19),units='1')
+     call construct_var1d('tauimodis',      d3, d2, cospOUT%modis_Optical_Thickness_Ice_Mean,     v1d(20),units='1')
+     call construct_var1d('tautlogmodis',   d3, d2, cospOUT%modis_Optical_Thickness_Total_LogMean,v1d(21),units='1')
+     call construct_var1d('tauwlogmodis',   d3, d2, cospOUT%modis_Optical_Thickness_Water_LogMean,v1d(22),units='1')
+     call construct_var1d('tauilogmodis',   d3, d2, cospOUT%modis_Optical_Thickness_Ice_LogMean,  v1d(23),units='1')
+     call construct_var1d('reffclwmodis',   d3, d2, cospOUT%modis_Cloud_Particle_Size_Water_Mean, v1d(24),units='m')
+     call construct_var1d('reffclimodis',   d3, d2, cospOUT%modis_Cloud_Particle_Size_Ice_Mean,   v1d(25),units='m')
+     call construct_var1d('pctmodis',       d3, d2, cospOUT%modis_Cloud_Top_Pressure_Total_Mean,  v1d(26),units='Pa')
+     call construct_var1d('lwpmodis',       d3, d2, cospOUT%modis_Liquid_Water_Path_Mean,         v1d(27),units='kg m-2')
+     call construct_var1d('iwpmodis',       d3, d2, cospOUT%modis_Ice_Water_Path_Mean,            v1d(28),units='kg m-2')
+     call construct_var1d('cllcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,1,1),         v1d(29),units='%')
+     call construct_var1d('clmcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,1),         v1d(30),units='%')
+     call construct_var1d('clhcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,1),         v1d(31),units='%')
+     call construct_var1d('cltcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,1),         v1d(32),units='%')
+     call construct_var1d('cllcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,1,2),         v1d(33),units='%')
+     call construct_var1d('clmcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,2),         v1d(34),units='%')
+     call construct_var1d('clhcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,2),         v1d(35),units='%')
+     call construct_var1d('cltcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,2),         v1d(36),units='%')
+     call construct_var1d('cllcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,1,3),         v1d(37),units='%')
+     call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(38),units='%')
+     call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(39),units='%')
+     call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(40),units='%')
+     ! 2D variables
+     d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
+     d3 = (/Nlon,Nlat,Nlvgrid/)
+     call construct_var2d('clcalipso',      d4, d3, cospOUT%calipso_lidarcld,                     v2d(1), units='%')
+     call construct_var2d('clcalipso2',     d4, d3, cospOUT%lidar_only_freq_cloud,                v2d(2), units='%')
+     d4 = (/lon_axid,lat_axid,height_mlev_axid,time_axid/)
+     d3 = (/Nlon,Nlat,Nlevels/)
+     call construct_var2d('lidarBetaMol532',d4, d3, cospOUT%calipso_beta_mol,                     v2d(3), units='m-1 sr-1')
+     d4 = (/lon_axid,lat_axid,column_axid,time_axid/)
+     d3 = (/Nlon,Nlat,Ncolumns/)
+     call construct_var2d('boxtauisccp',    d4, d3, cospOUT%isccp_boxtau,                         v2d(4), units='1')
+     call construct_var2d('boxptopisccp',   d4, d3, cospOUT%isccp_boxptop,                        v2d(5), units='Pa')
+     d4 = (/lon_axid,lat_axid,sza_axid,time_axid/)
+     d3 = (/Nlon,Nlat,PARASOL_NREFL/)
+     call construct_var2d('parasolRefl',    d4, d3, cospOUT%parasolGrid_refl,                     v2d(6), units='1')
+     d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
+     d3 = (/Nlon,Nlat,Nlvgrid/)
+     call construct_var2d('clcalipsoice',   d4, d3, cospOUT%calipso_lidarcldphase(:,:,1),         v2d(8), units='%')
+     call construct_var2d('clcalipsoliq',   d4, d3, cospOUT%calipso_lidarcldphase(:,:,2),         v2d(7), units='%')
+     call construct_var2d('clcalipsoun',    d4, d3, cospOUT%calipso_lidarcldphase(:,:,3),         v2d(9), units='%')
+     d3 = (/Nlon,Nlat,LIDAR_NTEMP/)
+     d4 = (/lon_axid,lat_axid,temp_axid,time_axid/)
+     call construct_var2d('clcalipsotmp',   d4, d3, cospOUT%calipso_lidarcldtmp(:,:,1),           v2d(10),units='%')
+     call construct_var2d('clcalipsotmpice',d4, d3, cospOUT%calipso_lidarcldtmp(:,:,2),           v2d(11),units='%')
+     call construct_var2d('clcalipsotmpliq',d4, d3, cospOUT%calipso_lidarcldtmp(:,:,3),           v2d(12),units='%')
+     call construct_var2d('clcalipsotmpun', d4, d3, cospOUT%calipso_lidarcldtmp(:,:,4),           v2d(13),units='%')
+     d4 = (/lon_axid,lat_axid,channel_axid,time_axid/)
+     d3 = (/Nlon,Nlat,Nchannels/)
+     call construct_var2d('tbrttov',        d4, d3, cospOUT%rttov_tbs,                            v2d(14),units='K') 
+     
+     ! 3D variables
+     d5 = (/lon_axid,lat_axid,column_axid,height_mlev_axid,time_axid/)
+     d4 = (/Nlon,Nlat,Ncolumns,Nlevels/)
+     call construct_var3d('dbze94',         d5, d4, cospOUT%cloudsat_Ze_tot,                      v3d(1), units='1')
+     call construct_var3d('atb532',         d5, d4, cospOUT%calipso_beta_tot,                     v3d(2), units='m-1 sr-1')
+     d5 = (/lon_axid,lat_axid,dbze_axid,height_axid,time_axid/)
+     d4 = (/Nlon,Nlat,DBZE_BINS,Nlvgrid/)
+     call construct_var3d('cfadDbze94',     d5, d4, cospOUT%cloudsat_cfad_ze,                     v3d(4), units='1')
+     d5 = (/lon_axid,lat_axid,sratio_axid,height_axid,time_axid/)
+     d4 = (/Nlon,Nlat,SR_BINS,Nlvgrid/)
+     call construct_var3d('cfadLidarsr532', d5, d4, cospOUT%calipso_cfad_sr,                      v3d(5), units='1')
+     d5 = (/lon_axid,lat_axid,tau_axid,pressure2_axid,time_axid/)
+     d4 = (/Nlon,Nlat,7,7/)
+     call construct_var3d('clisccp',        d5, d4, cospOUT%isccp_fq,                             v3d(6), units='%')
+     call construct_var3d('clmodis',        d5, d4, cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure, v3d(7), units='%')
+     d5 = (/lon_axid,lat_axid,tau_axid,MISR_CTH_axid,time_axid/)
+     d4 = (/Nlon,Nlat,7,numMISRHgtBins/)
+     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,                              v3d(8), units='%')
+   END SUBROUTINE NC_CMOR_ASSOCIATE_2D
+
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_var1d
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1198,7 +1466,7 @@ contains
   END SUBROUTINE CONSTRUCT_VAR3D
   
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   ! SUBROUTINE nc_cmor_write_1d
+   ! SUBROUTINE nc_cmor_write_1D
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_WRITE_1D(nPoints,longitude,latitude,tbnds,lonvar_id,latvar_id,N1,N2,N3,v1d,v2d,v3d)
      ! Inputs
@@ -1287,6 +1555,67 @@ contains
         endif
      enddo
    END SUBROUTINE NC_CMOR_WRITE_1D
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   ! SUBROUTINE nc_cmor_write_2D
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   SUBROUTINE NC_CMOR_WRITE_2D(tbnds,geomode,Nlon,Nlat,N1,N2,N3,v1d,v2d,v3d)
+     ! Input arguments
+     double precision,intent(in) :: tbnds(2,1)
+     integer,intent(in) :: geomode,Nlon,Nlat,N1,N2,N3
+     type(var1d),intent(inout) :: v1d(N1)
+     type(var2d),intent(inout) :: v2d(N2)
+     type(var3d),intent(inout) :: v3d(N3)
+     !--- Local variables ---
+     integer :: error_flag,i
+     real(wp),allocatable :: y2(:,:),y3(:,:,:),y4(:,:,:,:)
+     character(len=64) :: pro_name = 'NC_WRITE_COSP_2D'
+     
+     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     ! Write variables to file
+     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     ! 1D variables (2D output)
+     do i=1,N1
+        if (v1d(i)%lout) then
+           allocate(y2(v1d(i)%dimssz(1),v1d(i)%dimssz(2)))
+           call map_point_to_ll(Nlon,Nlat,geomode,x1=v1d(i)%pntr,y2=y2) ! Regridding
+           error_flag = cmor_write(var_id=v1d(i)%vid, data=y2, &
+                ntimes_passed=1,time_vals=(/1D0/),time_bnds=tbnds)
+           if (error_flag < 0) then
+              print *,  trim(pro_name)//': Error writing '//trim(v1d(i)%name)
+              stop
+           endif
+           deallocate(y2)
+        endif
+     enddo
+     ! 2D variables (3D output)
+     do i=1,N2
+        if (v2d(i)%lout) then
+           allocate(y3(v2d(i)%dimssz(1),v2d(i)%dimssz(2),v2d(i)%dimssz(3)))
+           call map_point_to_ll(Nlon,Nlat,geomode,x2=v2d(i)%pntr,y3=y3) ! Regridding
+           error_flag = cmor_write(var_id=v2d(i)%vid, data=y3, &
+                ntimes_passed=1,time_vals=(/1D0/),time_bnds=tbnds)
+           if (error_flag < 0) then
+              print *,  trim(pro_name)//': Error writing '//trim(v2d(i)%name)
+              stop
+           endif
+           deallocate(y3)
+        endif
+     enddo
+     ! 3D variables (4D output)
+     do i=1,N3
+        if (v3d(i)%lout) then
+           allocate(y4(v3d(i)%dimssz(1),v3d(i)%dimssz(2),v3d(i)%dimssz(3),v3d(i)%dimssz(4)))
+           call map_point_to_ll(Nlon,Nlat,geomode,x3=v3d(i)%pntr,y4=y4) ! Regridding
+           error_flag = cmor_write(var_id=v3d(i)%vid, data=y4, &
+                ntimes_passed=1,time_vals=(/1D0/),time_bnds=tbnds)
+           if (error_flag < 0) then
+              print *,  trim(pro_name)//': Error writing '//trim(v3d(i)%name)
+              stop
+           endif
+           deallocate(y4)
+        endif
+     enddo
+   END SUBROUTINE NC_CMOR_WRITE_2D
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Subrotuine cosp_error
