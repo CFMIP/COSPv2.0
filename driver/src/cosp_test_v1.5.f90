@@ -30,24 +30,22 @@
 ! May 2015 - D. Swales - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 PROGRAM COSPTEST_v1p5
-  USE MOD_COSP_INTERFACE_v1p5,    ONLY: cosp_interface => cosp_interface_v1p5,           &
-                                        cosp_interface_init,                             &
-                                        cosp_config,cosp_gridbox,cosp_subgrid,& 
-                                        construct_cosp_gridbox,  destroy_cosp_gridbox,   &
-                                        construct_cosp_subgrid,  destroy_cosp_subgrid,   &
-                                        construct_cosp_config,I_CVCLIQ,I_LSCLIQ,         &
-                                        I_CVCICE,I_LSCICE,I_LSRAIN,I_LSSNOW,I_LSGRPL,    &
-                                        I_CVRAIN,I_CVSNOW
-  USE MOD_COSP_IO,                ONLY: nc_read_input_file,nc_cmor_init,                 &
-                                        nc_cmor_associate_1d,nc_cmor_write_1d,           &
-                                        nc_cmor_associate_2d,nc_cmor_write_2d,           &
-                                        nc_cmor_close,nc_cmor_write_1d_v1p5,var1d,var2d,var3d  
-  USE COSP_KINDS,                 ONLY: wp,dp
-  USE MOD_COSP,                   ONLY: linitialization,cosp_column_inputs,cosp_outputs, &
-                                        construct_cosp_outputs,destroy_cosp_outputs
-  USE MOD_COSP_CONFIG,            ONLY: RTTOV_MAX_CHANNELS,N_HYDRO,PARASOL_NREFL
-  USE COSP_PHYS_CONSTANTS,        ONLY: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
-  
+  USE MOD_COSP_INTERFACE_v1p5, ONLY: cosp_interface => cosp_interface_v1p5,              &
+                                     cosp_interface_init,                                &
+                                     cosp_config,cosp_gridbox,cosp_subgrid,& 
+                                     construct_cosp_gridbox,  destroy_cosp_gridbox,      &
+                                     construct_cosp_subgrid,  destroy_cosp_subgrid,      &
+                                     construct_cosp_config,I_CVCLIQ,I_LSCLIQ,            &
+                                     I_CVCICE,I_LSCICE,I_LSRAIN,I_LSSNOW,I_LSGRPL,       &
+                                     I_CVRAIN,I_CVSNOW
+  USE MOD_COSP_IO,             ONLY: nc_read_input_file,nc_cmor_init,var1d,var2d,var3d,  &
+                                     nc_cmor_associate_1d,nc_cmor_write_1d,              &
+                                     nc_cmor_associate_2d,nc_cmor_write_2d,nc_cmor_close  
+  USE COSP_KINDS,              ONLY: wp
+  USE MOD_COSP,                ONLY: linitialization,cosp_column_inputs,cosp_outputs,    &
+                                     construct_cosp_outputs,destroy_cosp_outputs
+  USE MOD_COSP_CONFIG,         ONLY: RTTOV_MAX_CHANNELS,N_HYDRO,PARASOL_NREFL
+  USE COSP_PHYS_CONSTANTS,     ONLY: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   IMPLICIT NONE
   
   ! Parameters
@@ -57,7 +55,6 @@ PROGRAM COSPTEST_v1p5
   character(len=32),parameter :: &
        cospvID = 'COSP v1.5'        ! COSP version ID
   integer,parameter :: &
-       N_MAX_INPUT_FILES = 10000, &
        N_OUT_LIST = 63,           & ! Number of possible output variables
        N3D        = 8,            & ! Number of 3D output variables
        N2D        = 14,           & ! Number of 2D output variables
@@ -146,9 +143,9 @@ PROGRAM COSPTEST_v1p5
        Channels                     ! RTTOV: Channel numbers
   real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
        Surfem                       ! RTTOV: Surface emissivity
-  character(len=64) :: &
+  character(len=64)  :: &
        radar_micro_scheme           ! Microphysical scheme used in radar simulator
-  character(len=64),dimension(N_MAX_INPUT_FILES) :: &
+  character(len=64)  :: &
        finput                       ! List input NetCDF files
   character(len=512) :: &
        dinput,                    & ! Directory where the input files are located
@@ -168,20 +165,16 @@ PROGRAM COSPTEST_v1p5
   ! Read in namelist
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Input namelist
-  finput(:) = ''
   open(10,file=cosp_input_namelist,status='old')
   read(10,nml=cosp_input)
   close(10)
-  
-  ! Output namelist contains only logical switches that go directly into the derived type
-  ! for the configuration settings, cosp_config 
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Allocate space
   allocate(lon(Npoints),lat(Npoints),p(Npoints,Nlevels),ph(Npoints,Nlevels),             &
-           zlev(Npoints,Nlevels),zlev_half(Npoints,Nlevels),T(Npoints,Nlevels),        &
+           zlev(Npoints,Nlevels),zlev_half(Npoints,Nlevels),T(Npoints,Nlevels),          &
            sh(Npoints,Nlevels),rh(Npoints,Nlevels),tca(Npoints,Nlevels),                 &
            cca(Npoints,Nlevels),mr_lsliq(Npoints,Nlevels),mr_lsice(Npoints,Nlevels),     &
            mr_ccliq(Npoints,Nlevels),mr_ccice(Npoints,Nlevels),                          &
@@ -195,18 +188,12 @@ PROGRAM COSPTEST_v1p5
            frac_prec(Npoints,Ncolumns,Nlevels))
   
   ! Read in data
-  dfinput = trim(dinput)//trim(finput(1))
+  dfinput = trim(dinput)//trim(finput)
   call nc_read_input_file(dfinput,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,   &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
                           emsfc_lw,geomode,Nlon,Nlat)
-  
-  ! Time information
-  time           = 8*1._wp/8._wp  ! First time step
-  time_step      = 3._wp/24._wp!3.D0/24.D0
-  half_time_step = 0.5_wp*time_step
-  time_bnds      = (/time-half_time_step,time+half_time_step/) 
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -217,16 +204,16 @@ PROGRAM COSPTEST_v1p5
   call construct_cosp_config(cosp_output_namelist,N_OUT_LIST,cfg)
 
   ! Gridbox
-  call construct_cosp_gridbox(time,time_bnds,Npoints,Nlevels,Ncolumns,                   &
-                              N_HYDRO,Nprmts_max_hydro,Naero,Nprmts_max_aero,Npoints_it, &
-                              emsfc_lw,Nchannels,ZenAng,surfem(1:Nchannels),co2,ch4,n2o, &
-                              co,lon,lat,p,ph,zlev,zlev_half,T,sh,cca,tca,skt,landmask,  &
-                              mr_ozone,u_wind,v_wind,sunlit,fl_lsrain,fl_lssnow,         &
-                              fl_lsgrpl,fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,   &
-                              Reff,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,gbx)
+  call construct_cosp_gridbox(Npoints,Nlevels,Ncolumns,N_HYDRO,Nprmts_max_hydro,Naero,   &
+                              Nprmts_max_aero,Npoints_it,emsfc_lw,Nchannels,ZenAng,      &
+                              surfem(1:Nchannels),co2,ch4,n2o,co,lon,lat,p,ph,zlev,      &
+                              zlev_half,T,sh,cca,tca,skt,landmask,mr_ozone,u_wind,v_wind,&
+                              sunlit,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,  &
+                              dtau_s,dtau_c,dem_s,dem_c,Reff,mr_lsliq,mr_lsice,mr_ccliq, &
+                              mr_ccice,gbx)
 
   ! Subgrid
-  call construct_cosp_subgrid(Npoints, Ncolumns, Nlevels, sgx)
+  call construct_cosp_subgrid(Npoints,Ncolumns,Nlevels,sgx)
 
   ! Call initialization
   linitialization=.TRUE.
@@ -275,6 +262,12 @@ PROGRAM COSPTEST_v1p5
   ! Write outputs to CMOR-compliant netCDF format.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if (cfg%Lwrite_output) then
+     ! Time information
+     time           = 8*1._wp/8._wp
+     time_step      = 3._wp/24._wp
+     half_time_step = 0.5_wp*time_step
+     time_bnds      = (/time-half_time_step,time+half_time_step/) 
+
      N1 = N1D
      if (geomode == 1) N1 = N1D+1
      call nc_cmor_init(cmor_nl,'replace',cfg,gbx,sgx,cospOUT,                            &
@@ -289,8 +282,8 @@ PROGRAM COSPTEST_v1p5
                                   sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,&
                                   Nlat,gbx,sgx,                                          &
                                   cospOUT,N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
-        call nc_cmor_write_1d_v1p5(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,         &
-                                   v1d(1:N1),v2d,v3d)
+        call nc_cmor_write_1d(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,v1d(1:N1),v2d,&
+                              v3d)
      elseif (geomode >  1) then
         call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,               &
                                   height_mlev_axid,column_axid,sza_axid,temp_axid,       &

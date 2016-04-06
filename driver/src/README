@@ -8,7 +8,8 @@ Contents:
 cosp_test_v1.4.f90:      Code to test COSPv1.4.0 interface
 cosp_test_v1.5.f90:      Code to test COSPv1.5.0 interface
 cosp_test_v2.0.f90:      Code to test COSPv2.0 direct implementation by GCM
-cosp_io.f90:             Input/Output subroutines used by v1.4 and v1.5 drivers.
+cosp_io.v1.4.f90:        Input/Output subroutines used by v1.4 driver.
+cosp_io.v1.5.f90:        Input/Output subroutines used by v1.5 driver.
 cosp_io.v2.f90:          Input/Output subroutines used by v2.0 driver.
 Makefile.v1p4:           Makefile for test code that uses COSP v1.4.0
 		         interface

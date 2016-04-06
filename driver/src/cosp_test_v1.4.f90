@@ -35,7 +35,7 @@ PROGRAM COSPTEST_trunk
   USE COSP_KINDS,              ONLY: wp,dp
   USE MOD_COSP_CONFIG,         ONLY: RTTOV_MAX_CHANNELS,N_HYDRO,PARASOL_NREFL
   USE MOD_COSP_IO,             ONLY: nc_read_input_file,nc_cmor_init,                    &
-                                     nc_cmor_associate_1d,nc_cmor_write_1d_v1p4,         &
+                                     nc_cmor_associate_1d,nc_cmor_write_1d,              &
                                      nc_cmor_associate_2d,nc_cmor_write_2d,              &
                                      nc_cmor_close,var1d,var2d,var3d,read_cosp_output_nl,&
                                      cosp_error
@@ -57,11 +57,10 @@ PROGRAM COSPTEST_trunk
                                      construct_cosp_lidarstats,construct_cosp_sglidar,   &
                                      cosp_isccp,construct_cosp_isccp,cosp_misr,          &
                                      construct_cosp_misr,cosp_rttov,construct_cosp_rttov,&
-                                     cosp_sgradar,cosp_radarstats,                       & 
-                                     construct_cosp_radarstats,construct_cosp_sgradar,   &                                        
+                                     cosp_sgradar,cosp_radarstats,                       &
+                                     construct_cosp_radarstats,construct_cosp_sgradar,   &
                                      cosp_modis,construct_cosp_modis,                    &
                                      cosp_vgrid
-                                        
   USE MOD_COSP_INTERFACE_v1p5, ONLY: free_cosp_subgrid => destroy_cosp_subgrid,          &
                                      construct_cosp_subgrid,cosp_config,cosp_subgrid,    &
                                      I_CVCLIQ,I_LSCLIQ,I_CVCICE,I_LSCICE,I_LSRAIN,       &
@@ -257,6 +256,20 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Allocate memory for gridbox type
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    ! call construct_cosp_gridbox(time,time_bnds,radar_freq,surface_radar, use_mie_tables,&
+    !                             use_gas_abs,do_ray,melt_lay,k2,Npoints,Nlevels,Ncolumns,&
+    !                             N_HYDRO,Nprmts_max_hydro,Naero,Nprmts_max_aero,         &
+    !                             Npoints_it,lidar_ice_type,isccp_topheight,              &
+    !                             isccp_topheight_direction,overlap,emsfc_lw,             &
+    !                             use_precipitation_fluxes,use_reff,Platform,Satellite,   &
+    !                             Instrument,Nchannels,ZenAng, channels(1:Nchannels),     &
+    !                             surfem(1:Nchannels),co2,ch4,n2o,co,gbx,                 &
+    !                             ! RTTOV inputs (optional)
+    !                             lon,lat,p,ph,zlev,                                      &
+    !                             zlev_half,T,rh,sh,cca,tca,skt,landmask,mr_ozone,u_wind, &
+    !                             v_wind,sunlit,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,  &
+    !                             fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,Reff,mr_lsliq,      &
+    !                             mr_lsice,mr_ccliq,mr_ccice)
      call construct_cosp_gridbox(time,time_bnds,radar_freq,surface_radar, use_mie_tables,&
                                  use_gas_abs,do_ray,melt_lay,k2,Npoints,Nlevels,Ncolumns,&
                                  N_HYDRO,Nprmts_max_hydro,Naero,Nprmts_max_aero,         &
@@ -264,13 +277,45 @@ PROGRAM COSPTEST_trunk
                                  isccp_topheight_direction,overlap,emsfc_lw,             &
                                  use_precipitation_fluxes,use_reff,Platform,Satellite,   &
                                  Instrument,Nchannels,ZenAng, channels(1:Nchannels),     &
-                                 surfem(1:Nchannels),co2,ch4,n2o,co,gbx,                 &
-                                 ! RTTOV inputs (optional)
-                                 lon,lat,p,ph,zlev,                                      &
-                                 zlev_half,T,rh,sh,cca,tca,skt,landmask,mr_ozone,u_wind, &
-                                 v_wind,sunlit,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,  &
-                                 fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,Reff,mr_lsliq,      &
-                                 mr_lsice,mr_ccliq,mr_ccice)
+                                 surfem(1:Nchannels),co2,ch4,n2o,co,gbx)
+     gbx%longitude = lon
+     gbx%latitude = lat
+     ! Toffset. This assumes that time is the mid-point of the interval.
+     do k=1,Npoints
+        gbx%toffset(k) = -half_time_step + toffset_step*(k-0.5)
+     enddo
+     gbx%p = p
+     gbx%ph = ph
+     gbx%zlev = zlev
+     gbx%zlev_half = zlev_half
+     gbx%T = T
+     gbx%q = rh
+     gbx%sh = sh
+     gbx%cca = cca
+     gbx%tca = tca
+     gbx%psfc = ph(:,1)
+     gbx%skt  = skt
+     gbx%land = landmask
+     gbx%mr_ozone  = mr_ozone
+     gbx%u_wind  = u_wind
+     gbx%v_wind  = v_wind
+     gbx%sunlit  = sunlit
+     gbx%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
+     gbx%mr_hydro(:,:,I_LSCICE) = mr_lsice
+     gbx%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
+     gbx%mr_hydro(:,:,I_CVCICE) = mr_ccice
+     gbx%rain_ls = fl_lsrain
+     gbx%snow_ls = fl_lssnow
+     gbx%grpl_ls = fl_lsgrpl
+     gbx%rain_cv = fl_ccrain
+     gbx%snow_cv = fl_ccsnow
+     gbx%Reff = Reff
+     gbx%Reff(:,:,I_LSRAIN) = 0._wp
+     gbx%dtau_s   = dtau_s
+     gbx%dtau_c   = dtau_c
+     gbx%dem_s    = dem_s
+     gbx%dem_c    = dem_c
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      ! Define new vertical grid
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
@@ -328,8 +373,8 @@ PROGRAM COSPTEST_trunk
                                      pressure2_axid,Nlon,Nlat,vgrid,gbx,sgx,sglidar,     &
                                      isccp,misr,modis,rttov,sgradar,stradar,stlidar,     &
                                      N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
-           call nc_cmor_write_1d_v1p4(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,      &
-                                      v1d(1:N1),v2d,v3d)
+           call nc_cmor_write_1d(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,v1d(1:N1),v2d, &
+                                 v3d)
         elseif (geomode >  1) then
            call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,            &
                                      height_mlev_axid,column_axid,sza_axid,temp_axid,    &
@@ -362,6 +407,7 @@ PROGRAM COSPTEST_trunk
      if (cfg%Lrttov_sim) call free_cosp_rttov(rttov)
 
   enddo
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
   ! Free up local memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
@@ -369,8 +415,9 @@ PROGRAM COSPTEST_trunk
              mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,     &
              dtau_c,dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit)
 
-
-
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+  ! Driver timing
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
   call cpu_time(driver_time(5))
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to run COSP:         ',driver_time(3)-driver_time(2)

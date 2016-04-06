@@ -4,7 +4,7 @@
 ########################################################################
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -fpp -O3 -pg
+F90FLAGS = -fpp -O3 -pg -traceback
 F90_LIB  = /usr/local/ifort
 # Portland Group (pgf90)
 #F90      = pgf90
@@ -46,7 +46,7 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                  
 	$(OBJ_PATH)/cosp_modis_interface.o $(OBJ_PATH)/modis_simulator.o        \
 	$(OBJ_PATH)/cosp_rttov_interface.o $(OBJ_PATH)/cosp_rttovSTUB.o         \
 	$(OBJ_PATH)/cosp_parasol_interface.o mo_rng.o scops.o cosp_utils.o      \
-	cosp_interface_v1p5.o cosp_io.o cosp_errorHandling.o mrgrnk.o           \
+	cosp_interface_v1p5.o cosp_io.v1.5.o cosp_errorHandling.o mrgrnk.o      \
 	prec_scops.o array_lib.o quickbeam_optics.o math_lib.o optics_lib.o
 
 all: $(PROG)
@@ -61,12 +61,12 @@ $(PROG): $(OBJS)
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \
 	-o $(PROG)
 
-$(PROG).o     	      : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.o   \
+$(PROG).o     	      : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.v1.5.o   \
 			 cosp_interface_v1p5.o
-cosp_io.o  	      : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
+cosp_io.v1.5.o        : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
                         $(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/cosp.o          \
   	                $(OBJ_PATH)/cosp_parasol_interface.o                     \
-	    	        cosp_interface_v1p5.o cosp_interface_v1p4.o              
+	    	        cosp_interface_v1p5.o            
 cosp_interface_v1p5.o : $(OBJ_PATH)/cosp_kinds.o cosp_utils.o $(OBJ_PATH)/cosp.o \
 			$(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
 		        cosp_optics.o $(OBJ_PATH)/quickbeam.o                    \
@@ -99,7 +99,7 @@ clean:
 cosp:
 	make -C ../../src/ install
 
-cosp_io.o: cosp_io.f90
+cosp_io.v1.5.o: cosp_io.v1.5.f90
 	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(OBJ_PATH) $<
 
 mo_rng.o : $(SRC_F90)/rng/mo_rng.f90
@@ -116,9 +116,6 @@ cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.f90
 
 cosp_interface_v1p5.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p5.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
-
-cosp_interface_v1p4.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p4.f90
-	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<	
 
 cosp_errorHandling.o : $(COSP_INTERFACE_F90)/cosp_errorHandling.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<

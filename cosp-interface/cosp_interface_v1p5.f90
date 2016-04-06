@@ -87,18 +87,18 @@ MODULE MOD_COSP_INTERFACE_v1p5
        
        
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! Initialization variables
+  ! Initialization fields.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  type(radar_cfg)                          :: rcfg_cloudsat  ! Radar configuration
-  type(size_distribution)                  :: sd             ! Hydrometeor description
+  type(radar_cfg)         :: rcfg_cloudsat  ! Radar configuration
+  type(size_distribution) :: sd             ! Hydrometeor description
   integer ::         & 
-       overlap,      & !
+       overlap,      & ! SCOPS overlap assumption
        Npoints_it,   & ! Number of points per iteration
        lidar_ice_type  ! LIDAR ice type
   logical :: use_precipitation_fluxes
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !TYPE COSP_CONFIG
+  ! TYPE COSP_CONFIG (Same as in COSPv1.4.0)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE COSP_CONFIG
      logical :: &
@@ -179,21 +179,22 @@ MODULE MOD_COSP_INTERFACE_v1p5
   END TYPE COSP_CONFIG
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !                              TYPE COSP_SUBGRID
+  ! TYPE COSP_SUBGRID (Same as in COSPv1.4.0)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE COSP_SUBGRID
      integer ::      &
           Npoints,   & ! Number of gridpoints
           Ncolumns,  & ! Number of columns
           Nlevels,   & ! Number of levels
-          Nhydro       ! Number of hydrometeors
+          Nhydro       ! Number of hydrometeor types
      real(wp),dimension(:,:,:),pointer :: &
           prec_frac, & ! Subgrid precip array (Npoints,Ncolumns,Nlevels)
           frac_out     ! Subgrid cloud array  (Npoints,Ncolumns,Nlevels)
   END TYPE COSP_SUBGRID
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !                              TYPE COSP_GRIDBOX
+  ! TYPE COSP_GRIDBOX (NOT the same as in COSPv1.4.0)
+  ! Some fields have been moved to initialization (i.e. k2, radar-simulator configuration)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE COSP_GRIDBOX
      integer,pointer :: &
@@ -205,17 +206,13 @@ MODULE MOD_COSP_INTERFACE_v1p5
           Naero,            & ! Number of aerosol species
           Nprmts_max_aero,  & ! Max number of parameters for aerosol size distributions
           Npoints_it          ! Max number of gridpoints to be processed in one iteration
-     
-     ! Time [days]
-     double precision,pointer :: time
-     double precision,dimension(:),pointer :: time_bnds!(2)
 
      integer,pointer :: &
           nsizes ! Number of discrete drop sizes (um) used to represent the distribution
      
      ! Geolocation and point information (Npoints)
      real(wp),dimension(:),pointer :: &
-          toffset,   & ! Time offset of esch point from the value in time 
+          !toffset,   & ! Time offset of esch point from the value in time 
           longitude, & ! Longitude [degrees East]                       
           latitude,  & ! Latitude [deg North]                          
           land,      & ! Landmask [0 - Ocean, 1 - Land]              
@@ -255,29 +252,14 @@ MODULE MOD_COSP_INTERFACE_v1p5
      
      ! Hydrometeors concentration and distribution parameters
      real(wp),dimension(:,:,:),allocatable :: &
-          mr_hydro         ! Mixing ratio of each hydrometeor 
+          mr_hydro         ! Mixing ratio of each hydrometeor type 
                            ! (Npoints,Nlevels,Nhydro) [kg/kg]
-     real(wp),dimension(:,:),pointer :: &
-          dist_prmts_hydro ! Distributional parameters for hydrometeors 
-                           ! (Nprmts_max_hydro,Nhydro)
      real(wp),dimension(:,:,:),allocatable :: &
           Reff             ! Effective radius [m]. 
                            ! (Npoints,Nlevels,Nhydro)
      real(wp),dimension(:,:,:),allocatable :: &
           Np               ! Total Number Concentration [#/kg]. 
                            ! (Npoints,Nlevels,Nhydro)
- 
-     ! Aerosols concentration and distribution parameters
-     real(wp),dimension(:,:,:),pointer :: &
-          conc_aero       ! Aerosol concentration for each species 
-                          ! (Npoints,Nlevels,Naero)
-     integer,dimension(:),pointer :: &
-          dist_type_aero  ! Particle size distribution type for each aerosol species 
-                          ! (Naero)
-     real(wp),dimension(:,:,:,:),pointer :: &
-          dist_prmts_aero ! Distributional parameters for aerosols 
-                          ! (Npoints,Nlevels,Nprmts_max_aero,Naero)
-
      ! ISCCP simulator inputs
      real(wp),pointer :: &
           isccp_emsfc_lw      ! 10.5 micron emissivity of surface (fraction)
@@ -332,9 +314,7 @@ contains
          cloudsat_radar_freq,        & ! Cloudsat radar frequency
          cloudsat_k2                   !
     real(wp),intent(in),dimension(Npoints,Nlevels) :: & 
-         hgt_matrix,hgt_matrix_half     
-!ds    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
-!ds         hgt_matrix_half     
+         hgt_matrix,hgt_matrix_half          
     logical,intent(in) :: &
          lusePrecip,      & ! True if precipitation fluxes are input to the algorithm
          lusevgrid,       & ! True if using new grid for L3 CALIPSO and CLOUDSAT 
@@ -374,14 +354,11 @@ contains
        allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),                &
                 modis_histTauCenters(ntauV1p4))
        numMODISTauBins      = ntauV1p4+1            ! Number of tau bins for joint-histogram
-!ds       numMODISTauBins      = ntauV1p4            ! Number of tau bins for joint-histogram
        modis_histTau        = tau_binBoundsV1p4   ! Joint-histogram boundaries (optical depth)
        modis_histTauEdges   = tau_binEdgesV1p4    ! Joint-histogram bin edges (optical depth)
        modis_histTauCenters = tau_binCentersV1p4  ! Joint-histogram bin centers (optical depth)       
     else
-       allocate(modis_histTau(ntau),modis_histTauEdges(2,ntau),                        &
-!ds       allocate(modis_histTau(ntau+1),modis_histTauEdges(2,ntau),                        &
-                modis_histTauCenters(ntau))
+       allocate(modis_histTau(ntau),modis_histTauEdges(2,ntau),modis_histTauCenters(ntau))
        numMODISTauBins      = ntau
        modis_histTau        = tau_binBounds
        modis_histTauEdges   = tau_binEdges
@@ -926,7 +903,7 @@ contains
                Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,Lcltcalipsoliq,        &
                Lcltcalipsoice,Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,&
                Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq,              &
-               Lcllcalipsoice,Lcllcalipsoun,Ltoffset,LparasolRefl,LclMISR,Lmeantbisccp, &
+               Lcllcalipsoice,Lcllcalipsoun,LparasolRefl,LclMISR,Lmeantbisccp,          &
                Lmeantbclrisccp,Lfracout,LlidarBetaMol532,Ltbrttov,Lcltmodis,Lclwmodis,  &
                Lclimodis,Lclhmodis,Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,&
                Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,Lreffclimodis,   &
@@ -941,7 +918,7 @@ contains
                          Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun,Lclhcalipsoliq,    &
                          Lclhcalipsoice,Lclhcalipsoun,Lclmcalipsoliq,Lclmcalipsoice,    &
                          Lclmcalipsoun,Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,     &
-                         Lcltisccp,Ltoffset,LparasolRefl,LclMISR,Lmeantbisccp,          &
+                         Lcltisccp,LparasolRefl,LclMISR,Lmeantbisccp,          &
                          Lmeantbclrisccp,Lfracout,LlidarBetaMol532,Ltbrttov,Lcltmodis,  &
                          Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,Lcllmodis,Ltautmodis,  &
                          Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,             &
@@ -998,7 +975,6 @@ contains
     if (Ldbze94)           cfg%out_list(35) = 'dbze94'
     if (Ltauisccp)         cfg%out_list(36) = 'tauisccp'
     if (Lcltisccp)         cfg%out_list(37) = 'cltisccp'
-    if (Ltoffset)          cfg%out_list(38) = 'toffset'
     if (LparasolRefl)      cfg%out_list(39) = 'parasolRefl'
     if (LclMISR)           cfg%out_list(40) = 'clMISR'
     if (Lmeantbisccp)      cfg%out_list(41) = 'meantbisccp'
@@ -1076,7 +1052,8 @@ contains
     cfg%LclMISR          = LclMISR
     
     ! Other
-    cfg%Ltoffset         = Ltoffset
+    cfg%Ltoffset         = .false.
+!    cfg%Ltoffset         = Ltoffset
     cfg%Lfracout         = Lfracout
     cfg%LlidarBetaMol532 = LlidarBetaMol532
     
@@ -1137,8 +1114,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                         SUBROUTINE construct_cosp_gridbox
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE CONSTRUCT_COSP_GRIDBOX(time,time_bnds,                                      &
-                                    Npoints,Nlevels,Ncolumns,Nhydro,Nprmts_max_hydro,    &
+  SUBROUTINE CONSTRUCT_COSP_GRIDBOX(Npoints,Nlevels,Ncolumns,Nhydro,Nprmts_max_hydro,    &
                                     Naero,Nprmts_max_aero,Npoints_it,isccp_emsfc_lw,     &
                                     Nchan,ZenAng,SurfEm,co2,ch4,n2o,co,lon,lat,p,        &
                                     ph,zlev,zlev_half,T,sh,cca,tca,skt,landmask,         &
@@ -1146,9 +1122,6 @@ contains
                                     fl_lsgrpl,fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,   &
                                     dem_c,Reff,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,y)
     ! Inputs
-    double precision,intent(in),target :: &
-         time,          & ! Time since start of run [days] 
-         time_bnds(2)     ! Time boundaries
     integer,intent(in),target :: &
          Npoints,           & ! Number of gridpoints
          Nlevels,           & ! Number of levels
@@ -1169,47 +1142,42 @@ contains
          co,               & ! CO
          ZenAng              ! RTTOV zenith abgle
     real(wp),intent(in),dimension(Nchan),target :: &
-         SurfEm
+         SurfEm              ! Surface emissivity for RTTOV channels
     real(wp),intent(in),dimension(Npoints),target :: &
-         lon,        &
-         lat,        &
-         u_wind,     &
-         v_wind,     &
-         skt,        &
-         landmask,   &
-         sunlit
-    
+         lon,              & ! Longitude                               (degrees)
+         lat,              & ! Latitude                                (degrees)
+         u_wind,           & ! Surface u-component of wind.            (m/s)
+         v_wind,           & ! Surface v-component of wind.            (m/s) 
+         skt,              & ! Skin temperature                        (K)
+         landmask,         & ! Landsea mask                            (1)
+         sunlit              ! Sunlit flag                             (1)
     real(wp),intent(in),dimension(Npoints,Nlevels),target :: &
-         p,          &
-         ph,         &
-         zlev,       &
-         T,          & 
-         sh,         &
-         cca,        &
-         tca,        &
-         mr_ozone,   &
-         fl_lsrain,  &
-         fl_lssnow,  &
-         fl_lsgrpl,  &
-         fl_ccrain,  &
-         fl_ccsnow,  &
-         dtau_c,     &
-         dtau_s,     &
-         dem_c,      &
-         dem_s!,      &
- !        mr_lsice,   &
-!         mr_lsliq,   &
-!         mr_ccliq,   &
-!         mr_ccice
+         p,                & ! Model pressure layers                   (Pa)
+         ph,               & ! Model pressure @ half levels            (Pa)
+         zlev,             & ! Model layer height                      (m)
+         T,                & ! Temperature                             (K)
+         sh,               & ! Specific humidity                       (kg/kg) 
+         cca,              & ! Concvective cloud fraction              (0-1)
+         tca,              & ! Total cloud fraction                    (0-1)
+         mr_ozone,         & ! Mixing ratio (ozone)                    (kg/kg)
+         fl_lsrain,        & ! Precipitation flux (startiform rain)    (kg/m2/s)
+         fl_lssnow,        & ! Precipitation flux (startiform snow)    (kg/m2/s)
+         fl_lsgrpl,        & ! Precipitation flux (startiform groupel) (kg/m2/s) 
+         fl_ccrain,        & ! Precipitation flux (convective rain)    (kg/m2/s)
+         fl_ccsnow,        & ! Precipitation flux (convective snow)    (kg/m2/s)
+         dtau_c,           & ! 0.67micron optical depth (convective)   (1)
+         dtau_s,           & ! 0.67micron optical depth (stratiform)   (1)
+         dem_c,            & ! 11micron emissivity (convective)        (1)
+         dem_s               ! 11micorn emissivity (stratiform)        (1)
     real(wp),intent(in),dimension(Npoints,Nlevels+1),target ::&
-         zlev_half
+         zlev_half           ! Model level height (nlayer=nlevel+1)    (m)
     real(wp),intent(in),dimension(Npoints,Nlevels,N_HYDRO) :: &
-         Reff
+         Reff                ! Particle size for each hydrometeor type (m)
     real(wp),intent(in),dimension(Npoints,Nlevels) :: &
-         mr_lsice,   &
-         mr_lsliq,   &
-         mr_ccliq,   &
-         mr_ccice    
+         mr_lsice,         & ! Mixing ratio (stratiform cloud ice)     (kg/kg)
+         mr_lsliq,         & ! Mixing ratio (stratiform cloud liquid)  (kg/kg)
+         mr_ccliq,         & ! Mixing ratio (convective cloud liquid)  (kg/kg)
+         mr_ccice            ! Mixing ratio (convective cloud ice)     (kg/kg)
     
     ! Outputs
     type(cosp_gridbox),intent(out) :: y
@@ -1227,19 +1195,10 @@ contains
     y%Nprmts_max_aero   => Nprmts_max_aero
     y%Npoints_it        => Npoints_it
     y%isccp_emsfc_lw    => isccp_emsfc_lw
-    y%time              => time
-    y%time_bnds         => time_bnds
-   
-    ! Allocate surface information and geolocation
-     allocate(y%toffset(Npoints))
-
+    
     ! Hydrometeors concentration and distribution parameters
     allocate(y%mr_hydro(Npoints,Nlevels,Nhydro),y%Reff(Npoints,Nlevels,Nhydro),          &
-             y%Np(Npoints,Nlevels,Nhydro),y%dist_prmts_hydro(Nprmts_max_hydro,Nhydro))
-
-    ! Aerosols concentration and distribution parameters
-    allocate(y%conc_aero(Npoints,Nlevels,Naero), y%dist_type_aero(Naero),                &
-             y%dist_prmts_aero(Npoints,Nlevels,Nprmts_max_aero,Naero))
+             y%Np(Npoints,Nlevels,Nhydro))
     
     ! Point towards inputs where applicable and define where necessary
     y%longitude              => lon
@@ -1267,16 +1226,13 @@ contains
     y%dtau_s                 => dtau_s
     y%dtau_c                 => dtau_c
     y%dem_s                  => dem_s
-    y%dem_c                  => dem_c   
-!    y%dlev                   = 0._wp               
-!    y%dist_prmts_hydro       = 0._wp
-!    y%conc_aero              = 0._wp
-!    y%dist_type_aero         = 0   
-!    y%dist_prmts_aero        = 0._wp 
-!    y%Np                     = 0._wp     
+    y%dem_c                  => dem_c
+    ! Unfortunately, in fortran2003 you cannot point a subset of an array to a target, so we
+    ! need to copy here. This is something that is possible in fortran2008, so if you feel
+    ! like it and are using f2008, you can replace assignments below with pointing syntax.
+    y%Np                     = 0._wp     
     y%Reff                   = Reff
     y%Reff(:,:,I_LSRAIN)     = 0.0   
-!    y%mr_hydro               = 0._wp     
     y%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
     y%mr_hydro(:,:,I_LSCICE) = mr_lsice
     y%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
@@ -1290,13 +1246,7 @@ contains
     y%ch4    => ch4
     y%n2o    => n2o
     y%co     => co  
-      
-    ! Toffset. This assumes that time is the mid-point of the interval.
-    do k=1,Npoints
-       y%toffset(k) = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*(real(k)-0.5)/Npoints
-    enddo
-!ds    y%toffset = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*([1:Npoints]-0.5)/Npoints
-    
+
   END SUBROUTINE CONSTRUCT_COSP_GRIDBOX
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1324,8 +1274,7 @@ contains
     ! Save any updates to radar simulator LUT
     if (local_save_LUT) call save_scale_LUTs(rcfg_cloudsat)
     
-    deallocate(y%mr_hydro, y%dist_prmts_hydro, y%conc_aero, y%dist_type_aero,            &
-               y%dist_prmts_aero, y%Reff,y%Np,y%toffset)              
+    deallocate(y%mr_hydro,y%Reff,y%Np)             
   end subroutine destroy_cosp_gridbox
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
