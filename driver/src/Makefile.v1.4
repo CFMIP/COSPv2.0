@@ -31,6 +31,15 @@ OBJ_PATH = ${SRC_F90}/obj
 COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/COSPv2.0/cosp-interface
 PROG = cosp_test_v1.4
 
+# RTTOV setup
+RTTOV_PATH       = /Projects/Clouds/dswales/RTTOV/rttov_11.3
+RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib 
+RTTOV_INC_PATH   = $(RTTOV_PATH)/include 
+RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod
+RTTOV_LIBS       = -lrttov11_mw_scatt -lrttov11_brdf_atlas -lrttov11_emis_atlas \
+                   -lrttov11_other -lrttov11_parallel -lrttov11_coef_io        \
+                   -lrttov11_main
+		   
 # Object files
 OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                \
 	$(OBJ_PATH)/cosp_cloudsat_interface.o $(OBJ_PATH)/cosp_config.o       \
@@ -40,8 +49,8 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                \
 	$(OBJ_PATH)/cosp_isccp_interface.o $(OBJ_PATH)/cosp_misr_interface.o  \
 	$(OBJ_PATH)/MISR_simulator.o $(OBJ_PATH)/cosp_modis_interface.o       \
 	$(OBJ_PATH)/modis_simulator.o $(OBJ_PATH)/cosp_rttov_interface.o      \
-	$(OBJ_PATH)/cosp_rttovSTUB.o $(OBJ_PATH)/cosp_parasol_interface.o     \
-	mo_rng.o scops.o cosp_utils.o cosp_interface_v1p5.o mrgrnk.o          \
+	$(OBJ_PATH)/cosp_rttov11.o $(OBJ_PATH)/cosp_parasol_interface.o     \
+	mo_rng.o scops.o cosp_utils.o  mrgrnk.o          \
 	cosp_interface_v1p4.o cosp_io.v1.4.o prec_scops.o math_lib.o optics_lib.o  \
         cosp_optics.o array_lib.o quickbeam_optics.o cosp_errorHandling.o 
 all: $(PROG)
@@ -50,25 +59,20 @@ $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
 	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
 	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff -lnetcdf -L{LIB} -lnetcdf \
+	-L${RTTOV_LIB_PATH} $(RTTOV_LIBS) \
 	-I$(OBJ_PATH) \
 	-L${UDUNITS_LIB} -Wl,-rpath=${UDUNITS_LIB} -ludunits2 -lexpat -I${UDUNITS_INC} \
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \
 	-o $(PROG)
 
-$(PROG).o     	      : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.v1.4.o   \
-			cosp_interface_v1p5.o
+$(PROG).o     	      : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.v1.4.o
 cosp_io.v1.4.o        : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o       \
-			cosp_interface_v1p4.o $(OBJ_PATH)/cosp_rttovSTUB.o       \
+			cosp_interface_v1p4.o $(OBJ_PATH)/cosp_rttov11.o       \
 			$(OBJ_PATH)/cosp.o $(OBJ_PATH)/cosp_parasol_interface.o
-cosp_interface_v1p4.o : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp.o              \
-		        $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
-			$(OBJ_PATH)/quickbeam.o $(OBJ_PATH)/quickbeam.o          \
-			$(OBJ_PATH)/modis_simulator.o cosp_interface_v1p5.o      \
-			scops.o cosp_utils.o cosp_optics.o
-cosp_interface_v1p5.o : $(OBJ_PATH)/cosp_kinds.o cosp_utils.o $(OBJ_PATH)/cosp.o \
-		        $(OBJ_PATH)/cosp_constants.o $(OBJ_PATH)/cosp_config.o   \
-                        $(OBJ_PATH)/quickbeam.o quickbeam_optics.o mo_rng.o      \
-			scops.o prec_scops.o cosp_optics.o 
+cosp_interface_v1p4.o : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp.o scops.o    \
+		        $(OBJ_PATH)/cosp_config.o quickbeam_optics.o           \
+			$(OBJ_PATH)/quickbeam.o prec_scops.o cosp_optics.o     \
+			cosp_utils.o
 cosp_utils.o          : $(OBJ_PATH)/cosp_kinds.o $(OBJ_PATH)/cosp_config.o
 scops.o               : $(OBJ_PATH)/cosp_kinds.o mo_rng.o cosp_errorHandling.o
 mo_rng.o              : $(OBJ_PATH)/cosp_kinds.o
@@ -113,9 +117,6 @@ prec_scops.o : $(SRC_F90)/subcol/prec_scops.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
 cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.f90
-	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
-
-cosp_interface_v1p5.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p5.f90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
 cosp_interface_v1p4.o : $(COSP_INTERFACE_F90)/cosp_interface_v1p4.f90

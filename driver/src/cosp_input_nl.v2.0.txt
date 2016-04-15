@@ -36,7 +36,7 @@
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
-  FINPUT='../data/inputs/v1.4.0/cosp_input_um_2d.nc', ! List input NetCDF files
+  FINPUT='../data/inputs/v1.4.0/cosp_input_um.nc', ! List input NetCDF files
 !  FINPUT='../data/inputs/cosp_input_2d.aearc.2006.10.15.03.30.nc', ! List input NetCDF files  
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
@@ -86,9 +86,9 @@
   rttov_Platform=1,    ! satellite platform
   rttov_Satellite=15,  ! satellite
   rttov_Instrument=5,  ! instrument
-  rttov_Nchannels=8,   ! Number of channels to be computed
-  rttov_Channels=1,3,5,6,8,10,11,13,        ! Channel numbers (please be sure that you supply Nchannels)
-  rttov_Surfem=0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
+  rttov_Nchannels=3,   ! Number of channels to be computed
+  rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
+  rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
   rttov_ZenAng=50.0, ! Satellite Zenith Angle
   CO2=5.241e-04, ! Mixing ratios of trace gases
   CH4=9.139e-07,

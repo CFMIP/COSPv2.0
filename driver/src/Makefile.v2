@@ -4,7 +4,7 @@
 ########################################################################
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -fpp -O3 -pg
+F90FLAGS = -fpp -O3 -pg -traceback #-check all
 F90_LIB  = /usr/local/ifort
 # Portland Group (pgf90)
 #F90      = pgf90
@@ -33,6 +33,14 @@ OBJ_PATH = ${SRC_F90}/obj
 PROG     = cosp_test_v2.0
 COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/COSPv2.0/cosp-interface
 
+# RTTOV setup
+RTTOV_PATH       = /Projects/Clouds/dswales/RTTOV/rttov_11.3
+RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib 
+RTTOV_INC_PATH   = $(RTTOV_PATH)/include 
+RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod
+RTTOV_LIBS       = -lrttov11_mw_scatt -lrttov11_brdf_atlas -lrttov11_emis_atlas \
+                   -lrttov11_other -lrttov11_parallel -lrttov11_coef_io        \
+                   -lrttov11_main
 # Object files
 OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                  \
 	$(OBJ_PATH)/cosp_cloudsat_interface.o $(OBJ_PATH)/cosp_config.o         \
@@ -42,7 +50,7 @@ OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                  
 	$(OBJ_PATH)/cosp_calipso_interface.o $(OBJ_PATH)/cosp_isccp_interface.o \
 	$(OBJ_PATH)/cosp_misr_interface.o $(OBJ_PATH)/MISR_simulator.o          \
 	$(OBJ_PATH)/cosp_modis_interface.o $(OBJ_PATH)/modis_simulator.o        \
-	$(OBJ_PATH)/cosp_rttov_interface.o $(OBJ_PATH)/cosp_rttovSTUB.o         \
+	$(OBJ_PATH)/cosp_rttov_interface.o $(OBJ_PATH)/cosp_rttov11.o         \
 	$(OBJ_PATH)/cosp_parasol_interface.o mo_rng.o scops.o cosp_utils.o      \
 	cosp_io.v2.o cosp_errorHandling.o mrgrnk.o prec_scops.o array_lib.o     \
 	quickbeam_optics.o math_lib.o optics_lib.o
@@ -54,6 +62,7 @@ $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
 	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
 	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff -lnetcdf -L{LIB} -lnetcdf \
+	-L${RTTOV_LIB_PATH} $(RTTOV_LIBS) \
 	-I$(OBJ_PATH) \
 	-L${UDUNITS_LIB} -Wl,-rpath=${UDUNITS_LIB} -ludunits2 -lexpat -I${UDUNITS_INC} \
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \

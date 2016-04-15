@@ -262,7 +262,8 @@ program cosp_test_v2
   type(var1d) :: v1d(N1D+1) ! Structures needed by output routines for 1D variables
   type(var2d) :: v2d(N2D)   ! Structures needed by output routines for 2D variables
   type(var3d) :: v3d(N3D)   ! Structures needed by output routines for 3D variables
-  double precision :: time,time_bnds(2),time_step,half_time_step  
+  double precision :: time,time_bnds(2),time_step,half_time_step
+  real(wp),dimension(:),allocatable :: mgrid_z,mgrid_zu,mgrid_zl
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -315,6 +316,7 @@ program cosp_test_v2
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Initialize COSP
+  !*This only needs to be done the first time that COSP is called.*
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! MODIS joint-histogram bin boundaries declaration is done here, rather than in src/cosp_config.f90,
   ! because the joint-histogram bin bundaries are different in v2.0 than in v1.4, but to
@@ -345,10 +347,9 @@ program cosp_test_v2
   ! Initialize the distributional parameters for hydrometeors in radar simulator
   call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
   
-  ! Initialize COSP simulators
+  ! Initialize COSP simulator
   call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
-                 cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,             &
-                 zlev(:,Nlevels:1:-1),zlev_half(:,Nlevels:1:-1),surface_radar,          &
+                 cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,surface_radar,&
                  rcfg_cloudsat,rttov_Nchannels,rttov_Channels,rttov_platform,           &
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &
                  cloudsat_micro_scheme)
@@ -385,10 +386,9 @@ program cosp_test_v2
   ! Populate input types with model fields.
   ! Here the 3D sample model fields (temperature,pressure,etc...) are ordered from the
   ! surface-2-TOA, whereas COSP expects all fields to be ordered from TOA-2-SFC. So the
-  ! vertical fields are flipped prior to storing as inputs to COSP.
+  ! vertical fields are flipped prior to storing to COSP input type.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   cospstateIN%hgt_matrix           = zlev(:,Nlevels:1:-1)
-  cospstateIN%hgt_matrix_half      = zlev_half(:,Nlevels:1:-1)
   cospstateIN%sunlit               = sunlit
   cospstateIN%skt                  = skt
   cospstateIN%land                 = landmask
@@ -398,21 +398,24 @@ program cosp_test_v2
   cospstateIN%o3                   = mr_ozone(:,Nlevels:1:-1)*(amd/amO3)*1e6
   cospstateIN%u_sfc                = u_wind
   cospstateIN%v_sfc                = v_wind
-  cospstateIN%t_sfc                = T(:,1)
   cospstateIN%emis_sfc             = rttov_surfem
   cospstateIN%zenang               = rttov_zenang
   cospstateIN%lat                  = lat
+  cospstateIN%lon                  = lon
+  cospstateIN%month                = 2 ! This is needed by RTTOV only for the surface emissivity calculation.
   cospstateIN%co2                  = co2*(amd/amCO2)*1e6
   cospstateIN%ch4                  = ch4*(amd/amCH4)*1e6  
   cospstateIN%n2o                  = n2o*(amd/amN2O)*1e6
   cospstateIN%co                   = co*(amd/amCO)*1e6
   cospstateIN%phalf(:,1)           = 0._wp
   cospstateIN%phalf(:,2:Nlevels+1) = ph(:,Nlevels:1:-1)      
+  cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(:,Nlevels:1:-1)
+  cospstateIN%hgt_matrix_half(:,Nlevels+1) = 0._wp  
   cospIN%tautot_S_liq              = 0._wp
   cospIN%tautot_S_ice              = 0._wp
   cospIN%emsfc_lw                  = emsfc_lw
   cospIN%rcfg_cloudsat             = rcfg_cloudsat
-
+  
   if (Ncolumns .gt. 1) then
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns for clouds (SCOPS) and precipitation type (PREC_SCOPS)
@@ -726,10 +729,7 @@ program cosp_test_v2
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Call COSP
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,1,nPoints)   
-  call destroy_cospIN(cospIN)
-  call destroy_cospstateIN(cospstateIN)
-
+  cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,1,nPoints)
 
   call cpu_time(driver_time(7))
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
@@ -767,35 +767,45 @@ program cosp_test_v2
   half_time_step = 0.5_wp*time_step
   time_bnds      = (/time-half_time_step,time+half_time_step/)
 
+  ! Model grid info for cmor output
+  allocate(mgrid_z(Nlevels),mgrid_zl(Nlevels),mgrid_zu(Nlevels))
+  mgrid_z             = cospstateIN%hgt_matrix(1,:)
+  mgrid_zl            = cospstateIN%hgt_matrix_half(1,:)
+  mgrid_zu(2:Nlevels) = cospstateIN%hgt_matrix_half(1,1:Nlevels-1)
+  mgrid_zu(1)         = cospstateIN%hgt_matrix(1,1)+(cospstateIN%hgt_matrix(1,1)-mgrid_zl(1))
+  
   if (geomode .eq. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_1D.txt','replace',nPoints,nColumns,nLevels, &
-                       rttov_nChannels,nLvgrid,lon,lat,cospOUT,geomode,Nlon,Nlat,N1D+1,   &
-                       N2D,N3D,N_OUT_LIST,out_list,lon_axid,lat_axid,time_axid,          &
-                       height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id,         &
-                       column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
-                       MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D+1),v2d,v3d)
+                       rttov_nChannels,nLvgrid,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
+                       geomode,Nlon,Nlat,N1D+1,N2D,N3D,N_OUT_LIST,out_list,lon_axid,     &
+                       lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,&
+                       latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,  &
+                       sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D+1),   &
+                       v2d,v3d)
      call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,           &
                                column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
                                sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
                                Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid,    &
                                cospOUT,N1D+1,N2D,N3D,v1d,v2d,v3d)
-     call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1D+1,N2D,N3D,   &
+     call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1D+1,N2D,N3D,  &
                            v1d(1:N1D+1),v2d,v3d)
   endif
   if (geomode .gt. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_2D.txt','replace',nPoints,nColumns,nLevels, &
-                       rttov_nChannels,nLvgrid,lon,lat,cospOUT,geomode,Nlon,Nlat,N1D,   &
-                       N2D,N3D,N_OUT_LIST,out_list,lon_axid,lat_axid,time_axid,          &
-                       height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id,         &
-                       column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
-                       MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D),v2d,v3d)
+                       rttov_nChannels,nLvgrid,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
+                       geomode,Nlon,Nlat,N1D,N2D,N3D,N_OUT_LIST,out_list,lon_axid,       &
+                       lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,&
+                       latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,  &
+                       sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D),v2d, &
+                       v3d)
      call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid, &
                                column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
                                sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
                                Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid,    &
                                cospOUT,N1D,N2D,N3D,v1d(1:N1D),v2d,v3d)
      call nc_cmor_write_2d(time_bnds,geomode,Nlon,Nlat,N1D,N2D,N3D,v1d(1:N1D),v2d,v3d)
-  endif     
+  endif
+  deallocate(mgrid_z,mgrid_zu,mgrid_zl)
   call nc_cmor_close()
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
@@ -804,5 +814,6 @@ program cosp_test_v2
   ! Free up memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   call destroy_cosp_outputs(cospOUT)
-
+  call destroy_cospIN(cospIN)
+  call destroy_cospstateIN(cospstateIN)
 end program cosp_test_v2

@@ -153,7 +153,8 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################  
     integer,parameter :: &
        RTTOV_MAX_CHANNELS = 20
-       
+    character(len=256),parameter :: &
+         rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator   
     ! ####################################################################################  
@@ -311,9 +312,9 @@ MODULE MOD_COSP_CONFIG
     real(wp),dimension(:),allocatable :: &
        vgrid_zl,  & ! New grid bottoms
        vgrid_zu,  & ! New grid tops
-       vgrid_z,   & ! New grid center
-       mgrid_zl,  & ! Model grid botton
-       mgrid_zu,  & ! Model grid tops
-       mgrid_z      ! Model grid center
+       vgrid_z!,   & ! New grid center
+       !mgrid_zl,  & ! Model grid botton
+       !mgrid_zu,  & ! Model grid tops
+       !mgrid_z      ! Model grid center
 
 END MODULE MOD_COSP_CONFIG
