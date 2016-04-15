@@ -3,13 +3,13 @@ module mod_cosp_io
   use netcdf
   use mod_cosp,   only: cosp_outputs
   USE cmor_users_functions
-  USE MOD_COSP_CONFIG, ONLY: vgrid_zu,vgrid_zl,vgrid_z,mgrid_zu,mgrid_zl,mgrid_z,&
+  USE MOD_COSP_CONFIG, ONLY: vgrid_zu,vgrid_zl,vgrid_z,&!mgrid_zu,mgrid_zl,mgrid_z,&
                              R_UNDEF,DBZE_BINS,CFAD_ZE_MIN,CFAD_ZE_WIDTH,COSP_VERSION,   &
                              LIDAR_NTEMP,LIDAR_PHASE_TEMP,LIDAR_PHASE_TEMP_BNDS,misr_histHgtCenters,&
                              misr_histHgtEdges,numMISRHgtBins,PARASOL_NREFL,SR_BINS,   &
                              isccp_histTauEdges,isccp_histPresEdges,PARASOL_SZA,          &
                              isccp_histPresCenters,isccp_histTauCenters
-  USE MOD_COSP_RTTOV, ONLY: ichan_in
+  USE MOD_COSP_RTTOV, ONLY: iChannel
 
   implicit none
   
@@ -897,11 +897,12 @@ contains
   ! SUBROUTINE nc_cmor_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE NC_CMOR_INIT(cmor_nl,wmode,nPoints,nColumns,nLevels,nChannels,nLvgrid,      &
-                          longitude,latitude,cospOUT,geomode,Nlon,Nlat,N1,N2,N3,         &
-                          N_OUT_LIST,out_list,lon_axid,lat_axid,time_axid,height_axid,   &
-                          height_mlev_axid,grid_id,lonvar_id,latvar_id,column_axid,      &
-                          sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,         &
-                          MISR_CTH_axid,tau_axid,pressure2_axid,v1d,v2d,v3d)
+                          longitude,latitude,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,geomode,  &
+                          Nlon,Nlat,N1,N2,N3,N_OUT_LIST,out_list,lon_axid,lat_axid,      &
+                          time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,      &
+                          latvar_id,column_axid,sza_axid,temp_axid,channel_axid,         &
+                          dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,   &
+                          v1d,v2d,v3d)
     ! Input arguments
     character(len=*),  intent(in) :: cmor_nl,wmode ! Writing mode 'replace' or 'append'
     character(len=32),dimension(n_out_list),intent(in) :: out_list
@@ -909,6 +910,7 @@ contains
     integer,intent(in) :: geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST,nPoints,nColumns,nLevels,&
                           nChannels,nLvgrid
     real(wp),dimension(nPoints),intent(in) :: longitude,latitude
+    real(wp),dimension(nLevels),intent(in) :: mgrid_zl,mgrid_zu,mgrid_z
     
     ! Outputs
     integer,intent(out) :: grid_id,latvar_id,lonvar_id,column_axid,height_axid,dbze_axid,&
@@ -964,7 +966,7 @@ contains
        column_ax(i) = i
     enddo
     ! Channels
-    channel_ax = float(ichan_in(1:Nchannels))
+    channel_ax = float(iChannel(1:Nchannels))
     ! Radar Ze
     do i=1,DBZE_BINS
        dbze_ax(i) = CFAD_ZE_MIN + CFAD_ZE_WIDTH*(i - 0.5)

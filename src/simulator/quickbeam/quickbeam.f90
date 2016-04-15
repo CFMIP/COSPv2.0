@@ -240,7 +240,8 @@ contains
     real(wp),intent(in),dimension(npoints,ncolumns,Nlevels) :: &
          Ze_tot        ! 
     real(wp),intent(in),dimension(npoints,Nlevels) :: &
-         zlev,       & ! Model full levels
+         zlev          ! Model full levels
+    real(wp),intent(in),dimension(npoints,Nlevels+1) :: &
          zlev_half     ! Model half levels
          
     ! Outputs

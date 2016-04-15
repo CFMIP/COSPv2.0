@@ -168,8 +168,8 @@ CONTAINS
     integer,intent(in) :: Npoints  !# of grid points
     integer,intent(in) :: Nlevels  !# of levels
     integer,intent(in) :: Ncolumns !# of columns
-    real(wp),dimension(Npoints,Nlevels),intent(in) :: zfull ! Height at model levels [m] (Bottom of model layer)
-    real(wp),dimension(Npoints,Nlevels),intent(in) :: zhalf ! Height at half model levels [m] (Bottom of model layer)
+    real(wp),dimension(Npoints,Nlevels),intent(in) :: zfull ! Height at model levels [m] (center of model layer)
+    real(wp),dimension(Npoints,Nlevels+1),intent(in) :: zhalf ! Height at half model levels [m] (Bottom of model layer)
     real(wp),dimension(Npoints,Ncolumns,Nlevels),intent(in) :: y     ! Variable to be changed to a different grid
     integer,intent(in) :: M  !# levels in the new grid
     real(wp),dimension(M),intent(in) :: zl ! Lower boundary of new levels  [m]

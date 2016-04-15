@@ -38,10 +38,9 @@ MODULE MOD_COSP
                                          N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,      &
                                          DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
                                          use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,    &
-                                         mgrid_zl,mgrid_zu,mgrid_z,numMODISTauBins,      &
-                                         numMODISPresBins,numMODISReffIceBins,           &
-                                         numMODISReffLiqBins,numISCCPTauBins,            &
-                                         numISCCPPresBins,numMISRTauBins
+                                         numMODISTauBins,numMODISPresBins,               &
+                                         numMODISReffIceBins,numMODISReffLiqBins,        &
+                                         numISCCPTauBins,numISCCPPresBins,numMISRTauBins
   USE MOD_COSP_MODIS_INTERFACE,    ONLY: cosp_modis_init,     modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,    ONLY: cosp_rttov_init,     rttov_IN
   USE MOD_COSP_MISR_INTERFACE,     ONLY: cosp_misr_init,      misr_IN
@@ -55,7 +54,7 @@ MODULE MOD_COSP
   USE MOD_LIDAR_SIMULATOR,         ONLY: lidar_subcolumn,     lidar_column
   USE MOD_MODIS_SIM,               ONLY: modis_subcolumn,     modis_column
   USE MOD_PARASOL,                 ONLY: parasol_subcolumn,   parasol_column, ntetas
-  use mod_cosp_rttov,              ONLY: rttov_subcolumn
+  use mod_cosp_rttov,              ONLY: rttov_column
   USE MOD_COSP_STATS,              ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID
   
   IMPLICIT NONE
@@ -70,34 +69,44 @@ MODULE MOD_COSP
           Npoints,             & ! Number of gridpoints.
           Ncolumns,            & ! Number of columns.
           Nlevels                ! Number of levels.
+         
      integer,allocatable,dimension(:) :: &
-          sunlit                 ! Sunlit flag
+          sunlit                 ! Sunlit flag                            (0-1)
 
      real(wp),allocatable,dimension(:,:) :: &
-          at,                  & ! Temperature
-          pfull,               & ! Pressure
-          phalf,               & ! Pressure at half-levels
-          qv,                  & ! Specific humidity
-          hgt_matrix,          & ! Height of hydrometeors (km)
-          hgt_matrix_half        ! Height of hydrometeors at half levels (km)
+          at,                  & ! Temperature                            (K)
+          pfull,               & ! Pressure                               (Pa)
+          phalf,               & ! Pressure at half-levels                (Pa)
+          qv,                  & ! Specific humidity                      (kg/kg)
+          hgt_matrix,          & ! Height of hydrometeors                 (km)
+          hgt_matrix_half        ! Height of hydrometeors at half levels  (km)
+
      real(wp),allocatable,dimension(:) :: &
-          land,                & ! Land/Sea mask
-          skt                    ! Surface temperature
-     ! RTTOV fields
+          land,                & ! Land/Sea mask                          (0-1)
+          skt                    ! Surface temperature                    (K)
+     ! Fields used ONLY by RTTOV
+     integer :: &
+          month                  ! Month for surface emissivty atlas      (1-12)
      real(wp) :: &
-          zenang,              & ! Satellite zenith angle for RTTOV       
-          co2,                 & ! CO2
-          ch4,                 & ! Methane
-          n2o,                 & ! N2O
-          co                     ! CO           
+          zenang,              & ! Satellite zenith angle for RTTOV       (deg)
+          co2,                 & ! CO2                                    (kg/kg)
+          ch4,                 & ! Methane                                (kg/kg)
+          n2o,                 & ! N2O                                    (kg/kg)
+          co                     ! CO                                     (kg/kg)
      real(wp),allocatable,dimension(:) :: &
-          emis_sfc,            & ! Surface emissivity
-          u_sfc,               & ! Surface u-wind
-          v_sfc,               & ! Surface v-wind
-          t_sfc,               & ! Skin temperature
-          lat                    ! Latitude 
+          emis_sfc,            & ! Surface emissivity                     (1)
+          u_sfc,               & ! Surface u-wind                         (m/s)
+          v_sfc,               & ! Surface v-wind                         (m/s)
+          seaice,              & ! Sea-ice fraction                       (0-1)
+          lat,                 & ! Latitude                              (deg)
+          lon                    ! Longitude                              (deg)
      real(wp),allocatable,dimension(:,:) :: &
-          o3                     ! Ozone
+          o3,                  & ! Ozone                                  (kg/kg)
+          tca,                 & ! Total column cloud fraction            (0-1)
+          cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
+          cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
+          fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
+          fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
   end type cosp_column_inputs
   
   ! ######################################################################################
@@ -257,7 +266,7 @@ CONTAINS
     
     ! Local variables
     integer :: &
-         isim,t0,t1,i,icol,nloop,rmod,nprof,nlevels,istart,istop,maxlim,ij,ik,i1,i2
+         isim,t0,t1,i,icol,nloop,rmod,nprof,nlevels,istart,istop,maxlim,ij,ik,i1,i2,nError
     integer,target :: &
          Npoints
     logical :: &
@@ -381,7 +390,7 @@ CONTAINS
 
     ! RTTOV subcolumn
     if (associated(cospOUT%rttov_tbs))                                                   &
-       Lrttov_subcolumn    = .true.
+       Lrttov_column    = .true.
 
     ! ISCCP column
     if (associated(cospOUT%isccp_fq)                                       .or.          &
@@ -459,7 +468,7 @@ CONTAINS
                          Lmisr_subcolumn,Lmisr_column,Lmodis_subcolumn,Lmodis_column,    &
                          Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,        &
                          Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
-                         Lparasol_subcolumn,Lparasol_column,cospOUT,cosp_simulator)
+                         Lparasol_subcolumn,Lparasol_column,cospOUT,cosp_simulator,nError)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -524,29 +533,6 @@ CONTAINS
        cloudsatIN%hgt_matrix => cospgridIN%hgt_matrix
     endif
     
-    if (Lrttov_subcolumn) then
-       rttovIN%nlevels    => cospIN%Nlevels
-       rttovIN%zenang     => cospgridIN%zenang
-       rttovIN%co2        => cospgridIN%co2
-       rttovIN%ch4        => cospgridIN%ch4
-       rttovIN%n2o        => cospgridIN%n2o
-       rttovIN%co         => cospgridIN%co
-       rttovIN%o3         => cospgridIN%o3
-       rttovIN%p          => cospgridIN%pfull
-       rttovIN%t          => cospgridIN%at
-       rttovIN%q          => cospgridIN%qv
-       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,1)
-       rttovIN%u_surf     => cospgridIN%u_sfc
-       rttovIN%v_surf     => cospgridIN%v_sfc
-       rttovIN%t_skin     => cospgridIN%skt
-       rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
-       rttovIN%t_surf     => cospgridIN%t_sfc
-       rttovIN%q_surf     => cospgridIN%qv(:,cospIN%Nlevels)
-       rttovIN%lsmask     => cospgridIN%land
-       rttovIN%latitude   => cospgridIN%lat
-       rttovIN%surfem     => cospgridIN%emis_sfc
-    endif
-    
     if (Lmodis_subcolumn) then
        modisIN%Ncolumns  => cospIN%Ncolumns
        modisIN%Nlevels   => cospIN%Nlevels
@@ -565,6 +551,42 @@ CONTAINS
             mask = .not. cospgridIN%sunlit < 0)
        modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
     endif
+
+    if (Lrttov_column) then
+       rttovIN%nPoints    => Npoints
+       rttovIN%nLevels    => cospIN%nLevels
+       rttovIN%nSubCols   => cospIN%nColumns
+       rttovIN%zenang     => cospgridIN%zenang
+       rttovIN%co2        => cospgridIN%co2
+       rttovIN%ch4        => cospgridIN%ch4
+       rttovIN%n2o        => cospgridIN%n2o
+       rttovIN%co         => cospgridIN%co
+       rttovIN%surfem     => cospgridIN%emis_sfc
+       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels+1)
+       rttovIN%u_surf     => cospgridIN%u_sfc
+       rttovIN%v_surf     => cospgridIN%v_sfc
+       rttovIN%t_skin     => cospgridIN%skt
+       rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
+       rttovIN%q2m        => cospgridIN%qv(:,cospIN%Nlevels)
+       rttovIN%t2m        => cospgridIN%at(:,cospIN%Nlevels)
+       rttovIN%lsmask     => cospgridIN%land
+       rttovIN%latitude   => cospgridIN%lat
+       rttovIN%longitude  => cospgridIN%lon
+       rttovIN%seaice     => cospgridIN%seaice
+       rttovIN%p          => cospgridIN%pfull
+       rttovIN%ph         => cospgridIN%phalf
+       rttovIN%t          => cospgridIN%at
+       rttovIN%q          => cospgridIN%qv
+       rttovIN%o3         => cospgridIN%o3
+       ! Below only needed for all-sky RTTOV calculation
+       rttovIN%month      => cospgridIN%month
+       rttovIN%tca        => cospgridIN%tca
+       rttovIN%cldIce     => cospgridIN%cloudIce
+       rttovIN%cldLiq     => cospgridIN%cloudLiq
+       rttovIN%fl_rain    => cospgridIN%fl_rain
+       rttovIN%fl_snow    => cospgridIN%fl_snow
+    endif
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4) Call subcolumn simulators
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -687,16 +709,6 @@ CONTAINS
                                   modisRetrievedTau(i,:),modisRetrievedSize(i,:))
           end do
        endif
-    endif
-        
-    if (Lrttov_subcolumn) then
-        call rttov_subcolumn(rttovIN%surfem,npoints,rttovIN%Nlevels,rttovIN%zenang,      &
-                         rttovIN%p/100._wp,rttovIN%t,                                    &
-                         (rttovIN%q/(rttovIN%q+0.622_wp*(1._wp - rttovIN%q)))*1e6,       &
-                         rttovIN%o3,rttovIN%co2,rttovIN%ch4,rttovIN%n2o,rttovIN%co,      &
-                         rttovIN%h_surf,rttovIN%u_surf,rttovIN%v_surf,rttovIN%t_skin,    &
-                         rttovIN%p_surf/100._wp,rttovIN%t_surf,rttovIN%q_surf,           &
-                         rttovIN%lsmask,rttovIN%latitude,cospOUT%rttov_tbs(ij:ik,:))     
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -821,7 +833,7 @@ CONTAINS
        endif   
 
        ! Call simulator
-       ok_lidar_cfad=.true. 
+       ok_lidar_cfad=.true.
        call lidar_column(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels,         &
                          Nlvgrid,SR_BINS,cospgridIN%at(:,:),                             &
                          calipso_beta_tot(:,:,:),calipso_betaperp_tot(:,:,:),            &
@@ -1083,6 +1095,22 @@ CONTAINS
        if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
     endif
 
+    ! RTTOV
+    if (lrttov_column) then
+       call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
+                         rttovIN%p,rttovIN%t,rttovIN%o3,rttovIN%ph,rttovIN%h_surf,      &
+                         rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
+                         rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
+                         rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
+                         rttovIN%n2o,rttovIN%co,rttovIN%zenang,                         &
+                         cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1),           &
+                         ! Optional arguments for surface emissivity calculation
+                         month=rttovIN%month)
+                         ! Optional arguments to rttov for all-sky calculation
+                         ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
+                         ! rttovIN%fl_rain,rttovIN%fl_snow)
+    endif
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1149,10 +1177,9 @@ CONTAINS
   ! ######################################################################################
   SUBROUTINE COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,                  &
                        cloudsat_use_gas_abs,cloudsat_do_ray,isccp_top_height,            &
-                       isccp_top_height_direction,hgt_matrix,hgt_matrix_half,            &
-                       surface_radar,rcfg,rttov_Nchannels,rttov_Channels,rttov_platform, &
-                       rttov_satellite,rttov_instrument,lusevgrid,luseCSATvgrid,Nvgrid,  &
-                       cloudsat_micro_scheme)
+                       isccp_top_height_direction,surface_radar,rcfg,rttov_Nchannels,    &
+                       rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,   &
+                       lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
     
     ! INPUTS
     integer,intent(in)  :: &
@@ -1172,11 +1199,7 @@ CONTAINS
          rttov_channels                ! RTTOV channels    
     real(wp),intent(in) :: &
          cloudsat_radar_freq,        & !
-         cloudsat_k2                   !
-    real(wp),intent(in),dimension(Npoints,Nlevels) :: &
-         hgt_matrix,hgt_matrix_half                    !
-!ds    real(wp),intent(in),dimension(Npoints,Nlevels+1) :: &
-!ds         hgt_matrix_half     
+         cloudsat_k2                   !   
     logical,intent(in) :: &
          lusevgrid,                  & ! Switch to use different vertical grid
          luseCSATvgrid                 ! Switch to use CLOUDSAT grid spacing for new  
@@ -1207,14 +1230,7 @@ CONTAINS
        enddo
        vgrid_z = (vgrid_zl+vgrid_zu)/2._wp
     endif
-    
-    ! Define model grid 
-    allocate(mgrid_z(Nlevels),mgrid_zl(Nlevels),mgrid_zu(Nlevels))
-    mgrid_z             = hgt_matrix(1,:)
-    mgrid_zl            = hgt_matrix_half(1,:)
-    mgrid_zu(2:Nlevels) = hgt_matrix_half(1,1:Nlevels-1)
-    mgrid_zu(1)     = hgt_matrix(1,1)+(hgt_matrix(1,1)-mgrid_zl(1))
-    
+
     ! Initialize ISCCP
     call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
     ! Initialize MODIS
@@ -1227,7 +1243,7 @@ CONTAINS
 
     ! Initialize radar
     call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,        &
-         cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,hgt_matrix,surface_radar,rcfg,  &
+         cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,surface_radar,rcfg,             &
          cloudsat_micro_scheme)
     ! Initialize lidar
     call cosp_calipso_init()
@@ -1285,8 +1301,11 @@ CONTAINS
     allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
-             y%v_sfc(npoints),y%t_sfc(npoints),y%lat(npoints),y%emis_sfc(nchan),         &
-             y%hgt_matrix_half(npoints,nlevels))
+             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),           &
+             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),                    &
+             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
+             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels+1))
+
   end subroutine construct_cospstateIN
 
   ! ######################################################################################
@@ -1507,8 +1526,10 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine destroy_cospstateIN(y)
     type(cosp_column_inputs),intent(inout) :: y
-    deallocate(y%sunlit,y%skt,y%land,y%at,y%pfull,y%phalf,y%qv,y%o3,y%hgt_matrix,       &
-         y%u_sfc,y%v_sfc,y%t_sfc,y%lat,y%emis_sfc,y%hgt_matrix_half)
+    deallocate(y%sunlit,y%skt,y%land,y%at,y%pfull ,y%phalf,y%qv,y%o3,y%hgt_matrix,       &
+               y%u_sfc,y%v_sfc,y%lat,y%lon,y%emis_sfc,y%cloudIce,y%cloudLiq,y%seaice,    &
+               y%fl_rain,y%fl_snow,y%tca,y%hgt_matrix_half)
+
   end subroutine destroy_cospstateIN
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1598,7 +1619,7 @@ CONTAINS
   subroutine cosp_errorCheck(cospgridIN,cospIN,Lisccp_subcolumn,Lisccp_column,Lmisr_subcolumn,Lmisr_column,    &
                              Lmodis_subcolumn,Lmodis_column,Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,  &
                              Lcalipso_column,Lrttov_subcolumn,Lrttov_column,Lparasol_subcolumn,Lparasol_column,    &
-                             cospOUT,errorMessage)
+                             cospOUT,errorMessage,nError)
   ! Inputs
   type(cosp_column_inputs),intent(in) :: &
      cospgridIN       ! Model grid inputs to COSP
@@ -1624,10 +1645,10 @@ CONTAINS
   type(cosp_outputs),intent(inout) :: &
        cospOUT                ! COSP Outputs
   character(len=256),dimension(100) :: errorMessage
+  integer,intent(out) :: nError
   
   ! Local variables
   character(len=100) :: parasolErrorMessage
-  integer :: nError
 
   nError = 0
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1958,12 +1979,6 @@ CONTAINS
     if (any(cospgridIN%v_sfc .lt. -100. .OR. cospgridIN%v_sfc .gt. 100.)) then
        nError=nError+1
        errorMessage(nError) = 'ERROR: COSP input variable: cospIN%v_sfc contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
-    endif
-    if (any(cospgridIN%t_sfc .lt. 150 .OR. cospgridIN%t_sfc .gt. 350.)) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%t_sfc contains values out of range'
        Lrttov_subcolumn = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF       
     endif
@@ -2504,7 +2519,6 @@ CONTAINS
       size(cospgridIN%v_sfc)             .ne. cospIN%Npoints .OR. &
       size(cospgridIN%skt)               .ne. cospIN%Npoints .OR. &
       size(cospgridIN%phalf,1)           .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%t_sfc)             .ne. cospIN%Npoints .OR. &
       size(cospgridIN%qv,1)              .ne. cospIN%Npoints .OR. &
       size(cospgridIN%land)              .ne. cospIN%Npoints .OR. &
       size(cospgridIN%lat)               .ne. cospIN%Npoints) then
@@ -2516,7 +2530,7 @@ CONTAINS
   if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
       size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
       size(cospgridIN%qv,2)              .ne. cospIN%Nlevels   .OR. &
-      size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels   .OR. &
+      size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels+1 .OR. &
       size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1 .OR. &
       size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
       Lrttov_subcolumn = .false.

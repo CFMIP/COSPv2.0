@@ -64,8 +64,7 @@ CONTAINS
   !                              SUBROUTINE cosp_cloudsat_in
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_CLOUDSAT_INIT(radar_freq,k2,use_gas_abs,do_ray,undef,nhydro,Npoints,   &
-                                Nlevels,hgt_matrix,surface_radar,rcfg,                   &
-                                cloudsat_micro_scheme,load_LUT)
+                                Nlevels,surface_radar,rcfg,cloudsat_micro_scheme,load_LUT)
     ! INPUTS
     real(wp),intent(in) :: &
          radar_freq,  & ! Radar frequency (GHz)
@@ -79,10 +78,8 @@ CONTAINS
          Npoints,     & !
          Nlevels,     & !
          surface_radar
-    real(wp),intent(in),dimension(Npoints,Nlevels) :: &
-         hgt_matrix     !
     logical,intent(in),optional :: &
-         load_LUT       !
+         load_LUT
     character(len=64),intent(in) :: &
        cloudsat_micro_scheme
     
@@ -92,7 +89,7 @@ CONTAINS
     
     ! LOCAL VARIABLES
     character(len=240) :: LUT_file_name
-    logical       :: local_load_LUT,hgt_descending
+    logical       :: local_load_LUT
     integer       :: i,j
     
     if (present(load_LUT)) then
@@ -137,10 +134,8 @@ CONTAINS
        endif
     enddo
     
-    ! Set flag denoting position of radar relative to hgt_matrix orientation
-    hgt_descending = hgt_matrix(1,1) > hgt_matrix(1,size(hgt_matrix,2))
-    if ((surface_radar == 1 .and. hgt_descending) .or.     &
-         (surface_radar == 0 .and. (.not. hgt_descending))) then
+    ! Set flag denoting position of radar
+    if (surface_radar == 1) then
        rcfg%radar_at_layer_one = .false.
     else
        rcfg%radar_at_layer_one = .true.

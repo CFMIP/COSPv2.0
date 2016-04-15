@@ -31,20 +31,28 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #include "cosp_defs.h"
 MODULE MOD_COSP_INTERFACE_v1p4
-  use COSP_KINDS,                 ONLY: wp,dp
-  use MOD_COSP,                   ONLY: cosp_outputs,construct_cosp_outputs,             &
-                                        destroy_cosp_outputs,linitialization
-  USE MOD_COSP_CONFIG,            ONLY: PARASOL_NREFL,R_UNDEF,                           &
-                                        SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS,        &
-                                        numMISRHgtBins,N_HYDRO,numMODISReffLiqBins,      &
-                                        numMODISReffIceBins,numMODISTauBins,             &
-                                        numMODISPresBins
-  USE MOD_COSP_INTERFACE_v1p5,    ONLY: cosp_config,cosp_subgrid,cosp_gridbox,&
-                                        cosp_interface_init,cosp_interface_v1p5,         &
-                                        construct_cosp_gridbox,destroy_cosp_gridbox,     &
-                                        I_LSCLIQ,I_LSCICE,I_CVCICE,I_CVCLIQ,I_LSRAIN
-  USE quickbeam,                  ONLY: maxhclass,nRe_types,nd,mt_ntt,Re_BIN_LENGTH,     &
-                                        Re_MAX_BIN
+  use COSP_KINDS,          only: wp,dp
+  use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
+  use MOD_COSP,            only: cosp_init,cosp_outputs,construct_cosp_outputs,           &
+                                 destroy_cosp_outputs,linitialization,cosp_optical_inputs,&
+                                 cosp_column_inputs,construct_cospIN,destroy_cospIN,      &
+                                 construct_cospstateIN,destroy_cospstateIN,cosp_simulator
+  use mod_cosp_config,     only: RTTOV_MAX_CHANNELS,N_HYDRO,numMODISTauBins,modis_histTau,&
+                                 modis_histTauEdges,modis_histTauCenters,ntau,ntauV1p4,   &
+                                 tau_binBounds,tau_binEdges,tau_binCenters,R_UNDEF,       &
+                                 tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4,   &
+                                 numMISRHgtBins,SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS, &
+                                 numMODISReffIceBins,numMODISTauBins, numMODISPresBins,   &
+                                 numMODISReffLiqBins
+  use mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics_init,&
+                                 quickbeam_optics
+  use cosp_optics,         only: cosp_simulator_optics,lidar_optics,num_trial_res,        &
+                                 modis_optics,modis_optics_partition
+  use quickbeam,           only: maxhclass,nRe_types,nd,mt_ntt,radar_cfg
+  use mod_rng,             only: rng_state, init_rng
+  use mod_scops,           only: scops
+  use mod_prec_scops,      only: prec_scops
+  use mod_cosp_utils,      only: cosp_precip_mxratio
 
   implicit none
   
@@ -52,10 +60,129 @@ MODULE MOD_COSP_INTERFACE_v1p4
        RADAR_SIM_LUT_DIRECTORY = './'
   logical,parameter :: &
        RADAR_SIM_LOAD_scale_LUTs_flag   = .false., &
-       RADAR_SIM_UPDATE_scale_LUTs_flag = .false.     
-       
+       RADAR_SIM_UPDATE_scale_LUTs_flag = .false.
+  
+  ! Indices to address arrays of LS and CONV hydrometeors
+  integer,parameter :: &
+       I_LSCLIQ = 1, & ! Large-scale (stratiform) liquid
+       I_LSCICE = 2, & ! Large-scale (stratiform) ice
+       I_LSRAIN = 3, & ! Large-scale (stratiform) rain
+       I_LSSNOW = 4, & ! Large-scale (stratiform) snow
+       I_CVCLIQ = 5, & ! Convective liquid
+       I_CVCICE = 6, & ! Convective ice
+       I_CVRAIN = 7, & ! Convective rain
+       I_CVSNOW = 8, & ! Convective snow
+       I_LSGRPL = 9    ! Large-scale (stratiform) groupel
+  
+  ! Stratiform and convective clouds in frac_out.
+  integer, parameter :: &
+       I_LSC = 1, & ! Large-scale clouds
+       I_CVC = 2    ! Convective clouds      
+  
+  ! Microphysical settings for the precipitation flux to mixing ratio conversion
+  real(wp),parameter,dimension(N_HYDRO) :: &
+                 ! LSL   LSI      LSR       LSS   CVL  CVI      CVR       CVS       LSG
+       N_ax    = (/-1., -1.,     8.e6,     3.e6, -1., -1.,     8.e6,     3.e6,     4.e6/),&
+       N_bx    = (/-1., -1.,      0.0,      0.0, -1., -1.,      0.0,      0.0,      0.0/),&
+       alpha_x = (/-1., -1.,      0.0,      0.0, -1., -1.,      0.0,      0.0,      0.0/),&
+       c_x     = (/-1., -1.,    842.0,     4.84, -1., -1.,    842.0,     4.84,     94.5/),&
+       d_x     = (/-1., -1.,      0.8,     0.25, -1., -1.,      0.8,     0.25,      0.5/),&
+       g_x     = (/-1., -1.,      0.5,      0.5, -1., -1.,      0.5,      0.5,      0.5/),&
+       a_x     = (/-1., -1.,    524.0,    52.36, -1., -1.,    524.0,    52.36,   209.44/),&
+       b_x     = (/-1., -1.,      3.0,      3.0, -1., -1.,      3.0,      3.0,      3.0/),&
+       gamma_1 = (/-1., -1., 17.83725, 8.284701, -1., -1., 17.83725, 8.284701, 11.63230/),&
+       gamma_2 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/),&
+       gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
+       gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
+  
+  ! Initialization fields
+  type(size_distribution) :: &
+       sd                ! Hydrometeor description
+  type(radar_cfg) :: &
+       rcfg_cloudsat     ! Radar configuration
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !                                  TYPE COSP_VGRID
+  ! TYPE COSP_CONFIG
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  TYPE COSP_CONFIG
+     logical :: &
+          Lstats,           & ! Control for L3 stats output
+          Lwrite_output,    & ! Control for output
+          Ltoffset,         & ! Time difference between each profile and the value 
+                              ! recorded in varaible time.
+          Lradar_sim,       & ! Radar simulator on/off switch 
+          Llidar_sim,       & ! LIDAR simulator on/off switch 
+          Lisccp_sim,       & ! ISCCP simulator on/off switch
+          Lmodis_sim,       & ! MODIS simulatoe on/off switch
+          Lmisr_sim,        & ! MISR simulator on/off switch 
+          Lrttov_sim,       & ! RTTOV simulator on/off switch 
+          Lparasol_sim,     & ! PARASOL simulator on/off switch 
+          Lpctisccp,        & ! ISCCP mean cloud top pressure
+          Lclisccp,         & ! ISCCP cloud area fraction
+          Lboxptopisccp,    & ! ISCCP CTP in each column
+          Lboxtauisccp,     & ! ISCCP optical epth in each column
+          Ltauisccp,        & ! ISCCP mean optical depth
+          Lcltisccp,        & ! ISCCP total cloud fraction
+          Lmeantbisccp,     & ! ISCCP mean all-sky 10.5micron brightness temperature
+          Lmeantbclrisccp,  & ! ISCCP mean clear-sky 10.5micron brightness temperature
+          Lalbisccp,        & ! ISCCP mean cloud albedo
+          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
+          Ldbze94,          & ! CLOUDSAT radar reflectivity
+          LparasolRefl,     & ! PARASOL reflectance
+          Latb532,          & ! CALIPSO attenuated total backscatter (532nm)
+          LlidarBetaMol532, & ! CALIPSO molecular backscatter (532nm)
+          LcfadLidarsr532,  & ! CALIPSO scattering ratio CFAD
+          Lclcalipso2,      & ! CALIPSO cloud fraction undetected by cloudsat
+          Lclcalipso,       & ! CALIPSO cloud area fraction
+          Lclhcalipso,      & ! CALIPSO high-level cloud fraction
+          Lcllcalipso,      & ! CALIPSO low-level cloud fraction
+          Lclmcalipso,      & ! CALIPSO mid-level cloud fraction
+          Lcltcalipso,      & ! CALIPSO total cloud fraction
+          Lcltlidarradar,   & ! CALIPSO-CLOUDSAT total cloud fraction
+          Lclcalipsoliq,    & ! CALIPSO liquid cloud area fraction
+          Lclcalipsoice,    & ! CALIPSO ice cloud area fraction 
+          Lclcalipsoun,     & ! CALIPSO undetected cloud area fraction
+          Lclcalipsotmp,    & ! CALIPSO undetected cloud area fraction
+          Lclcalipsotmpliq, & ! CALIPSO liquid cloud area fraction
+          Lclcalipsotmpice, & ! CALIPSO ice cloud area fraction
+          Lclcalipsotmpun,  & ! CALIPSO undetected cloud area fraction
+          Lcltcalipsoliq,   & ! CALIPSO liquid total cloud fraction
+          Lcltcalipsoice,   & ! CALIPSO ice total cloud fraction
+          Lcltcalipsoun,    & ! CALIPSO undetected total cloud fraction
+          Lclhcalipsoliq,   & ! CALIPSO high-level liquid cloud fraction
+          Lclhcalipsoice,   & ! CALIPSO high-level ice cloud fraction
+          Lclhcalipsoun,    & ! CALIPSO high-level undetected cloud fraction
+          Lclmcalipsoliq,   & ! CALIPSO mid-level liquid cloud fraction
+          Lclmcalipsoice,   & ! CALIPSO mid-level ice cloud fraction
+          Lclmcalipsoun,    & ! CALIPSO mid-level undetected cloud fraction
+          Lcllcalipsoliq,   & ! CALIPSO low-level liquid cloud fraction
+          Lcllcalipsoice,   & ! CALIPSO low-level ice cloud fraction
+          Lcllcalipsoun,    & ! CALIPSO low-level undetected cloud fraction
+          Lcltmodis,        & ! MODIS total cloud fraction
+          Lclwmodis,        & ! MODIS liquid cloud fraction
+          Lclimodis,        & ! MODIS ice cloud fraction
+          Lclhmodis,        & ! MODIS high-level cloud fraction
+          Lclmmodis,        & ! MODIS mid-level cloud fraction
+          Lcllmodis,        & ! MODIS low-level cloud fraction
+          Ltautmodis,       & ! MODIS total cloud optical thicknes
+          Ltauwmodis,       & ! MODIS liquid optical thickness
+          Ltauimodis,       & ! MODIS ice optical thickness
+          Ltautlogmodis,    & ! MODIS total cloud optical thickness (log10 mean)
+          Ltauwlogmodis,    & ! MODIS liquid optical thickness (log10 mean)
+          Ltauilogmodis,    & ! MODIS ice optical thickness (log10 mean)
+          Lreffclwmodis,    & ! MODIS liquid cloud particle size
+          Lreffclimodis,    & ! MODIS ice particle size
+          Lpctmodis,        & ! MODIS cloud top pressure
+          Llwpmodis,        & ! MODIS cloud ice water path
+          Liwpmodis,        & ! MODIS cloud liquid water path
+          Lclmodis,         & ! MODIS cloud area fraction
+          LclMISR,          & ! MISR cloud fraction
+          Lfracout,         & ! SCOPS Subcolumn output
+          Ltbrttov            ! RTTOV mean clear-sky brightness temperature
+     character(len=32),dimension(:),allocatable :: out_list
+  END TYPE COSP_CONFIG       
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! TYPE cosp_vgrid
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE COSP_VGRID
      logical ::  &
@@ -75,8 +202,22 @@ MODULE MOD_COSP_INTERFACE_v1p4
           mzu           ! Upper boundaries of model levels (Nlevels)
   END TYPE COSP_VGRID
   
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! TYPE COSP_SUBGRID
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  TYPE COSP_SUBGRID
+     integer ::      &
+          Npoints,   & ! Number of gridpoints
+          Ncolumns,  & ! Number of columns
+          Nlevels,   & ! Number of levels
+          Nhydro       ! Number of hydrometeor types
+     real(wp),dimension(:,:,:),pointer :: &
+          prec_frac, & ! Subgrid precip array (Npoints,Ncolumns,Nlevels)
+          frac_out     ! Subgrid cloud array  (Npoints,Ncolumns,Nlevels)
+  END TYPE COSP_SUBGRID  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  TYPE class_param
+  ! TYPE class_param
+  ! With the reorganizing of COSPv2.0, this derived type
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   type class_param
      ! Variables used to store hydrometeor "default" properties
@@ -104,9 +245,9 @@ MODULE MOD_COSP_INTERFACE_v1p4
      real(dp),dimension(maxhclass,nd,nRe_types)     :: fc, rho_eff     
   end type class_param
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE cosp_gridbox_v1p4
+  ! TYPE cosp_gridbox
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  TYPE COSP_GRIDBOX_v1p4
+  TYPE cosp_gridbox
      integer :: &
           Npoints,          & ! Number of gridpoints
           Nlevels,          & ! Number of levels
@@ -262,7 +403,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
           ch4,    & ! CH4 mixing ratio
           n2o,    & ! N2O mixing ratio
           co        ! CO mixing ratio
-  END TYPE COSP_GRIDBOX_v1p4
+  END TYPE cosp_gridbox
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE cosp_modis
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -311,7 +452,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
         MISR_cldarea     ! Mean MISR cloud cover area
   END TYPE COSP_MISR  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !									Type cosp_rttov
+  ! TYPE cosp_rttov
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE COSP_RTTOV
      ! Dimensions
@@ -323,7 +464,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
      real(wp),pointer :: tbs(:,:)
   END TYPE COSP_RTTOV
  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- !									TYPE cosp_isccp
+ ! TYPE cosp_isccp
  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE COSP_ISCCP
      integer,pointer  ::&
@@ -423,7 +564,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                            SUBROUTINE COSP_INTERFACE (v1.4)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_interface_v1p4(overlap,Ncolumns,cfg,vgrid,gbxIN,sgx,sgradar,sglidar,   &
+  subroutine cosp_interface_v1p4(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,   &
                                  isccp,misr,modis,rttov,stradar,stlidar)
     ! Inputs 
     integer,                intent(in)    :: overlap  ! Overlap type in SCOPS: 1=max, 
@@ -442,45 +583,84 @@ contains
     type(cosp_radarstats),  intent(inout) :: stradar  ! Summary statistics from cloudsat
                                                       ! simulator (gridbox)
     type(cosp_lidarstats),  intent(inout) :: stlidar  ! Output from LIDAR simulator (gridbox)
-    type(cosp_gridbox_v1p4),intent(inout),target :: gbxIN ! COSP gridbox type from v1.4
+    type(cosp_gridbox),intent(inout),target :: gbx ! COSP gridbox type from v1.4
                                                           ! Shares memory with new type
-                                                          ! for v1.5.
-    
-    ! Inputs to cosp_interface_v1p5
-    type(cosp_gridbox) :: gbxOUT   ! COSP gridbox type for v1.5
-    
+ 
     ! Outputs from cosp_interface_v1p5
     type(cosp_outputs),target :: cospOUT  ! NEW derived type output that contains all 
     					                  ! simulator information
-     ! Local variables
-     character(len=32) :: &
-        cospvID = 'COSP v1.4' ! COSP version ID				                  
+    ! Local variables
+    integer :: i
+    integer :: &
+         num_chunks, & ! Number of iterations to make
+         start_idx,  & ! Starting index when looping over points
+         end_idx,    & ! Ending index when looping over points
+         Nptsperit     ! Number of points for current iteration
+    character(len=32) :: &
+         cospvID = 'COSP v1.4' ! COSP version ID				                  
+    logical :: &
+         lsingle=.true., & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
+         ldouble=.false.   ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme  
+    type(cosp_optical_inputs) :: &
+         cospIN            ! COSP optical (or derived?) fields needed by simulators
+    type(cosp_column_inputs) :: &
+         cospstateIN       ! COSP model fields needed by simulators
+    character(len=256),dimension(100) :: cosp_status
+
 #ifdef MMF_V3_SINGLE_MOMENT    					  
-     character(len=64) :: &
-        cloudsat_micro_scheme = 'MMF_v3_single_moment'
+    character(len=64) :: &
+         cloudsat_micro_scheme = 'MMF_v3_single_moment'
 #endif
 #ifdef MMF_V3p5_TWO_MOMENT
-     character(len=64) :: &
-        cloudsat_micro_scheme = 'MMF_v3.5_two_moment'
+    character(len=64) :: &
+         cloudsat_micro_scheme = 'MMF_v3.5_two_moment'
 #endif 
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Call cosp_init
+    ! Initialize COSP
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if (linitialization) then
-      call cosp_interface_init(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Npoints_it,overlap,     &
-                               gbxIN%use_precipitation_fluxes,gbxIN%radar_freq,          &
-                               cloudsat_micro_scheme,gbxIN%k2,gbxIN%use_gas_abs,         &
-                               gbxIN%do_ray,gbxIN%isccp_top_height,                      &
-                               gbxIN%isccp_top_height_direction,                         &
-                               gbxIN%zlev(:,gbxIN%Nlevels:1:-1),                         &
-                               gbxIN%zlev_half(:,gbxIN%Nlevels:1:-1),gbxIN%surface_radar,&
-                               gbxIN%Nchan,gbxIN%Ichan,gbxIN%Plat,gbxIN%Sat,gbxIN%Inst,  &
-                               gbxIN%lidar_ice_type,vgrid%use_vgrid,vgrid%Nlvgrid,       &
-                               vgrid%csat_vgrid,cospvID)
+       ! MODIS joint-histogram bin boundaries declaration is done here, rather than in src/cosp_config.f90,
+       ! because the joint-histogram bin bundaries are different in v2.0 than in v1.4, but to
+       ! keep backward compatability with v1.4 in v2.0, the MODIS boundaries are set here. The
+       ! joint-histogram boundaries for the other simulators are all set in src/cosp_config.f90
+       if (cospvID == 'COSP v1.4') then
+          print*,'Using cospV1.4.0 optical depth axis for MODIS tau/ctp joint-histogram'
+          allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),modis_histTauCenters(ntauV1p4))
+          numMODISTauBins      = ntauV1p4+1          ! Number of tau bins for joint-histogram
+          modis_histTau        = tau_binBoundsV1p4   ! Joint-histogram boundaries (optical depth)
+          modis_histTauEdges   = tau_binEdgesV1p4    ! Joint-histogram bin edges (optical depth)
+          modis_histTauCenters = tau_binCentersV1p4  ! Joint-histogram bin centers (optical depth)       
+       else
+          allocate(modis_histTau(ntau),modis_histTauEdges(2,ntau),modis_histTauCenters(ntau))
+          numMODISTauBins      = ntau
+          modis_histTau        = tau_binBounds
+          modis_histTauEdges   = tau_binEdges
+          modis_histTauCenters = tau_binCenters
+       endif
+       
+       ! Initialize quickbeam_optics, also if two-moment radar microphysics scheme is wanted...
+       if (cloudsat_micro_scheme == 'MMF_v3.5_two_moment')  then
+          ldouble = .true. 
+          lsingle = .false.
+       endif
+       call quickbeam_optics_init()
+       
+       ! Initialize the distributional parameters for hydrometeors in radar simulator
+       call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
+       
+       ! Initialize COSP simulator
+       call COSP_INIT(gbx%Npoints,gbx%Nlevels,gbx%radar_freq,gbx%k2,gbx%use_gas_abs,  &
+            gbx%do_ray,gbx%isccp_top_height,gbx%isccp_top_height_direction,gbx%surface_radar,&
+            rcfg_cloudsat,&
+            gbx%Nchan,gbx%Ichan,gbx%plat,           &
+            gbx%sat,gbx%inst,vgrid%use_vgrid,vgrid%csat_vgrid,vgrid%Nlvgrid,         &
+            cloudsat_micro_scheme)
+       
     endif
+    
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Call construct_cosp_outputs
+    ! Construct output type for cosp
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     call construct_cosp_outputs(cfg%Lpctisccp,cfg%Lclisccp,cfg%Lboxptopisccp,            &
                                 cfg%Lboxtauisccp,cfg%Ltauisccp,cfg%Lcltisccp,            &
@@ -502,77 +682,69 @@ contains
                                 cfg%Lclmcalipsoliq,cfg%Lclmcalipsoice,cfg%Lclmcalipsoun, &
                                 cfg%Lcllcalipsoliq,cfg%Lcllcalipsoice,cfg%Lcllcalipsoun, &
                                 cfg%LcfadDbze94,cfg%Ldbze94,cfg%Lparasolrefl,            &
-                                cfg%Ltbrttov,gbxIN%Npoints,gbxIN%Ncolumns,gbxIN%Nlevels, &
-                                vgrid%Nlvgrid,gbxIN%Nchan,cospOUT)    
+                                cfg%Ltbrttov,gbx%Npoints,gbx%Ncolumns,gbx%Nlevels,       &
+                                vgrid%Nlvgrid,gbx%Nchan,cospOUT)
 
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Copy input data from old derived type to new derived type
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    gbxOUT%Npoints          => gbxIN%Npoints
-    gbxOUT%Nlevels          => gbxIN%Nlevels
-    gbxOUT%Ncolumns         => gbxIN%Ncolumns
-    gbxOUT%Nhydro           => gbxIN%Nhydro
-    gbxOUT%Nprmts_max_hydro => gbxIN%Nprmts_max_hydro
-    gbxOUT%Naero            => gbxIN%Naero
-    gbxOUT%Nprmts_max_aero  => gbxIN%Nprmts_max_aero
-    gbxOUT%Npoints_it       => gbxIN%Npoints_it
-    gbxOUT%nsizes           => gbxIN%nsizes
-    gbxOUT%longitude        => gbxIN%longitude
-    gbxOUT%latitude         => gbxIN%latitude
-    gbxOUT%zlev             => gbxIN%zlev
-    gbxOUT%zlev_half        => gbxIN%zlev_half
-    gbxOUT%dlev             => gbxIN%dlev
-    gbxOUT%p                => gbxIN%p
-    gbxOUT%ph               => gbxIN%ph
-    gbxOUT%T                => gbxIN%T
-    gbxOUT%sh               => gbxIN%sh
-    gbxOUT%dtau_s           => gbxIN%dtau_s
-    gbxOUT%dtau_c           => gbxIN%dtau_c
-    gbxOUT%dem_s            => gbxIN%dem_s
-    gbxOUT%dem_c            => gbxIN%dem_c
-    gbxOUT%mr_ozone         => gbxIN%mr_ozone
-    gbxOUT%land             => gbxIN%land
-    gbxOUT%psfc             => gbxIN%psfc
-    gbxOUT%sunlit           => gbxIN%sunlit
-    gbxOUT%skt              => gbxIN%skt
-    gbxOUT%u_wind           => gbxIN%u_wind
-    gbxOUT%v_wind           => gbxIN%v_wind
-    gbxOUT%tca              => gbxIN%tca
-    gbxOUT%cca              => gbxIN%cca
-    gbxOUT%rain_ls          => gbxIN%rain_ls
-    gbxOUT%rain_cv          => gbxIN%rain_cv
-    gbxOUT%snow_ls          => gbxIN%snow_ls
-    gbxOUT%snow_cv          => gbxIN%snow_cv
-    gbxOUT%grpl_ls          => gbxIN%grpl_ls
-    gbxOUT%isccp_emsfc_lw   => gbxIN%isccp_emsfc_lw
-    gbxOUT%Nchan            => gbxIN%Nchan
-    gbxOUT%Surfem           => gbxIN%Surfem
-    gbxOUT%ZenAng           => gbxIN%ZenAng
-    gbxOUT%co2              => gbxIN%co2
-    gbxOUT%ch4              => gbxIN%ch4
-    gbxOUT%n2o              => gbxIN%n2o
-    gbxOUT%co               => gbxIN%co 
-    allocate(gbxOUT%mr_hydro(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Nhydro),                  &
-             gbxOUT%Reff(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Nhydro),                      &
-             gbxOUT%Np(gbxIN%Npoints,gbxIN%Nlevels,gbxIN%Nhydro))
-    gbxOUT%mr_hydro         =  gbxIN%mr_hydro
-    gbxOUT%Reff             =  gbxIN%Reff
-    gbxOUT%Np               =  gbxIN%Np
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Break COSP into chunks, only applicable when gbx%Npoints_it > gbx%Npoints
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    num_chunks = gbx%Npoints/gbx%Npoints_it+1
+    do i=1,num_chunks
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Determine indices for "chunking" (again, if necessary)
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       if (num_chunks .eq. 1) then
+          start_idx = 1
+          end_idx   = gbx%Npoints
+          Nptsperit = gbx%Npoints
+       else
+          start_idx = (i-1)*gbx%Npoints_it+1
+          end_idx   = i*gbx%Npoints_it
+          if (end_idx .gt. gbx%Npoints) end_idx=gbx%Npoints
+          Nptsperit = end_idx-start_idx+1
+       endif
 
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Call cosp_interface_v1p5
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    call cosp_interface_V1p5(gbxIN%Npoints,gbxOUT,sgx,cospOUT)
- 
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Copy output from v1.5 to v1.4
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Allocate space
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       if (i .eq. 1) then
+          call construct_cospIN(Nptsperit,gbx%ncolumns,gbx%nlevels,cospIN)
+          call construct_cospstateIN(Nptsperit,gbx%nlevels,gbx%nchan,cospstateIN)
+       endif
+       if (i .eq. num_chunks) then
+          call destroy_cospIN(cospIN)
+          call destroy_cospstateIN(cospstateIN)
+          call construct_cospIN(Nptsperit,gbx%ncolumns,gbx%nlevels,cospIN)
+          call construct_cospstateIN(Nptsperit,gbx%nlevels,gbx%nchan,cospstateIN)    
+       endif
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Generate subcolumns and compute optical inputs to COSP.
+       ! This subroutine essentially contains all of the pieces of code that were removed
+       ! from the simulators during the v2.0 reconstruction.
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       call subsample_and_optics(overlap,gbx,sgx,Nptsperit,start_idx,end_idx,cospIN,     &
+                                 cospstateIN)
+       
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Call COSPv2.0
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT, start_idx,end_idx) 
+    enddo
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Free up memory
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    call destroy_cospIN(cospIN)
+    call destroy_cospstateIN(cospstateIN)
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Copy new output to old output types.
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MISR
     if (cfg%Lmisr_sim) then
        if (cfg%LclMISR) misr%fq_MISR  => cospOUT%misr_fq
        ! *NOTE* These 3 fields are not output, but were part of the v1.4.0 cosp_misr, so
        !        they are still computed. Should probably have a logical to control these
-       !        outputs.       
+       !        outputs in cosp_config.
        misr%MISR_meanztop             => cospOUT%misr_meanztop
        misr%MISR_cldarea              => cospOUT%misr_cldarea
        misr%MISR_dist_model_layertops => cospOUT%misr_dist_model_layertops
@@ -713,17 +885,461 @@ contains
     endif
     if (cfg%Lcltlidarradar) stradar%radar_lidar_tcc => cospOUT%radar_lidar_tcc      
 
-    
     ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
     !        not true. To maintain the outputs of v1.4, the affected fields are flipped.
     sgx%frac_out                  = sgx%frac_out(:,:,sgx%Nlevels:1:-1)
+    
+   end subroutine cosp_interface_v1p4
+   
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   ! SUBROUTINE subsample_and_optics
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine subsample_and_optics(overlap,gbx,sgx,npoints,start_idx,end_idx,cospIN,cospgridIN)
 
-  end subroutine cosp_interface_v1p4
+    ! Inputs
+    integer, intent(in) :: overlap  ! Overlap type in SCOPS: 1=max, 2=rand, 3=max/rand
+    type(cosp_gridbox),intent(in)    :: gbx   ! Grid box description
+    type(cosp_subgrid),intent(inout) :: sgx   ! Sub-grid scale description
+    integer,intent(in) :: &
+         npoints,     & ! Number of points
+         start_idx,   & ! Starting index for subsetting input data.
+         end_idx        ! Ending index for subsetting input data.
+    ! Outputs
+    type(cosp_optical_inputs),intent(inout) :: &
+         cospIN         ! Optical (or derived) fields needed by simulators
+    type(cosp_column_inputs),intent(inout) :: &
+         cospgridIN     ! Model fields needed by simulators
+    
+    ! Local variables
+    integer :: i,j,k,ij
+    real(wp),dimension(npoints,gbx%Nlevels) :: column_frac_out,column_prec_out
+    real(wp),dimension(:,:),    allocatable :: frac_ls,frac_cv,prec_ls,prec_cv,ls_p_rate,&
+                                               cv_p_rate
+    real(wp),dimension(:,:,:),allocatable :: frac_out,frac_prec,hm_matrix,re_matrix,     &
+                                             Np_matrix,MODIS_cloudWater,MODIS_cloudIce,  &
+                                             MODIS_watersize,MODIS_iceSize,              &
+                                             MODIS_opticalThicknessLiq,                  &
+                                             MODIS_opticalThicknessIce
+    real(wp),dimension(:,:,:,:),allocatable :: mr_hydro,Reff,Np
+    type(rng_state),allocatable,dimension(:) :: rngs  ! Seeds for random number generator
+    integer,dimension(:),allocatable :: seed
+    logical :: cmpGases=.true.
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Initialize COSP inputs
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    cospIN%tautot_S_liq                                 = 0._wp
+    cospIN%tautot_S_ice                                 = 0._wp
+    cospIN%emsfc_lw                                     = gbx%isccp_emsfc_lw
+    cospIN%rcfg_cloudsat                                = rcfg_cloudsat
+    cospgridIN%hgt_matrix(1:nPoints,1:gbx%Nlevels)      = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
+    cospgridIN%hgt_matrix_half(1:nPoints,1:gbx%Nlevels) = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
+    cospgridIN%sunlit(1:nPoints)                        = gbx%sunlit(start_idx:end_idx)
+    cospgridIN%skt(1:nPoints)                           = gbx%skt(start_idx:end_idx)
+    cospgridIN%land(1:nPoints)                          = gbx%land(start_idx:end_idx)
+    cospgridIN%qv(1:nPoints,1:gbx%Nlevels)              = gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%at(1:nPoints,1:gbx%Nlevels)              = gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%pfull(1:nPoints,1:gbx%Nlevels)           = gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1) 
+    cospgridIN%o3(1:nPoints,1:gbx%Nlevels)              = gbx%mr_ozone(start_idx:end_idx,gbx%Nlevels:1:-1)*(amd/amO3)*1e6
+    cospgridIN%u_sfc(1:nPoints)                         = gbx%u_wind(start_idx:end_idx)
+    cospgridIN%v_sfc(1:nPoints)                         = gbx%v_wind(start_idx:end_idx)
+    cospgridIN%emis_sfc                                 = gbx%surfem
+    cospgridIN%lat(1:nPoints)                           = gbx%latitude(start_idx:end_idx)
+    cospgridIN%lon(1:nPoints)                           = gbx%longitude(start_idx:end_idx)
+    cospgridIN%month                                    = 2 ! This is needed by RTTOV only for the surface emissivity calculation.
+    cospgridIN%co2                                      = gbx%co2*(amd/amCO2)*1e6
+    cospgridIN%ch4                                      = gbx%ch4*(amd/amCH4)*1e6  
+    cospgridIN%n2o                                      = gbx%n2o*(amd/amN2O)*1e6
+    cospgridIN%co                                       = gbx%co*(amd/amCO)*1e6
+    cospgridIN%zenang                                   = gbx%zenang
+    cospgridIN%phalf(:,1)                               = 0._wp
+    cospgridIN%phalf(:,2:gbx%Nlevels+1)                 = gbx%ph(start_idx:end_idx,gbx%Nlevels:1:-1)    
+    if (gbx%Ncolumns .gt. 1) then
+       
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Random number generator
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       allocate(rngs(Npoints),seed(Npoints))
+       seed(:)=0
+       seed = int(gbx%psfc)  ! In case of Npoints=1
+       if (Npoints .gt. 1) seed=int((gbx%psfc(start_idx:end_idx)-minval(gbx%psfc))/      &
+            (maxval(gbx%psfc)-minval(gbx%psfc))*100000) + 1
+       call init_rng(rngs, seed)  
+
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Generate subcolumns for clouds (SCOPS) and precipitation type (PREC_SCOPS)
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Call SCOPS
+       if (gbx%Ncolumns .gt. 1) then
+          call scops(npoints,gbx%Nlevels,gbx%Ncolumns,rngs,                              &
+                     gbx%tca(start_idx:end_idx,gbx%Nlevels:1:-1),                        &
+                     gbx%cca(start_idx:end_idx,gbx%Nlevels:1:-1),overlap,                &
+                     sgx%frac_out(start_idx:end_idx,:,:),0)
+          deallocate(seed,rngs)
+       else
+          sgx%frac_out(start_idx:end_idx,:,:) = 1  
+       endif
+       
+       ! Sum up precipitation rates
+       allocate(ls_p_rate(npoints,gbx%Nlevels),cv_p_rate(npoints,gbx%Nlevels))
+       if(gbx%use_precipitation_fluxes) then
+          ls_p_rate(:,gbx%Nlevels:1:-1) = gbx%rain_ls(start_idx:end_idx,1:gbx%Nlevels) + &
+               gbx%snow_ls(start_idx:end_idx,1:gbx%Nlevels) + &
+               gbx%grpl_ls(start_idx:end_idx,1:gbx%Nlevels)
+          cv_p_rate(:,gbx%Nlevels:1:-1) = gbx%rain_cv(start_idx:end_idx,1:gbx%Nlevels) + &
+               gbx%snow_cv(start_idx:end_idx,1:gbx%Nlevels)
+       else
+          ls_p_rate(:,gbx%Nlevels:1:-1) = &
+               gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSRAIN) +                  &
+               gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSSNOW) +                  &
+               gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_LSGRPL)
+          cv_p_rate(:,gbx%Nlevels:1:-1) =                                                &
+               gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVRAIN) +                  &
+               gbx%mr_hydro(start_idx:end_idx,1:gbx%Nlevels,I_CVSNOW)
+       endif
+       
+       ! Call PREC_SCOPS
+       call prec_scops(npoints,gbx%Nlevels,gbx%Ncolumns,ls_p_rate,cv_p_rate,             &
+                       sgx%frac_out(start_idx:end_idx,:,:),                              &
+                       sgx%prec_frac(start_idx:end_idx,:,:))
+       deallocate(ls_p_rate,cv_p_rate)
+
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Compute precipitation fraction in each gridbox
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Allocate
+       allocate(frac_ls(npoints,gbx%Nlevels),prec_ls(npoints,gbx%Nlevels),               &
+                frac_cv(npoints,gbx%Nlevels),prec_cv(npoints,gbx%Nlevels))
+
+       ! Initialize
+       frac_ls(1:npoints,1:gbx%Nlevels) = 0._wp
+       prec_ls(1:npoints,1:gbx%Nlevels) = 0._wp
+       frac_cv(1:npoints,1:gbx%Nlevels) = 0._wp
+       prec_cv(1:npoints,1:gbx%Nlevels) = 0._wp
+       do j=1,npoints,1
+          do k=1,gbx%Nlevels,1
+             do i=1,gbx%Ncolumns,1
+                if (sgx%frac_out(start_idx+j-1,i,gbx%Nlevels+1-k) == I_LSC)              &
+                     frac_ls(j,k) = frac_ls(j,k)+1._wp
+                if (sgx%frac_out(start_idx+j-1,i,gbx%Nlevels+1-k) == I_CVC)              &
+                     frac_cv(j,k) = frac_cv(j,k)+1._wp
+                if (sgx%prec_frac(start_idx+j-1,i,gbx%Nlevels+1-k) .eq. 1)               &
+                     prec_ls(j,k) = prec_ls(j,k)+1._wp
+                if (sgx%prec_frac(start_idx+j-1,i,gbx%Nlevels+1-k) .eq. 2)               &
+                     prec_cv(j,k) = prec_cv(j,k)+1._wp
+                if (sgx%prec_frac(start_idx+j-1,i,gbx%Nlevels+1-k) .eq. 3)               &
+                     prec_cv(j,k) = prec_cv(j,k)+1._wp
+                if (sgx%prec_frac(start_idx+j-1,i,gbx%Nlevels+1-k) .eq. 3)               &
+                     prec_ls(j,k) = prec_ls(j,k)+1._wp
+             enddo
+             frac_ls(j,k)=frac_ls(j,k)/gbx%Ncolumns
+             frac_cv(j,k)=frac_cv(j,k)/gbx%Ncolumns
+             prec_ls(j,k)=prec_ls(j,k)/gbx%Ncolumns
+             prec_cv(j,k)=prec_cv(j,k)/gbx%Ncolumns
+          enddo
+       enddo
+
+       ! Flip SCOPS output from TOA-to-SFC to SFC-to-TOA
+       sgx%frac_out(start_idx:end_idx,:,1:gbx%Nlevels)  =                                &
+            sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1)
+       sgx%prec_frac(start_idx:end_idx,:,1:gbx%Nlevels) =                                &
+            sgx%prec_frac(start_idx:end_idx,:,gbx%Nlevels:1:-1)
+       
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Compute mixing ratios, effective radii and precipitation fluxes for clouds
+       ! and precipitation
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       allocate(mr_hydro(npoints, gbx%Ncolumns, gbx%Nlevels, gbx%Nhydro),                &
+                Reff(    npoints, gbx%Ncolumns, gbx%Nlevels, gbx%Nhydro),                &
+                Np(      npoints, gbx%Ncolumns, gbx%Nlevels, gbx%Nhydro))
+       mr_hydro(:,:,:,:) = 0._wp
+       Reff(:,:,:,:)     = 0._wp
+       Np(:,:,:,:)       = 0._wp
+       do k=1,gbx%Ncolumns
+          ! Subcolumn cloud fraction
+          column_frac_out = sgx%frac_out(start_idx:end_idx,k,:)
+
+          ! LS clouds
+          where (column_frac_out == I_LSC)
+             mr_hydro(:,k,:,I_LSCLIQ) = gbx%mr_hydro(start_idx:end_idx,:,I_LSCLIQ)
+             mr_hydro(:,k,:,I_LSCICE) = gbx%mr_hydro(start_idx:end_idx,:,I_LSCICE)
+             Reff(:,k,:,I_LSCLIQ)     = gbx%Reff(start_idx:end_idx,:,I_LSCLIQ)
+             Reff(:,k,:,I_LSCICE)     = gbx%Reff(start_idx:end_idx,:,I_LSCICE)
+             Np(:,k,:,I_LSCLIQ)       = gbx%Np(start_idx:end_idx,:,I_LSCLIQ)
+             Np(:,k,:,I_LSCICE)       = gbx%Np(start_idx:end_idx,:,I_LSCICE)
+             ! CONV clouds   
+          elsewhere (column_frac_out == I_CVC)
+             mr_hydro(:,k,:,I_CVCLIQ) = gbx%mr_hydro(start_idx:end_idx,:,I_CVCLIQ)
+             mr_hydro(:,k,:,I_CVCICE) = gbx%mr_hydro(start_idx:end_idx,:,I_CVCICE)
+             Reff(:,k,:,I_CVCLIQ)     = gbx%Reff(start_idx:end_idx,:,I_CVCLIQ)
+             Reff(:,k,:,I_CVCICE)     = gbx%Reff(start_idx:end_idx,:,I_CVCICE)
+             Np(:,k,:,I_CVCLIQ)       = gbx%Np(start_idx:end_idx,:,I_CVCLIQ)
+             Np(:,k,:,I_CVCICE)       = gbx%Np(start_idx:end_idx,:,I_CVCICE)
+          end where
+          
+          ! Subcolumn precipitation
+          column_prec_out = sgx%prec_frac(start_idx:end_idx,k,:)
+          
+          ! LS Precipitation
+          where ((column_prec_out == 1) .or. (column_prec_out == 3) )
+             Reff(:,k,:,I_LSRAIN) = gbx%Reff(start_idx:end_idx,:,I_LSRAIN)
+             Reff(:,k,:,I_LSSNOW) = gbx%Reff(start_idx:end_idx,:,I_LSSNOW)
+             Reff(:,k,:,I_LSGRPL) = gbx%Reff(start_idx:end_idx,:,I_LSGRPL)
+             Np(:,k,:,I_LSRAIN)   = gbx%Np(start_idx:end_idx,:,I_LSRAIN)
+             Np(:,k,:,I_LSSNOW)   = gbx%Np(start_idx:end_idx,:,I_LSSNOW)
+             Np(:,k,:,I_LSGRPL)   = gbx%Np(start_idx:end_idx,:,I_LSGRPL)
+          ! CONV precipitation   
+          elsewhere ((column_prec_out == 2) .or. (column_prec_out == 3))
+             Reff(:,k,:,I_CVRAIN) = gbx%Reff(start_idx:end_idx,:,I_CVRAIN)
+             Reff(:,k,:,I_CVSNOW) = gbx%Reff(start_idx:end_idx,:,I_CVSNOW)
+             Np(:,k,:,I_CVRAIN)   = gbx%Np(start_idx:end_idx,:,I_CVRAIN)
+             Np(:,k,:,I_CVSNOW)   = gbx%Np(start_idx:end_idx,:,I_CVSNOW)
+          end where
+       enddo
+       
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Convert the mixing ratio and precipitation fluxes from gridbox mean to
+       ! the fraction-based values
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       do k=1,gbx%Nlevels
+          do j=1,npoints
+             ! Clouds
+             if (frac_ls(j,k) .ne. 0.) then
+                mr_hydro(j,:,k,I_LSCLIQ) = mr_hydro(j,:,k,I_LSCLIQ)/frac_ls(j,k)
+                mr_hydro(j,:,k,I_LSCICE) = mr_hydro(j,:,k,I_LSCICE)/frac_ls(j,k)
+             endif
+             if (frac_cv(j,k) .ne. 0.) then
+                mr_hydro(j,:,k,I_CVCLIQ) = mr_hydro(j,:,k,I_CVCLIQ)/frac_cv(j,k)
+                mr_hydro(j,:,k,I_CVCICE) = mr_hydro(j,:,k,I_CVCICE)/frac_cv(j,k)
+             endif
+             ! Precipitation
+             if (gbx%use_precipitation_fluxes) then
+                if (prec_ls(j,k) .ne. 0.) then
+                   gbx%rain_ls(start_idx+j-1,k) = gbx%rain_ls(start_idx+j-1,k)/prec_ls(j,k)
+                   gbx%snow_ls(start_idx+j-1,k) = gbx%snow_ls(start_idx+j-1,k)/prec_ls(j,k)
+                   gbx%grpl_ls(start_idx+j-1,k) = gbx%grpl_ls(start_idx+j-1,k)/prec_ls(j,k)
+                endif
+                if (prec_cv(j,k) .ne. 0.) then
+                   gbx%rain_cv(start_idx+j-1,k) = gbx%rain_cv(start_idx+j-1,k)/prec_cv(j,k)
+                   gbx%snow_cv(start_idx+j-1,k) = gbx%snow_cv(start_idx+j-1,k)/prec_cv(j,k)
+                endif
+             else
+                if (prec_ls(j,k) .ne. 0.) then
+                   mr_hydro(j,:,k,I_LSRAIN) = mr_hydro(j,:,k,I_LSRAIN)/prec_ls(j,k)
+                   mr_hydro(j,:,k,I_LSSNOW) = mr_hydro(j,:,k,I_LSSNOW)/prec_ls(j,k)
+                   mr_hydro(j,:,k,I_LSGRPL) = mr_hydro(j,:,k,I_LSGRPL)/prec_ls(j,k)
+                endif
+                if (prec_cv(j,k) .ne. 0.) then
+                   mr_hydro(j,:,k,I_CVRAIN) = mr_hydro(j,:,k,I_CVRAIN)/prec_cv(j,k)
+                   mr_hydro(j,:,k,I_CVSNOW) = mr_hydro(j,:,k,I_CVSNOW)/prec_cv(j,k)
+                endif
+             endif
+          enddo
+       enddo
+       deallocate(frac_ls,prec_ls,frac_cv,prec_cv)
+
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Convert precipitation fluxes to mixing ratios
+       !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       if (gbx%use_precipitation_fluxes) then
+          call cosp_precip_mxratio(npoints, gbx%Nlevels, gbx%Ncolumns,                   &
+                                   gbx%p(start_idx:end_idx,:),gbx%T(start_idx:end_idx,:),&
+                                   sgx%prec_frac(start_idx:end_idx,:,:), 1._wp,          &
+                                   n_ax(I_LSRAIN), n_bx(I_LSRAIN),   alpha_x(I_LSRAIN),  &
+                                   c_x(I_LSRAIN),   d_x(I_LSRAIN),   g_x(I_LSRAIN),      &
+                                   a_x(I_LSRAIN),   b_x(I_LSRAIN),   gamma_1(I_LSRAIN),  &
+                                   gamma_2(I_LSRAIN),gamma_3(I_LSRAIN),gamma_4(I_LSRAIN),&
+                                   gbx%rain_ls(start_idx:end_idx,:),                     &
+                                   mr_hydro(:,:,:,I_LSRAIN),Reff(:,:,:,I_LSRAIN))
+          call cosp_precip_mxratio(npoints, gbx%Nlevels, gbx%Ncolumns,                   &
+                                   gbx%p(start_idx:end_idx,:),gbx%T(start_idx:end_idx,:),&
+                                   sgx%prec_frac(start_idx:end_idx,:,:), 1._wp,          &          
+                                   n_ax(I_LSSNOW),  n_bx(I_LSSNOW),  alpha_x(I_LSSNOW),  &
+                                   c_x(I_LSSNOW),   d_x(I_LSSNOW),   g_x(I_LSSNOW),      &
+                                   a_x(I_LSSNOW),   b_x(I_LSSNOW),   gamma_1(I_LSSNOW),  &
+                                   gamma_2(I_LSSNOW),gamma_3(I_LSSNOW),gamma_4(I_LSSNOW),&
+                                   gbx%snow_ls(start_idx:end_idx,:),                     &
+                                   mr_hydro(:,:,:,I_LSSNOW),Reff(:,:,:,I_LSSNOW))
+          call cosp_precip_mxratio(npoints, gbx%Nlevels, gbx%Ncolumns,                   &
+                                   gbx%p(start_idx:end_idx,:),gbx%T(start_idx:end_idx,:),&
+                                   sgx%prec_frac(start_idx:end_idx,:,:), 2._wp,          &
+                                   n_ax(I_CVRAIN),  n_bx(I_CVRAIN),  alpha_x(I_CVRAIN),  &
+                                   c_x(I_CVRAIN),   d_x(I_CVRAIN),   g_x(I_CVRAIN),      &
+                                   a_x(I_CVRAIN),   b_x(I_CVRAIN),   gamma_1(I_CVRAIN),  &
+                                   gamma_2(I_CVRAIN),gamma_3(I_CVRAIN),gamma_4(I_CVRAIN),&
+                                   gbx%rain_cv(start_idx:end_idx,:),                     &
+                                   mr_hydro(:,:,:,I_CVRAIN),Reff(:,:,:,I_CVRAIN))
+          call cosp_precip_mxratio(npoints, gbx%Nlevels, gbx%Ncolumns,                   &
+                                   gbx%p(start_idx:end_idx,:),gbx%T(start_idx:end_idx,:),&
+                                   sgx%prec_frac(start_idx:end_idx,:,:), 2._wp,          &          
+                                   n_ax(I_CVSNOW),  n_bx(I_CVSNOW),  alpha_x(I_CVSNOW),  &
+                                   c_x(I_CVSNOW),   d_x(I_CVSNOW),   g_x(I_CVSNOW),      &
+                                   a_x(I_CVSNOW),   b_x(I_CVSNOW),   gamma_1(I_CVSNOW),  &
+                                   gamma_2(I_CVSNOW),gamma_3(I_CVSNOW),gamma_4(I_CVSNOW),&
+                                   gbx%snow_cv(start_idx:end_idx,:),                     &
+                                   mr_hydro(:,:,:,I_CVSNOW),Reff(:,:,:,I_CVSNOW))
+          call cosp_precip_mxratio(npoints, gbx%Nlevels, gbx%Ncolumns,                   &
+                                   gbx%p(start_idx:end_idx,:),gbx%T(start_idx:end_idx,:),&
+                                   sgx%prec_frac(start_idx:end_idx,:,:), 1._wp,          &         
+                                   n_ax(I_LSGRPL),  n_bx(I_LSGRPL),  alpha_x(I_LSGRPL),  &
+                                   c_x(I_LSGRPL),   d_x(I_LSGRPL),   g_x(I_LSGRPL),      &
+                                   a_x(I_LSGRPL),   b_x(I_LSGRPL),   gamma_1(I_LSGRPL),  &
+                                   gamma_2(I_LSGRPL),gamma_3(I_LSGRPL),gamma_4(I_LSGRPL),&
+                                   gbx%grpl_ls(start_idx:end_idx,:),                     &
+                                   mr_hydro(:,:,:,I_LSGRPL),Reff(:,:,:,I_LSGRPL))
+       endif
+    else
+       allocate(mr_hydro(npoints, 1, gbx%Nlevels, gbx%Nhydro),                           &
+                Reff(npoints,     1, gbx%Nlevels, gbx%Nhydro),                           &
+                Np(npoints,       1, gbx%Nlevels, gbx%Nhydro))
+       mr_hydro(:,1,:,:) = gbx%mr_hydro(start_idx:end_idx,:,:)
+       Reff(:,1,:,:)     = gbx%Reff(start_idx:end_idx,:,:)
+       Np(:,1,:,:)       = gbx%Np(start_idx:end_idx,:,:)
+       where(gbx%dtau_s(start_idx:end_idx,:) .gt. 0)
+          sgx%frac_out(start_idx:end_idx,1,:) = 1
+       endwhere
+    endif
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 11 micron emissivity
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
+                               sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1),       &
+                               gbx%dem_c(start_idx:end_idx,gbx%Nlevels:1:-1),            &
+                               gbx%dem_s(start_idx:end_idx,gbx%Nlevels:1:-1),            &
+                               cospIN%emiss_11)
+ 
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 0.67 micron optical depth
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
+                               sgx%frac_out(start_idx:end_idx,:,gbx%Nlevels:1:-1),       &
+                               gbx%dtau_c(start_idx:end_idx,gbx%Nlevels:1:-1),           &
+                               gbx%dtau_s(start_idx:end_idx,gbx%Nlevels:1:-1),           &
+                               cospIN%tau_067)
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! LIDAR Polarized optics
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    call lidar_optics(npoints,gbx%Ncolumns,gbx%Nlevels,4,gbx%lidar_ice_type,             &
+                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCLIQ),                    &
+                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCICE),                    &
+                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCLIQ),                    &
+                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                    &
+                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCLIQ),      &
+                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCICE),      &
+                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCLIQ),      &
+                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCICE),      & 
+                          cospgridIN%pfull,cospgridIN%phalf,cospgridIN%at,               &
+                          cospIN%beta_mol,cospIN%betatot,cospIN%taupart,                 &
+                          cospIN%tau_mol,cospIN%tautot,cospIN%tautot_S_liq,              &
+                          cospIN%tautot_S_ice, betatot_ice = cospIN%betatot_ice,         &
+                          betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,   &
+                          tautot_liq = cospIN%tautot_liq)
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! CLOUDSAT RADAR OPTICS
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+    ! Allocate memory
+    allocate(hm_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
+             re_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
+             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))           
+
+    do ij=1,gbx%Ncolumns
+       do i=1,N_HYDRO
+          hm_matrix(i,1:npoints,gbx%Nlevels:1:-1) = mr_hydro(:,ij,:,i)*1000._wp 
+          re_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Reff(:,ij,:,i)*1.e6_wp  
+          Np_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Np(:,ij,:,i)       
+       enddo
+       call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF, hm_matrix,  &
+                             re_matrix, Np_matrix,                                       &
+                             gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
+                             gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
+                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,        &
+                             cospIN%z_vol_cloudsat(1:npoints,ij,:),                      &
+                             cospIN%kr_vol_cloudsat(1:npoints,ij,:),                     &
+                             cospIN%g_vol_cloudsat(1:npoints,ij,:))
+    enddo
+    
+    ! Deallocate memory
+    deallocate(hm_matrix,re_matrix,Np_matrix)
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! MODIS optics
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Allocate memory
+    allocate(MODIS_cloudWater(npoints,gbx%Ncolumns,gbx%Nlevels),                         &
+             MODIS_cloudIce(npoints,gbx%Ncolumns,gbx%Nlevels),                           &
+             MODIS_waterSize(npoints,gbx%Ncolumns,gbx%Nlevels),                          &
+             MODIS_iceSize(npoints,gbx%Ncolumns,gbx%Nlevels),                            &
+             MODIS_opticalThicknessLiq(npoints,gbx%Ncolumns,gbx%Nlevels),                &
+             MODIS_opticalThicknessIce(npoints,gbx%Ncolumns,gbx%Nlevels))
+    ! Cloud water
+    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
+                               sgx%frac_out(start_idx:end_idx,:,:),                      &
+                               mr_hydro(:,:,:,I_CVCLIQ),mr_hydro(:,:,:,I_LSCLIQ),        &
+                               MODIS_cloudWater(:, :, gbx%Nlevels:1:-1))   
+    ! Cloud ice
+    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
+                               sgx%frac_out(start_idx:end_idx,:,:),                      &
+                               mr_hydro(:,:,:,I_CVCICE), mr_hydro(:,:,:,I_LSCICE),       &
+                               MODIS_cloudIce(:, :, gbx%Nlevels:1:-1))  
+    ! Water droplet size
+    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
+                               sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCLIQ), &
+                               reff(:,:,:,I_LSCLIQ),                                     &
+                               MODIS_waterSize(:, :, gbx%Nlevels:1:-1))
+    ! Ice crystal size
+    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
+                               sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCICE), &
+                               reff(:,:,:,I_LSCICE),                                     &
+                               MODIS_iceSize(:, :, gbx%Nlevels:1:-1))
+    ! Partition optical thickness into liquid and ice parts
+    call modis_optics_partition(npoints,gbx%Nlevels,gbx%Ncolumns,                        &
+                                MODIS_cloudWater,MODIS_cloudIce,MODIS_waterSize,         &
+                                MODIS_iceSize,cospIN%tau_067,MODIS_opticalThicknessLiq,  &
+                                MODIS_opticalThicknessIce)
+    ! Compute assymetry parameter and single scattering albedo 
+    call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,num_trial_res,                    &
+                      MODIS_opticalThicknessLiq, MODIS_waterSize*1.0e6_wp,               &
+                      MODIS_opticalThicknessIce, MODIS_iceSize*1.0e6_wp,                 &
+                      cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
+    
+    ! Deallocate memory
+    deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,            &
+               MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,             &
+               Reff,Np)
+    
+  end subroutine subsample_and_optics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE construct_cosp_gridbox_v1p4
+  ! SUBROUTINE construct_cosp_gridbox
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE CONSTRUCT_COSP_GRIDBOX_v1p4(time,time_bnds,radar_freq,surface_radar,         &
+  SUBROUTINE CONSTRUCT_cosp_gridbox(time,time_bnds,radar_freq,surface_radar,         &
                                          use_mie_tables,use_gas_abs,do_ray,melt_lay,k2,   &
                                          Npoints,Nlevels,Ncolumns,Nhydro,Nprmts_max_hydro,&
                                          Naero,Nprmts_max_aero,Npoints_it,lidar_ice_type, &
@@ -731,13 +1347,7 @@ contains
                                          isccp_overlap,isccp_emsfc_lw,                    &
                                          use_precipitation_fluxes,use_reff,Plat,Sat,Inst, &
                                          Nchan,ZenAng,Ichan,SurfEm,co2,ch4,n2o,co,        &
-                                         y,load_LUT)!,                                               &
-                                         !lon,lat,p, ph,zlev,zlev_half,T,rh,sh,cca,tca,skt,&
-                                         !landmask,mr_ozone,u_wind,v_wind,sunlit,fl_lsrain,&
-                                         !fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,dtau_s,  &
-                                         !dtau_c,dem_s,dem_c,Reff,mr_lsliq,mr_lsice,       &
-                                         !mr_ccliq,mr_ccice,load_LUT)
-    
+                                         y,load_LUT)
     ! Inputs
     double precision,intent(in) :: &
          time,          & ! Time since start of run [days] 
@@ -784,46 +1394,9 @@ contains
          use_precipitation_fluxes,&
          use_reff
     logical,intent(in),optional :: load_LUT
-    
-    ! RTTOV inputs
-!    real(wp),intent(in),dimension(Npoints),optional :: &
-!         lon,        &
-!         lat,        &
-!         u_wind,     &
-!         v_wind,     &
-!         skt,        &
-!         landmask,   &
-!         sunlit   
-!    real(wp),intent(in),dimension(Npoints,Nlevels),optional :: &
-!         p,          &
-!         ph,         &
-!         zlev,       &
-!         T,          & 
-!         rh,         &
-!         sh,         &
-!         cca,        &
-!         tca,        &
-!         mr_ozone,   &
-!         fl_lsrain,  &
-!         fl_lssnow,  &
-!         fl_lsgrpl,  &
-!         fl_ccrain,  &
-!         fl_ccsnow,  &
-!         dtau_c,     &
-!         dtau_s,     &
-!         dem_c,      &
-!         dem_s,      &
-!         mr_lsice,   &
-!         mr_lsliq,   &
-!         mr_ccliq,   &
-!         mr_ccice
-!    real(wp),intent(in),dimension(Npoints,Nlevels+1),optional ::&
-!         zlev_half
-!    real(wp),intent(in),dimension(Npoints,Nlevels,N_HYDRO),optional :: &
-!         Reff    
-    
+
     ! Outputs
-    type(cosp_gridbox_v1p4),intent(out) :: y
+    type(cosp_gridbox),intent(out) :: y
     
     ! local variables
     integer :: k
@@ -835,23 +1408,7 @@ contains
     else
        local_load_LUT = RADAR_SIM_LOAD_scale_LUTs_flag
     endif
-    
-    ! Check to see if RTTOV inputs are provided (default is no RTTOV)
-    !rttovInputs = .false.
-    !if (present(lon)       .and. present(lat)       .and.                                &
-    !    present(ph)        .and. present(zlev)      .and. present(zlev_half) .and.       &
-    !    present(rh)        .and. present(sh)        .and. present(cca)       .and.       &
-    !    present(p)         .and. present(T)         .and. present(tca)       .and.       &
-    !    present(skt)       .and. present(landmask)  .and. present(mr_ozone)  .and.       &
-    !    present(u_wind)    .and. present(v_wind)    .and. present(sunlit)    .and.       &
-    !    present(fl_lsrain) .and. present(fl_lssnow) .and. present(fl_lsgrpl) .and.       &
-    !    present(fl_ccrain) .and. present(fl_ccsnow) .and. present(dtau_s)    .and.       &
-    !    present(dtau_c)    .and. present(dem_s)     .and. present(dem_c)     .and.       &
-    !    present(Reff)      .and. present(mr_lsliq)  .and. present(mr_lsice)  .and.       &
-    !    present(mr_ccliq)  .and. present(mr_ccice)) then 
-    !    rttovInputs = .true.
-    !endif
-    
+
     ! Dimensions and scalars
     y%radar_freq       = radar_freq
     y%surface_radar    = surface_radar
@@ -953,59 +1510,15 @@ contains
     y%conc_aero        = 0.0 
     y%dist_type_aero   = 0   
     y%dist_prmts_aero  = 0.0 
-
- !   ! Toffset. This assumes that time is the mid-point of the interval.
- !   do k=1,Npoints
- !      y%toffset(k) = -0.5_wp*3._wp/24._wp + 3._wp/24._wp*(k-0.5)/Npoints
- !   enddo
- !   
- !   ! Setup RTTOV inputs (if provided)
- !   if (rttovInputs) then
- !      y%longitude = lon
- !      y%latitude  = lat
- !      y%ichan     = ichan
- !      y%surfem    = surfem
- !      y%p         = p
- !      y%ph        = ph
- !      y%zlev      = zlev
- !      y%zlev_half = zlev_half
- !      y%T         = T 
- !      y%q         = rh
- !      y%sh        = sh
- !      y%cca       = cca
- !      y%tca       = tca
- !      y%psfc      = ph(:,1)
- !      y%skt       = skt
- !      y%land      = landmask
- !      y%mr_ozone  = mr_ozone
- !      y%u_wind    = u_wind
- !      y%v_wind    = v_wind
- !      y%sunlit    = sunlit
- !      y%rain_ls   = fl_lsrain
- !      y%snow_ls   = fl_lssnow
- !      y%grpl_ls   = fl_lsgrpl
- !      y%rain_cv   = fl_ccrain
- !      y%snow_cv   = fl_ccsnow
- !      y%dtau_s    = dtau_s
- !      y%dtau_c    = dtau_c
- !      y%dem_s     = dem_s
- !      y%dem_c     = dem_c
- !      y%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
- !      y%mr_hydro(:,:,I_LSCICE) = mr_lsice
- !      y%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
- !      y%mr_hydro(:,:,I_CVCICE) = mr_ccice
- !      y%Reff = Reff
- !      y%Reff(:,:,I_LSRAIN) = 0.0
- !   endif      
     
-  END SUBROUTINE CONSTRUCT_COSP_GRIDBOX_v1p4
+  END SUBROUTINE CONSTRUCT_cosp_gridbox
     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE destroy_cosp_gridbox_v1p4
+  ! SUBROUTINE destroy_cosp_gridbox
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE destroy_cosp_gridbox_v1p4(y,save_LUT)
+  SUBROUTINE destroy_cosp_gridbox(y,save_LUT)
     
-    type(cosp_gridbox_v1p4),intent(inout) :: y
+    type(cosp_gridbox),intent(inout) :: y
     logical,intent(in),optional :: save_LUT
     
     logical :: local_save_LUT
@@ -1016,7 +1529,7 @@ contains
     endif
     
     ! save any updates to radar simulator LUT
-    if (local_save_LUT) call save_scale_LUTs_v1p4(y%hp)
+    if (local_save_LUT) call save_scale_LUTs(y%hp)
     
     deallocate(y%zlev,y%zlev_half,y%dlev,y%p,y%ph,y%T,y%q,y%sh,y%dtau_s,y%dtau_c,y%dem_s,&
                y%dem_c,y%toffset,y%longitude,y%latitude,y%psfc,y%land,y%tca,y%cca,       &
@@ -1024,12 +1537,40 @@ contains
                y%dist_prmts_aero,y%rain_ls,y%rain_cv,y%snow_ls,y%snow_cv,y%grpl_ls,      &
                y%sunlit,y%skt,y%Reff,y%Np,y%ichan,y%surfem,y%mr_ozone,y%u_wind,y%v_wind)
     
-  END SUBROUTINE destroy_cosp_gridbox_v1p4
-  
+  END SUBROUTINE destroy_cosp_gridbox
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE construct_cosp_subgrid
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE CONSTRUCT_COSP_SUBGRID(Npoints,Ncolumns,Nlevels,y)
+    ! Inputs
+    integer,intent(in) :: &
+         Npoints,  & ! Number of gridpoints
+         Ncolumns, & ! Number of columns
+         Nlevels     ! Number of levels
+    ! Outputs
+    type(cosp_subgrid),intent(out) :: y
+    
+    ! Dimensions
+    y%Npoints  = Npoints
+    y%Ncolumns = Ncolumns
+    y%Nlevels  = Nlevels
+    
+    ! Allocate
+    allocate(y%frac_out(Npoints,Ncolumns,Nlevels))
+    if (Ncolumns > 1) then
+       allocate(y%prec_frac(Npoints,Ncolumns,Nlevels))
+    else ! CRM mode, not needed
+       allocate(y%prec_frac(1,1,1))
+    endif
+    
+    ! Initialize
+    y%prec_frac = 0._wp
+    y%frac_out  = 0._wp
+  END SUBROUTINE CONSTRUCT_COSP_SUBGRID  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE save_scale_LUTs_v1p4
+  ! SUBROUTINE save_scale_LUTs
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine save_scale_LUTs_v1p4(hp)
+  subroutine save_scale_LUTs(hp)
     type(class_param), intent(inout) :: hp
     logical                          :: LUT_file_exists
     integer                          :: i,j,k,ind
@@ -1063,13 +1604,13 @@ contains
 99  write(*,*) 'Error: Unable to create/update radar LUT file: ', &
          trim(hp%scale_LUT_file_name) // '_radar_Z_scale_LUT.dat'
     return  
-  end subroutine save_scale_LUTs_v1p4
+  end subroutine save_scale_LUTs
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !SUBROUTINE construct_cosp_vgrid_v1p4
+  !SUBROUTINE construct_cosp_vgrid
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE CONSTRUCT_COSP_VGRID_v1p4(gbx,Nlvgrid,use_vgrid,cloudsat,x)
-    type(cosp_gridbox_v1p4),intent(in) :: gbx ! Gridbox information
+  SUBROUTINE CONSTRUCT_COSP_VGRID(gbx,Nlvgrid,use_vgrid,cloudsat,x)
+    type(cosp_gridbox),intent(in) :: gbx ! Gridbox information
     integer,intent(in) :: Nlvgrid  ! Number of new levels    
     logical,intent(in) :: use_vgrid! Logical flag that controls the output on a different grid
     logical,intent(in) :: cloudsat ! TRUE if a CloudSat like grid (480m) is requested
@@ -1125,7 +1666,7 @@ contains
        x%zu = x%mzu
     endif
     
-  END SUBROUTINE CONSTRUCT_COSP_VGRID_v1p4
+  END SUBROUTINE CONSTRUCT_COSP_VGRID
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cosp_sgradar
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1177,6 +1718,13 @@ contains
     x%radar_lidar_tcc       = 0._wp    
     
   end subroutine construct_cosp_radarstats
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE destroy_cosp_subgrid
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine destroy_cosp_subgrid(y)
+    type(cosp_subgrid),intent(inout) :: y   
+    deallocate(y%prec_frac, y%frac_out)
+  end subroutine destroy_cosp_subgrid
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cosp_sgradar

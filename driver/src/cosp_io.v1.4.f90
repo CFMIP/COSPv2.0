@@ -39,20 +39,20 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_IO
   USE COSP_KINDS, ONLY: wp
-  USE MOD_COSP_CONFIG, ONLY: Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,mgrid_zu,mgrid_zl,mgrid_z,&
+  USE MOD_COSP_CONFIG, ONLY: Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,&!mgrid_zu,mgrid_zl,mgrid_z,&
                              R_UNDEF,DBZE_BINS,CFAD_ZE_MIN,CFAD_ZE_WIDTH,COSP_VERSION,   &
                              LIDAR_NTEMP,LIDAR_PHASE_TEMP,LIDAR_PHASE_TEMP_BNDS,misr_histHgtCenters,&
                              misr_histHgtEdges,numMISRHgtBins,PARASOL_NREFL,SR_BINS,   &
                              isccp_histTauEdges,isccp_histPresEdges,PARASOL_SZA,          &
                              isccp_histPresCenters,isccp_histTauCenters
-  USE MOD_COSP_INTERFACE_v1p5, ONLY: cosp_subgrid,cosp_config
-  USE MOD_COSP_INTERFACE_v1p4, ONLY: cosp_gridbox_v1p4,cosp_sgradar,cosp_radarstats,     &
+  USE MOD_COSP_INTERFACE_v1p4, ONLY: cosp_gridbox,cosp_sgradar,cosp_radarstats,     &
                                      cosp_sglidar,cosp_lidarstats,cosp_isccp,cosp_misr,  &
-                                     cosp_modis,cosp_rttov,cosp_vgrid
+                                     cosp_modis,cosp_rttov,cosp_vgrid,cosp_subgrid,      &
+                                     cosp_config
   USE cmor_users_functions
   USE netcdf
   USE MOD_COSP_PARASOL_INTERFACE
-  USE MOD_COSP_RTTOV, ONLY: ichan_in
+  USE MOD_COSP_RTTOV, ONLY: iChannel
   IMPLICIT NONE
 
   ! Types to be used as arrays of pointers
@@ -850,6 +850,7 @@ CONTAINS
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_INIT(cmor_nl,wmode,cfg,vgrid,gb,sg,sglidar,&
         isccp,misr,modis,rttov,sgradar,stradar,stlidar,geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST, &
+        mgrid_zl,mgrid_zu,mgrid_z, &
         lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id, &
         column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
         sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
@@ -859,7 +860,7 @@ CONTAINS
      character(len=*),intent(in)      :: wmode ! Writing mode 'replace' or 'append'
      type(cosp_config),intent(in)     :: cfg
      type(cosp_vgrid),intent(in)      :: vgrid
-     type(cosp_gridbox_v1p4),intent(in)    :: gb
+     type(cosp_gridbox),intent(in)    :: gb
      type(cosp_subgrid),intent(in)    :: sg
      type(cosp_sgradar),intent(in)    :: sgradar  ! Cloudsat radar simulator output (pixel)
      type(cosp_radarstats),intent(in) :: stradar  ! Cloudsat radar simulator output (gridbox)
@@ -869,6 +870,7 @@ CONTAINS
      type(cosp_modis),intent(in)      :: modis    ! MODIS outputs
      type(cosp_rttov),intent(in)      :: rttov    ! RTTOV outputs
      type(cosp_lidarstats),intent(in) :: stlidar  ! Summary statistics from lidar simulator
+     real(wp),dimension(gb%nlevels),intent(in) :: mgrid_zl,mgrid_zu,mgrid_z
      integer,intent(in) :: geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST
      integer,intent(out) :: grid_id,latvar_id,lonvar_id,column_axid,height_axid,dbze_axid,height_mlev_axid,sratio_axid, &
           tau_axid,pressure2_axid,lon_axid,lat_axid,time_axid,sza_axid,MISR_CTH_axid, &
@@ -938,7 +940,7 @@ CONTAINS
         column_ax(i) = i
      enddo
      ! Channels
-     channel_ax = float(gb%ichan)
+     channel_ax = float(iChannel)
      ! Radar Ze
      do i=1,DBZE_BINS
         dbze_ax(i) = CFAD_ZE_MIN + CFAD_ZE_WIDTH*(i - 0.5)
@@ -1148,7 +1150,7 @@ CONTAINS
           temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid
      integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
      type(cosp_vgrid),intent(in)      :: vgrid
-     type(cosp_gridbox_v1p4),intent(in)    :: gb
+     type(cosp_gridbox),intent(in)    :: gb
      type(cosp_subgrid),intent(in)    :: sg
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
      type(cosp_sgradar),intent(in)    :: sgradar  ! Cloudsat radar simulator output (pixel)
@@ -1290,7 +1292,7 @@ CONTAINS
           temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid
      integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
      type(cosp_vgrid),intent(in) :: vgrid
-     type(cosp_gridbox_v1p4),intent(in)    :: gb
+     type(cosp_gridbox),intent(in)    :: gb
      type(cosp_subgrid),intent(in)    :: sg
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
      type(cosp_sgradar),intent(in)    :: sgradar  ! Cloudsat radar simulator output (pixel)
@@ -1414,7 +1416,7 @@ CONTAINS
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_WRITE_1D(gb,tbnds,lonvar_id,latvar_id,N1,N2,N3,v1d,v2d,v3d)
      ! Input arguments
-     type(cosp_gridbox_v1p4),intent(in) :: gb
+     type(cosp_gridbox),intent(in) :: gb
      double precision,intent(in) :: tbnds(2,1)
      integer,intent(in) :: lonvar_id,latvar_id,N1,N2,N3
      type(var1d),intent(inout) :: v1d(N1)
