@@ -284,7 +284,9 @@ CONTAINS
          Lcloudsat_column,    & ! On/Off switch for column CLOUDSAT simulator
          Lmodis_column,       & ! On/Off switch for column MODIS simulator
          Lrttov_column          ! On/Off switch for column RTTOV simulator (not used)      
-    logical :: ok_lidar_cfad = .false.
+    logical :: &
+         ok_lidar_cfad  = .false., &
+         lrttov_cleanUp = .false.
     
     integer, dimension(:,:),allocatable  :: &
          modisRetrievedPhase,isccpLEVMATCH
@@ -388,10 +390,13 @@ CONTAINS
     if (associated(cospOUT%parasolPix_refl))                                             &
        Lparasol_subcolumn  = .true.
 
-    ! RTTOV subcolumn
+    ! RTTOV column
     if (associated(cospOUT%rttov_tbs))                                                   &
        Lrttov_column    = .true.
 
+    ! Set flag to deallocate rttov types (only done on final call to simulator)
+    if (size(cospOUT%isccp_meantb) .eq. stop_idx) lrttov_cleanUp = .true.    
+    
     ! ISCCP column
     if (associated(cospOUT%isccp_fq)                                       .or.          &
         associated(cospOUT%isccp_meanalbedocld)                            .or.          &
@@ -648,12 +653,13 @@ CONTAINS
                             calipso_beta_tot(:,:,:),calipso_betaperp_tot(:,:,:))
        ! Store output (if requested)
        if (associated(cospOUT%calipso_beta_mol))                                         &
-            cospOUT%calipso_beta_mol = calipso_beta_mol
+            cospOUT%calipso_beta_mol(ij:ik,:) = calipso_beta_mol
        if (associated(cospOUT%calipso_beta_tot))                                         &
-            cospOUT%calipso_beta_tot = calipso_beta_tot
+            cospOUT%calipso_beta_tot(ij:ik,:,:) = calipso_beta_tot
        if (associated(cospOUT%calipso_betaperp_tot))                                     &
-            cospOUT%calipso_betaperp_tot = calipso_betaperp_tot
-    endif  
+            cospOUT%calipso_betaperp_tot(ij:ik,:,:) = calipso_betaperp_tot
+
+    endif
 
     ! PARASOL subcolumn simulator
     if (Lparasol_subcolumn) then
@@ -702,8 +708,9 @@ CONTAINS
              call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels, modisIN%pres(i,:),   &
                                   modisIN%tau(i,:,:),modisIN%liqFrac(i,:,:),             &
                                   modisIN%g(i,:,:),modisIN%w0(i,:,:),                    &
-                                  isccp_boxtau(ij+int(modisIN%sunlit(i))-1,:),           &
-                                  isccp_boxptop(ij+int(modisIN%sunlit(i))-1,:),          &
+                                  isccp_boxtau(int(modisIN%sunlit(i)),:),isccp_boxptop(int(modisIN%sunlit(i)),:),&
+!                                  isccp_boxtau(ij+int(modisIN%sunlit(i))-1,:),           &
+!                                  isccp_boxptop(ij+int(modisIN%sunlit(i))-1,:),          &
                                   modisRetrievedPhase(i,:),                              &
                                   modisRetrievedCloudTopPressure(i,:),                   &
                                   modisRetrievedTau(i,:),modisRetrievedSize(i,:))
@@ -744,7 +751,7 @@ CONTAINS
        endif   
                                 
        ! Call simulator
-        call icarus_column(isccpIN%npoints, isccpIN%ncolumns, isccpIN%nlevels,           &
+       call icarus_column(isccpIN%npoints, isccpIN%ncolumns, isccpIN%nlevels,           &
                           isccp_boxtau(:,:),isccp_boxptop(:,:)/100._wp,                  &
                           isccpIN%sunlit,isccpIN%pfull,isccpIN%phalf,isccpIN%qv,         &
                           isccpIN%at,isccpIN%skt,isccpIN%emsfc_lw,isccp_boxttop,         &
@@ -847,7 +854,7 @@ CONTAINS
                          cospOUT%calipso_cldlayerphase(ij:ik,:,:),                       &
                          cospOUT%calipso_lidarcldtmp(ij:ik,:,:))                                      
        cospOUT%calipso_srbval = calipso_histBsct     
-      
+       
        ! Free up memory (if necessary)
        if (allocated(calipso_beta_tot))     deallocate(calipso_beta_tot)
        if (allocated(calipso_beta_mol))     deallocate(calipso_beta_mol)
@@ -1102,7 +1109,7 @@ CONTAINS
                          rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
                          rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
                          rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
-                         rttovIN%n2o,rttovIN%co,rttovIN%zenang,                         &
+                         rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
                          cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1),           &
                          ! Optional arguments for surface emissivity calculation
                          month=rttovIN%month)

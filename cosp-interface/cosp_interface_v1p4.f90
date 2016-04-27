@@ -620,31 +620,12 @@ contains
     ! Initialize COSP
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if (linitialization) then
-       ! MODIS joint-histogram bin boundaries declaration is done here, rather than in src/cosp_config.f90,
-       ! because the joint-histogram bin bundaries are different in v2.0 than in v1.4, but to
-       ! keep backward compatability with v1.4 in v2.0, the MODIS boundaries are set here. The
-       ! joint-histogram boundaries for the other simulators are all set in src/cosp_config.f90
-       if (cospvID == 'COSP v1.4') then
-          print*,'Using cospV1.4.0 optical depth axis for MODIS tau/ctp joint-histogram'
-          allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),modis_histTauCenters(ntauV1p4))
-          numMODISTauBins      = ntauV1p4+1          ! Number of tau bins for joint-histogram
-          modis_histTau        = tau_binBoundsV1p4   ! Joint-histogram boundaries (optical depth)
-          modis_histTauEdges   = tau_binEdgesV1p4    ! Joint-histogram bin edges (optical depth)
-          modis_histTauCenters = tau_binCentersV1p4  ! Joint-histogram bin centers (optical depth)       
-       else
-          allocate(modis_histTau(ntau),modis_histTauEdges(2,ntau),modis_histTauCenters(ntau))
-          numMODISTauBins      = ntau
-          modis_histTau        = tau_binBounds
-          modis_histTauEdges   = tau_binEdges
-          modis_histTauCenters = tau_binCenters
-       endif
-       
+
        ! Initialize quickbeam_optics, also if two-moment radar microphysics scheme is wanted...
        if (cloudsat_micro_scheme == 'MMF_v3.5_two_moment')  then
           ldouble = .true. 
           lsingle = .false.
        endif
-       call quickbeam_optics_init()
        
        ! Initialize the distributional parameters for hydrometeors in radar simulator
        call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
@@ -979,7 +960,8 @@ contains
        else
           sgx%frac_out(start_idx:end_idx,:,:) = 1  
        endif
-       
+       do i=start_idx,end_idx
+
        ! Sum up precipitation rates
        allocate(ls_p_rate(npoints,gbx%Nlevels),cv_p_rate(npoints,gbx%Nlevels))
        if(gbx%use_precipitation_fluxes) then
