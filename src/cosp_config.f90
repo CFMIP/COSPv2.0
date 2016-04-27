@@ -81,7 +81,19 @@ MODULE MOD_COSP_CONFIG
        tau_binEdges = reshape(source=(/0.0, 0.3,  0.3,  1.3,  1.3,  3.6,      3.6,      &
                                         9.4, 9.4, 23.0, 23.0, 60.0, 60.0, 100000.0/),    &
                                         shape=(/2,ntau/)) 
-                                        
+
+    ! Optical depth bin axes (ONLY USED BY MODIS SIMULATOR IN v1.4)
+    integer :: l,k
+    integer,parameter :: &
+         ntauV1p4 = 6
+    real(wp),parameter,dimension(ntauV1p4+1) :: &
+         tau_binBoundsV1p4 = (/0.3, 1.3, 3.6, 9.4, 23., 60., 10000./)
+    real(wp),parameter,dimension(2,ntauV1p4) :: &
+         tau_binEdgesV1p4 = reshape(source =(/tau_binBoundsV1p4(1),((tau_binBoundsV1p4(k),l=1,2),   &
+                                    k=2,ntauV1p4),100000._wp/),shape = (/2,ntauV1p4/)) 
+    real(wp),parameter,dimension(ntauV1p4) :: &
+         tau_binCentersV1p4 = (tau_binEdgesV1p4(1,:)+tau_binEdgesV1p4(2,:))/2._wp  
+    
     ! Cloud-top height pressure bin axis
     integer,parameter :: &
        npres = 7     
@@ -112,7 +124,7 @@ MODULE MOD_COSP_CONFIG
 
     ! Liquid and Ice particle bins for MODIS joint histogram of optical-depth and particle
     ! size
-    integer :: i,j,l,k
+    integer :: i,j
     integer,parameter :: &
        nReffLiq = 11, & ! Number of bins for tau/ReffLiq joint-histogram
        nReffIce = 11    ! Number of bins for tau/ReffICE joint-histogram
@@ -140,7 +152,8 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################  
     integer,parameter :: &
        RTTOV_MAX_CHANNELS = 20
-       
+    character(len=256),parameter :: &
+         rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator   
     ! ####################################################################################  
@@ -187,26 +200,22 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################
     ! MODIS simulator tau/CTP joint histogram information 
     ! ####################################################################################
-    ! For the MODIS simulator we want to preserve the ability for cospV1.4.0 to use the
-    ! old histogram bin boundaries for optical depth, so these are set up in initialization.
     integer,parameter :: &
-         numMODISPresBins = npres                    ! Number of pressure bins for joint-histogram    
+         numMODISPresBins = npres, &                 ! Number of pressure bins for joint-histogram    
+         numMODISTauBins  = ntau                     ! Number of tau bins for joint-histogram
     real(wp),parameter,dimension(numMODISPresBins + 1) :: & 
          modis_histPres = 100*pres_binBounds         ! Joint-histogram boundaries (cloud pressure)
     real(wp),parameter,dimension(2, numMODISPresBins) :: &
          modis_histPresEdges = 100*pres_binEdges     ! Joint-histogram bin edges (cloud pressure)
     real(wp),parameter,dimension(numMODISPresBins) :: &
          modis_histPresCenters = 100*pres_binCenters ! Joint-histogram bin centers (cloud pressure)
-
-    integer :: &
-         numMODISTauBins          ! Number of tau bins for joint-histogram
-    real(wp),allocatable,dimension(:) :: &
-         modis_histTau            ! Joint-histogram boundaries (optical depth)
-    real(wp),allocatable,dimension(:,:) :: &
-         modis_histTauEdges       ! Joint-histogram bin edges (optical depth)
-    real(wp),allocatable,dimension(:) :: &
-         modis_histTauCenters     ! Joint-histogram bin centers (optical depth)
-
+    real(wp),parameter,dimension(numMODISTauBins+1) :: &
+         modis_histTau = tau_binBounds               ! Joint-histogram boundaries (optical depth)
+    real(wp),parameter,dimension(2,numMODISTauBins) :: &
+         modis_histTauEdges = tau_binEdges           ! Joint-histogram bin edges (optical depth)
+    real(wp),parameter,dimension(numMODISTauBins) :: &
+         modis_histTauCenters = tau_binCenters       ! Joint-histogram bin centers (optical depth)
+     
     ! ####################################################################################
     ! CLARA simulator tau/CTP joint-histogram information
     ! ####################################################################################
@@ -309,9 +318,9 @@ MODULE MOD_COSP_CONFIG
     real(wp),dimension(:),allocatable :: &
        vgrid_zl,  & ! New grid bottoms
        vgrid_zu,  & ! New grid tops
-       vgrid_z,   & ! New grid center
-       mgrid_zl,  & ! Model grid botton
-       mgrid_zu,  & ! Model grid tops
-       mgrid_z      ! Model grid center
+       vgrid_z!,   & ! New grid center
+       !mgrid_zl,  & ! Model grid botton
+       !mgrid_zu,  & ! Model grid tops
+       !mgrid_z      ! Model grid center
 
 END MODULE MOD_COSP_CONFIG

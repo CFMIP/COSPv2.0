@@ -34,10 +34,28 @@ module cosp_optics
   USE COSP_KINDS, ONLY: wp,dp
   USE COSP_MATH_CONSTANTS,  ONLY: pi
   USE COSP_PHYS_CONSTANTS,  ONLY: rholiq,km,rd,grav
-  USE mod_modis_sim,        ONLY: modis_ssa=>get_ssa_nir, modis_g=>get_g_nir, ice_density,&
-                                  phaseIsLiquid,phaseIsIce
+  USE mod_modis_sim,        ONLY: modis_ssa=>get_ssa_nir, modis_g=>get_g_nir
   USE mod_clara_sim,        ONLY: clara_ssa=>get_ssa_nir, clara_g=>get_g_nir
   implicit none
+  
+  real(wp),parameter ::        & !
+       ice_density   = 0.93_wp,& ! Ice density used in MODIS phase partitioning
+       re_water_min  = 4._wp,  & ! Minimum effective radius (liquid)
+       re_water_max  = 30._wp, & ! Maximum effective radius (liquid)
+       re_ice_min    = 5._wp,  & ! Minimum effective radius (ice)
+       re_ice_max    = 90._wp    ! Minimum effective radius (ice)
+  integer, parameter ::        & !
+       num_trial_res = 15,     & ! Increase to make the linear pseudo-retrieval of size 
+       phaseIsLiquid = 1,      & !
+       phaseIsIce    = 2         !
+  
+  ! Precompute near-IR optical params vs size for retrieval scheme
+  integer, private :: i 
+  real(wp), dimension(num_trial_res), parameter :: & 
+       trial_re_w = re_water_min + (re_water_max - re_water_min)/ &
+       (num_trial_res-1) * (/ (i - 1, i = 1, num_trial_res) /),   &
+       trial_re_i = re_ice_min   + (re_ice_max -   re_ice_min)/   &
+       (num_trial_res-1) * (/ (i - 1, i = 1, num_trial_res) /)
   
   interface cosp_simulator_optics
      module procedure cosp_simulator_optics2D, cosp_simulator_optics3D

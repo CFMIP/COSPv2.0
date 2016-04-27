@@ -25,9 +25,9 @@
 
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
-  CMOR_NL='../cmor/cosp_cmor_nl_1D.txt', ! CMOR namelist
-  NPOINTS=153,!27840,! Number of gridpoints 153,27840,7081,6912
-  NPOINTS_IT=2000,! Max number of gridpoints to be processed in one iteration
+  NPOINTS=153,! Number of gridpoints 153,27840,7081,6912
+!  NPOINTS=27840,! Number of gridpoints 153,27840,7081,6912
+  NPOINTS_IT=5000,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=38,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
@@ -41,24 +41,18 @@
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
-  RADAR_FREQ=94.0, ! CloudSat radar frequency (GHz)
+  cloudsat_RADAR_FREQ=94.0, ! CloudSat radar frequency (GHz)
   SURFACE_RADAR=0, ! surface=1, spaceborne=0
-  use_mie_tables=0,! use a precomputed lookup table? yes=1,no=0
-  use_gas_abs=1,   ! include gaseous absorption? yes=1,no=0
-  do_ray=0,        ! calculate/output Rayleigh refl=1, not=0
-  melt_lay=0,      ! melting layer model off=0, on=1
-  k2=-1,           ! |K|^2, -1=use frequency dependent default
-  use_reff=.true., ! True if you want effective radius to be used by radar simulator (always used by lidar)
+  cloudsat_use_gas_abs=1,   ! include gaseous absorption? yes=1,no=0
+  cloudsat_do_ray=0,        ! calculate/output Rayleigh refl=1, not=0
+  cloudsat_k2=-1,           ! |K|^2, -1=use frequency dependent default
   use_precipitation_fluxes=.true.,  ! True if precipitation fluxes are input to the algorithm 
-  radar_micro_scheme='MMF_v3_single_moment', !'MMF_v3.5_two_moment'
+  cloudsat_micro_scheme='MMF_v3_single_moment', !'MMF_v3.5_two_moment'
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to lidar simulations
   !----------------------------------------------------------------------------------
-  Nprmts_max_hydro=12, ! Max number of parameters for hydrometeor size distributions
-  Naero=1,             ! Number of aerosol species (Not used)
-  Nprmts_max_aero=1,   ! Max number of parameters for aerosol size distributions (Not used)
   lidar_ice_type=0,    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
-  OVERLAP=3,   !  overlap type: 1=max, 2=rand, 3=max/rand
+  OVERLAP=3,           !  overlap assumption used by scops: 1=max, 2=rand, 3=max/rand
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to ISCCP simulator
   !----------------------------------------------------------------------------------
@@ -89,13 +83,13 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-  Platform=1,    ! satellite platform
-  Satellite=15,  ! satellite
-  Instrument=5,  ! instrument
-  Nchannels=8,   ! Number of channels to be computed
-  Channels=1,3,5,6,8,10,11,13,        ! Channel numbers (please be sure that you supply Nchannels)
-  Surfem=0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
-  ZenAng=50.0, ! Satellite Zenith Angle
+  rttov_Platform=1,    ! satellite platform
+  rttov_Satellite=15,  ! satellite
+  rttov_Instrument=5,  ! instrument
+  rttov_Nchannels=3,   ! Number of channels to be computed
+  rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
+  rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
+  rttov_ZenAng=50.0, ! Satellite Zenith Angle
   CO2=5.241e-04, ! Mixing ratios of trace gases
   CH4=9.139e-07,
   N2O=4.665e-07,

@@ -35,15 +35,14 @@ PROGRAM COSPTEST_trunk
   USE COSP_KINDS,              ONLY: wp,dp
   USE MOD_COSP_CONFIG,         ONLY: RTTOV_MAX_CHANNELS,N_HYDRO,PARASOL_NREFL
   USE MOD_COSP_IO,             ONLY: nc_read_input_file,nc_cmor_init,                    &
-                                     nc_cmor_associate_1d,nc_cmor_write_1d_v1p4,         &
+                                     nc_cmor_associate_1d,nc_cmor_write_1d,              &
                                      nc_cmor_associate_2d,nc_cmor_write_2d,              &
                                      nc_cmor_close,var1d,var2d,var3d,read_cosp_output_nl,&
                                      cosp_error
   USE MOD_COSP_INTERFACE_v1p4, ONLY: cosp                   => cosp_interface_v1p4,      &
-                                     cosp_gridbox           => cosp_gridbox_v1p4,        &
-                                     construct_cosp_vgrid   => construct_cosp_vgrid_v1p4,&
-                                     construct_cosp_gridbox => construct_cosp_gridbox_v1p4,&
-                                     free_cosp_gridbox      => destroy_cosp_gridbox_v1p4,&
+                                     cosp_gridbox,construct_cosp_vgrid,                  &
+                                     construct_cosp_gridbox,                             &
+                                     free_cosp_gridbox      => destroy_cosp_gridbox,     &
                                      free_cosp_sgradar      => destroy_cosp_sgradar,     &
                                      free_cosp_radarstats   => destroy_cosp_radarstats,  &
                                      free_cosp_sglidar      => destroy_cosp_sglidar,     &
@@ -53,19 +52,18 @@ PROGRAM COSPTEST_trunk
                                      free_cosp_rttov        => destroy_cosp_rttov,       &
                                      free_cosp_modis        => destroy_cosp_modis,       &
                                      free_cosp_vgrid        => destroy_cosp_vgrid,       &
+                                     free_cosp_subgrid      => destroy_cosp_subgrid,     &
+                                     construct_cosp_subgrid,cosp_config,cosp_subgrid,    &
                                      cosp_sglidar,cosp_lidarstats,                       &
                                      construct_cosp_lidarstats,construct_cosp_sglidar,   &
                                      cosp_isccp,construct_cosp_isccp,cosp_misr,          &
                                      construct_cosp_misr,cosp_rttov,construct_cosp_rttov,&
-                                     cosp_sgradar,cosp_radarstats,                       & 
-                                     construct_cosp_radarstats,construct_cosp_sgradar,   &                                        
+                                     cosp_sgradar,cosp_radarstats,                       &
+                                     construct_cosp_radarstats,construct_cosp_sgradar,   &
                                      cosp_modis,construct_cosp_modis,                    &
-                                     cosp_vgrid
-                                        
-  USE MOD_COSP_INTERFACE_v1p5, ONLY: free_cosp_subgrid => destroy_cosp_subgrid,          &
-                                     construct_cosp_subgrid,cosp_config,cosp_subgrid,    &
-                                     I_CVCLIQ,I_LSCLIQ,I_CVCICE,I_LSCICE,I_LSRAIN,       &
-                                     I_LSSNOW,I_LSGRPL,I_CVRAIN,I_CVSNOW
+                                     cosp_vgrid,I_CVCLIQ,I_LSCLIQ,I_CVCICE,I_LSCICE,     &
+                                     I_LSRAIN,I_LSSNOW,I_LSGRPL,I_CVRAIN,I_CVSNOW
+
   USE MOD_COSP,                ONLY: linitialization
   IMPLICIT NONE
   
@@ -111,6 +109,7 @@ PROGRAM COSPTEST_trunk
   character(len=600) :: &
        dfinput ! Input file
   real(wp),dimension(10) :: driver_time
+  real(wp),dimension(:),allocatable :: mgrid_zl,mgrid_zu,mgrid_z
 
   ! Variables for hydrometeor description
   double precision :: time,time_bnds(2),time_step,half_time_step
@@ -264,13 +263,44 @@ PROGRAM COSPTEST_trunk
                                  isccp_topheight_direction,overlap,emsfc_lw,             &
                                  use_precipitation_fluxes,use_reff,Platform,Satellite,   &
                                  Instrument,Nchannels,ZenAng, channels(1:Nchannels),     &
-                                 surfem(1:Nchannels),co2,ch4,n2o,co,gbx,                 &
-                                 ! RTTOV inputs (optional)
-                                 lon,lat,p,ph,zlev,                                      &
-                                 zlev_half,T,rh,sh,cca,tca,skt,landmask,mr_ozone,u_wind, &
-                                 v_wind,sunlit,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,  &
-                                 fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,Reff,mr_lsliq,      &
-                                 mr_lsice,mr_ccliq,mr_ccice)
+                                 surfem(1:Nchannels),co2,ch4,n2o,co,gbx)
+     gbx%longitude = lon
+     gbx%latitude  = lat
+     ! Toffset. This assumes that time is the mid-point of the interval.
+     do k=1,Npoints
+        gbx%toffset(k) = -half_time_step + toffset_step*(k-0.5)
+     enddo
+     gbx%p         = p
+     gbx%ph        = ph
+     gbx%zlev      = zlev
+     gbx%zlev_half = zlev_half
+     gbx%T         = T
+     gbx%q         = rh
+     gbx%sh        = sh
+     gbx%cca       = cca
+     gbx%tca       = tca
+     gbx%psfc      = ph(:,1)
+     gbx%skt       = skt
+     gbx%land      = landmask
+     gbx%mr_ozone  = mr_ozone
+     gbx%u_wind    = u_wind
+     gbx%v_wind    = v_wind
+     gbx%sunlit    = sunlit
+     gbx%rain_ls   = fl_lsrain
+     gbx%snow_ls   = fl_lssnow
+     gbx%grpl_ls   = fl_lsgrpl
+     gbx%rain_cv   = fl_ccrain
+     gbx%snow_cv   = fl_ccsnow
+     gbx%dtau_s    = dtau_s
+     gbx%dtau_c    = dtau_c
+     gbx%dem_s     = dem_s
+     gbx%dem_c     = dem_c
+     gbx%Reff      = Reff
+     gbx%Reff(:,:,I_LSRAIN) = 0._wp
+     gbx%mr_hydro(:,:,I_LSCLIQ) = mr_lsliq
+     gbx%mr_hydro(:,:,I_LSCICE) = mr_lsice
+     gbx%mr_hydro(:,:,I_CVCLIQ) = mr_ccliq
+     gbx%mr_hydro(:,:,I_CVCICE) = mr_ccice
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      ! Define new vertical grid
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
@@ -287,9 +317,13 @@ PROGRAM COSPTEST_trunk
      !        subroutines provided with cospv1.4.0. The old subroutines required the 
      !        derived type cosp_config to be provided, which was used to determine which
      !        simulators were to be run. For simulators that were not run, a minimum
-     !        amount of space was allocated for that simulator. This is not done in the
-     !        new subroutines, since space is only allocated when the simulator is being
-     !        used
+     !        amount of space was allocated for that simulator.
+     !        In COSPv2.0, which simulators are run is determined by looking at which
+     !        output fields are allocated (i.e. if the output field for the modis tau vs.
+     !        cloud-top height joint histogram is allocated, we know that the ISCCP and
+     !        MODIS simulators need to be run). This change in v2.0 makes the way that
+     !        the simulators outputs were allocated in compatable, so these subroutines
+     !        needed to be modified, albeit only slightly.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      if (cfg%Lradar_sim) call construct_cosp_sgradar(Npoints,Ncolumns,Nlevels,N_HYDRO,sgradar)
      if (cfg%Lradar_sim) call construct_cosp_radarstats(Npoints,Ncolumns,vgrid%Nlvgrid,N_HYDRO,stradar)  
@@ -311,12 +345,21 @@ PROGRAM COSPTEST_trunk
      ! Write outputs to CMOR-compliant netCDF format.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      if (cfg%Lwrite_output) then
+
+       ! Model grid info for cmor output
+        allocate(mgrid_z(Nlevels),mgrid_zl(Nlevels),mgrid_zu(Nlevels))
+        mgrid_z             = zlev(1,Nlevels:1:-1)
+        mgrid_zl            = zlev_half(1,Nlevels:1:-1)
+        mgrid_zu(2:Nlevels) = zlev_half(1,Nlevels:2:-1)
+        mgrid_zu(1)         = zlev(1,Nlevels)+(zlev(1,Nlevels)-mgrid_zl(Nlevels))
+        
         N1 = N1D
         if (geomode == 1) N1 = N1D+1
         if (i .eq. 1) then
            call nc_cmor_init(cmor_nl,'replace',cfg,vgrid,gbx,sgx,sglidar,isccp,misr,     &
                              modis,rttov,sgradar,stradar,stlidar,geomode,Nlon,Nlat,N1,   &
-                             N2D,N3D,N_OUT_LIST,lon_axid,lat_axid,time_axid,height_axid, &
+                             N2D,N3D,N_OUT_LIST,mgrid_zl,mgrid_zu,mgrid_z,lon_axid,      &
+                             lat_axid,time_axid,height_axid, &
                              height_mlev_axid,grid_id,lonvar_id,latvar_id,column_axid,   &
                              sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,      &
                              MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1),v2d,v3d)
@@ -328,8 +371,8 @@ PROGRAM COSPTEST_trunk
                                      pressure2_axid,Nlon,Nlat,vgrid,gbx,sgx,sglidar,     &
                                      isccp,misr,modis,rttov,sgradar,stradar,stlidar,     &
                                      N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
-           call nc_cmor_write_1d_v1p4(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,      &
-                                      v1d(1:N1),v2d,v3d)
+           call nc_cmor_write_1d(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,v1d(1:N1),v2d, &
+                                 v3d)
         elseif (geomode >  1) then
            call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,            &
                                      height_mlev_axid,column_axid,sza_axid,temp_axid,    &
@@ -343,6 +386,7 @@ PROGRAM COSPTEST_trunk
         if (i .eq. Nfiles) then
            call nc_cmor_close()
         endif
+        deallocate(mgrid_zl,mgrid_zu,mgrid_z)
      endif
      call cpu_time(driver_time(4))
 
@@ -362,6 +406,7 @@ PROGRAM COSPTEST_trunk
      if (cfg%Lrttov_sim) call free_cosp_rttov(rttov)
 
   enddo
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
   ! Free up local memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
@@ -369,8 +414,9 @@ PROGRAM COSPTEST_trunk
              mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,     &
              dtau_c,dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit)
 
-
-
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+  ! Driver timing
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
   call cpu_time(driver_time(5))
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to run COSP:         ',driver_time(3)-driver_time(2)

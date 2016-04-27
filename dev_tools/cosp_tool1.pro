@@ -51,7 +51,7 @@ dim='1D'
 thresh = 1e-5
 
 ; Reference data location
-dirREF = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/refTRUNKwModwFlip/'
+dirREF = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/ref1D/'
 
 ; Data location
 dir = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/'+dim+'/'
