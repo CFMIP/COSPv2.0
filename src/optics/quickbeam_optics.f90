@@ -58,6 +58,7 @@ module mod_quickbeam_optics
   real(wp),dimension(cnt_ice) :: mt_tti 
   real(wp),dimension(cnt_liq) :: mt_ttl
   real(wp),dimension(nd)      :: D
+  logical :: lQuickbeamInit
   
 contains
   ! ######################################################################################
@@ -72,7 +73,7 @@ contains
     do j=2,nd
        D(j) = D(j-1)*exp((log(dmax)-log(dmin))/(nd-1))
     enddo
-    
+    lQuickbeamInit = .true.
   end subroutine quickbeam_optics_init
   
   ! ######################################################################################
@@ -137,10 +138,11 @@ contains
     logical, parameter ::       & !
          DO_LUT_TEST = .false., & !
          DO_NP_TEST  = .false.    !
-     real(wp), parameter :: &
+    real(wp), parameter :: &
          one_third   = 1._wp/3._wp    !
     
     ! Initialization
+    if (.not. lQuickbeamInit) call quickbeam_optics_init()
     z_vol    = 0._wp
     z_ray    = 0._wp
     kr_vol   = 0._wp

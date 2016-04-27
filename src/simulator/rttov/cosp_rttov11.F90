@@ -84,7 +84,7 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine rttov_column(nPoints,nLevels,nSubCols,q,p,t,o3,ph,h_surf,u_surf,v_surf,     &
                           p_surf,t_skin,t2m,q2m,lsmask,lon,lat,seaice,co2,ch4,n2o,co,    &
-                          zenang,                                                        &
+                          zenang,lCleanup,                                               &
                           ! Outputs
                           Tb,error,                                                      &
                           ! Optional arguments for surface emissivity calculation.
@@ -121,6 +121,8 @@ contains
          o3         ! Ozone
     real(wp),dimension(nPoints,nLevels+1),intent(in) :: &
          ph         ! Pressure @ half-levels (Pa)
+    logical,intent(in) :: &
+         lCleanup
 
     ! Optional inputs (Needed for surface emissivity calculation)
     integer,optional :: &
@@ -178,7 +180,7 @@ contains
     Tbs(:,:,:) = 0._wp
     Tb(:,:)    = 0._wp
     error      = ''
-    
+
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Setup for call to RTTOV
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -307,9 +309,11 @@ contains
     endif
     
     ! Free up space
-    call rttov_dealloc_coefs(errorstatus,coef_rttov)
-    call rttov_deallocate_emis_atlas(coef_rttov)
-    if (lallSky) call rttov_dealloc_scattcoeffs(coef_scatt)    
+    if (lCleanup) then
+       call rttov_dealloc_coefs(errorstatus,coef_rttov)
+       call rttov_deallocate_emis_atlas(coef_rttov)
+       if (lallSky) call rttov_dealloc_scattcoeffs(coef_scatt)    
+    endif
   end subroutine rttov_column
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -553,7 +557,8 @@ contains
        ! pack channels and input emissivity arrays
        allocate(chanprof(nchanprof))
        !      allocate(emis(nchanprof))
-
+       chanprof(:)%chan =0
+       
        nch = 0
        do j = 1, nprof
           do jch = 1, nchan(j)
