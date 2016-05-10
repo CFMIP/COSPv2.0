@@ -356,6 +356,7 @@ contains
              cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,calipso_histBsct)
           enddo
        enddo
+       ! DJS2016: In v1.4.0, cfad2 was left equal to zero.
        where(cfad2 .eq. 0) cfad2=R_UNDEF
        where(cfad2 .ne. R_UNDEF) cfad2=cfad2/ncol
 

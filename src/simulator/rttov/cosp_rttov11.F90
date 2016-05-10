@@ -122,7 +122,7 @@ contains
     real(wp),dimension(nPoints,nLevels+1),intent(in) :: &
          ph         ! Pressure @ half-levels (Pa)
     logical,intent(in) :: &
-         lCleanup
+         lCleanup   ! Flag to determine whether to deallocate RTTOV types
 
     ! Optional inputs (Needed for surface emissivity calculation)
     integer,optional :: &

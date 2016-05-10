@@ -55,6 +55,9 @@ dirREF = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/ref1D/'
 
 ; Data location
 dir = '/home/dswales/Projects/COSP/COSPv2.0/driver/data/output/'+dim+'/'
+; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;                               No changes needed below
+; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ; Files to compare
 files = file_search(dir,'*'+dim+'*.nc')
@@ -102,17 +105,14 @@ for ij=0,n_elements(files)-1 do begin
       minV(ij) = min(diff2(where(diff2 ne 0)))
       maxV(ij) = max(diff2(where(diff2 ne 0)))
    endif
-
-   ;if (ij eq 5) then stop
-
 end
 
 ; Print results
 count=0
 print,'#######################################################################################'
-print,'Comparing'
-print,dir
-print,dirREF
+print,'Comparing...'
+print,'COSP output:    ',dir
+print,'COSP reference: ',dirREF
 print,'#######################################################################################'
 for ij=0,n_elements(files)-1 do begin
    ;if (minV(ij) ne -999 and abs(minV(ij)) gt thresh or abs(maxV(ij)) gt thresh) then begin
