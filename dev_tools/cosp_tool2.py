@@ -46,6 +46,7 @@
 # -logScale             logical         option for plot axis, default is linear (optional) 
 #
 ##########################################################################################
+#!/usr/bin/python
 import os,fnmatch,netCDF4,sys,numpy,warnings,math
 import matplotlib.pyplot as plt
 import argparse

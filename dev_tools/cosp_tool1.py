@@ -47,12 +47,12 @@ import os,fnmatch,numpy,netCDF4,sys,argparse,warnings
 
 # Get command line arguments
 parser = argparse.ArgumentParser(description='Read user specifications')
-parser.add_argument('dirOUT',metavar='Input Directory 1',type=str,nargs=1,
-                    help='Directory of output data')
-parser.add_argument('dirREF',metavar='Input Directory 2',type=str,nargs=1,
-                    help='Directory of reference data')
-parser.add_argument('dataset',metavar='Sample Dataset',type=str,nargs=1,
-                    help='Reference dataset for comparison (1D or 2D)')
+parser.add_argument('dirOUT',metavar='COSP_output_data',type=str,nargs=1,
+                    help='Output data location')
+parser.add_argument('dirREF',metavar='COSP_reference_data',type=str,nargs=1,
+                    help='Reference data location')
+parser.add_argument('dataset',metavar='Dataset_dimension',type=str,nargs=1,
+                    help='Reference data format (1D or 2D)')
 parser.add_argument('-zeroThresh',nargs='?',type=float,
                     default=0.00001,help='Error tolerance threshold')
 args       = parser.parse_args()

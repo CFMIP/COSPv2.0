@@ -96,5 +96,5 @@
   Liwpmodis=.true.,
   Lclmodis=.true.,
   !- RTTOV
-  Ltbrttov=.true.,
+  Ltbrttov=.false.,
 /

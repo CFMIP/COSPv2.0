@@ -246,7 +246,7 @@ CONTAINS
   ! FUNCTION cosp_simulator
   ! ######################################################################################
 !  SUBROUTINE COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
-  function COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
+  function COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx,debug)
     type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
     type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
     
@@ -259,6 +259,7 @@ CONTAINS
     type(modis_IN)    :: modisIN    ! Input to the MODIS simulator
     type(rttov_IN)    :: rttovIN    ! Input to the RTTOV simulator
     integer,optional  :: start_idx,stop_idx
+    logical,optional  :: debug
     
     ! Outputs from the simulators (nested simulator output structure)
     type(cosp_outputs), intent(inout) :: cospOUT
@@ -307,7 +308,9 @@ CONTAINS
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
     real(wp),dimension(:,:,:),allocatable :: &
        t_in,betamol_in,tmpFlip,betamolFlip,pnormFlip,pnorm_perpFlip,ze_totFlip
+    real(wp),dimension(20) :: cosp_time
 
+    call cpu_time(cosp_time(1))
     ! Initialize error reporting for output
     cosp_simulator(:)=''
 
@@ -463,7 +466,9 @@ CONTAINS
        Lmodis_column    = .true.
        Lmodis_subcolumn = .true.
     endif
-                                  
+    call cpu_time(cosp_time(2))
+    if (debug) print*,'   Time to check outputs to see which simualtor to run:  ',cosp_time(2)-cosp_time(1)
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2b) Error Checking
     !     Enforce bounds on input fields. If input field is out-of-bounds, report error 
@@ -474,6 +479,8 @@ CONTAINS
                          Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,        &
                          Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
                          Lparasol_subcolumn,Lparasol_column,cospOUT,cosp_simulator,nError)
+    call cpu_time(cosp_time(3))
+    if (debug) print*,'   Time for cosp_errorCheck:                             ',cosp_time(3)-cosp_time(2)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -591,7 +598,9 @@ CONTAINS
        rttovIN%fl_rain    => cospgridIN%fl_rain
        rttovIN%fl_snow    => cospgridIN%fl_snow
     endif
-    
+    call cpu_time(cosp_time(3))
+    if (debug) print*,'   Time to populate simulator imputs:                    ',cosp_time(3)-cosp_time(2)
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4) Call subcolumn simulators
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -621,13 +630,15 @@ CONTAINS
           cospOUT%isccp_meantbclr(ij:ik) = isccp_meantbclr
        endif
    endif
+   call cpu_time(cosp_time(4))
+   if (debug) print*,'   Time to run isccp_subcolumn:                          ',cosp_time(4)-cosp_time(3)
 
    ! MISR subcolumn simulator
     if (Lmisr_subcolumn) then
        ! Allocate space for local variables
        allocate(misr_boxztop(Npoints,misrIN%Ncolumns),                                   &
                 misr_boxtau(Npoints,misrIN%Ncolumns),                                    &
-                misr_dist_model_layertops(Npoints,misrIN%Ncolumns))
+                misr_dist_model_layertops(Npoints,numMISRHgtBins))
        ! Call simulator
        call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                            misrIN%zfull,misrIN%at,misrIN%sunlit,misr_boxtau,             &
@@ -637,6 +648,8 @@ CONTAINS
           cospOUT%misr_dist_model_layertops(ij:ik,:) = misr_dist_model_layertops
        endif
     endif
+   call cpu_time(cosp_time(5))
+   if (debug) print*,'   Time to run misr_subcolumn:                           ',cosp_time(5)-cosp_time(4)
 
     ! Calipso subcolumn simulator
     if (Lcalipso_subcolumn) then
@@ -660,6 +673,8 @@ CONTAINS
             cospOUT%calipso_betaperp_tot(ij:ik,:,:) = calipso_betaperp_tot
 
     endif
+   call cpu_time(cosp_time(6))
+   if (debug) print*,'   Time to run lidar_subcolumn:                          ',cosp_time(6)-cosp_time(5)
 
     ! PARASOL subcolumn simulator
     if (Lparasol_subcolumn) then
@@ -678,7 +693,9 @@ CONTAINS
                parasolPix_refl(:,icol,1:PARASOL_NREFL)
        endif
     endif    
-    
+    call cpu_time(cosp_time(7))
+    if (debug) print*,'   Time to run parasol_subcolumn:                        ',cosp_time(7)-cosp_time(6)
+
     ! Cloudsat (quickbeam) subcolumn simulator
     if (Lcloudsat_subcolumn) then
        ! Allocate space for local variables
@@ -695,7 +712,9 @@ CONTAINS
           cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe
        endif
     endif
-    
+    call cpu_time(cosp_time(8))
+    if (debug) print*,'   Time to run radar_subcolumn:                          ',cosp_time(8)-cosp_time(7)
+   
     if (Lmodis_subcolumn) then
        if(modisiN%nSunlit > 0) then 
           ! Allocate space for local variables
@@ -708,15 +727,17 @@ CONTAINS
              call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels, modisIN%pres(i,:),   &
                                   modisIN%tau(i,:,:),modisIN%liqFrac(i,:,:),             &
                                   modisIN%g(i,:,:),modisIN%w0(i,:,:),                    &
-                                  isccp_boxtau(int(modisIN%sunlit(i)),:),isccp_boxptop(int(modisIN%sunlit(i)),:),&
-!                                  isccp_boxtau(ij+int(modisIN%sunlit(i))-1,:),           &
-!                                  isccp_boxptop(ij+int(modisIN%sunlit(i))-1,:),          &
+                                  isccp_boxtau(int(modisIN%sunlit(i)),:),                &
+                                  isccp_boxptop(int(modisIN%sunlit(i)),:),               &
                                   modisRetrievedPhase(i,:),                              &
                                   modisRetrievedCloudTopPressure(i,:),                   &
                                   modisRetrievedTau(i,:),modisRetrievedSize(i,:))
           end do
        endif
     endif
+    call cpu_time(cosp_time(9))
+    if (debug) print*,'   Time to run modis_subcolum:                           ',cosp_time(9)-cosp_time(8)
+
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 5) Call column simulators
@@ -780,6 +801,8 @@ CONTAINS
        if (allocated(out1D_5))         deallocate(out1D_5)
        if (allocated(out1D_6))         deallocate(out1D_6)
     endif
+    call cpu_time(cosp_time(10))
+    if (debug) print*,'   Time to run isccp_column:                             ',cosp_time(10)-cosp_time(9)
 
     ! MISR
     if (Lmisr_column) then
@@ -810,6 +833,8 @@ CONTAINS
        if (allocated(out1D_2))                   deallocate(out1D_2)
        if (allocated(out1D_3))                   deallocate(out1D_3)
     endif
+    call cpu_time(cosp_time(11))
+    if (debug) print*,'   Time to run misr_column:                              ',cosp_time(11)-cosp_time(10)
     
     ! CALIPSO LIDAR Simulator
     if (Lcalipso_column) then
@@ -866,6 +891,8 @@ CONTAINS
        if (allocated(out1D_5))              deallocate(out1D_5)
        if (allocated(out1D_6))              deallocate(out1D_6)
     endif
+    call cpu_time(cosp_time(12))
+    if (debug) print*,'   Time to run lidar_column:                             ',cosp_time(12)-cosp_time(11)
 
     ! PARASOL
     if (Lparasol_column) then
@@ -874,7 +901,9 @@ CONTAINS
                             cospOUT%parasolGrid_refl(ij:ik,:))
        if (allocated(parasolPix_refl)) deallocate(parasolPix_refl)
     endif
-
+    call cpu_time(cosp_time(13))
+    if (debug) print*,'   Time to run parasol_column:                           ',cosp_time(13)-cosp_time(12)
+    
     ! CLOUDSAT
     if (Lcloudsat_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -891,6 +920,8 @@ CONTAINS
        if (allocated(out1D_1))      deallocate(out1D_1)
        if (allocated(cloudsatDBZe)) deallocate(cloudsatDBZe)
     endif
+    call cpu_time(cosp_time(14))
+    if (debug) print*,'   Time to run radar_column:                             ',cosp_time(14)-cosp_time(13)
 
     ! MODIS
     if (Lmodis_column) then
@@ -1101,7 +1132,9 @@ CONTAINS
        if (allocated(isccp_meantbclr)) deallocate(isccp_meantbclr)
        if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
     endif
-
+    call cpu_time(cosp_time(15))
+    if (debug) print*,'   Time to run modis_column:                             ',cosp_time(15)-cosp_time(14)
+    
     ! RTTOV
     if (lrttov_column) then
        call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
@@ -1117,7 +1150,9 @@ CONTAINS
                          ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
                          ! rttovIN%fl_rain,rttovIN%fl_snow)
     endif
-
+    call cpu_time(cosp_time(16))
+    if (debug) print*,'   Time to run rttov_column:                             ',cosp_time(16)-cosp_time(15)
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1177,7 +1212,9 @@ CONTAINS
                                      cospOUT%radar_lidar_tcc(ij:ik))
        endif
     endif
-
+    call cpu_time(cosp_time(17))
+    if (debug) print*,'   Time to create joint products:                        ',cosp_time(17)-cosp_time(16)
+    
   end function COSP_SIMULATOR
   ! ######################################################################################
   ! SUBROUTINE cosp_init
