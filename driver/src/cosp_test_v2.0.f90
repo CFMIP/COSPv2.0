@@ -189,8 +189,15 @@ program cosp_test_v2
   character(len=32),parameter :: &
        cospvID = 'COSP v1.5'        ! COSP version I
   logical :: &
-       lsingle=.true., & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
-       ldouble=.false.   ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme  
+       lsingle   = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
+       ldouble   = .false., & ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme
+       lisccp    = .false. ,& ! Local on/off switch for simulators (used by initialization)
+       lmodis    = .false., & !
+       lmisr     = .false., & !
+       lcalipso  = .false., & !
+       lcloudsat = .false., & !
+       lrttov    = .false., & !
+       lparasol  = .false.    !
   type(size_distribution) :: &
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
@@ -294,6 +301,26 @@ program cosp_test_v2
                           emsfc_lw,geomode,Nlon,Nlat)
   call cpu_time(driver_time(2))
 
+  ! Which simulators need to be run? Look at which outputs are requested.
+  if (Lpctisccp .or. Lclisccp .or. Lboxptopisccp .or.  Lboxtauisccp .or. Ltauisccp .or. &
+       Lcltisccp .or. Lmeantbisccp .or. Lmeantbclrisccp .or. Lalbisccp) Lisccp = .true.
+  if (LclMISR) Lmisr = .true.
+  if (Lcltmodis .or. Lclwmodis .or. Lclimodis .or. Lclhmodis .or. Lclmmodis .or.         &
+       Lcllmodis .or. Ltautmodis .or. Ltauwmodis .or. Ltauimodis .or. Ltautlogmodis .or. &
+       Ltauwlogmodis .or. Ltauilogmodis .or. Lreffclwmodis .or. Lreffclimodis .or.       &
+       Lpctmodis .or. Llwpmodis .or. Liwpmodis .or. Lclmodis) Lmodis = .true.
+  if (Lclcalipso2 .or. Lclcalipso .or.  Lclhcalipso .or. Lcllcalipso .or. Lclmcalipso    &
+       .or. Lcltcalipso .or. Lcltlidarradar .or. Lclcalipsoliq .or. Lclcalipsoice .or.   &
+       Lclcalipsoun .or. Lclcalipsotmp .or. Lclcalipsotmpliq .or. Lclcalipsotmpice .or.  &
+       Lclcalipsotmpun .or. Lcltcalipsoliq .or. Lcltcalipsoice .or. Lcltcalipsoun .or.   &
+       Lclhcalipsoliq .or. Lclhcalipsoice .or. Lclhcalipsoun .or. Lclmcalipsoliq .or.    &
+       Lclmcalipsoice .or. Lclmcalipsoun .or. Lcllcalipsoliq .or. Lcllcalipsoice .or.    &
+       Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
+       Lcltlidarradar) lcalipso = .true.
+  if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
+  if (Lparasolrefl) Lparasol = .true.
+  if (Ltbrttov) Lrttov = .true.
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -319,7 +346,8 @@ program cosp_test_v2
   call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
   
   ! Initialize COSP simulator
-  call COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
+  call COSP_INIT(Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov,                 &
+       Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
                  cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,surface_radar,&
                  rcfg_cloudsat,rttov_Nchannels,rttov_Channels,rttov_platform,           &
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &

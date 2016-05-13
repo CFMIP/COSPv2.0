@@ -449,7 +449,13 @@ contains
       end if 
       if(totalTau >= tauLimit) exit
     end do 
-    cloud_top_pressure = totalProduct/totalTau
+
+    if (totalTau > 0._wp) then
+       cloud_top_pressure = totalProduct/totalTau
+    else
+       cloud_top_pressure = 0._wp
+    endif
+    
   end function cloud_top_pressure
 
   ! ########################################################################################
@@ -477,7 +483,13 @@ contains
       end if 
       if(totalTau >= tauLimit) exit
     end do 
-    weight_by_extinction = totalProduct/totalTau
+
+    if (totalTau > 0._wp) then
+       weight_by_extinction = totalProduct/totalTau
+    else
+       weight_by_extinction = 0._wp
+    endif
+    
   end function weight_by_extinction
 
   ! ########################################################################################
