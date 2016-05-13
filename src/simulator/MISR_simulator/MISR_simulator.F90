@@ -276,8 +276,13 @@ contains
           MISR_cldarea(j)=real(count(box_MISR_ztopWRK(j,1:ncol) .ne. -999.))/ncol
 
           ! Column cloud-top height
-          MISR_mean_ztop(j) = sum(box_MISR_ztopWRK(j,1:ncol),box_MISR_ztopWRK(j,1:ncol) .ne. -999.)/ &
-               count(box_MISR_ztopWRK(j,1:ncol) .ne. -999.)
+          if ( count(box_MISR_ztopWRK(j,1:ncol) .ne. -999.) .ne. 0 ) then
+             MISR_mean_ztop(j) = sum(box_MISR_ztopWRK(j,1:ncol),box_MISR_ztopWRK(j,1:ncol) .ne. -999.)/ &
+                  count(box_MISR_ztopWRK(j,1:ncol) .ne. -999.)
+          else
+             MISR_mean_ztop(j) = R_UNDEF
+          endif
+
        else
           MISR_cldarea(j)         = R_UNDEF
           MISR_mean_ztop(npoints) = R_UNDEF
