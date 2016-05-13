@@ -5,7 +5,7 @@
 # Compiler and flags
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -fpp -O3 #-pg # -traceback -check bounds
+F90FLAGS = -O3 #-fpp#-pg # -traceback -check bounds
 F90_LIB  = /usr/local/ifort
 
 # Portland Group (pgf90)
@@ -46,12 +46,12 @@ OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
         cosp_modis_interface.o modis_simulator.o cosp_rttov_interface.o        \
         cosp_rttovSTUB.o cosp_parasol_interface.o
 
-%.o: $(SIM_PATH)/%.f90
+%.o: $(SIM_PATH)/%.F90
 	@echo $(F90) $(F90FLAGS) -c $<
 	$(F90) $(F90FLAGS) -c $<
 	@echo "-----------------------------"
 
-%.o: %.f90
+%.o: %.F90
 	@echo $(F90) $(F90FLAGS) -c $<
 	$(F90) $(F90FLAGS) -c $<
 	@echo "-----------------------------"
@@ -84,44 +84,44 @@ install:
 clean:	
 	rm -f $(OBJ_PATH)*.mod $(OBJ_PATH)*.o fort.* *.mod *.o
 
-icarus.o : $(ISCCP_PATH)/icarus.f90
+icarus.o : $(ISCCP_PATH)/icarus.F90
 	$(F90) $(F90FLAGS) -c $<
 
-quickbeam.o: $(RS_PATH)/quickbeam.f90
+quickbeam.o: $(RS_PATH)/quickbeam.F90
 	$(F90) $(F90FLAGS) -c $<
 
-MISR_simulator.o : $(MISR_PATH)/MISR_simulator.f90
+MISR_simulator.o : $(MISR_PATH)/MISR_simulator.F90
 	$(F90) $(F90FLAGS) -c $<
 
 modis_simulator.o : $(MODIS_PATH)/modis_simulator.F90 
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_rttov_interface.o : simulator/cosp_rttov_interface.f90
+cosp_rttov_interface.o : simulator/cosp_rttov_interface.F90
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
 cosp_rttovSTUB.o : $(RT_PATH)/cosp_rttovSTUB.F90 
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
-lidar_simulator.o : $(CS_PATH)/lidar_simulator.f90
+lidar_simulator.o : $(CS_PATH)/lidar_simulator.F90
 	$(F90) $(F90FLAGS) -c $<
 
-parasol.o : $(PARASOL_PATH)/parasol.f90
+parasol.o : $(PARASOL_PATH)/parasol.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_constants.o :  hooks/cosp_constants.f90
+cosp_constants.o :  hooks/cosp_constants.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_kinds.o : hooks/cosp_kinds.f90
+cosp_kinds.o : hooks/cosp_kinds.F90
 	$(F90) $(F90FLAGS) -c $<
 
-mo_rng.o : rng/mo_rng.f90
+mo_rng.o : rng/mo_rng.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_config.o :  cosp_config.f90
+cosp_config.o :  cosp_config.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp.o :  cosp.f90
+cosp.o :  cosp.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_stats.o :  cosp_stats.f90
+cosp_stats.o :  cosp_stats.F90
 	$(F90) $(F90FLAGS) -c $<

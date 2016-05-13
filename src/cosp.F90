@@ -560,7 +560,7 @@ CONTAINS
        modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),                              &
             mask = cospgridIN%sunlit > 0)
        modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),                              &
-            mask = .not. cospgridIN%sunlit < 0)
+            mask = .not. cospgridIN%sunlit <= 0)
        modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
     endif
 
@@ -1118,19 +1118,35 @@ CONTAINS
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, :, :) = R_UNDEF
        endif
        ! Free up memory (if necessary)
-       deallocate(modisRetrievedTau,modisRetrievedSize,modisRetrievedPhase,              &
-                  modisRetrievedCloudTopPressure,modisCftotal,modisCfLiquid,             &
-                  modisCfIce,modisCfHigh,modisCfMid,modisCfLow,modisMeanTauTotal,        &
-                  modisMeanTauLiquid,modisMeanTauIce,modisMeanLogTauTotal,               &       
-                  modisMeanLogTauLiquid,modisMeanLogTauIce,modisMeanSizeLiquid,          & 
-                  modisMeanSizeIce,modisMeanCloudTopPressure,modisMeanLiquidWaterPath,   &
-                  modisMeanIceWaterPath,modisJointHistogram,modisJointHistogramIce,      &
-                  modisJointHistogramLiq)       
-       if (allocated(isccp_boxttop))   deallocate(isccp_boxttop)
-       if (allocated(isccp_boxptop))   deallocate(isccp_boxptop)
-       if (allocated(isccp_boxtau))    deallocate(isccp_boxtau)
-       if (allocated(isccp_meantbclr)) deallocate(isccp_meantbclr)
-       if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
+       if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)
+       if (allocated(modisRetrievedSize))              deallocate(modisRetrievedSize)
+       if (allocated(modisRetrievedPhase))             deallocate(modisRetrievedPhase)
+       if (allocated(modisRetrievedCloudTopPressure))  deallocate(modisRetrievedCloudTopPressure)
+       if (allocated(modisCftotal))                    deallocate(modisCftotal)
+       if (allocated(modisCfLiquid))                   deallocate(modisCfLiquid)
+       if (allocated(modisCfIce))                      deallocate(modisCfIce)
+       if (allocated(modisCfHigh))                     deallocate(modisCfHigh)
+       if (allocated(modisCfMid))                      deallocate(modisCfMid)
+       if (allocated(modisCfLow))                      deallocate(modisCfLow)
+       if (allocated(modisMeanTauTotal))               deallocate(modisMeanTauTotal)
+       if (allocated(modisMeanTauLiquid))              deallocate(modisMeanTauLiquid)
+       if (allocated(modisMeanTauIce))                 deallocate(modisMeanTauIce)
+       if (allocated(modisMeanLogTauTotal))            deallocate(modisMeanLogTauTotal)
+       if (allocated(modisMeanLogTauLiquid))           deallocate(modisMeanLogTauLiquid)
+       if (allocated(modisMeanLogTauIce))              deallocate(modisMeanLogTauIce)
+       if (allocated(modisMeanSizeLiquid))             deallocate(modisMeanSizeLiquid)
+       if (allocated(modisMeanSizeIce))                deallocate(modisMeanSizeIce)
+       if (allocated(modisMeanCloudTopPressure))       deallocate(modisMeanCloudTopPressure)
+       if (allocated(modisMeanLiquidWaterPath))        deallocate(modisMeanLiquidWaterPath)
+       if (allocated(modisMeanIceWaterPath))           deallocate(modisMeanIceWaterPath)
+       if (allocated(modisJointHistogram))             deallocate(modisJointHistogram)
+       if (allocated(modisJointHistogramIce))          deallocate(modisJointHistogramIce)
+       if (allocated(modisJointHistogramLiq))          deallocate(modisJointHistogramLiq)
+       if (allocated(isccp_boxttop))                   deallocate(isccp_boxttop)
+       if (allocated(isccp_boxptop))                   deallocate(isccp_boxptop)
+       if (allocated(isccp_boxtau))                    deallocate(isccp_boxtau)
+       if (allocated(isccp_meantbclr))                 deallocate(isccp_meantbclr)
+       if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
     endif
     call cpu_time(cosp_time(15))
     if (debug) print*,'   Time to run modis_column:                             ',cosp_time(15)-cosp_time(14)
@@ -1219,13 +1235,15 @@ CONTAINS
   ! ######################################################################################
   ! SUBROUTINE cosp_init
   ! ######################################################################################
-  SUBROUTINE COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,                  &
+  SUBROUTINE COSP_INIT(Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov,            &
+                       Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,                  &
                        cloudsat_use_gas_abs,cloudsat_do_ray,isccp_top_height,            &
                        isccp_top_height_direction,surface_radar,rcfg,rttov_Nchannels,    &
                        rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,   &
                        lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
     
     ! INPUTS
+    logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & ! 
          cloudsat_do_ray,            & !
@@ -1275,24 +1293,17 @@ CONTAINS
        vgrid_z = (vgrid_zl+vgrid_zu)/2._wp
     endif
 
-    ! Initialize ISCCP
-    call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
-    ! Initialize MODIS
-    call cosp_modis_init()
-    ! Initialize MISR
-    call cosp_misr_init()
-    ! Initialize RTTOV
-    call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,rttov_instrument,&
-         rttov_channels)
-
-    ! Initialize radar
-    call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,        &
-         cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,surface_radar,rcfg,             &
-         cloudsat_micro_scheme)
-    ! Initialize lidar
-    call cosp_calipso_init()
-    ! Initialize PARASOL
-    call cosp_parasol_init()
+    ! Initialize simulators
+    if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
+    if (Lmodis) call cosp_modis_init()
+    if (Lmisr)  call cosp_misr_init()
+    if (Lrttov) call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,     &
+         rttov_instrument,rttov_channels)
+    if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
+         cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,           &
+         surface_radar,rcfg,cloudsat_micro_scheme)
+    if (Lcalipso) call cosp_calipso_init()
+    if (Lparasol) call cosp_parasol_init()
     
     linitialization = .FALSE.
   END SUBROUTINE COSP_INIT
