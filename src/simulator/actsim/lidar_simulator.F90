@@ -356,6 +356,7 @@ contains
              cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,calipso_histBsct)
           enddo
        enddo
+       ! DJS2016: In v1.4.0, cfad2 was left equal to zero.
        where(cfad2 .eq. 0) cfad2=R_UNDEF
        where(cfad2 .ne. R_UNDEF) cfad2=cfad2/ncol
 
@@ -392,12 +393,16 @@ contains
     ! Other layers
     do k=2,nlev
        tautot_lay(:) = tau(:,k)-tau(:,k-1) 
-       WHERE (tautot_lay(:) .gt. 0.)
-          pnorm(:,k) = beta(:,k)*EXP(-2._wp*tau(:,k-1)) /&
-               (2._wp*tautot_lay(:))*(1._wp-EXP(-2._wp*tautot_lay(:)))
+       WHERE ( EXP(-2._wp*tau(:,k-1)) .gt. 0. )
+          WHERE (tautot_lay(:) .gt. 0.)
+             pnorm(:,k) = beta(:,k)*EXP(-2._wp*tau(:,k-1)) /&
+                  (2._wp*tautot_lay(:))*(1._wp-EXP(-2._wp*tautot_lay(:)))
+          ELSEWHERE
+             ! This must never happen, but just in case, to avoid div. by 0
+             pnorm(:,k) = beta(:,k) * EXP(-2._wp*tau(:,k-1))
+          END WHERE
        ELSEWHERE
-          ! This must never happen, but just in case, to avoid div. by 0
-          pnorm(:,k) = beta(:,k) * EXP(-2._wp*tau(:,k-1))
+          pnorm(:,k) = 0._wp!beta(:,k)
        END WHERE
     END DO
   end subroutine cmp_backsignal
@@ -417,11 +422,15 @@ contains
     beta(:,1) = pnorm(:,1) * (2._wp*tau(:,1))/(1._wp-exp(-2._wp*tau(:,1)))
     do k=2,nlev
        tautot_lay(:) = tau(:,k)-tau(:,k-1)       
-       WHERE (tautot_lay(:) .gt. 0.)
-          beta(:,k) = pnorm(:,k)/ EXP(-2._wp*tau(:,k-1))* &
-               (2._wp*tautot_lay(:))/(1._wp-exp(-2._wp*tautot_lay(:)))
+       WHERE ( EXP(-2._wp*tau(:,k-1)) .gt. 0. )
+          WHERE (tautot_lay(:) .gt. 0.)
+             beta(:,k) = pnorm(:,k)/ EXP(-2._wp*tau(:,k-1))* &
+                  (2._wp*tautot_lay(:))/(1._wp-exp(-2._wp*tautot_lay(:)))
+          ELSEWHERE
+             beta(:,k)=pnorm(:,k)/EXP(-2._wp*tau(:,k-1))
+          END WHERE
        ELSEWHERE
-          beta(:,k)=pnorm(:,k)/EXP(-2._wp*tau(:,k-1))
+          beta(:,k)=pnorm(:,k)
        END WHERE
     ENDDO
 

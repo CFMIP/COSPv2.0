@@ -630,14 +630,14 @@ contains
        ! Initialize the distributional parameters for hydrometeors in radar simulator
        call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
        
-       ! Initialize COSP simulator
-       call COSP_INIT(gbx%Npoints,gbx%Nlevels,gbx%radar_freq,gbx%k2,gbx%use_gas_abs,  &
-            gbx%do_ray,gbx%isccp_top_height,gbx%isccp_top_height_direction,gbx%surface_radar,&
-            rcfg_cloudsat,&
-            gbx%Nchan,gbx%Ichan,gbx%plat,           &
-            gbx%sat,gbx%inst,vgrid%use_vgrid,vgrid%csat_vgrid,vgrid%Nlvgrid,         &
-            cloudsat_micro_scheme)
-           endif
+       ! Initialize COSP simulators
+       call COSP_INIT(cfg%Lisccp_sim,cfg%Lmodis_sim,cfg%Lmisr_sim,cfg%Lradar_sim,        &
+            cfg%Llidar_sim,cfg%Lparasol_sim,cfg%Lrttov_sim,gbx%Npoints,gbx%Nlevels,      &
+            gbx%radar_freq,gbx%k2,gbx%use_gas_abs,gbx%do_ray,gbx%isccp_top_height,       &
+            gbx%isccp_top_height_direction,gbx%surface_radar,rcfg_cloudsat,gbx%Nchan,    &
+            gbx%Ichan,gbx%plat,gbx%sat,gbx%inst,vgrid%use_vgrid,vgrid%csat_vgrid,        &
+            vgrid%Nlvgrid,cloudsat_micro_scheme)
+    endif
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Construct output type for cosp
@@ -711,7 +711,7 @@ contains
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Call COSPv2.0
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT, start_idx,end_idx) 
+       cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT, start_idx,end_idx,.false.) 
     enddo
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Free up memory
@@ -724,126 +724,119 @@ contains
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MISR
     if (cfg%Lmisr_sim) then
-       if (cfg%LclMISR) misr%fq_MISR  => cospOUT%misr_fq
+       if (cfg%LclMISR) misr%fq_MISR  = cospOUT%misr_fq
        ! *NOTE* These 3 fields are not output, but were part of the v1.4.0 cosp_misr, so
        !        they are still computed. Should probably have a logical to control these
        !        outputs in cosp_config.
-       misr%MISR_meanztop             => cospOUT%misr_meanztop
-       misr%MISR_cldarea              => cospOUT%misr_cldarea
-       misr%MISR_dist_model_layertops => cospOUT%misr_dist_model_layertops
+       misr%MISR_meanztop             = cospOUT%misr_meanztop
+       misr%MISR_cldarea              = cospOUT%misr_cldarea
+       misr%MISR_dist_model_layertops = cospOUT%misr_dist_model_layertops
     endif
     
     ! ISCCP
     if (cfg%Lisccp_sim) then
-       if (cfg%Lboxtauisccp)    isccp%boxtau        => cospOUT%isccp_boxtau
-       if (cfg%Lboxptopisccp)   isccp%boxptop       => cospOUT%isccp_boxptop
-       if (cfg%Lclisccp)        isccp%fq_isccp      => cospOUT%isccp_fq
-       if (cfg%Lcltisccp)       isccp%totalcldarea  => cospOUT%isccp_totalcldarea
-       if (cfg%Lmeantbisccp)    isccp%meantb        => cospOUT%isccp_meantb
-       if (cfg%Lmeantbclrisccp) isccp%meantbclr     => cospOUT%isccp_meantbclr
-       if (cfg%Lpctisccp)       isccp%meanptop      => cospOUT%isccp_meanptop
-       if (cfg%Ltauisccp)       isccp%meantaucld    => cospOUT%isccp_meantaucld
-       if (cfg%Lalbisccp)       isccp%meanalbedocld => cospOUT%isccp_meanalbedocld
+       if (cfg%Lboxtauisccp)    isccp%boxtau        = cospOUT%isccp_boxtau
+       if (cfg%Lboxptopisccp)   isccp%boxptop       = cospOUT%isccp_boxptop
+       if (cfg%Lclisccp)        isccp%fq_isccp      = cospOUT%isccp_fq
+       if (cfg%Lcltisccp)       isccp%totalcldarea  = cospOUT%isccp_totalcldarea
+       if (cfg%Lmeantbisccp)    isccp%meantb        = cospOUT%isccp_meantb
+       if (cfg%Lmeantbclrisccp) isccp%meantbclr     = cospOUT%isccp_meantbclr
+       if (cfg%Lpctisccp)       isccp%meanptop      = cospOUT%isccp_meanptop
+       if (cfg%Ltauisccp)       isccp%meantaucld    = cospOUT%isccp_meantaucld
+       if (cfg%Lalbisccp)       isccp%meanalbedocld = cospOUT%isccp_meanalbedocld
    endif
 
     ! MODIS
     if (cfg%Lmodis_sim) then
-       if (cfg%Lcltmodis)     modis%Cloud_Fraction_Total_Mean =>                         &
+       if (cfg%Lcltmodis)     modis%Cloud_Fraction_Total_Mean =                         &
                           cospOUT%modis_Cloud_Fraction_Total_Mean
-       if (cfg%Lclwmodis)     modis%Cloud_Fraction_Water_Mean =>                         &
+       if (cfg%Lclwmodis)     modis%Cloud_Fraction_Water_Mean =                         &
                           cospOUT%modis_Cloud_Fraction_Water_Mean
-       if (cfg%Lclimodis)     modis%Cloud_Fraction_Ice_Mean =>                           &
+       if (cfg%Lclimodis)     modis%Cloud_Fraction_Ice_Mean =                           &
                           cospOUT%modis_Cloud_Fraction_Ice_Mean
-       if (cfg%Lclhmodis)     modis%Cloud_Fraction_High_Mean =>                          &
+       if (cfg%Lclhmodis)     modis%Cloud_Fraction_High_Mean =                          &
                           cospOUT%modis_Cloud_Fraction_High_Mean
-       if (cfg%Lclmmodis)     modis%Cloud_Fraction_Mid_Mean =>                           &
+       if (cfg%Lclmmodis)     modis%Cloud_Fraction_Mid_Mean =                           &
                           cospOUT%modis_Cloud_Fraction_Mid_Mean
-       if (cfg%Lcllmodis)     modis%Cloud_Fraction_Low_Mean =>                           &
+       if (cfg%Lcllmodis)     modis%Cloud_Fraction_Low_Mean =                           &
                           cospOUT%modis_Cloud_Fraction_Low_Mean
-       if (cfg%Ltautmodis)    modis%Optical_Thickness_Total_Mean =>                      &
+       if (cfg%Ltautmodis)    modis%Optical_Thickness_Total_Mean =                      &
                           cospOUT%modis_Optical_Thickness_Total_Mean
-       if (cfg%Ltauwmodis)    modis%Optical_Thickness_Water_Mean =>                      &
+       if (cfg%Ltauwmodis)    modis%Optical_Thickness_Water_Mean =                      &
                           cospOUT%modis_Optical_Thickness_Water_Mean
-       if (cfg%Ltauimodis)    modis%Optical_Thickness_Ice_Mean =>                        &
+       if (cfg%Ltauimodis)    modis%Optical_Thickness_Ice_Mean =                        &
                           cospOUT%modis_Optical_Thickness_Ice_Mean
-       if (cfg%Ltautlogmodis) modis%Optical_Thickness_Total_LogMean =>                   &
+       if (cfg%Ltautlogmodis) modis%Optical_Thickness_Total_LogMean =                   &
                           cospOUT%modis_Optical_Thickness_Total_LogMean
-       if (cfg%Ltauwlogmodis) modis%Optical_Thickness_Water_LogMean =>                   &
+       if (cfg%Ltauwlogmodis) modis%Optical_Thickness_Water_LogMean =                   &
                           cospOUT%modis_Optical_Thickness_Water_LogMean
-       if (cfg%Ltauilogmodis) modis%Optical_Thickness_Ice_LogMean =>                     &
+       if (cfg%Ltauilogmodis) modis%Optical_Thickness_Ice_LogMean =                     &
                           cospOUT%modis_Optical_Thickness_Ice_LogMean
-       if (cfg%Lreffclwmodis) modis%Cloud_Particle_Size_Water_Mean =>                    &
+       if (cfg%Lreffclwmodis) modis%Cloud_Particle_Size_Water_Mean =                    &
                           cospOUT%modis_Cloud_Particle_Size_Water_Mean
-       if (cfg%Lreffclimodis) modis%Cloud_Particle_Size_Ice_Mean =>                      &
+       if (cfg%Lreffclimodis) modis%Cloud_Particle_Size_Ice_Mean =                      &
                           cospOUT%modis_Cloud_Particle_Size_Ice_Mean
-       if (cfg%Lpctmodis)     modis%Cloud_Top_Pressure_Total_Mean =>                     &
+       if (cfg%Lpctmodis)     modis%Cloud_Top_Pressure_Total_Mean =                     &
                           cospOUT%modis_Cloud_Top_Pressure_Total_Mean
-       if (cfg%Llwpmodis)     modis%Liquid_Water_Path_Mean =>                            &
+       if (cfg%Llwpmodis)     modis%Liquid_Water_Path_Mean =                            &
                           cospOUT%modis_Liquid_Water_Path_Mean
-       if (cfg%Liwpmodis)     modis%Ice_Water_Path_Mean =>                               &
+       if (cfg%Liwpmodis)     modis%Ice_Water_Path_Mean =                               &
                           cospOUT%modis_Ice_Water_Path_Mean
        if (cfg%Lclmodis) then
-          modis%Optical_Thickness_vs_Cloud_Top_Pressure =>                               &
+          modis%Optical_Thickness_vs_Cloud_Top_Pressure =                               &
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure
-          modis%Optical_Thickness_vs_ReffICE => cospOUT%modis_Optical_Thickness_vs_ReffICE
-          modis%Optical_Thickness_vs_ReffLIQ => cospOUT%modis_Optical_Thickness_vs_ReffLIQ
+          modis%Optical_Thickness_vs_ReffICE = cospOUT%modis_Optical_Thickness_vs_ReffICE
+          modis%Optical_Thickness_vs_ReffLIQ = cospOUT%modis_Optical_Thickness_vs_ReffLIQ
        endif
     endif
 
     ! PARASOL
     if (cfg%Lparasol_sim) then
-       if (cfg%Lparasolrefl) sglidar%refl        => cospOUT%parasolPix_refl
-       if (cfg%Lparasolrefl) stlidar%parasolrefl => cospOUT%parasolGrid_refl
+       if (cfg%Lparasolrefl) sglidar%refl        = cospOUT%parasolPix_refl
+       if (cfg%Lparasolrefl) stlidar%parasolrefl = cospOUT%parasolGrid_refl
     endif
 
     ! RTTOV
-    if (cfg%Lrttov_sim) rttov%tbs => cospOUT%rttov_tbs  
+    if (cfg%Lrttov_sim) rttov%tbs = cospOUT%rttov_tbs  
 
     ! CALIPSO
     if (cfg%Llidar_sim) then
-       ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
+       ! *NOTE* In COSPv2.0 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.
 
        if (cfg%LlidarBetaMol532) then
-          cospOUT%calipso_beta_mol = cospOUT%calipso_beta_mol(:,sglidar%Nlevels:1:-1)
-          sglidar%beta_mol         => cospOUT%calipso_beta_mol
+          sglidar%beta_mol         = cospOUT%calipso_beta_mol(:,sglidar%Nlevels:1:-1)
        endif
        if (cfg%Latb532) then
           cospOUT%calipso_beta_tot = cospOUT%calipso_beta_tot(:,:,sglidar%Nlevels:1:-1)
-          sglidar%beta_tot         => cospOUT%calipso_beta_tot
+          sglidar%beta_tot         = cospOUT%calipso_beta_tot
        endif
        if (cfg%LcfadLidarsr532)  then
-          cospOUT%calipso_cfad_sr       = cospOUT%calipso_cfad_sr(:,:,stlidar%Nlevels:1:-1)
-          cospOUT%calipso_betaperp_tot  = cospOUT%calipso_betaperp_tot(:,:,sglidar%Nlevels:1:-1)
-          stlidar%srbval                => cospOUT%calipso_srbval
-          stlidar%cfad_sr               => cospOUT%calipso_cfad_sr
-          sglidar%betaperp_tot          => cospOUT%calipso_betaperp_tot
+          stlidar%srbval                = cospOUT%calipso_srbval
+          stlidar%cfad_sr               = cospOUT%calipso_cfad_sr(:,:,sglidar%Nlevels:1:-1)
+          sglidar%betaperp_tot          = cospOUT%calipso_betaperp_tot(:,:,sglidar%Nlevels:1:-1)
        endif   
        if (cfg%Lclcalipso) then
-          cospOUT%calipso_lidarcld = cospOUT%calipso_lidarcld(:,stlidar%Nlevels:1:-1)
-          stlidar%lidarcld         => cospOUT%calipso_lidarcld
+          stlidar%lidarcld         = cospOUT%calipso_lidarcld(:,stlidar%Nlevels:1:-1)
        endif       
        if (cfg%Lclhcalipso .or. cfg%Lclmcalipso .or. cfg%Lcllcalipso .or. cfg%Lcltcalipso) then
-          stlidar%cldlayer => cospOUT%calipso_cldlayer
+          stlidar%cldlayer = cospOUT%calipso_cldlayer
        endif
        if (cfg%Lclcalipsoice .or. cfg%Lclcalipsoliq .or. cfg%Lclcalipsoun) then
-          stlidar%lidarcldphase => cospOUT%calipso_lidarcldphase
+          stlidar%lidarcldphase = cospOUT%calipso_lidarcldphase(:,vgrid%Nlvgrid:1:-1,:)
        endif
        if (cfg%Lcllcalipsoice .or. cfg%Lclmcalipsoice .or. cfg%Lclhcalipsoice .or.                   &
            cfg%Lcltcalipsoice .or. cfg%Lcllcalipsoliq .or. cfg%Lclmcalipsoliq .or.                   &
            cfg%Lclhcalipsoliq .or. cfg%Lcltcalipsoliq .or. cfg%Lcllcalipsoun  .or.                   &
            cfg%Lclmcalipsoun  .or. cfg%Lclhcalipsoun  .or. cfg%Lcltcalipsoun) then       
-           cospOUT%calipso_lidarcldphase = cospOUT%calipso_lidarcldphase(:,stlidar%Nlevels:1:-1,:) 
-           stlidar%cldlayerphase         => cospOUT%calipso_cldlayerphase
+           stlidar%cldlayerphase         = cospOUT%calipso_cldlayerphase(:,stlidar%Nlevels:1:-1,:)
        endif
        if (cfg%Lclcalipsotmp .or. cfg%Lclcalipsotmpliq .or. cfg%Lclcalipsoice .or. cfg%Lclcalipsotmpun) then
-          stlidar%lidarcldtmp => cospOUT%calipso_lidarcldtmp
+          stlidar%lidarcldtmp = cospOUT%calipso_lidarcldtmp
        endif
        ! Fields present, but not controlled by logical switch
-       cospOUT%calipso_temp_tot = cospOUT%calipso_temp_tot(:,sglidar%Nlevels:1:-1)
-       cospOUT%calipso_tau_tot  = cospOUT%calipso_tau_tot(:,:,sglidar%Nlevels:1:-1)
-       sglidar%temp_tot => cospOUT%calipso_temp_tot
-       sglidar%tau_tot  => cospOUT%calipso_tau_tot
+       sglidar%temp_tot = cospOUT%calipso_temp_tot(:,sglidar%Nlevels:1:-1)
+       sglidar%tau_tot  = cospOUT%calipso_tau_tot(:,:,sglidar%Nlevels:1:-1)
     endif
 
     ! Cloudsat             
@@ -851,26 +844,24 @@ contains
        ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.    
        if (cfg%Ldbze94) then
-          cospOUT%cloudsat_Ze_tot = cospOUT%cloudsat_Ze_tot(:,:,sgradar%Nlevels:1:-1) 
-          sgradar%Ze_tot                => cospOUT%cloudsat_Ze_tot  
+          sgradar%Ze_tot          = cospOUT%cloudsat_Ze_tot(:,:,sgradar%Nlevels:1:-1)  
        endif
        if (cfg%LcfadDbze94) then 
-          cospOUT%cloudsat_cfad_ze      = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)
-          stradar%cfad_ze               => cospOUT%cloudsat_cfad_ze              
+          stradar%cfad_ze               = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)              
        endif
- 
     endif
 
     ! Combined instrument products
     if (cfg%Lclcalipso2) then
-       cospOUT%lidar_only_freq_cloud = cospOUT%lidar_only_freq_cloud(:,stradar%Nlevels:1:-1)
-       stradar%lidar_only_freq_cloud => cospOUT%lidar_only_freq_cloud    
+       stradar%lidar_only_freq_cloud = cospOUT%lidar_only_freq_cloud(:,stradar%Nlevels:1:-1)    
     endif
-    if (cfg%Lcltlidarradar) stradar%radar_lidar_tcc => cospOUT%radar_lidar_tcc      
+    if (cfg%Lcltlidarradar) stradar%radar_lidar_tcc = cospOUT%radar_lidar_tcc      
 
-    ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
-    !        not true. To maintain the outputs of v1.4, the affected fields are flipped.
-    sgx%frac_out                  = sgx%frac_out(:,:,sgx%Nlevels:1:-1)
+    ! Subcolumns
+    sgx%frac_out = sgx%frac_out(:,:,sgx%Nlevels:1:-1)
+
+    ! Clean-up memory
+    call destroy_cosp_outputs(cospOUT)
     
    end subroutine cosp_interface_v1p4
    
@@ -962,7 +953,6 @@ contains
        else
           sgx%frac_out(start_idx:end_idx,:,:) = 1  
        endif
-       do i=start_idx,end_idx
 
        ! Sum up precipitation rates
        allocate(ls_p_rate(npoints,gbx%Nlevels),cv_p_rate(npoints,gbx%Nlevels))
@@ -1295,30 +1285,6 @@ contains
                Reff,Np)
     
   end subroutine subsample_and_optics
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cosp_gridbox

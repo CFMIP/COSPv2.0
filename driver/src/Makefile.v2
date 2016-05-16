@@ -4,7 +4,7 @@
 ########################################################################
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -fpp -O3 -pg -traceback #-check all
+F90FLAGS = -O3 #-fpp -traceback #-check all
 F90_LIB  = /usr/local/ifort
 # Portland Group (pgf90)
 #F90      = pgf90
@@ -102,38 +102,38 @@ clean:
 cosp:
 	make -C ../../src/ install
 
-mo_rng.o : $(SRC_F90)/rng/mo_rng.f90
+mo_rng.o : $(SRC_F90)/rng/mo_rng.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-scops.o : $(SRC_F90)/subcol/scops.f90
+scops.o : $(SRC_F90)/subcol/scops.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-prec_scops.o : $(SRC_F90)/subcol/prec_scops.f90
+prec_scops.o : $(SRC_F90)/subcol/prec_scops.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 	
-cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.f90
+cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 	
 cosp_io.v2.o: cosp_io.v2.f90
 	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(OBJ_PATH) $<
 
-cosp_errorHandling.o : $(COSP_INTERFACE_F90)/cosp_errorHandling.f90
+cosp_errorHandling.o : $(COSP_INTERFACE_F90)/cosp_errorHandling.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 	
-quickbeam_optics.o :  $(SRC_F90)/optics/quickbeam_optics.f90
+quickbeam_optics.o :  $(SRC_F90)/optics/quickbeam_optics.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-cosp_optics.o :  $(SRC_F90)/optics/cosp_optics.f90
+cosp_optics.o :  $(SRC_F90)/optics/cosp_optics.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-array_lib.o : $(SRC_F90)/optics/array_lib.f90
+array_lib.o : $(SRC_F90)/optics/array_lib.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-math_lib.o : $(SRC_F90)/optics/math_lib.f90
+math_lib.o : $(SRC_F90)/optics/math_lib.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-mrgrnk.o : $(SRC_F90)/optics/mrgrnk.f90
+mrgrnk.o : $(SRC_F90)/optics/mrgrnk.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
-optics_lib.o : $(SRC_F90)/optics/optics_lib.f90
+optics_lib.o : $(SRC_F90)/optics/optics_lib.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<	

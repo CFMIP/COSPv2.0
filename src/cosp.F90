@@ -274,7 +274,7 @@ CONTAINS
   ! FUNCTION cosp_simulator
   ! ######################################################################################
 !  SUBROUTINE COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
-  function COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx)
+  function COSP_SIMULATOR(cospIN,cospgridIN,cospOUT,start_idx,stop_idx,debug)
     type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
     type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
     
@@ -288,6 +288,7 @@ CONTAINS
     type(rttov_IN)    :: rttovIN    ! Input to the RTTOV simulator
     type(clara_IN)    :: claraIN    ! Input to the CLARA simulator
     integer,optional  :: start_idx,stop_idx
+    logical,optional  :: debug
     
     ! Outputs from the simulators (nested simulator output structure)
     type(cosp_outputs), intent(inout) :: cospOUT
@@ -339,7 +340,9 @@ CONTAINS
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
     real(wp),dimension(:,:,:),allocatable :: &
        t_in,betamol_in,tmpFlip,betamolFlip,pnormFlip,pnorm_perpFlip,ze_totFlip
+    real(wp),dimension(20) :: cosp_time
 
+    call cpu_time(cosp_time(1))
     ! Initialize error reporting for output
     cosp_simulator(:)=''
 
@@ -505,7 +508,9 @@ CONTAINS
        Lmodis_column    = .true.
        Lmodis_subcolumn = .true.
     endif
-                                  
+    call cpu_time(cosp_time(2))
+    if (debug) print*,'   Time to check outputs to see which simualtor to run:  ',cosp_time(2)-cosp_time(1)
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2b) Error Checking
     !     Enforce bounds on input fields. If input field is out-of-bounds, report error 
@@ -516,6 +521,8 @@ CONTAINS
                          Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,        &
                          Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
                          Lparasol_subcolumn,Lparasol_column,cospOUT,cosp_simulator,nError)
+    call cpu_time(cosp_time(3))
+    if (debug) print*,'   Time for cosp_errorCheck:                             ',cosp_time(3)-cosp_time(2)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -595,7 +602,7 @@ CONTAINS
        modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),                              &
             mask = cospgridIN%sunlit > 0)
        modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),                              &
-            mask = .not. cospgridIN%sunlit < 0)
+            mask = .not. cospgridIN%sunlit <= 0)
        modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
     endif
     
@@ -659,7 +666,9 @@ CONTAINS
        rttovIN%fl_rain    => cospgridIN%fl_rain
        rttovIN%fl_snow    => cospgridIN%fl_snow
     endif
-    
+    call cpu_time(cosp_time(3))
+    if (debug) print*,'   Time to populate simulator imputs:                    ',cosp_time(3)-cosp_time(2)
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4) Call subcolumn simulators
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -689,13 +698,15 @@ CONTAINS
           cospOUT%isccp_meantbclr(ij:ik) = isccp_meantbclr
        endif
    endif
+   call cpu_time(cosp_time(4))
+   if (debug) print*,'   Time to run isccp_subcolumn:                          ',cosp_time(4)-cosp_time(3)
 
    ! MISR subcolumn simulator
     if (Lmisr_subcolumn) then
        ! Allocate space for local variables
        allocate(misr_boxztop(Npoints,misrIN%Ncolumns),                                   &
                 misr_boxtau(Npoints,misrIN%Ncolumns),                                    &
-                misr_dist_model_layertops(Npoints,misrIN%Ncolumns))
+                misr_dist_model_layertops(Npoints,numMISRHgtBins))
        ! Call simulator
        call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                            misrIN%zfull,misrIN%at,misrIN%sunlit,misr_boxtau,             &
@@ -705,6 +716,8 @@ CONTAINS
           cospOUT%misr_dist_model_layertops(ij:ik,:) = misr_dist_model_layertops
        endif
     endif
+   call cpu_time(cosp_time(5))
+   if (debug) print*,'   Time to run misr_subcolumn:                           ',cosp_time(5)-cosp_time(4)
 
     ! Calipso subcolumn simulator
     if (Lcalipso_subcolumn) then
@@ -728,6 +741,8 @@ CONTAINS
             cospOUT%calipso_betaperp_tot(ij:ik,:,:) = calipso_betaperp_tot
 
     endif
+   call cpu_time(cosp_time(6))
+   if (debug) print*,'   Time to run lidar_subcolumn:                          ',cosp_time(6)-cosp_time(5)
 
     ! PARASOL subcolumn simulator
     if (Lparasol_subcolumn) then
@@ -746,7 +761,9 @@ CONTAINS
                parasolPix_refl(:,icol,1:PARASOL_NREFL)
        endif
     endif    
-    
+    call cpu_time(cosp_time(7))
+    if (debug) print*,'   Time to run parasol_subcolumn:                        ',cosp_time(7)-cosp_time(6)
+
     ! Cloudsat (quickbeam) subcolumn simulator
     if (Lcloudsat_subcolumn) then
        ! Allocate space for local variables
@@ -763,7 +780,9 @@ CONTAINS
           cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe
        endif
     endif
-    
+    call cpu_time(cosp_time(8))
+    if (debug) print*,'   Time to run radar_subcolumn:                          ',cosp_time(8)-cosp_time(7)
+   
     if (Lmodis_subcolumn) then
        if(modisiN%nSunlit > 0) then 
           ! Allocate space for local variables
@@ -776,15 +795,17 @@ CONTAINS
              call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels, modisIN%pres(i,:),   &
                                   modisIN%tau(i,:,:),modisIN%liqFrac(i,:,:),             &
                                   modisIN%g(i,:,:),modisIN%w0(i,:,:),                    &
-                                  isccp_boxtau(int(modisIN%sunlit(i)),:),isccp_boxptop(int(modisIN%sunlit(i)),:),&
-!                                  isccp_boxtau(ij+int(modisIN%sunlit(i))-1,:),           &
-!                                  isccp_boxptop(ij+int(modisIN%sunlit(i))-1,:),          &
+                                  isccp_boxtau(int(modisIN%sunlit(i)),:),                &
+                                  isccp_boxptop(int(modisIN%sunlit(i)),:),               &
                                   modisRetrievedPhase(i,:),                              &
                                   modisRetrievedCloudTopPressure(i,:),                   &
                                   modisRetrievedTau(i,:),modisRetrievedSize(i,:))
           end do
        endif
     endif
+    call cpu_time(cosp_time(9))
+    if (debug) print*,'   Time to run modis_subcolum:                           ',cosp_time(9)-cosp_time(8)
+
 
     if (Lclara_subcolumn) then
        allocate(claraSC_tau(nPoints,cospIN%Ncolumns),                                    &
@@ -866,6 +887,8 @@ CONTAINS
        if (allocated(out1D_5))         deallocate(out1D_5)
        if (allocated(out1D_6))         deallocate(out1D_6)
     endif
+    call cpu_time(cosp_time(10))
+    if (debug) print*,'   Time to run isccp_column:                             ',cosp_time(10)-cosp_time(9)
 
     ! MISR
     if (Lmisr_column) then
@@ -896,6 +919,8 @@ CONTAINS
        if (allocated(out1D_2))                   deallocate(out1D_2)
        if (allocated(out1D_3))                   deallocate(out1D_3)
     endif
+    call cpu_time(cosp_time(11))
+    if (debug) print*,'   Time to run misr_column:                              ',cosp_time(11)-cosp_time(10)
     
     ! CALIPSO LIDAR Simulator
     if (Lcalipso_column) then
@@ -952,6 +977,8 @@ CONTAINS
        if (allocated(out1D_5))              deallocate(out1D_5)
        if (allocated(out1D_6))              deallocate(out1D_6)
     endif
+    call cpu_time(cosp_time(12))
+    if (debug) print*,'   Time to run lidar_column:                             ',cosp_time(12)-cosp_time(11)
 
     ! PARASOL
     if (Lparasol_column) then
@@ -960,7 +987,9 @@ CONTAINS
                             cospOUT%parasolGrid_refl(ij:ik,:))
        if (allocated(parasolPix_refl)) deallocate(parasolPix_refl)
     endif
-
+    call cpu_time(cosp_time(13))
+    if (debug) print*,'   Time to run parasol_column:                           ',cosp_time(13)-cosp_time(12)
+    
     ! CLOUDSAT
     if (Lcloudsat_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -977,6 +1006,8 @@ CONTAINS
        if (allocated(out1D_1))      deallocate(out1D_1)
        if (allocated(cloudsatDBZe)) deallocate(cloudsatDBZe)
     endif
+    call cpu_time(cosp_time(14))
+    if (debug) print*,'   Time to run radar_column:                             ',cosp_time(14)-cosp_time(13)
 
     ! MODIS
     if (Lmodis_column) then
@@ -1173,21 +1204,39 @@ CONTAINS
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, :, :) = R_UNDEF
        endif
        ! Free up memory (if necessary)
-       deallocate(modisRetrievedTau,modisRetrievedSize,modisRetrievedPhase,              &
-                  modisRetrievedCloudTopPressure,modisCftotal,modisCfLiquid,             &
-                  modisCfIce,modisCfHigh,modisCfMid,modisCfLow,modisMeanTauTotal,        &
-                  modisMeanTauLiquid,modisMeanTauIce,modisMeanLogTauTotal,               &       
-                  modisMeanLogTauLiquid,modisMeanLogTauIce,modisMeanSizeLiquid,          & 
-                  modisMeanSizeIce,modisMeanCloudTopPressure,modisMeanLiquidWaterPath,   &
-                  modisMeanIceWaterPath,modisJointHistogram,modisJointHistogramIce,      &
-                  modisJointHistogramLiq)       
-       if (allocated(isccp_boxttop))   deallocate(isccp_boxttop)
-       if (allocated(isccp_boxptop))   deallocate(isccp_boxptop)
-       if (allocated(isccp_boxtau))    deallocate(isccp_boxtau)
-       if (allocated(isccp_meantbclr)) deallocate(isccp_meantbclr)
-       if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
+       if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)
+       if (allocated(modisRetrievedSize))              deallocate(modisRetrievedSize)
+       if (allocated(modisRetrievedPhase))             deallocate(modisRetrievedPhase)
+       if (allocated(modisRetrievedCloudTopPressure))  deallocate(modisRetrievedCloudTopPressure)
+       if (allocated(modisCftotal))                    deallocate(modisCftotal)
+       if (allocated(modisCfLiquid))                   deallocate(modisCfLiquid)
+       if (allocated(modisCfIce))                      deallocate(modisCfIce)
+       if (allocated(modisCfHigh))                     deallocate(modisCfHigh)
+       if (allocated(modisCfMid))                      deallocate(modisCfMid)
+       if (allocated(modisCfLow))                      deallocate(modisCfLow)
+       if (allocated(modisMeanTauTotal))               deallocate(modisMeanTauTotal)
+       if (allocated(modisMeanTauLiquid))              deallocate(modisMeanTauLiquid)
+       if (allocated(modisMeanTauIce))                 deallocate(modisMeanTauIce)
+       if (allocated(modisMeanLogTauTotal))            deallocate(modisMeanLogTauTotal)
+       if (allocated(modisMeanLogTauLiquid))           deallocate(modisMeanLogTauLiquid)
+       if (allocated(modisMeanLogTauIce))              deallocate(modisMeanLogTauIce)
+       if (allocated(modisMeanSizeLiquid))             deallocate(modisMeanSizeLiquid)
+       if (allocated(modisMeanSizeIce))                deallocate(modisMeanSizeIce)
+       if (allocated(modisMeanCloudTopPressure))       deallocate(modisMeanCloudTopPressure)
+       if (allocated(modisMeanLiquidWaterPath))        deallocate(modisMeanLiquidWaterPath)
+       if (allocated(modisMeanIceWaterPath))           deallocate(modisMeanIceWaterPath)
+       if (allocated(modisJointHistogram))             deallocate(modisJointHistogram)
+       if (allocated(modisJointHistogramIce))          deallocate(modisJointHistogramIce)
+       if (allocated(modisJointHistogramLiq))          deallocate(modisJointHistogramLiq)
+       if (allocated(isccp_boxttop))                   deallocate(isccp_boxttop)
+       if (allocated(isccp_boxptop))                   deallocate(isccp_boxptop)
+       if (allocated(isccp_boxtau))                    deallocate(isccp_boxtau)
+       if (allocated(isccp_meantbclr))                 deallocate(isccp_meantbclr)
+       if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
     endif
-    
+    call cpu_time(cosp_time(15))
+    if (debug) print*,'   Time to run modis_column:                             ',cosp_time(15)-cosp_time(14)
+
     ! CLARA
     if (Lclara_column) then
        call clara_column(claraIN%Npoints,claraIN%Ncolumns,claraSC_tau,claraSC_ctp,       &
@@ -1199,7 +1248,7 @@ CONTAINS
        deallocate(claraSC_tau,claraSC_ctp,claraSC_ctt,claraSC_size,claraSC_phase,        &
                   claraSC_cth)    
     endif
-
+    
     ! RTTOV
     if (lrttov_column) then
        call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
@@ -1215,7 +1264,9 @@ CONTAINS
                          ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
                          ! rttovIN%fl_rain,rttovIN%fl_snow)
     endif
-
+    call cpu_time(cosp_time(16))
+    if (debug) print*,'   Time to run rttov_column:                             ',cosp_time(16)-cosp_time(15)
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1275,12 +1326,15 @@ CONTAINS
                                      cospOUT%radar_lidar_tcc(ij:ik))
        endif
     endif
-
+    call cpu_time(cosp_time(17))
+    if (debug) print*,'   Time to create joint products:                        ',cosp_time(17)-cosp_time(16)
+    
   end function COSP_SIMULATOR
   ! ######################################################################################
   ! SUBROUTINE cosp_init
   ! ######################################################################################
-  SUBROUTINE COSP_INIT(Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,                  &
+  SUBROUTINE COSP_INIT(Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov,            &
+                       Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,                  &
                        cloudsat_use_gas_abs,cloudsat_do_ray,isccp_top_height,            &
                        isccp_top_height_direction,surface_radar,rcfg,rttov_Nchannels,    &
                        rttov_Channels,rttov_platform, &
@@ -1297,6 +1351,7 @@ CONTAINS
                        CLARA_retSize)
     
     ! INPUTS
+    logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & ! 
          cloudsat_do_ray,            & !
@@ -1382,29 +1437,17 @@ CONTAINS
        vgrid_z = (vgrid_zl+vgrid_zu)/2._wp
     endif
 
-    ! Initialize ISCCP
-    call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
-    
-    ! Initialize MODIS
-    call cosp_modis_init()
-    
-    ! Initialize MISR
-    call cosp_misr_init()
-    
-    ! Initialize RTTOV
-    call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,rttov_instrument,&
-         rttov_channels)
-
-    ! Initialize radar
-    call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,        &
-         cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,surface_radar,rcfg,             &
-         cloudsat_micro_scheme)
-    
-    ! Initialize lidar
-    call cosp_calipso_init()
-    
-    ! Initialize PARASOL
-    call cosp_parasol_init()
+    ! Initialize simulators
+    if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
+    if (Lmodis) call cosp_modis_init()
+    if (Lmisr)  call cosp_misr_init()
+    if (Lrttov) call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,     &
+         rttov_instrument,rttov_channels)
+    if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
+         cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO,Npoints,Nlevels,           &
+         surface_radar,rcfg,cloudsat_micro_scheme)
+    if (Lcalipso) call cosp_calipso_init()
+    if (Lparasol) call cosp_parasol_init()
     
     if (lclara) then
        ! Initialize CLARA
