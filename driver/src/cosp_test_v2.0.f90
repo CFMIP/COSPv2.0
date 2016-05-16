@@ -936,12 +936,21 @@ contains
     call modis_optics_partition(nPoints,nLevels,nColumns,MODIS_cloudWater,MODIS_cloudIce,  &
                                 MODIS_waterSize,MODIS_iceSize,cospIN%tau_067,              &
                                 MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce)
-    
+
     ! Compute assymetry parameter and single scattering albedo 
-    call modis_optics(nPoints,nLevels,nColumns,num_trial_res,MODIS_opticalThicknessLiq,    &
+    call modis_optics(nPoints,nLevels,nColumns,MODIS_opticalThicknessLiq,                  &
                       MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,                  &
                       MODIS_iceSize*1.0e6_wp,cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
     
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! CLARA optics
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Compute assymetry parameter and single scattering albedo for CLARA
+    call clara_optics(nPoints,nLevels,nColumns,MODIS_opticalThicknessLiq,                  &
+                      MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,                  &
+                      MODIS_iceSize*1.0e6_wp,cospIN%fracLiq,cospIN%asym_AVHRR,             &
+                      cospIN%ss_alb_AVHRR)    
+
     ! Deallocate memory
     deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,              &
                MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,               &
