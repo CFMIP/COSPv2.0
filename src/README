@@ -32,7 +32,8 @@ simulators/: Contains interfaces between COSP and the simulators, in
              addition to the individual simulators.
 rng/:        Contains code to generate random numbers.
 optics/:     Contains code for computing the derived optical fields from
-             the model state.
+             the model state. Called by subsample_and_optics in example
+	     interfaces.
 hooks/:      Contains code that is used by all of COSP
 subcol/:     Contains code used to generate sub-columns 
  
