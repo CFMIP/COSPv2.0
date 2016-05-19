@@ -337,7 +337,7 @@ CONTAINS
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq,     &
          calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl
     real(wp),dimension(:),allocatable,target :: &
-         out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
+         out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6,out1D_7,out1D_8,out1D_9,out1D_10
     real(wp),dimension(:,:,:),allocatable :: &
        t_in,betamol_in,tmpFlip,betamolFlip,pnormFlip,pnorm_perpFlip,ze_totFlip
     real(wp),dimension(20) :: cosp_time
@@ -1239,6 +1239,46 @@ CONTAINS
 
     ! CLARA
     if (Lclara_column) then
+       if (.not. associated(cospOUT%clara_tau)) then
+          allocate(out1D_1(Npoints))
+          cospOUT%clara_tau(ij:ik) => out1D_1          
+       endif
+       if (.not. associated(cospOUT%clara_ctp)) then
+          allocate(out1D_2(Npoints))
+          cospOUT%clara_ctp(ij:ik) => out1D_2
+       endif
+       if (.not. associated(cospOUT%clara_ctt)) then
+          allocate(out1D_3(Npoints))
+          cospOUT%clara_ctt(ij:ik) => out1D_3
+       endif
+       if (.not. associated(cospOUT%clara_cth)) then
+          allocate(out1D_4(Npoints))
+          cospOUT%clara_cth(ij:ik) => out1D_4
+       endif
+       if (.not. associated(cospOUT%clara_sizeLIQ)) then
+          allocate(out1D_5(Npoints))
+          cospOUT%clara_sizeLIQ(ij:ik) => out1D_5
+       endif
+       if (.not. associated(cospOUT%clara_sizeICE)) then
+          allocate(out1D_6(Npoints))
+          cospOUT%clara_sizeICE(ij:ik) => out1D_6
+       endif
+       if (.not. associated(cospOUT%clara_cfrac)) then
+          allocate(out1D_7(Npoints))
+          cospOUT%clara_cfrac(ij:ik) => out1D_7
+       endif
+       if (.not. associated(cospOUT%clara_IWP)) then
+          allocate(out1D_8(Npoints))
+          cospOUT%clara_IWP(ij:ik) => out1D_8
+       endif
+       if (.not. associated(cospOUT%clara_LWP)) then
+          allocate(out1D_9(Npoints))
+          cospOUT%clara_LWP(ij:ik) => out1D_9
+       endif
+       if (.not. associated(cospOUT%clara_fq)) then
+          allocate(out1D_10(Npoints*numCLARAtauBins*numCLARApresBins))
+          cospOUT%clara_fq(ij:ik,1:numCLARAtauBins,1:numCLARApresBins) => out1D_10
+       endif
        call clara_column(claraIN%Npoints,claraIN%Ncolumns,claraSC_tau,claraSC_ctp,       &
                          claraSC_ctt,claraSC_cth,claraSC_size,claraSC_phase,             &
                          cospOUT%clara_tau,       &
@@ -1247,6 +1287,16 @@ CONTAINS
                          cospOUT%clara_IWP,cospOUT%clara_LWP,cospOUT%clara_fq)
        deallocate(claraSC_tau,claraSC_ctp,claraSC_ctt,claraSC_size,claraSC_phase,        &
                   claraSC_cth)    
+       if (allocated(out1D_1))  deallocate(out1D_1)
+       if (allocated(out1D_2))  deallocate(out1D_2)
+       if (allocated(out1D_3))  deallocate(out1D_3)
+       if (allocated(out1D_4))  deallocate(out1D_4)
+       if (allocated(out1D_5))  deallocate(out1D_5)
+       if (allocated(out1D_6))  deallocate(out1D_6)
+       if (allocated(out1D_7))  deallocate(out1D_7)
+       if (allocated(out1D_8))  deallocate(out1D_8)
+       if (allocated(out1D_9))  deallocate(out1D_9)
+       if (allocated(out1D_10)) deallocate(out1D_10)
     endif
     
     ! RTTOV
