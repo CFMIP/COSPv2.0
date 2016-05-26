@@ -351,7 +351,7 @@ program cosp_test_v2
                  cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,surface_radar,&
                  rcfg_cloudsat,rttov_Nchannels,rttov_Channels,rttov_platform,           &
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &
-                 cloudsat_micro_scheme)
+                 cloudsat_micro_scheme,cospOUT)
   call cpu_time(driver_time(3))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

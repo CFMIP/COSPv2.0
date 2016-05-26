@@ -1240,7 +1240,7 @@ CONTAINS
                        cloudsat_use_gas_abs,cloudsat_do_ray,isccp_top_height,            &
                        isccp_top_height_direction,surface_radar,rcfg,rttov_Nchannels,    &
                        rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,   &
-                       lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
+                       lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme,cospOUT)
     
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov
@@ -1268,6 +1268,7 @@ CONTAINS
                                        ! vertical grid
     character(len=64),intent(in) :: &
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
+    type(cosp_outputs),intent(inout) :: cospOUT
     
     ! OUTPUTS
     type(radar_cfg) :: rcfg
@@ -1305,6 +1306,40 @@ CONTAINS
          surface_radar,rcfg,cloudsat_micro_scheme)
     if (Lcalipso) call cosp_calipso_init()
     if (Lparasol) call cosp_parasol_init()
+
+    ! Set all output diagnostics as disassociated.
+    nullify(cospOUT%calipso_betaperp_tot,cospOUT%calipso_beta_tot,                       &
+            cospOUT%calipso_tau_tot,cospOUT%calipso_lidarcldphase,                       &
+            cospOUT%calipso_cldlayerphase,cospOUT%calipso_lidarcldtmp,                   &
+            cospOUT%calipso_cfad_sr,cospOUT%calipso_lidarcld,cospOUT%calipso_cldlayer,   &
+            cospOUT%calipso_beta_mol,cospOUT%calipso_temp_tot,cospOUT%calipso_srbval,    &          
+            cospOUT%parasolPix_refl,cospOUT%parasolGrid_refl,cospOUT%cloudsat_Ze_tot,    &   
+            cospOUT%cloudsat_cfad_ze,cospOUT%lidar_only_freq_cloud,                      &
+            cospOUT%radar_lidar_tcc,cospOUT%isccp_totalcldarea,cospOUT%isccp_meantb,     &
+            cospOUT%isccp_meantbclr,cospOUT%isccp_meanptop,cospOUT%isccp_meantaucld,     &
+            cospOUT%isccp_meanalbedocld,cospOUT%isccp_boxtau,cospOUT%isccp_boxptop,      &
+            cospOUT%isccp_fq,cospOUT%misr_fq,cospOUT%misr_dist_model_layertops,          &
+            cospOUT%misr_meanztop,cospOUT%misr_cldarea,                                  &
+            cospOUT%modis_Cloud_Fraction_Total_Mean,                                     &
+            cospOUT%modis_Cloud_Fraction_Water_Mean,                                     &
+            cospOUT%modis_Cloud_Fraction_Ice_Mean,                                       &
+            cospOUT%modis_Cloud_Fraction_High_Mean,                                      &
+            cospOUT%modis_Cloud_Fraction_Mid_Mean,                                       &
+            cospOUT%modis_Cloud_Fraction_Low_Mean,                                       &
+            cospOUT%modis_Optical_Thickness_Total_Mean,                                  &
+            cospOUT%modis_Optical_Thickness_Water_Mean,                                  &
+            cospOUT%modis_Optical_Thickness_Ice_Mean,                                    &
+            cospOUT%modis_Optical_Thickness_Total_LogMean,                               &
+            cospOUT%modis_Optical_Thickness_Water_LogMean,                               &
+            cospOUT%modis_Optical_Thickness_Ice_LogMean,                                 &
+            cospOUT%modis_Cloud_Particle_Size_Water_Mean,                                &
+            cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                                  &
+            cospOUT%modis_Cloud_Top_Pressure_Total_Mean,                                 &
+            cospOUT%modis_Liquid_Water_Path_Mean,cospOUT%modis_Ice_Water_Path_Mean,      &
+            cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure,                       &	    
+            cospOUT%modis_Optical_Thickness_vs_ReffICE,                                  &
+            cospOUT%modis_Optical_Thickness_vs_ReffLIQ,cospOUT%rttov_tbs)	    
+     
     
     linitialization = .FALSE.
   END SUBROUTINE COSP_INIT
