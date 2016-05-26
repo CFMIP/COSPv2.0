@@ -43,8 +43,8 @@ OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
         prec_scops.o cosp.o cosp_stats.o quickbeam.o parasol.o                 \
         lidar_simulator.o icarus.o cosp_calipso_interface.o                    \
         cosp_isccp_interface.o cosp_misr_interface.o MISR_simulator.o          \
-        cosp_modis_interface.o modis_simulator.o cosp_rttov_interfaceSTUB.o        \
-        cosp_rttovSTUB.o cosp_parasol_interface.o
+        cosp_modis_interface.o modis_simulator.o cosp_rttov_interface.o        \
+        cosp_rttov11.o cosp_parasol_interface.o
 
 %.o: $(SIM_PATH)/%.F90
 	@echo $(F90) $(F90FLAGS) -c $<
@@ -58,9 +58,9 @@ OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
 
 # Dependencies
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o                   \
-                            cosp_rttov_interfaceSTUB.o cosp_misr_interface.o cosp_isccp_interface.o    \
+                            cosp_rttov_interface.o cosp_misr_interface.o cosp_isccp_interface.o    \
                             cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_stats.o        \
-			    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interfaceSTUB.o       \
+			    cosp_parasol_interface.o cosp_rttov11.o cosp_rttov_interface.o       \
                             quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o
 cosp_config.o             : cosp_kinds.o
 cosp_stats.o              : cosp_kinds.o cosp_config.o
@@ -69,9 +69,9 @@ cosp_cloudsat_interface.o : cosp_kinds.o cosp_config.o quickbeam.o
 cosp_isccp_interface.o    : cosp_kinds.o icarus.o
 cosp_misr_interface.o     : cosp_kinds.o 
 cosp_modis_interface.o    : cosp_kinds.o cosp_config.o modis_simulator.o
-cosp_rttov_interfaceSTUB.o    : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
+cosp_rttov_interface.o    : cosp_kinds.o cosp_config.o cosp_rttov11.o
 cosp_parasol_interface.o  : cosp_kinds.o 
-cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+cosp_rttov11.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 MISR_simulator.o          : cosp_kinds.o cosp_config.o cosp_stats.o
 modis_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
 lidar_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
@@ -79,7 +79,7 @@ icarus.o	          : cosp_kinds.o cosp_constants.o  cosp_stats.o
 parasol.o                 : cosp_kinds.o cosp_config.o cosp_constants.o
 
 install:
-	make
+	make -f MakefilewRTTOV
 	mv *.mod *.o $(OBJ_PATH)
 clean:	
 	rm -f $(OBJ_PATH)*.mod $(OBJ_PATH)*.o fort.* *.mod *.o
@@ -96,10 +96,10 @@ MISR_simulator.o : $(MISR_PATH)/MISR_simulator.F90
 modis_simulator.o : $(MODIS_PATH)/modis_simulator.F90 
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_rttov_interfaceSTUB.o : simulator/cosp_rttov_interfaceSTUB.F90
+cosp_rttov_interface.o : simulator/cosp_rttov_interface.F90
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
-cosp_rttovSTUB.o : $(RT_PATH)/cosp_rttovSTUB.F90 
+cosp_rttov11.o : $(RT_PATH)/cosp_rttov11.F90 
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
 lidar_simulator.o : $(CS_PATH)/lidar_simulator.F90

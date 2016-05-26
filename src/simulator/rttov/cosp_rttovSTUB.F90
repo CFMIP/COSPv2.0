@@ -31,29 +31,11 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MODULE MOD_COSP_RTTOV
-  use rttov_const,         only : errorstatus_success, errorstatus_fatal
-  use rttov_types,         only : rttov_options,rttov_coefs,profile_type,                &
-                                  transmission_type,radiance_type,rttov_chanprof,        &
-                                  rttov_emissivity,profile_cloud_type,rttov_scatt_coef,  &
-                                  rttov_options_scatt
-  use rttov_const,         only : surftype_sea, surftype_land, surftype_seaice
-  use rttov_unix_env,      only : rttov_exit
   use cosp_kinds,          only : wp
   use mod_cosp_config,     only : RTTOV_MAX_CHANNELS,N_HYDRO,rttovDir
   use cosp_phys_constants, only : mdry=>amd,mO3=>amO3,mco2=>amCO2,mCH4=>amCH4,           &
                                   mn2o=>amN2O,mco=>amCO
-
   IMPLICIT NONE
-
-#include "rttov_direct.interface"
-#include "rttov_alloc_prof.interface"
-#include "rttov_alloc_rad.interface"
-#include "rttov_alloc_transmission.interface"
-#include "rttov_dealloc_coefs.interface"
-#include "rttov_user_options_checkinput.interface"
-#include "rttov_read_coefs.interface"
-#include "rttov_get_emis.interface"
-#include "rttov_boundaryconditions.interface"
 
   ! Module parameters
   integer, parameter :: maxlim =  10000
@@ -68,16 +50,6 @@ MODULE MOD_COSP_RTTOV
   integer,dimension(RTTOV_MAX_CHANNELS) :: &
        iChannel      ! RTTOV channel numbers
 
-  ! Scattering coefficients (read in once during initialization)
-  type(rttov_coefs) :: &
-       coef_rttov
-  type(rttov_scatt_coef) :: &
-       coef_scatt
-  ! RTTOV setup and options (set during initialization)
-  type(rttov_options) :: &
-       opts     ! defaults to everything optional switched off
-  type(rttov_options_scatt) :: &
-       opts_scatt
 CONTAINS
   subroutine rttov_column(nPoints,nLevels,nSubCols,q,p,t,o3,ph,h_surf,u_surf,v_surf,     &
                           p_surf,t_skin,t2m,q2m,lsmask,lon,lat,seaice,co2,ch4,n2o,co,    &
