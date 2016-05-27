@@ -63,8 +63,6 @@ PROGRAM COSPTEST_trunk
                                      cosp_modis,construct_cosp_modis,                    &
                                      cosp_vgrid,I_CVCLIQ,I_LSCLIQ,I_CVCICE,I_LSCICE,     &
                                      I_LSRAIN,I_LSSNOW,I_LSGRPL,I_CVRAIN,I_CVSNOW
-
-  USE MOD_COSP,                ONLY: linitialization
   IMPLICIT NONE
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -189,9 +187,6 @@ PROGRAM COSPTEST_trunk
   ! Start timer
   call cpu_time(driver_time(1))
   
-  ! Initialization switch. Set to false after cosp_init is called.
-  linitialization = .true.
-
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read COSP namelists
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,8 +232,8 @@ PROGRAM COSPTEST_trunk
   time_bnds      = (/time-half_time_step,time+half_time_step/) 
   call cpu_time(driver_time(2))
 
-  do i=1,Nfiles
-     dfinput=trim(dinput)//trim(finput(i))
+  do i=1,10!Nfiles
+     dfinput=trim(dinput)//trim(finput(1))
      time_bnds = (/time-half_time_step,time+half_time_step/) ! This may need to be adjusted, 
                                                              ! depending on the approx_interval in the MIP table
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -344,6 +339,7 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Write outputs to CMOR-compliant netCDF format.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     cfg%Lwrite_output=.false.
      if (cfg%Lwrite_output) then
 
        ! Model grid info for cmor output

@@ -1703,7 +1703,14 @@ CONTAINS
      if (associated(y%modis_Optical_thickness_vs_ReffICE))                               &
         deallocate(y%modis_Optical_thickness_vs_ReffICE)
         
-  end subroutine destroy_cosp_outputs
+   end subroutine destroy_cosp_outputs
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   ! SUBROUTINE cosp_cleanUp
+   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   subroutine cosp_cleanUp()
+     deallocate(vgrid_zl,vgrid_zu,vgrid_z)
+   end subroutine cosp_cleanUp
+   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_errorCheck
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
