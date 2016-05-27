@@ -43,7 +43,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
                                  tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4,   &
                                  numMISRHgtBins,SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS, &
                                  numMODISReffIceBins,numMODISTauBins, numMODISPresBins,   &
-                                 numMODISReffLiqBins
+                                 numMODISReffLiqBins,vgrid_zl,vgrid_zu,vgrid_z
   use mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics_init,&
                                  quickbeam_optics
   use cosp_optics,         only: cosp_simulator_optics,lidar_optics,num_trial_res,        &
@@ -619,7 +619,7 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize COSP
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if (linitialization) then
+    if (.not. allocated(vgrid_zl) .or. .not. allocated(vgrid_zu) .or. .not. allocated(vgrid_z)) then
 
        ! Initialize quickbeam_optics, also if two-moment radar microphysics scheme is wanted...
        if (cloudsat_micro_scheme == 'MMF_v3.5_two_moment')  then
@@ -859,6 +859,7 @@ contains
 
     ! Clean-up memory
     call destroy_cosp_outputs(cospOUT)
+    deallocate(vgrid_zl,vgrid_zu,vgrid_z)
     
    end subroutine cosp_interface_v1p4
    

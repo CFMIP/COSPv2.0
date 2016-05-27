@@ -41,7 +41,7 @@ program cosp_test_v2
   use quickbeam,           only: radar_cfg
   use mod_cosp,            only: cosp_init,cosp_optical_inputs,cosp_column_inputs,        &
                                  construct_cosp_outputs,cosp_outputs,construct_cospIN,    &
-                                 construct_cospstateIN,destroy_cosp_outputs,              &
+                                 construct_cospstateIN,destroy_cosp_outputs,cosp_cleanUp, &
                                  destroy_cospIN,destroy_cospstateIN,cosp_simulator
   USE mod_rng,             ONLY: rng_state, init_rng
   USE mod_scops,           ONLY: scops
@@ -551,6 +551,7 @@ program cosp_test_v2
   call destroy_cosp_outputs(cospOUT)
   call destroy_cospIN(cospIN)
   call destroy_cospstateIN(cospstateIN)
+  call cosp_cleanUp()
 contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   ! SUBROUTINE subsample_and_optics
