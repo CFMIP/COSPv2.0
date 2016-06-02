@@ -724,10 +724,11 @@ contains
        if (cfg%LclMISR) misr%fq_MISR  = cospOUT%misr_fq
        ! *NOTE* These 3 fields are not output, but were part of the v1.4.0 cosp_misr, so
        !        they are still computed. Should probably have a logical to control these
-       !        outputs in cosp_config.
-       misr%MISR_meanztop             = cospOUT%misr_meanztop
-       misr%MISR_cldarea              = cospOUT%misr_cldarea
-       misr%MISR_dist_model_layertops = cospOUT%misr_dist_model_layertops
+       !        outputs in cosp_config. In the meantime, only assign v1.4.0 outputs to
+       !        v2.0 outputs IF a MISR diagnostic was requested.
+       if (cfg%LclMISR) misr%MISR_meanztop             = cospOUT%misr_meanztop
+       if (cfg%LclMISR) misr%MISR_cldarea              = cospOUT%misr_cldarea
+       if (cfg%LclMISR) misr%MISR_dist_model_layertops = cospOUT%misr_dist_model_layertops
     endif
     
     ! ISCCP
@@ -794,8 +795,10 @@ contains
     endif
 
     ! RTTOV
-    if (cfg%Lrttov_sim) rttov%tbs = cospOUT%rttov_tbs  
-
+    if (cfg%Lrttov_sim) then
+       if (cfg%Ltbrttov) rttov%tbs = cospOUT%rttov_tbs  
+    endif
+    
     ! CALIPSO
     if (cfg%Llidar_sim) then
        ! *NOTE* In COSPv2.0 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
@@ -832,19 +835,27 @@ contains
           stlidar%lidarcldtmp = cospOUT%calipso_lidarcldtmp
        endif
        ! Fields present, but not controlled by logical switch
-       sglidar%temp_tot = cospOUT%calipso_temp_tot(:,sglidar%Nlevels:1:-1)
-       sglidar%tau_tot  = cospOUT%calipso_tau_tot(:,:,sglidar%Nlevels:1:-1)
+       if (any([cfg%Lclcalipsoliq,cfg%Lclcalipsoice,cfg%Lclcalipsoun,cfg%Lclcalipsotmp,          &
+            cfg%Lclcalipsotmpliq,cfg%Lclcalipsotmpice,cfg%Lclcalipsotmpun,cfg%Lclhcalipsoliq,&
+            cfg%Lcllcalipsoliq,cfg%Lclmcalipsoliq,cfg%Lcltcalipsoliq,cfg%Lclhcalipsoice,&
+            cfg%Lcllcalipsoice,cfg%Lclmcalipsoice,cfg%Lcltcalipsoice,cfg%Lclhcalipsoun,&
+            cfg%Lcllcalipsoun,cfg%Lclmcalipsoun,cfg%Lcltcalipsoun])) then
+          sglidar%temp_tot = cospOUT%calipso_temp_tot(:,sglidar%Nlevels:1:-1)
+          sglidar%tau_tot  = cospOUT%calipso_tau_tot(:,:,sglidar%Nlevels:1:-1)
+       else
+          print*,'CALIPSO simulator turned on, but no diagnostics reque!sted!!!'
+       endif       
     endif
-
+    
     ! Cloudsat             
     if (cfg%Lradar_sim) then
        ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.    
        if (cfg%Ldbze94) then
-          sgradar%Ze_tot          = cospOUT%cloudsat_Ze_tot(:,:,sgradar%Nlevels:1:-1)  
+          sgradar%Ze_tot = cospOUT%cloudsat_Ze_tot(:,:,sgradar%Nlevels:1:-1)  
        endif
        if (cfg%LcfadDbze94) then 
-          stradar%cfad_ze               = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)              
+          stradar%cfad_ze = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)              
        endif
     endif
 
@@ -853,15 +864,15 @@ contains
        stradar%lidar_only_freq_cloud = cospOUT%lidar_only_freq_cloud(:,stradar%Nlevels:1:-1)    
     endif
     if (cfg%Lcltlidarradar) stradar%radar_lidar_tcc = cospOUT%radar_lidar_tcc      
-
+    
     ! Subcolumns
     sgx%frac_out = sgx%frac_out(:,:,sgx%Nlevels:1:-1)
-
+    
     ! Clean-up memory
     call destroy_cosp_outputs(cospOUT)
     deallocate(vgrid_zl,vgrid_zu,vgrid_z)
-    
-   end subroutine cosp_interface_v1p4
+
+  end subroutine cosp_interface_v1p4
    
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    ! SUBROUTINE subsample_and_optics
