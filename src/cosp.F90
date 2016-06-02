@@ -296,11 +296,12 @@ CONTAINS
          modisCfIce, modisCfHigh, modisCfMid, modisCfLow,modisMeanTauTotal,     &       
          modisMeanTauLiquid, modisMeanTauIce, modisMeanLogTauTotal,             &       
          modisMeanLogTauLiquid, modisMeanLogTauIce, modisMeanSizeLiquid,        &        
-         modisMeanSizeIce, modisMeanCloudTopPressure, modisMeanLiquidWaterPath
+         modisMeanSizeIce, modisMeanCloudTopPressure, modisMeanLiquidWaterPath, &
+         radar_lidar_tcc
     REAL(WP), dimension(:,:),allocatable  :: &
          modisRetrievedCloudTopPressure,modisRetrievedTau,modisRetrievedSize,   &
          misr_boxtau,misr_boxztop,misr_dist_model_layertops,isccp_boxtau,       &
-         isccp_boxttop,isccp_boxptop,calipso_beta_mol
+         isccp_boxttop,isccp_boxptop,calipso_beta_mol,lidar_only_freq_cloud
     REAL(WP), dimension(:,:,:),allocatable :: &
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq,     &
          calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl
@@ -437,9 +438,7 @@ CONTAINS
     endif
 
     ! CLOUDSAT column
-    if (associated(cospOUT%cloudsat_cfad_ze)                               .or.          &
-        associated(cospOUT%lidar_only_freq_cloud)                          .or.          &
-        associated(cospOUT%radar_lidar_tcc)) then
+    if (associated(cospOUT%cloudsat_cfad_ze)) then
        Lcloudsat_column    = .true.
        Lcloudsat_subcolumn = .true.
     endif
@@ -466,6 +465,15 @@ CONTAINS
        Lmodis_column    = .true.
        Lmodis_subcolumn = .true.
     endif
+
+    ! Joint simulator products
+    if (associated(cospOUT%lidar_only_freq_cloud) .or. associated(cospOUT%radar_lidar_tcc)) then
+       Lcalipso_column     = .true.
+       Lcalipso_subcolumn  = .true.
+       Lcloudsat_column    = .true.
+       Lcloudsat_subcolumn = .true.
+    endif
+    
     call cpu_time(cosp_time(2))
     if (debug) print*,'   Time to check outputs to see which simualtor to run:  ',cosp_time(2)-cosp_time(1)
     
@@ -881,9 +889,6 @@ CONTAINS
        cospOUT%calipso_srbval = calipso_histBsct     
        
        ! Free up memory (if necessary)
-       if (allocated(calipso_beta_tot))     deallocate(calipso_beta_tot)
-       if (allocated(calipso_beta_mol))     deallocate(calipso_beta_mol)
-       if (allocated(calipso_betaperp_tot)) deallocate(calipso_betaperp_tot)
        if (allocated(out1D_1))              deallocate(out1D_1)
        if (allocated(out1D_2))              deallocate(out1D_2)
        if (allocated(out1D_3))              deallocate(out1D_3)
@@ -918,7 +923,6 @@ CONTAINS
                              cospgridIN%hgt_matrix_half,cospOUT%cloudsat_cfad_ze(ij:ik,:,:))
        ! Free up memory  (if necessary)
        if (allocated(out1D_1))      deallocate(out1D_1)
-       if (allocated(cloudsatDBZe)) deallocate(cloudsatDBZe)
     endif
     call cpu_time(cosp_time(14))
     if (debug) print*,'   Time to run radar_column:                             ',cosp_time(14)-cosp_time(13)
@@ -1174,7 +1178,9 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     ! CLOUDSAT/CALIPSO products
-    if (associated(cospOUT%radar_lidar_tcc) .or. associated(cospOUT%lidar_only_freq_cloud)) then    
+    if (associated(cospOUT%radar_lidar_tcc) .or. associated(cospOUT%lidar_only_freq_cloud)) then
+       allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,Nlvgrid),                       &
+                radar_lidar_tcc(cloudsatIN%Npoints))
        if (use_vgrid) then
           allocate(t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),                        &
                    betamol_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),                  &
@@ -1188,7 +1194,7 @@ CONTAINS
                                          cospgridIN%hgt_matrix,                          &
                                          cospgridIN%hgt_matrix_half,t_in,Nlvgrid,        &
                                          vgrid_zl,vgrid_zu,tmpFlip)
-          betamol_in(:,1,:) = cospOUT%calipso_beta_mol(ij:ik,:)
+          betamol_in(:,1,:) = calipso_beta_mol(ij:ik,:)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
                                          cospgridIN%hgt_matrix,                          &
                                          cospgridIN%hgt_matrix_half,betamol_in,          &
@@ -1196,41 +1202,52 @@ CONTAINS
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                                          cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
                                          cospgridIN%hgt_matrix_half,                     &
-                                         cospOUT%calipso_beta_tot(ij:ik,:,:),            &
+                                         calipso_beta_tot(ij:ik,:,:),                    &
                                          Nlvgrid,vgrid_zl,vgrid_zu,pnormFlip)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                                          cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
                                          cospgridIN%hgt_matrix_half,                     &
-                                         cospOUT%calipso_betaperp_tot(ij:ik,:,:),        &
+                                         calipso_betaperp_tot(ij:ik,:,:),                &
                                          Nlvgrid,vgrid_zl,vgrid_zu,pnorm_perpFlip)      
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                                          cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
-                                         cospgridIN%hgt_matrix_half,                     &
-                                         cospOUT%cloudsat_Ze_tot(ij:ik,:,:),             &
+                                         cospgridIN%hgt_matrix_half,cloudsatDBZe,        &
                                          Nlvgrid,vgrid_zl,vgrid_zu,                      &
                                          Ze_totFlip,log_units=.true.)                               
                                                            
           call cosp_lidar_only_cloud(cloudsatIN%Npoints,cloudsatIN%Ncolumns,             &
                                      Nlvgrid,tmpFlip,pnormFlip,pnorm_perpFlip,           &
                                      betamolFlip,Ze_totFlip,                             &
-                                     cospOUT%lidar_only_freq_cloud(ij:ik,:),             &
-                                     cospOUT%radar_lidar_tcc(ij:ik))                                            
+                                     lidar_only_freq_cloud,radar_lidar_tcc)                                            
           deallocate(t_in,betamol_in,tmpFlip,betamolFlip,pnormFlip,pnorm_perpFlip,       &
                      ze_totFlip)
        else
           call cosp_lidar_only_cloud(cloudsatIN%Npoints,cloudsatIN%Ncolumns,             &
-                                     cospIN%Nlevels,cospgridIN%at,                       &
-                                     cospOUT%calipso_beta_tot(ij:ik,:,:),                &
-                                     cospOUT%calipso_betaperp_tot(ij:ik,:,:),            &
-                                     cospOUT%calipso_beta_mol(ij:ik,:),                  &
-                                     cospOUT%cloudsat_Ze_tot(ij:ik,:,:),                 &
-                                     cospOUT%lidar_only_freq_cloud(ij:ik,:),             &
-                                     cospOUT%radar_lidar_tcc(ij:ik))
+                                     cospIN%Nlevels,cospgridIN%at,calipso_beta_tot,      &
+                                     calipso_betaperp_tot,calipso_beta_mol,cloudsatDBZe, &
+                                     lidar_only_freq_cloud,radar_lidar_tcc)
        endif
+       
+       ! Store, when necessary
+       if (associated(cospOUT%lidar_only_freq_cloud)) then
+          cospOUT%lidar_only_freq_cloud(ij:ik,:) = lidar_only_freq_cloud
+       endif
+       if (associated(cospOUT%radar_lidar_tcc)) then
+          cospOUT%radar_lidar_tcc(ij:ik) = radar_lidar_tcc
+       endif
+
     endif
     call cpu_time(cosp_time(17))
     if (debug) print*,'   Time to create joint products:                        ',cosp_time(17)-cosp_time(16)
     
+    ! Cleanup 
+    if (allocated(calipso_beta_tot))      deallocate(calipso_beta_tot)
+    if (allocated(calipso_beta_mol))      deallocate(calipso_beta_mol)
+    if (allocated(calipso_betaperp_tot))  deallocate(calipso_betaperp_tot)
+    if (allocated(cloudsatDBZe))          deallocate(cloudsatDBZe)
+    if (allocated(lidar_only_freq_cloud)) deallocate(lidar_only_freq_cloud)
+    if (allocated(radar_lidar_tcc))       deallocate(radar_lidar_tcc)
+
   end function COSP_SIMULATOR
   ! ######################################################################################
   ! SUBROUTINE cosp_init
@@ -1630,78 +1647,78 @@ CONTAINS
      type(cosp_outputs),intent(inout) :: y
 
      ! Deallocate
-     if (associated(y%calipso_beta_mol))          deallocate(y%calipso_beta_mol)     
-     if (associated(y%calipso_temp_tot))          deallocate(y%calipso_temp_tot)     
-     if (associated(y%calipso_betaperp_tot))      deallocate(y%calipso_betaperp_tot)     
-     if (associated(y%calipso_beta_tot))          deallocate(y%calipso_beta_tot)     
-     if (associated(y%calipso_tau_tot))           deallocate(y%calipso_tau_tot)     
-     if (associated(y%calipso_lidarcldphase))     deallocate(y%calipso_lidarcldphase)     
-     if (associated(y%calipso_cldlayerphase))     deallocate(y%calipso_cldlayerphase)     
-     if (associated(y%calipso_lidarcldtmp))       deallocate(y%calipso_lidarcldtmp)     
-     if (associated(y%calipso_cldlayer))          deallocate(y%calipso_cldlayer)     
-     if (associated(y%calipso_lidarcld))          deallocate(y%calipso_lidarcld)     
-     if (associated(y%calipso_srbval))            deallocate(y%calipso_srbval)     
-     if (associated(y%calipso_cfad_sr))           deallocate(y%calipso_cfad_sr)     
-     if (associated(y%parasolPix_refl))           deallocate(y%parasolPix_refl)     
-     if (associated(y%parasolGrid_refl))          deallocate(y%parasolGrid_refl)     
-     if (associated(y%cloudsat_Ze_tot))           deallocate(y%cloudsat_Ze_tot)  
-     if (associated(y%cloudsat_cfad_ze))          deallocate(y%cloudsat_cfad_ze)     
-     if (associated(y%radar_lidar_tcc))           deallocate(y%radar_lidar_tcc)  
-     if (associated(y%lidar_only_freq_cloud))     deallocate(y%lidar_only_freq_cloud)     
-     if (associated(y%isccp_totalcldarea))        deallocate(y%isccp_totalcldarea)  
-     if (associated(y%isccp_meantb))              deallocate(y%isccp_meantb)     
-     if (associated(y%isccp_meantbclr))           deallocate(y%isccp_meantbclr)  
-     if (associated(y%isccp_meanptop))            deallocate(y%isccp_meanptop)     
-     if (associated(y%isccp_meantaucld))          deallocate(y%isccp_meantaucld)       
-     if (associated(y%isccp_meanalbedocld))       deallocate(y%isccp_meanalbedocld)     
-     if (associated(y%isccp_boxtau))              deallocate(y%isccp_boxtau)       
-     if (associated(y%isccp_boxptop))             deallocate(y%isccp_boxptop)     
-     if (associated(y%isccp_fq))                  deallocate(y%isccp_fq)       
-     if (associated(y%misr_fq))                   deallocate(y%misr_fq)     
-     if (associated(y%misr_dist_model_layertops)) deallocate(y%misr_dist_model_layertops)       
-     if (associated(y%misr_meanztop))             deallocate(y%misr_meanztop)     
-     if (associated(y%misr_cldarea))              deallocate(y%misr_cldarea)      
-     if (associated(y%rttov_tbs))                 deallocate(y%rttov_tbs)     
+     if (associated(y%calipso_beta_mol))          nullify(y%calipso_beta_mol)     
+     if (associated(y%calipso_temp_tot))          nullify(y%calipso_temp_tot)     
+     if (associated(y%calipso_betaperp_tot))      nullify(y%calipso_betaperp_tot)     
+     if (associated(y%calipso_beta_tot))          nullify(y%calipso_beta_tot)     
+     if (associated(y%calipso_tau_tot))           nullify(y%calipso_tau_tot)     
+     if (associated(y%calipso_lidarcldphase))     nullify(y%calipso_lidarcldphase)     
+     if (associated(y%calipso_cldlayerphase))     nullify(y%calipso_cldlayerphase)     
+     if (associated(y%calipso_lidarcldtmp))       nullify(y%calipso_lidarcldtmp)     
+     if (associated(y%calipso_cldlayer))          nullify(y%calipso_cldlayer)     
+     if (associated(y%calipso_lidarcld))          nullify(y%calipso_lidarcld)     
+     if (associated(y%calipso_srbval))            nullify(y%calipso_srbval)     
+     if (associated(y%calipso_cfad_sr))           nullify(y%calipso_cfad_sr)     
+     if (associated(y%parasolPix_refl))           nullify(y%parasolPix_refl)     
+     if (associated(y%parasolGrid_refl))          nullify(y%parasolGrid_refl)     
+     if (associated(y%cloudsat_Ze_tot))           nullify(y%cloudsat_Ze_tot)  
+     if (associated(y%cloudsat_cfad_ze))          nullify(y%cloudsat_cfad_ze)     
+     if (associated(y%radar_lidar_tcc))           nullify(y%radar_lidar_tcc)  
+     if (associated(y%lidar_only_freq_cloud))     nullify(y%lidar_only_freq_cloud)     
+     if (associated(y%isccp_totalcldarea))        nullify(y%isccp_totalcldarea)  
+     if (associated(y%isccp_meantb))              nullify(y%isccp_meantb)     
+     if (associated(y%isccp_meantbclr))           nullify(y%isccp_meantbclr)  
+     if (associated(y%isccp_meanptop))            nullify(y%isccp_meanptop)     
+     if (associated(y%isccp_meantaucld))          nullify(y%isccp_meantaucld)       
+     if (associated(y%isccp_meanalbedocld))       nullify(y%isccp_meanalbedocld)     
+     if (associated(y%isccp_boxtau))              nullify(y%isccp_boxtau)       
+     if (associated(y%isccp_boxptop))             nullify(y%isccp_boxptop)     
+     if (associated(y%isccp_fq))                  nullify(y%isccp_fq)       
+     if (associated(y%misr_fq))                   nullify(y%misr_fq)     
+     if (associated(y%misr_dist_model_layertops)) nullify(y%misr_dist_model_layertops)       
+     if (associated(y%misr_meanztop))             nullify(y%misr_meanztop)     
+     if (associated(y%misr_cldarea))              nullify(y%misr_cldarea)      
+     if (associated(y%rttov_tbs))                 nullify(y%rttov_tbs)     
      if (associated(y%modis_Cloud_Fraction_Total_Mean))                                  &
-        deallocate(y%modis_Cloud_Fraction_Total_Mean)       
+        nullify(y%modis_Cloud_Fraction_Total_Mean)       
      if (associated(y%modis_Cloud_Fraction_Ice_Mean))                                    &
-        deallocate(y%modis_Cloud_Fraction_Ice_Mean)     
+        nullify(y%modis_Cloud_Fraction_Ice_Mean)     
      if (associated(y%modis_Cloud_Fraction_Water_Mean))                                  &
-        deallocate(y%modis_Cloud_Fraction_Water_Mean)           
+        nullify(y%modis_Cloud_Fraction_Water_Mean)           
      if (associated(y%modis_Cloud_Fraction_High_Mean))                                   &
-        deallocate(y%modis_Cloud_Fraction_High_Mean)     
+        nullify(y%modis_Cloud_Fraction_High_Mean)     
      if (associated(y%modis_Cloud_Fraction_Mid_Mean))                                    &
-        deallocate(y%modis_Cloud_Fraction_Mid_Mean)       
+        nullify(y%modis_Cloud_Fraction_Mid_Mean)       
      if (associated(y%modis_Cloud_Fraction_Low_Mean))                                    &
-        deallocate(y%modis_Cloud_Fraction_Low_Mean)     
+        nullify(y%modis_Cloud_Fraction_Low_Mean)     
      if (associated(y%modis_Optical_Thickness_Total_Mean))                               &
-        deallocate(y%modis_Optical_Thickness_Total_Mean)  
+        nullify(y%modis_Optical_Thickness_Total_Mean)  
      if (associated(y%modis_Optical_Thickness_Water_Mean))                               &
-        deallocate(y%modis_Optical_Thickness_Water_Mean)     
+        nullify(y%modis_Optical_Thickness_Water_Mean)     
      if (associated(y%modis_Optical_Thickness_Ice_Mean))                                 &
-        deallocate(y%modis_Optical_Thickness_Ice_Mean)       
+        nullify(y%modis_Optical_Thickness_Ice_Mean)       
      if (associated(y%modis_Optical_Thickness_Total_LogMean))                            &
-        deallocate(y%modis_Optical_Thickness_Total_LogMean)    
+        nullify(y%modis_Optical_Thickness_Total_LogMean)    
      if (associated(y%modis_Optical_Thickness_Water_LogMean))                            &
-        deallocate(y%modis_Optical_Thickness_Water_LogMean)     
+        nullify(y%modis_Optical_Thickness_Water_LogMean)     
      if (associated(y%modis_Optical_Thickness_Ice_LogMean))                              &
-        deallocate(y%modis_Optical_Thickness_Ice_LogMean)     
+        nullify(y%modis_Optical_Thickness_Ice_LogMean)     
      if (associated(y%modis_Cloud_Particle_Size_Water_Mean))                             &
-        deallocate(y%modis_Cloud_Particle_Size_Water_Mean)       
+        nullify(y%modis_Cloud_Particle_Size_Water_Mean)       
      if (associated(y%modis_Cloud_Particle_Size_Ice_Mean))                               &
-        deallocate(y%modis_Cloud_Particle_Size_Ice_Mean)     
+        nullify(y%modis_Cloud_Particle_Size_Ice_Mean)     
      if (associated(y%modis_Cloud_Top_Pressure_Total_Mean))                              &
-        deallocate(y%modis_Cloud_Top_Pressure_Total_Mean)           
+        nullify(y%modis_Cloud_Top_Pressure_Total_Mean)           
      if (associated(y%modis_Liquid_Water_Path_Mean))                                     &
-        deallocate(y%modis_Liquid_Water_Path_Mean)     
+        nullify(y%modis_Liquid_Water_Path_Mean)     
      if (associated(y%modis_Ice_Water_Path_Mean))                                        &
-        deallocate(y%modis_Ice_Water_Path_Mean)       
+        nullify(y%modis_Ice_Water_Path_Mean)       
      if (associated(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure))                    &
-        deallocate(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure)     
+        nullify(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure)     
      if (associated(y%modis_Optical_thickness_vs_ReffLIQ))                               &
-        deallocate(y%modis_Optical_thickness_vs_ReffLIQ)
+        nullify(y%modis_Optical_thickness_vs_ReffLIQ)
      if (associated(y%modis_Optical_thickness_vs_ReffICE))                               &
-        deallocate(y%modis_Optical_thickness_vs_ReffICE)
+        nullify(y%modis_Optical_thickness_vs_ReffICE)
         
    end subroutine destroy_cosp_outputs
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

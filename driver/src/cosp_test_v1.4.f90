@@ -70,7 +70,7 @@ PROGRAM COSPTEST_trunk
   ! Parameters
   character(len=64),parameter :: &
        cosp_input_namelist  = 'cosp_input_nl.v1.4.txt', &
-       cosp_output_namelist = 'cosp_output_nl_v1.4.txt'
+       cosp_output_namelist = 'cosp_output_nl_v1.4.Alejandro.txt'
   integer,parameter :: &
        N_MAX_INPUT_FILES = 10000, &
        N_OUT_LIST = 63,           & ! Number of possible output variables
@@ -232,7 +232,7 @@ PROGRAM COSPTEST_trunk
   time_bnds      = (/time-half_time_step,time+half_time_step/) 
   call cpu_time(driver_time(2))
 
-  do i=1,10!Nfiles
+  do i=1,Nfiles
      dfinput=trim(dinput)//trim(finput(1))
      time_bnds = (/time-half_time_step,time+half_time_step/) ! This may need to be adjusted, 
                                                              ! depending on the approx_interval in the MIP table
@@ -335,11 +335,9 @@ PROGRAM COSPTEST_trunk
      call cosp(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,isccp,misr,modis,rttov,&
                stradar,stlidar)
      call cpu_time(driver_time(3))
-
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Write outputs to CMOR-compliant netCDF format.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     cfg%Lwrite_output=.false.
      if (cfg%Lwrite_output) then
 
        ! Model grid info for cmor output

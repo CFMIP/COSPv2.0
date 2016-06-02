@@ -8,7 +8,7 @@ module mod_cosp_io
                              LIDAR_NTEMP,LIDAR_PHASE_TEMP,LIDAR_PHASE_TEMP_BNDS,misr_histHgtCenters,&
                              misr_histHgtEdges,numMISRHgtBins,PARASOL_NREFL,SR_BINS,   &
                              isccp_histTauEdges,isccp_histPresEdges,PARASOL_SZA,          &
-                             isccp_histPresCenters,isccp_histTauCenters
+                             isccp_histPresCenters,isccp_histTauCenters,calipso_histBsct
   USE MOD_COSP_RTTOV, ONLY: iChannel
 
   implicit none
@@ -986,8 +986,10 @@ contains
        vgrid_bounds(2,i) = vgrid_zu(i)
     enddo
     ! Lidar scattering ratio bounds (They are output by cosp_cfad_sr->diag_lidar in lmd_ipsl_stats.f90)
-    sratio_bounds(2,:)         = cospOUT%calipso_srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
-    sratio_bounds(1,2:SR_BINS) = cospOUT%calipso_srbval(1:SR_BINS-1)
+!    sratio_bounds(2,:)         = cospOUT%calipso_srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
+!    sratio_bounds(1,2:SR_BINS) = cospOUT%calipso_srbval(1:SR_BINS-1)
+    sratio_bounds(2,:)         = calipso_histBsct(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
+    sratio_bounds(1,2:SR_BINS) = calipso_histBsct(1:SR_BINS-1)
     sratio_bounds(1,1)         = 0.0
     sratio_bounds(2,SR_BINS)   = 1.e5 ! This matches with Chepfer et al., JGR, 2009. However, it is not consistent 
     ! with the upper limit in lmd_ipsl_stats.f90, which is LIDAR_UNDEF-1=998.999
