@@ -1194,7 +1194,7 @@ CONTAINS
                                          cospgridIN%hgt_matrix,                          &
                                          cospgridIN%hgt_matrix_half,t_in,Nlvgrid,        &
                                          vgrid_zl,vgrid_zu,tmpFlip)
-          betamol_in(:,1,:) = calipso_beta_mol(ij:ik,:)
+          betamol_in(:,1,:) = calipso_beta_mol!(ij:ik,:)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
                                          cospgridIN%hgt_matrix,                          &
                                          cospgridIN%hgt_matrix_half,betamol_in,          &
@@ -1202,12 +1202,12 @@ CONTAINS
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                                          cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
                                          cospgridIN%hgt_matrix_half,                     &
-                                         calipso_beta_tot(ij:ik,:,:),                    &
+                                         calipso_beta_tot,&!(ij:ik,:,:),                    &
                                          Nlvgrid,vgrid_zl,vgrid_zu,pnormFlip)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                                          cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
                                          cospgridIN%hgt_matrix_half,                     &
-                                         calipso_betaperp_tot(ij:ik,:,:),                &
+                                         calipso_betaperp_tot,&!(ij:ik,:,:),                &
                                          Nlvgrid,vgrid_zl,vgrid_zu,pnorm_perpFlip)      
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                                          cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
