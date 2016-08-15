@@ -780,7 +780,7 @@ CONTAINS
        endif   
                                 
        ! Call simulator
-       call icarus_column(isccpIN%npoints, isccpIN%ncolumns, isccpIN%nlevels,           &
+       call icarus_column(isccpIN%npoints, isccpIN%ncolumns, isccpIN%nlevels,            &
                           isccp_boxtau(:,:),isccp_boxptop(:,:)/100._wp,                  &
                           isccpIN%sunlit,isccpIN%pfull,isccpIN%phalf,isccpIN%qv,         &
                           isccpIN%at,isccpIN%skt,isccpIN%emsfc_lw,isccp_boxttop,         &
@@ -802,12 +802,30 @@ CONTAINS
        if (allocated(isccp_boxtau))    deallocate(isccp_boxtau)
        if (allocated(isccp_meantbclr)) deallocate(isccp_meantbclr)
        if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
-       if (allocated(out1D_1))         deallocate(out1D_1)
-       if (allocated(out1D_2))         deallocate(out1D_2)
-       if (allocated(out1D_3))         deallocate(out1D_3)
-       if (allocated(out1D_4))         deallocate(out1D_4)
-       if (allocated(out1D_5))         deallocate(out1D_5)
-       if (allocated(out1D_6))         deallocate(out1D_6)
+       if (allocated(out1D_1)) then
+          deallocate(out1D_1)
+          nullify(cospOUT%isccp_meanalbedocld)
+       endif
+       if (allocated(out1D_2)) then
+          deallocate(out1D_2)
+          nullify(cospOUT%isccp_meanptop)
+       endif
+       if (allocated(out1D_3)) then
+          deallocate(out1D_3)
+          nullify(cospOUT%isccp_meantaucld)
+       endif
+       if (allocated(out1D_4)) then
+          deallocate(out1D_4)
+          nullify(cospOUT%isccp_totalcldarea)
+       endif
+       if (allocated(out1D_5)) then
+          deallocate(out1D_5)
+          nullify(cospOUT%isccp_meantb)
+       endif
+       if (allocated(out1D_6)) then
+          deallocate(out1D_6)
+          nullify(cospOUT%isccp_fq)
+       endif
     endif
     call cpu_time(cosp_time(10))
     if (debug) print*,'   Time to run isccp_column:                             ',cosp_time(10)-cosp_time(9)
@@ -837,9 +855,18 @@ CONTAINS
        if (allocated(misr_boxtau))               deallocate(misr_boxtau)
        if (allocated(misr_boxztop))              deallocate(misr_boxztop)
        if (allocated(misr_dist_model_layertops)) deallocate(misr_dist_model_layertops)   
-       if (allocated(out1D_1))                   deallocate(out1D_1)
-       if (allocated(out1D_2))                   deallocate(out1D_2)
-       if (allocated(out1D_3))                   deallocate(out1D_3)
+       if (allocated(out1D_1)) then
+          deallocate(out1D_1)
+          nullify(cospOUT%misr_cldarea)
+       endif
+       if (allocated(out1D_2)) then
+          deallocate(out1D_2)
+          nullify(cospOUT%misr_meanztop)
+       endif
+       if (allocated(out1D_3)) then
+          deallocate(out1D_3)
+          nullify(cospOUT%misr_fq)
+       endif
     endif
     call cpu_time(cosp_time(11))
     if (debug) print*,'   Time to run misr_column:                              ',cosp_time(11)-cosp_time(10)
@@ -889,12 +916,30 @@ CONTAINS
        cospOUT%calipso_srbval = calipso_histBsct     
        
        ! Free up memory (if necessary)
-       if (allocated(out1D_1))              deallocate(out1D_1)
-       if (allocated(out1D_2))              deallocate(out1D_2)
-       if (allocated(out1D_3))              deallocate(out1D_3)
-       if (allocated(out1D_4))              deallocate(out1D_4)
-       if (allocated(out1D_5))              deallocate(out1D_5)
-       if (allocated(out1D_6))              deallocate(out1D_6)
+       if (allocated(out1D_1)) then
+          deallocate(out1D_1)
+          nullify(cospOUT%calipso_cfad_sr)
+       endif
+       if (allocated(out1D_2)) then
+          deallocate(out1D_2)
+          nullify(cospOUT%calipso_lidarcld)
+       endif
+       if (allocated(out1D_3)) then
+          deallocate(out1D_3)
+          nullify(cospOUT%calipso_lidarcldphase)
+       endif
+       if (allocated(out1D_4)) then
+          deallocate(out1D_4)
+          nullify(cospOUT%calipso_cldlayer)
+       endif
+       if (allocated(out1D_5)) then
+          deallocate(out1D_5)
+          nullify(cospOUT%calipso_cldlayerphase)
+       endif
+       if (allocated(out1D_6)) then
+          deallocate(out1D_6)
+          nullify(cospOUT%calipso_lidarcldtmp)
+       endif
     endif
     call cpu_time(cosp_time(12))
     if (debug) print*,'   Time to run lidar_column:                             ',cosp_time(12)-cosp_time(11)
@@ -922,7 +967,10 @@ CONTAINS
                              Nlvgrid,cloudsatDBZe,cospgridIN%hgt_matrix,                 &
                              cospgridIN%hgt_matrix_half,cospOUT%cloudsat_cfad_ze(ij:ik,:,:))
        ! Free up memory  (if necessary)
-       if (allocated(out1D_1))      deallocate(out1D_1)
+       if (allocated(out1D_1)) then
+          deallocate(out1D_1)
+          nullify(cospOUT%cloudsat_cfad_ze)
+       endif
     endif
     call cpu_time(cosp_time(14))
     if (debug) print*,'   Time to run radar_column:                             ',cosp_time(14)-cosp_time(13)
