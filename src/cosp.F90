@@ -694,12 +694,12 @@ CONTAINS
                                  parasolIN%tautot_S_liq(1:parasolIN%Npoints,icol),       &
                                  parasolIN%tautot_S_ice(1:parasolIN%Npoints,icol),       &
                                  parasolPix_refl(:,icol,1:PARASOL_NREFL))
+          ! Store output (if requested)
+          if (associated(cospOUT%parasolPix_refl)) then
+             cospOUT%parasolPix_refl(ij:ik,icol,1:PARASOL_NREFL) =                          &
+                  parasolPix_refl(:,icol,1:PARASOL_NREFL)
+          endif
        enddo
-       ! Store output (if requested)
-       if (associated(cospOUT%parasolPix_refl)) then
-          cospOUT%parasolPix_refl(ij:ik,icol,1:PARASOL_NREFL) =                          &
-               parasolPix_refl(:,icol,1:PARASOL_NREFL)
-       endif
     endif    
     call cpu_time(cosp_time(7))
     if (debug) print*,'   Time to run parasol_subcolumn:                        ',cosp_time(7)-cosp_time(6)
@@ -2712,9 +2712,9 @@ CONTAINS
          write(parasolErrorMessage,"(a50,i2,a4,i2)") 'ERROR(lidar_simulator): nrefl should be less then ',ntetas,' not',PARASOL_NREFL
          nError=nError+1
          errorMessage(nError) = parasolErrorMessage
-      ENDIF
-      Lparasol_subcolumn = .false.
-      Lparasol_column    = .false.
+         Lparasol_subcolumn = .false.
+         Lparasol_column    = .false.
+      endif
   endif  
     
   end subroutine cosp_errorCheck
