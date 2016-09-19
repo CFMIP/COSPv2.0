@@ -40,7 +40,11 @@ MODULE MOD_COSP
                                          use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,    &
                                          numMODISTauBins,numMODISPresBins,               &
                                          numMODISReffIceBins,numMODISReffLiqBins,        &
-                                         numISCCPTauBins,numISCCPPresBins,numMISRTauBins
+                                         numISCCPTauBins,numISCCPPresBins,numMISRTauBins,&
+                                         ntau,modis_histTau,tau_binBounds,               &
+                                         modis_histTauEdges,tau_binEdges,                &
+                                         modis_histTauCenters,tau_binCenters
+  
   USE MOD_COSP_MODIS_INTERFACE,    ONLY: cosp_modis_init,     modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,    ONLY: cosp_rttov_init,     rttov_IN
   USE MOD_COSP_MISR_INTERFACE,     ONLY: cosp_misr_init,      misr_IN
@@ -898,7 +902,7 @@ CONTAINS
           allocate(out1D_6(Npoints*40*5))
           cospOUT%calipso_lidarcldtmp(ij:ik,1:40,1:5) => out1D_6
        endif   
-
+       
        ! Call simulator
        ok_lidar_cfad=.true.
        call lidar_column(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels,         &
@@ -913,8 +917,8 @@ CONTAINS
                          cospgridIN%hgt_matrix,cospgridIN%hgt_matrix_half,               &
                          cospOUT%calipso_cldlayerphase(ij:ik,:,:),                       &
                          cospOUT%calipso_lidarcldtmp(ij:ik,:,:))                                      
-       cospOUT%calipso_srbval = calipso_histBsct     
-       
+       cospOUT%calipso_srbval = calipso_histBsct
+
        ! Free up memory (if necessary)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
@@ -1342,6 +1346,15 @@ CONTAINS
     integer  :: i
     real(wp) :: zstep
 
+    ! Initialize MODIS optical-depth bin boundaries for joint-histogram. (defined in cosp_config.F90)
+    if (.not. allocated(modis_histTau)) then
+       allocate(modis_histTau(ntau+1),modis_histTauEdges(2,ntau),modis_histTauCenters(ntau))
+       numMODISTauBins      = ntau
+       modis_histTau        = tau_binBounds
+       modis_histTauEdges   = tau_binEdges
+       modis_histTauCenters = tau_binCenters
+    endif
+    
     ! Set up vertical grid used by CALIPSO and CLOUDSAT L3
     use_vgrid = lusevgrid
     

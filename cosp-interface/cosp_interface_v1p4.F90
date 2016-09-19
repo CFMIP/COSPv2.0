@@ -42,7 +42,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
                                  tau_binBounds,tau_binEdges,tau_binCenters,R_UNDEF,       &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4,   &
                                  numMISRHgtBins,SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS, &
-                                 numMODISReffIceBins,numMODISTauBins, numMODISPresBins,   &
+                                 numMODISReffIceBins, numMODISPresBins,                   &
                                  numMODISReffLiqBins,vgrid_zl,vgrid_zu,vgrid_z
   use mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics_init,&
                                  quickbeam_optics
@@ -619,8 +619,18 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize COSP
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if (.not. allocated(vgrid_zl) .or. .not. allocated(vgrid_zu) .or. .not. allocated(vgrid_z)) then
 
+    ! Initialize MODIS optical-depth bin boundaries for joint-histogram. (defined in cosp_config.F90)
+    if (.not. allocated(modis_histTau)) then
+       allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),modis_histTauCenters(ntauV1p4))
+       numMODIStauBins      = ntauV1p4
+       modis_histTau        = tau_binBoundsV1p4
+       modis_histTauEdges   = tau_binEdgesV1p4
+       modis_histTauCenters = tau_binCentersV1p4
+    endif
+
+    if (.not. allocated(vgrid_zl) .or. .not. allocated(vgrid_zu) .or. .not. allocated(vgrid_z)) then
+       
        ! Initialize quickbeam_optics, also if two-moment radar microphysics scheme is wanted...
        if (cloudsat_micro_scheme == 'MMF_v3.5_two_moment')  then
           ldouble = .true. 
@@ -812,12 +822,13 @@ contains
           sglidar%beta_tot         = cospOUT%calipso_beta_tot
        endif
        if (cfg%LcfadLidarsr532)  then
-          stlidar%srbval                = cospOUT%calipso_srbval
-          stlidar%cfad_sr               = cospOUT%calipso_cfad_sr(:,:,sglidar%Nlevels:1:-1)
-          sglidar%betaperp_tot          = cospOUT%calipso_betaperp_tot(:,:,sglidar%Nlevels:1:-1)
-       endif   
+          stlidar%srbval       = cospOUT%calipso_srbval
+          stlidar%cfad_sr      = cospOUT%calipso_cfad_sr(:,:,vgrid%Nlvgrid:1:-1)
+          sglidar%betaperp_tot = cospOUT%calipso_betaperp_tot(:,:,sglidar%Nlevels:1:-1)
+       endif
+
        if (cfg%Lclcalipso) then
-          stlidar%lidarcld         = cospOUT%calipso_lidarcld(:,stlidar%Nlevels:1:-1)
+          stlidar%lidarcld = cospOUT%calipso_lidarcld(:,stlidar%Nlevels:1:-1)
        endif       
        if (cfg%Lclhcalipso .or. cfg%Lclmcalipso .or. cfg%Lcllcalipso .or. cfg%Lcltcalipso) then
           stlidar%cldlayer = cospOUT%calipso_cldlayer
@@ -1906,13 +1917,12 @@ contains
              x%Cloud_Particle_Size_Ice_Mean(Npoints),                                    &
              x%Cloud_Top_Pressure_Total_Mean(Npoints),x%Liquid_Water_Path_Mean(Npoints), &
              x%Ice_Water_Path_Mean(Npoints),                                             &
-             x%Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,numMODISTauBins+1,numMODISPresBins),&
-             x%Optical_Thickness_vs_ReffICE(nPoints,numModisTauBins+1,numMODISReffIceBins),&
-             x%Optical_Thickness_vs_ReffLIQ(nPoints,numModisTauBins+1,numMODISReffLiqBins))
+             x%Optical_Thickness_vs_Cloud_Top_Pressure(nPoints,ntauV1p4+1,numMODISPresBins),&
+             x%Optical_Thickness_vs_ReffICE(nPoints,ntauV1p4+1,numMODISReffIceBins),&
+             x%Optical_Thickness_vs_ReffLIQ(nPoints,ntauV1p4+1,numMODISReffLiqBins))
     x%Optical_Thickness_vs_Cloud_Top_Pressure(:, :, :) = R_UNDEF
     x%Optical_Thickness_vs_ReffICE(:,:,:)              = R_UNDEF
     x%Optical_Thickness_vs_ReffLIQ(:,:,:)              = R_UNDEF
-
   END SUBROUTINE CONSTRUCT_COSP_MODIS
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
