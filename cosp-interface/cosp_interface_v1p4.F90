@@ -623,7 +623,7 @@ contains
     ! Initialize MODIS optical-depth bin boundaries for joint-histogram. (defined in cosp_config.F90)
     if (.not. allocated(modis_histTau)) then
        allocate(modis_histTau(ntauV1p4+1),modis_histTauEdges(2,ntauV1p4),modis_histTauCenters(ntauV1p4))
-       numMODIStauBins      = ntauV1p4
+       numMODIStauBins      = ntauV1p4+1
        modis_histTau        = tau_binBoundsV1p4
        modis_histTauEdges   = tau_binEdgesV1p4
        modis_histTauCenters = tau_binCentersV1p4
@@ -840,7 +840,7 @@ contains
            cfg%Lcltcalipsoice .or. cfg%Lcllcalipsoliq .or. cfg%Lclmcalipsoliq .or.                   &
            cfg%Lclhcalipsoliq .or. cfg%Lcltcalipsoliq .or. cfg%Lcllcalipsoun  .or.                   &
            cfg%Lclmcalipsoun  .or. cfg%Lclhcalipsoun  .or. cfg%Lcltcalipsoun) then       
-           stlidar%cldlayerphase         = cospOUT%calipso_cldlayerphase(:,stlidar%Nlevels:1:-1,:)
+          stlidar%cldlayerphase         = cospOUT%calipso_cldlayerphase
        endif
        if (cfg%Lclcalipsotmp .or. cfg%Lclcalipsotmpliq .or. cfg%Lclcalipsoice .or. cfg%Lclcalipsotmpun) then
           stlidar%lidarcldtmp = cospOUT%calipso_lidarcldtmp
