@@ -56,19 +56,24 @@ the repository using the following command:
 
 This will create a local copy, by default COSPv2.0/, of the COSP source code on your machine.
 
-Legacy versions of COSP (v1.3.1, v1.3.2 and v1.4.0) are also now archived on GitHub. These 3
-versions are archived as different "commits" in the same repository. To download one of these
+Legacy versions of COSP (v1.3.1, v1.3.2, v1.4.0 and v1.4.1) are also now archived on GitHub. These
+4 versions are archived as different "commits" in the same repository. To download one of these
 versions you will need to clone the COSPv1 repository and then revert to the correct commit.
 
 For example, to download COSP v1.3.2 you would first clone the COSPv1 repository:
 
    git clone https://github.com/CFMIP/COSPv1.git
 
-This will create a local copy of the sourcecode, by default COSPv1/. Then to view the different
+This will create a local copy of the repository, by default COSPv1/. Then to view the different
 "commits" in that repository you can use "git log". For example:
 
    git log
-   
+     commit bae896c6d09af4f34493422974cfb86722f9ead5
+     Author: Dustin Swales <dustin.swales@noaa.gov>
+     Date:   Fri Nov 6 08:26:35 2015 -0700
+
+          COSP version 1.4.1
+
      commit 572c53ab941c8019135d147fbdf01a6633487aaa
      Author: Dustin Swales <dustin.swales@noaa.gov>
      Date:   Mon Sep 14 11:53:52 2015 -0600
@@ -89,10 +94,11 @@ This will create a local copy of the sourcecode, by default COSPv1/. Then to vie
 
 This shows the commit IDs, author of the commit, date of the commit and a brief description
 for the three archived releases. By default in git, when you clone a repository, you will be
-at the latest commit. In this case COSPv1.4.0. To revert to an older
-commit you need to "reset" to that commit. So to revert to COSP v1.3.2, you would:
+at the latest commit. In this case COSPv1.4.1. To revert to an older
+commit you need to "checkout" that commit (i.e. git checkout <commit>). So for example, to
+revert to COSP v1.3.2, you would:
 
-   git reset --hard 9e7d84d735249d95521852e0db0c8eed16b4f070
+   git checkout 9e7d84d735249d95521852e0db0c8eed16b4f070
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 4) COMPILATION AND TESTING
@@ -212,9 +218,8 @@ c) Compare to reference data.
         All Files Match
         ############################################################################################
 
-	Above are the results for a correct implementation. If differences arise, they are
-	reported at the end of the list. For example:
-
+Above are the results for a correct implementation. If differences arise, they are
+reported at the end of the list. For example:
 	...
         ...
 	clhcalipsoliq
