@@ -1707,79 +1707,215 @@ CONTAINS
   subroutine destroy_cosp_outputs(y)
      type(cosp_outputs),intent(inout) :: y
 
-     ! Deallocate
-     if (associated(y%calipso_beta_mol))          nullify(y%calipso_beta_mol)     
-     if (associated(y%calipso_temp_tot))          nullify(y%calipso_temp_tot)     
-     if (associated(y%calipso_betaperp_tot))      nullify(y%calipso_betaperp_tot)     
-     if (associated(y%calipso_beta_tot))          nullify(y%calipso_beta_tot)     
-     if (associated(y%calipso_tau_tot))           nullify(y%calipso_tau_tot)     
-     if (associated(y%calipso_lidarcldphase))     nullify(y%calipso_lidarcldphase)     
-     if (associated(y%calipso_cldlayerphase))     nullify(y%calipso_cldlayerphase)     
-     if (associated(y%calipso_lidarcldtmp))       nullify(y%calipso_lidarcldtmp)     
-     if (associated(y%calipso_cldlayer))          nullify(y%calipso_cldlayer)     
-     if (associated(y%calipso_lidarcld))          nullify(y%calipso_lidarcld)     
-     if (associated(y%calipso_srbval))            nullify(y%calipso_srbval)     
-     if (associated(y%calipso_cfad_sr))           nullify(y%calipso_cfad_sr)     
-     if (associated(y%parasolPix_refl))           nullify(y%parasolPix_refl)     
-     if (associated(y%parasolGrid_refl))          nullify(y%parasolGrid_refl)     
-     if (associated(y%cloudsat_Ze_tot))           nullify(y%cloudsat_Ze_tot)  
-     if (associated(y%cloudsat_cfad_ze))          nullify(y%cloudsat_cfad_ze)     
-     if (associated(y%radar_lidar_tcc))           nullify(y%radar_lidar_tcc)  
-     if (associated(y%lidar_only_freq_cloud))     nullify(y%lidar_only_freq_cloud)     
-     if (associated(y%isccp_totalcldarea))        nullify(y%isccp_totalcldarea)  
-     if (associated(y%isccp_meantb))              nullify(y%isccp_meantb)     
-     if (associated(y%isccp_meantbclr))           nullify(y%isccp_meantbclr)  
-     if (associated(y%isccp_meanptop))            nullify(y%isccp_meanptop)     
-     if (associated(y%isccp_meantaucld))          nullify(y%isccp_meantaucld)       
-     if (associated(y%isccp_meanalbedocld))       nullify(y%isccp_meanalbedocld)     
-     if (associated(y%isccp_boxtau))              nullify(y%isccp_boxtau)       
-     if (associated(y%isccp_boxptop))             nullify(y%isccp_boxptop)     
-     if (associated(y%isccp_fq))                  nullify(y%isccp_fq)       
-     if (associated(y%misr_fq))                   nullify(y%misr_fq)     
-     if (associated(y%misr_dist_model_layertops)) nullify(y%misr_dist_model_layertops)       
-     if (associated(y%misr_meanztop))             nullify(y%misr_meanztop)     
-     if (associated(y%misr_cldarea))              nullify(y%misr_cldarea)      
-     if (associated(y%rttov_tbs))                 nullify(y%rttov_tbs)     
-     if (associated(y%modis_Cloud_Fraction_Total_Mean))                                  &
+     ! Deallocate and nullify
+     if (associated(y%calipso_beta_mol))          then
+        deallocate(y%calipso_beta_mol)
+        nullify(y%calipso_beta_mol)
+     endif
+     if (associated(y%calipso_temp_tot))          then
+        deallocate(y%calipso_temp_tot)
+        nullify(y%calipso_temp_tot)     
+     endif
+     if (associated(y%calipso_betaperp_tot))      then
+        deallocate(y%calipso_betaperp_tot)
+        nullify(y%calipso_betaperp_tot)     
+     endif
+     if (associated(y%calipso_beta_tot))          then
+        deallocate(y%calipso_beta_tot)    
+        nullify(y%calipso_beta_tot)     
+     endif
+     if (associated(y%calipso_tau_tot))           then
+        deallocate(y%calipso_tau_tot) 
+        nullify(y%calipso_tau_tot)     
+     endif
+     if (associated(y%calipso_lidarcldphase))     then
+        deallocate(y%calipso_lidarcldphase)
+        nullify(y%calipso_lidarcldphase)     
+     endif
+     if (associated(y%calipso_cldlayerphase))     then
+        deallocate(y%calipso_cldlayerphase)
+        nullify(y%calipso_cldlayerphase)     
+     endif
+     if (associated(y%calipso_lidarcldtmp))       then
+        deallocate(y%calipso_lidarcldtmp)
+        nullify(y%calipso_lidarcldtmp)     
+     endif
+     if (associated(y%calipso_cldlayer))          then
+        deallocate(y%calipso_cldlayer)
+        nullify(y%calipso_cldlayer)     
+     endif
+     if (associated(y%calipso_lidarcld))         then
+        deallocate(y%calipso_lidarcld)
+        nullify(y%calipso_lidarcld)     
+     endif
+     if (associated(y%calipso_srbval))            then
+        deallocate(y%calipso_srbval)
+        nullify(y%calipso_srbval)     
+     endif
+     if (associated(y%calipso_cfad_sr))          then
+        deallocate(y%calipso_cfad_sr)
+        nullify(y%calipso_cfad_sr)     
+     endif
+     if (associated(y%parasolPix_refl))           then
+        deallocate(y%parasolPix_refl)
+        nullify(y%parasolPix_refl)     
+     endif
+     if (associated(y%parasolGrid_refl))          then
+        deallocate(y%parasolGrid_refl) 
+        nullify(y%parasolGrid_refl)     
+     endif
+     if (associated(y%cloudsat_Ze_tot))           then
+        deallocate(y%cloudsat_Ze_tot) 
+        nullify(y%cloudsat_Ze_tot)  
+     endif
+     if (associated(y%cloudsat_cfad_ze))          then
+        deallocate(y%cloudsat_cfad_ze)
+        nullify(y%cloudsat_cfad_ze)     
+     endif
+     if (associated(y%radar_lidar_tcc))           then
+        deallocate(y%radar_lidar_tcc) 
+        nullify(y%radar_lidar_tcc)  
+     endif
+     if (associated(y%lidar_only_freq_cloud))     then
+        deallocate(y%lidar_only_freq_cloud)
+        nullify(y%lidar_only_freq_cloud)     
+     endif
+     if (associated(y%isccp_totalcldarea))        then
+        deallocate(y%isccp_totalcldarea) 
+        nullify(y%isccp_totalcldarea)  
+     endif
+     if (associated(y%isccp_meantb))              then
+        deallocate(y%isccp_meantb) 
+        nullify(y%isccp_meantb)     
+     endif
+     if (associated(y%isccp_meantbclr))           then
+        deallocate(y%isccp_meantbclr)
+        nullify(y%isccp_meantbclr)  
+     endif
+     if (associated(y%isccp_meanptop))            then
+        deallocate(y%isccp_meanptop)
+        nullify(y%isccp_meanptop)     
+     endif
+     if (associated(y%isccp_meantaucld))          then
+        deallocate(y%isccp_meantaucld) 
+        nullify(y%isccp_meantaucld)       
+     endif
+     if (associated(y%isccp_meanalbedocld))       then
+        deallocate(y%isccp_meanalbedocld)
+        nullify(y%isccp_meanalbedocld)     
+     endif
+     if (associated(y%isccp_boxtau))              then
+        deallocate(y%isccp_boxtau)
+        nullify(y%isccp_boxtau)       
+     endif
+     if (associated(y%isccp_boxptop))             then
+        deallocate(y%isccp_boxptop)
+        nullify(y%isccp_boxptop)     
+     endif
+     if (associated(y%isccp_fq))                  then
+        deallocate(y%isccp_fq)
+        nullify(y%isccp_fq)       
+     endif
+     if (associated(y%misr_fq))                   then
+        deallocate(y%misr_fq) 
+        nullify(y%misr_fq)     
+     endif
+     if (associated(y%misr_dist_model_layertops)) then
+        deallocate(y%misr_dist_model_layertops)
+        nullify(y%misr_dist_model_layertops)       
+     endif
+     if (associated(y%misr_meanztop))             then
+        deallocate(y%misr_meanztop)
+        nullify(y%misr_meanztop)     
+     endif
+     if (associated(y%misr_cldarea))              then
+        deallocate(y%misr_cldarea)
+        nullify(y%misr_cldarea)      
+     endif
+     if (associated(y%rttov_tbs))                 then
+        deallocate(y%rttov_tbs)
+        nullify(y%rttov_tbs)     
+     endif
+     if (associated(y%modis_Cloud_Fraction_Total_Mean))                      then
+        deallocate(y%modis_Cloud_Fraction_Total_Mean)       
         nullify(y%modis_Cloud_Fraction_Total_Mean)       
-     if (associated(y%modis_Cloud_Fraction_Ice_Mean))                                    &
+     endif
+     if (associated(y%modis_Cloud_Fraction_Ice_Mean))                        then
+        deallocate(y%modis_Cloud_Fraction_Ice_Mean)     
         nullify(y%modis_Cloud_Fraction_Ice_Mean)     
-     if (associated(y%modis_Cloud_Fraction_Water_Mean))                                  &
+     endif
+     if (associated(y%modis_Cloud_Fraction_Water_Mean))                      then
+        deallocate(y%modis_Cloud_Fraction_Water_Mean)           
         nullify(y%modis_Cloud_Fraction_Water_Mean)           
-     if (associated(y%modis_Cloud_Fraction_High_Mean))                                   &
+     endif
+     if (associated(y%modis_Cloud_Fraction_High_Mean))                       then
+        deallocate(y%modis_Cloud_Fraction_High_Mean)     
         nullify(y%modis_Cloud_Fraction_High_Mean)     
-     if (associated(y%modis_Cloud_Fraction_Mid_Mean))                                    &
+     endif
+     if (associated(y%modis_Cloud_Fraction_Mid_Mean))                        then
+        deallocate(y%modis_Cloud_Fraction_Mid_Mean)       
         nullify(y%modis_Cloud_Fraction_Mid_Mean)       
-     if (associated(y%modis_Cloud_Fraction_Low_Mean))                                    &
+     endif
+     if (associated(y%modis_Cloud_Fraction_Low_Mean))                        then
+        deallocate(y%modis_Cloud_Fraction_Low_Mean)     
         nullify(y%modis_Cloud_Fraction_Low_Mean)     
-     if (associated(y%modis_Optical_Thickness_Total_Mean))                               &
+     endif
+     if (associated(y%modis_Optical_Thickness_Total_Mean))                   then
+        deallocate(y%modis_Optical_Thickness_Total_Mean)  
         nullify(y%modis_Optical_Thickness_Total_Mean)  
-     if (associated(y%modis_Optical_Thickness_Water_Mean))                               &
+     endif
+     if (associated(y%modis_Optical_Thickness_Water_Mean))                   then
+        deallocate(y%modis_Optical_Thickness_Water_Mean)     
         nullify(y%modis_Optical_Thickness_Water_Mean)     
-     if (associated(y%modis_Optical_Thickness_Ice_Mean))                                 &
+     endif
+     if (associated(y%modis_Optical_Thickness_Ice_Mean))                     then
+        deallocate(y%modis_Optical_Thickness_Ice_Mean)       
         nullify(y%modis_Optical_Thickness_Ice_Mean)       
-     if (associated(y%modis_Optical_Thickness_Total_LogMean))                            &
+     endif
+     if (associated(y%modis_Optical_Thickness_Total_LogMean))                then
+        deallocate(y%modis_Optical_Thickness_Total_LogMean)    
         nullify(y%modis_Optical_Thickness_Total_LogMean)    
-     if (associated(y%modis_Optical_Thickness_Water_LogMean))                            &
+     endif
+     if (associated(y%modis_Optical_Thickness_Water_LogMean))                then
+        deallocate(y%modis_Optical_Thickness_Water_LogMean)     
         nullify(y%modis_Optical_Thickness_Water_LogMean)     
-     if (associated(y%modis_Optical_Thickness_Ice_LogMean))                              &
+     endif
+     if (associated(y%modis_Optical_Thickness_Ice_LogMean))                  then
+        deallocate(y%modis_Optical_Thickness_Ice_LogMean)     
         nullify(y%modis_Optical_Thickness_Ice_LogMean)     
-     if (associated(y%modis_Cloud_Particle_Size_Water_Mean))                             &
+     endif
+     if (associated(y%modis_Cloud_Particle_Size_Water_Mean))                 then
+        deallocate(y%modis_Cloud_Particle_Size_Water_Mean)       
         nullify(y%modis_Cloud_Particle_Size_Water_Mean)       
-     if (associated(y%modis_Cloud_Particle_Size_Ice_Mean))                               &
+     endif
+     if (associated(y%modis_Cloud_Particle_Size_Ice_Mean))                   then
+        deallocate(y%modis_Cloud_Particle_Size_Ice_Mean)     
         nullify(y%modis_Cloud_Particle_Size_Ice_Mean)     
-     if (associated(y%modis_Cloud_Top_Pressure_Total_Mean))                              &
+     endif
+     if (associated(y%modis_Cloud_Top_Pressure_Total_Mean))                  then
+        deallocate(y%modis_Cloud_Top_Pressure_Total_Mean)           
         nullify(y%modis_Cloud_Top_Pressure_Total_Mean)           
-     if (associated(y%modis_Liquid_Water_Path_Mean))                                     &
+     endif
+     if (associated(y%modis_Liquid_Water_Path_Mean))                         then
+        deallocate(y%modis_Liquid_Water_Path_Mean)     
         nullify(y%modis_Liquid_Water_Path_Mean)     
-     if (associated(y%modis_Ice_Water_Path_Mean))                                        &
+     endif
+     if (associated(y%modis_Ice_Water_Path_Mean))                            then
+        deallocate(y%modis_Ice_Water_Path_Mean)       
         nullify(y%modis_Ice_Water_Path_Mean)       
-     if (associated(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure))                    &
+     endif
+     if (associated(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure))        then
+        deallocate(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure)     
         nullify(y%modis_Optical_Thickness_vs_Cloud_Top_Pressure)     
-     if (associated(y%modis_Optical_thickness_vs_ReffLIQ))                               &
+     endif
+     if (associated(y%modis_Optical_thickness_vs_ReffLIQ))                   then
+        deallocate(y%modis_Optical_thickness_vs_ReffLIQ)
         nullify(y%modis_Optical_thickness_vs_ReffLIQ)
-     if (associated(y%modis_Optical_thickness_vs_ReffICE))                               &
+     endif
+     if (associated(y%modis_Optical_thickness_vs_ReffICE))                   then
+        deallocate(y%modis_Optical_thickness_vs_ReffICE)
         nullify(y%modis_Optical_thickness_vs_ReffICE)
+     endif
         
    end subroutine destroy_cosp_outputs
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
