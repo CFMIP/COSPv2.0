@@ -288,7 +288,9 @@ CONTAINS
          Lparasol_column,     & ! On/Off switch for column PARASOL simulator
          Lcloudsat_column,    & ! On/Off switch for column CLOUDSAT simulator
          Lmodis_column,       & ! On/Off switch for column MODIS simulator
-         Lrttov_column          ! On/Off switch for column RTTOV simulator (not used)      
+         Lrttov_column,       & ! On/Off switch for column RTTOV simulator (not used)      
+         Lradar_lidar_tcc,    & ! On/Off switch from joint Calipso/Cloudsat product
+         Llidar_only_freq_cloud  ! On/Off switch from joint Calipso/Cloudsat product
     logical :: &
          ok_lidar_cfad  = .false., &
          lrttov_cleanUp = .false.
@@ -337,7 +339,7 @@ CONTAINS
     !    - If any of the column fields are allocated, then compute the statistics for that
     !      simulator, but only save the requested fields.
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Start with all simulators off
+    ! Start with all simulators and joint-diagnostics off
     Lisccp_subcolumn    = .false.
     Lmisr_subcolumn     = .false.
     Lcalipso_subcolumn  = .false.
@@ -352,6 +354,8 @@ CONTAINS
     Lcloudsat_column    = .false.
     Lmodis_column       = .false.
     Lrttov_column       = .false.
+    Lradar_lidar_tcc    = .false.
+    Llidar_only_freq_cloud = .false.
 
     ! CLOUDSAT subcolumn
     if (associated(cospOUT%cloudsat_Ze_tot)) Lcloudsat_subcolumn = .true.
@@ -476,6 +480,8 @@ CONTAINS
        Lcalipso_subcolumn  = .true.
        Lcloudsat_column    = .true.
        Lcloudsat_subcolumn = .true.
+       Lradar_lidar_tcc    = .true.
+       Llidar_only_freq_cloud = .true.
     endif
     
     call cpu_time(cosp_time(2))
@@ -490,7 +496,8 @@ CONTAINS
                          Lmisr_subcolumn,Lmisr_column,Lmodis_subcolumn,Lmodis_column,    &
                          Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,        &
                          Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
-                         Lparasol_subcolumn,Lparasol_column,cospOUT,cosp_simulator,nError)
+                         Lparasol_subcolumn,Lparasol_column,Lradar_lidar_tcc,            &
+                         Llidar_only_freq_cloud,cospOUT,cosp_simulator,nError)
     call cpu_time(cosp_time(3))
     if (debug) print*,'   Time for cosp_errorCheck:                             ',cosp_time(3)-cosp_time(2)
 
@@ -1230,7 +1237,8 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     ! CLOUDSAT/CALIPSO products
-    if (associated(cospOUT%radar_lidar_tcc) .or. associated(cospOUT%lidar_only_freq_cloud)) then
+    if (Lradar_lidar_tcc .or. Llidar_only_freq_cloud) then
+       
        allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,Nlvgrid),                       &
                 radar_lidar_tcc(cloudsatIN%Npoints))
        if (use_vgrid) then
@@ -1931,7 +1939,7 @@ CONTAINS
   subroutine cosp_errorCheck(cospgridIN,cospIN,Lisccp_subcolumn,Lisccp_column,Lmisr_subcolumn,Lmisr_column,    &
                              Lmodis_subcolumn,Lmodis_column,Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,  &
                              Lcalipso_column,Lrttov_subcolumn,Lrttov_column,Lparasol_subcolumn,Lparasol_column,    &
-                             cospOUT,errorMessage,nError)
+                             Lradar_lidar_tcc,Llidar_only_freq_cloud,cospOUT,errorMessage,nError)
   ! Inputs
   type(cosp_column_inputs),intent(in) :: &
      cospgridIN       ! Model grid inputs to COSP
@@ -1953,7 +1961,9 @@ CONTAINS
       Lparasol_subcolumn,  & ! PARASOL subcolumn simulator on/off switch
       Lparasol_column,     & ! PARASOL column simulator on/off switch
       Lrttov_subcolumn,    & ! RTTOV subcolumn simulator on/off switch
-      Lrttov_column          ! RTTOV column simulator on/off switch       
+      Lrttov_column,       & ! RTTOV column simulator on/off switch       
+      Lradar_lidar_tcc,    & ! On/Off switch for joint Calipso/Cloudsat product
+      Llidar_only_freq_cloud ! On/Off switch for joint Calipso/Cloudsat product
   type(cosp_outputs),intent(inout) :: &
        cospOUT                ! COSP Outputs
   character(len=256),dimension(100) :: errorMessage
@@ -2042,6 +2052,8 @@ CONTAINS
        Lrttov_subcolumn = .false.
        Lcalipso_column  = .false.
        Lcloudsat_column = .false.
+       Lradar_lidar_tcc = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:)         = R_UNDEF       
        if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
        if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
@@ -2174,6 +2186,8 @@ CONTAINS
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
        Lcalipso_column     = .false.
+       Lradar_lidar_tcc = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%misr_fq))                   cospOUT%misr_fq(:,:,:)                 = R_UNDEF
        if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(:,:) = R_UNDEF
        if (associated(cospOUT%misr_meanztop))             cospOUT%misr_meanztop(:)               = R_UNDEF
@@ -2195,6 +2209,8 @@ CONTAINS
        Lrttov_subcolumn = .false.
        Lcloudsat_column = .false.
        Lcalipso_column  = .false.
+       Lradar_lidar_tcc = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%rttov_tbs))             cospOUT%rttov_tbs(:,:)               = R_UNDEF       
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
        if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
@@ -2536,6 +2552,8 @@ CONTAINS
        Lcalipso_subcolumn = .false.
        Lcalipso_column    = .false.
        Lcloudsat_column   = .false.
+       Lradar_lidar_tcc = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
        if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
        if (associated(cospOUT%calipso_lidarcldphase)) cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
@@ -2620,6 +2638,8 @@ CONTAINS
        errorMessage(nError) = 'ERROR: COSP input variable: cospIN%z_vol_cloudsat contains values out of range'
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
+       Lradar_lidar_tcc    = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
        if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
@@ -2630,6 +2650,8 @@ CONTAINS
        errorMessage(nError) = 'ERROR: COSP input variable: cospIN%kr_vol_cloudsat contains values out of range'
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
+       Lradar_lidar_tcc    = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
        if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
@@ -2640,6 +2662,8 @@ CONTAINS
        errorMessage(nError) = 'ERROR: COSP input variable: cospIN%g_vol_cloudsat contains values out of range'
        Lcloudsat_subcolumn = .false.
        Lcloudsat_column    = .false.
+       Lradar_lidar_tcc    = .false.
+       Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
        if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
