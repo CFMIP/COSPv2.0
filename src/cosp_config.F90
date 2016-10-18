@@ -126,14 +126,12 @@ MODULE MOD_COSP_CONFIG
     ! size
     integer :: i,j
     integer,parameter :: &
-       nReffLiq = 11, & ! Number of bins for tau/ReffLiq joint-histogram
-       nReffIce = 11    ! Number of bins for tau/ReffICE joint-histogram
+       nReffLiq = 6, & ! Number of bins for tau/ReffLiq joint-histogram
+       nReffIce = 6    ! Number of bins for tau/ReffICE joint-histogram
     real(wp),parameter,dimension(nReffLiq+1) :: &
-       reffLIQ_binBounds = (/5.00e-7, 9.54e-6, 1.83e-5, 2.76e-5, 3.67e-5, 4.57e-5,       &
-                             5.48e-5, 6.38e-5, 7.29e-5, 8.19e-5, 9.10e-5, 1.00e-4 /)
+         reffLIQ_binBounds = (/0., 8e-6, 1.0e-5, 1.3e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
     real(wp),parameter,dimension(nReffIce+1) :: &
-       reffICE_binBounds = (/1.00e-7, 9.18e-6, 1.83e-5, 2.73e-5, 3.64e-5, 4.55e-5,       &
-                             5.46e-5, 6.37e-5, 7.28e-5, 8.18e-5, 9.10e-5, 1.00e-4/)
+         reffICE_binBounds = (/0., 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 6.0e-5, 9.0e-5/)
     real(wp),parameter,dimension(2,nReffICE) :: &
        reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
                                   l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
