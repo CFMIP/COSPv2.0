@@ -2199,7 +2199,7 @@ CONTAINS
        if (associated(cospOUT%calipso_cldlayerphase))     cospOUT%calipso_cldlayerphase(:,:,:)   = R_UNDEF
        if (associated(cospOUT%calipso_lidarcldtmp))       cospOUT%calipso_lidarcldtmp(:,:,:)     = R_UNDEF            
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
-       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
+       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF       
     endif
@@ -2641,7 +2641,7 @@ CONTAINS
        Lradar_lidar_tcc    = .false.
        Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
-       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
+       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF     
     endif
@@ -2653,7 +2653,7 @@ CONTAINS
        Lradar_lidar_tcc    = .false.
        Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
-       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
+       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF      
     endif    
@@ -2665,7 +2665,7 @@ CONTAINS
        Lradar_lidar_tcc    = .false.
        Llidar_only_freq_cloud = .false.
        if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
-       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
+       if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
        if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
        if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF
     endif   

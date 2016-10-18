@@ -316,63 +316,82 @@ contains
                                            lowCloudPressureLimit,  dim = 2)) 
     Cloud_Fraction_Mid_Mean(1:nPoints)   = Cloud_Fraction_Total_Mean(1:nPoints) - Cloud_Fraction_High_Mean(1:nPoints)&
                                            - Cloud_Fraction_Low_Mean(1:nPoints)
-   
-    ! ########################################################################################
-    ! Don't want to divide by 0, even though the sums will be 0 where the pixel counts are 0. 
-    ! ########################################################################################
-    where (Cloud_Fraction_Total_Mean == 0) Cloud_Fraction_Total_Mean = -1._wp
-    where (Cloud_Fraction_Water_Mean == 0) Cloud_Fraction_Water_Mean = -1._wp
-    where (Cloud_Fraction_Ice_Mean   == 0) Cloud_Fraction_Ice_Mean   = -1._wp
-    
-    Optical_Thickness_Total_Mean(1:nPoints) = sum(optical_thickness, mask = cloudMask,      dim = 2) / &
-                                              Cloud_Fraction_Total_Mean(1:nPoints) 
-    Optical_Thickness_Water_Mean(1:nPoints) = sum(optical_thickness, mask = waterCloudMask, dim = 2) / &
-                                              Cloud_Fraction_Water_Mean(1:nPoints)
-    Optical_Thickness_Ice_Mean(1:nPoints)   = sum(optical_thickness, mask = iceCloudMask,   dim = 2) / &
-                                              Cloud_Fraction_Ice_Mean(1:nPoints)
-   
-    ! ########################################################################################
-    ! We take the absolute value of optical thickness here to satisfy compilers that complains 
-    ! when we evaluate the logarithm of a negative number, even though it's not included in 
-    ! the sum. 
-    ! ########################################################################################
-    Optical_Thickness_Total_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = cloudMask, &
-         dim = 2) / Cloud_Fraction_Total_Mean(1:nPoints)
-    Optical_Thickness_Water_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = waterCloudMask,&
-         dim = 2) / Cloud_Fraction_Water_Mean(1:nPoints)
-    Optical_Thickness_Ice_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = iceCloudMask,&
-         dim = 2) / Cloud_Fraction_Ice_Mean(1:nPoints)
-    Cloud_Particle_Size_Water_Mean(1:nPoints) = sum(particle_size, mask = waterCloudMask, dim = 2) / &
-         Cloud_Fraction_Water_Mean(1:nPoints)
-    Cloud_Particle_Size_Ice_Mean(1:nPoints) = sum(particle_size, mask = iceCloudMask,   dim = 2) / &
-         Cloud_Fraction_Ice_Mean(1:nPoints)
-    Cloud_Top_Pressure_Total_Mean(1:nPoints) = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
-         max(1, count(cloudMask, dim = 2))
-    Liquid_Water_Path_Mean(1:nPoints) = LWP_conversion*sum(particle_size*optical_thickness, &
-         mask=waterCloudMask,dim=2)/Cloud_Fraction_Water_Mean(1:nPoints)
-    Ice_Water_Path_Mean(1:nPoints) = LWP_conversion * ice_density*sum(particle_size*optical_thickness,&
-         mask=iceCloudMask,dim = 2) /Cloud_Fraction_Ice_Mean(1:nPoints)
 
     ! ########################################################################################
-    ! Normalize pixel counts to fraction. The first three cloud fractions have been set to -1 
-    ! in cloud-free areas, so set those places to 0.
+    ! Compute column amounts.
     ! ########################################################################################
-    Cloud_Fraction_Total_Mean(1:nPoints) = max(0._wp, Cloud_Fraction_Total_Mean(1:nPoints)/nSubcols)
-    Cloud_Fraction_Water_Mean(1:nPoints) = max(0._wp, Cloud_Fraction_Water_Mean(1:nPoints)/nSubcols)
-    Cloud_Fraction_Ice_Mean(1:nPoints)   = max(0._wp, Cloud_Fraction_Ice_Mean(1:nPoints)  /nSubcols)
+    ! Total
+    where(Cloud_Fraction_Total_Mean .gt. 0)
+       ! Optical thickness
+       Optical_Thickness_Total_Mean      = sum(optical_thickness,mask=cloudMask,dim=2)/&
+                                           Cloud_Fraction_Total_Mean  
+       Optical_Thickness_Total_MeanLog10 = sum(log10(abs(optical_thickness)),mask=cloudMask,dim=2)/&
+                                           Cloud_Fraction_Total_Mean
+    elsewhere
+       Optical_Thickness_Total_Mean      = R_UNDEF
+       Optical_Thickness_Total_MeanLog10 = R_UNDEF
+       Cloud_Top_Pressure_Total_Mean     = R_UNDEF
+    end where
+
+    ! Liquid
+    where(Cloud_Fraction_Water_Mean .gt. 0)
+       ! Optical thickness
+       Optical_Thickness_Water_Mean      = sum(optical_thickness,mask=waterCloudMask,dim=2)/&
+                                           Cloud_Fraction_Water_Mean 
+       Optical_Thickness_Water_MeanLog10 = sum(log10(abs(optical_thickness)),mask=waterCloudMask,dim=2)/&
+                                           Cloud_Fraction_Water_Mean 
+       ! Particle size
+       Cloud_Particle_Size_Water_Mean    = sum(particle_size,mask=waterCloudMask,dim=2)/&
+                                           Cloud_Fraction_Water_Mean 
+       ! LWP
+       Liquid_Water_Path_Mean            = LWP_conversion*sum(particle_size*optical_thickness,mask=waterCloudMask,dim=2)/&
+                                           Cloud_Fraction_Water_Mean
+    elsewhere
+       Optical_Thickness_Water_Mean      = R_UNDEF
+       Optical_Thickness_Water_MeanLog10 = R_UNDEF
+       Cloud_Particle_Size_Water_Mean    = R_UNDEF
+       Liquid_Water_Path_Mean            = R_UNDEF
+    end where
+
+    ! Ice
+    where(Cloud_Fraction_Ice_Mean  .gt. 0)
+       ! Optical thickness
+       Optical_Thickness_Ice_Mean      = sum(optical_thickness,mask=iceCloudMask,dim=2)/&
+                                         Cloud_Fraction_Ice_Mean 
+       Optical_Thickness_Ice_MeanLog10 = sum(log10(abs(optical_thickness)),mask=iceCloudMask,dim=2)/&
+                                         Cloud_Fraction_Ice_Mean 
+       ! Particle size
+       Cloud_Particle_Size_Ice_Mean    = sum(particle_size, mask=iceCloudMask,dim=2)/&
+                                         Cloud_Fraction_Ice_Mean 
+       ! IWP
+       Ice_Water_Path_Mean             = LWP_conversion*ice_density*sum(particle_size*optical_thickness,mask=iceCloudMask,dim=2)/&
+                                         Cloud_Fraction_Ice_Mean 
+    elsewhere
+       Optical_Thickness_Ice_Mean        = R_UNDEF
+       Optical_Thickness_Ice_MeanLog10   = R_UNDEF
+       Cloud_Particle_Size_Ice_Mean      = R_UNDEF
+       Ice_Water_Path_Mean               = R_UNDEF
+    end where
+    
+    ! Cloud-top pressure
+    Cloud_Top_Pressure_Total_Mean  = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
+                                     max(1, count(cloudMask, dim = 2))
+
+    ! ########################################################################################
+    ! Normalize pixel counts to fraction. 
+    ! ########################################################################################
     Cloud_Fraction_High_Mean(1:nPoints)  = Cloud_Fraction_High_Mean(1:nPoints) /nSubcols
     Cloud_Fraction_Mid_Mean(1:nPoints)   = Cloud_Fraction_Mid_Mean(1:nPoints)  /nSubcols
     Cloud_Fraction_Low_Mean(1:nPoints)   = Cloud_Fraction_Low_Mean(1:nPoints)  /nSubcols
-
+    
     ! ########################################################################################
-    ! Joint histogram  
+    ! Joint histograms
     ! ########################################################################################
-
     ! Loop over all points
     tauWRK(1:nPoints,1:nSubCols)     = optical_thickness(1:nPoints,1:nSubCols)
     ctpWRK(1:nPoints,1:nSubCols)     = cloud_top_pressure(1:nPoints,1:nSubCols)
-    reffIceWRK(1:nPoints,1:nSubCols) = merge(particle_size,0._wp,iceCloudMask)
-    reffLiqWRK(1:nPoints,1:nSubCols) = merge(particle_size,0._wp,waterCloudMask)
+    reffIceWRK(1:nPoints,1:nSubCols) = merge(particle_size,R_UNDEF,iceCloudMask)
+    reffLiqWRK(1:nPoints,1:nSubCols) = merge(particle_size,R_UNDEF,waterCloudMask)
     do j=1,nPoints
 
        ! Fill clear and optically thin subcolumns with fill
