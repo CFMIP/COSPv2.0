@@ -100,6 +100,8 @@ MODULE MOD_COSP_INTERFACE_v1p4
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
        rcfg_cloudsat     ! Radar configuration
+  type(radar_cfg) :: &
+       rcfg_arm     ! Radar configuration
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE COSP_CONFIG
@@ -111,6 +113,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
           Ltoffset,         & ! Time difference between each profile and the value 
                               ! recorded in varaible time.
           Lradar_sim,       & ! Radar simulator on/off switch 
+          Larmradar_sim,    & ! Radar simulator on/off switch 
           Llidar_sim,       & ! LIDAR simulator on/off switch 
           Lisccp_sim,       & ! ISCCP simulator on/off switch
           Lmodis_sim,       & ! MODIS simulatoe on/off switch
@@ -128,6 +131,8 @@ MODULE MOD_COSP_INTERFACE_v1p4
           Lalbisccp,        & ! ISCCP mean cloud albedo
           LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
           Ldbze94,          & ! CLOUDSAT radar reflectivity
+          LarmcfadDbze35,   & ! ARM radar reflectivity CFAD
+          Larmdbze35,       & ! ARM radar reflectivity
           LparasolRefl,     & ! PARASOL reflectance
           Latb532,          & ! CALIPSO attenuated total backscatter (532nm)
           LlidarBetaMol532, & ! CALIPSO molecular backscatter (532nm)
@@ -265,8 +270,10 @@ MODULE MOD_COSP_INTERFACE_v1p4
      ! Radar ancillary info
      real(wp) :: &
           radar_freq,    & ! Radar frequency [GHz]
+          arm_radar_freq, & ! Radar frequency [GHz]
           k2               ! |K|^2, -1=use frequency dependent default
      integer :: surface_radar,  & ! surface=1, spaceborne=0
+          arm_surface_radar,  & ! surface=1, spaceborne=0
           use_mie_tables, & ! use a precomputed loopup table? yes=1,no=0
           use_gas_abs,    & ! include gaseous absorption? yes=1,no=0
           do_ray,         & ! calculate/output Rayleigh refl=1, not=0
@@ -564,8 +571,9 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                            SUBROUTINE COSP_INTERFACE (v1.4)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_interface_v1p4(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,   &
-                                 isccp,misr,modis,rttov,stradar,stlidar)
+  subroutine cosp_interface_v1p4(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,armsgradar, &
+                                 sglidar,isccp,misr,modis,rttov,stradar,                &
+                                 armstradar,stlidar)
     ! Inputs 
     integer,                intent(in)    :: overlap  ! Overlap type in SCOPS: 1=max, 
                                                       ! 2=rand, 3=max/rand
@@ -575,12 +583,15 @@ contains
                                                       ! stats
     type(cosp_subgrid),     intent(inout) :: sgx      ! Subgrid info
     type(cosp_sgradar),     intent(inout) :: sgradar  ! Output from radar simulator (pixel)
+    type(cosp_sgradar),     intent(inout) :: armsgradar  ! Output from radar simulator (pixel)
     type(cosp_sglidar),     intent(inout) :: sglidar  ! Output from lidar simulator (pixel)
     type(cosp_isccp),       intent(inout) :: isccp    ! Output from ISCCP simulator
     type(cosp_misr),        intent(inout) :: misr     ! Output from MISR simulator
     type(cosp_modis),       intent(inout) :: modis    ! Output from MODIS simulator
     type(cosp_rttov),       intent(inout) :: rttov    ! Output from RTTOV
     type(cosp_radarstats),  intent(inout) :: stradar  ! Summary statistics from cloudsat
+                                                      ! simulator (gridbox)
+    type(cosp_radarstats),  intent(inout) :: armstradar  ! Summary statistics from arm
                                                       ! simulator (gridbox)
     type(cosp_lidarstats),  intent(inout) :: stlidar  ! Output from LIDAR simulator (gridbox)
     type(cosp_gridbox),intent(inout),target :: gbx ! COSP gridbox type from v1.4
@@ -642,9 +653,11 @@ contains
        
        ! Initialize COSP simulator
        call COSP_INIT(cfg%Lisccp_sim,cfg%Lmodis_sim,cfg%Lmisr_sim,cfg%Lradar_sim,        &
-            cfg%Llidar_sim,cfg%Lparasol_sim,cfg%Lrttov_sim,gbx%Npoints,gbx%Nlevels,      &
-            gbx%radar_freq,gbx%k2,gbx%use_gas_abs,gbx%do_ray,gbx%isccp_top_height,       &
-            gbx%isccp_top_height_direction,gbx%surface_radar,rcfg_cloudsat,gbx%Nchan,    &
+            cfg%Larmradar_sim,cfg%Llidar_sim,cfg%Lparasol_sim,cfg%Lrttov_sim,            &
+            gbx%Npoints,gbx%Nlevels,gbx%radar_freq,gbx%arm_radar_freq,gbx%k2,            &
+            gbx%use_gas_abs,gbx%do_ray,gbx%isccp_top_height,                             &
+            gbx%isccp_top_height_direction,gbx%surface_radar,                            &
+            gbx%arm_surface_radar,rcfg_cloudsat,rcfg_arm,gbx%Nchan,                      &
             gbx%Ichan,gbx%plat,gbx%sat,gbx%inst,vgrid%use_vgrid,vgrid%csat_vgrid,        &
             vgrid%Nlvgrid,cloudsat_micro_scheme,cospOUT)
     endif
@@ -671,7 +684,8 @@ contains
                                 cfg%Lclhcalipsoliq,cfg%Lclhcalipsoice,cfg%Lclhcalipsoun, &
                                 cfg%Lclmcalipsoliq,cfg%Lclmcalipsoice,cfg%Lclmcalipsoun, &
                                 cfg%Lcllcalipsoliq,cfg%Lcllcalipsoice,cfg%Lcllcalipsoun, &
-                                cfg%LcfadDbze94,cfg%Ldbze94,cfg%Lparasolrefl,            &
+                                cfg%LcfadDbze94,cfg%Ldbze94,                             &
+                                cfg%LarmcfadDbze35,cfg%Larmdbze35,cfg%Lparasolrefl,      &
                                 cfg%Ltbrttov,gbx%Npoints,gbx%Ncolumns,gbx%Nlevels,       &
                                 vgrid%Nlvgrid,gbx%Nchan,cospOUT)
 
@@ -683,7 +697,7 @@ contains
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! Determine indices for "chunking" (again, if necessary)
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       if (num_chunks .eq. 1) then
+      if (num_chunks .eq. 1) then
           start_idx = 1
           end_idx   = gbx%Npoints
           Nptsperit = gbx%Npoints
@@ -869,6 +883,18 @@ contains
           stradar%cfad_ze = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)              
        endif
     endif
+    
+    ! ARM             
+    if (cfg%Larmradar_sim) then
+       ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
+       !        not true. To maintain the outputs of v1.4, the affected fields are flipped.    
+       if (cfg%Larmdbze35) then
+          armsgradar%Ze_tot = cospOUT%arm_Ze_tot(:,:,armsgradar%Nlevels:1:-1)  
+       endif
+       if (cfg%LarmcfadDbze35) then 
+          armstradar%cfad_ze = cospOUT%arm_cfad_ze(:,:,armstradar%Nlevels:1:-1)              
+       endif
+    endif
 
     ! Combined instrument products
     if (cfg%Lclcalipso2) then
@@ -918,6 +944,7 @@ contains
     type(rng_state),allocatable,dimension(:) :: rngs  ! Seeds for random number generator
     integer,dimension(:),allocatable :: seed
     logical :: cmpGases=.true.
+    logical :: cmpGases_cloudsat,cmpGases_arm
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize COSP inputs
@@ -926,6 +953,7 @@ contains
     cospIN%tautot_S_ice                                 = 0._wp
     cospIN%emsfc_lw                                     = gbx%isccp_emsfc_lw
     cospIN%rcfg_cloudsat                                = rcfg_cloudsat
+    cospIN%rcfg_arm                                     = rcfg_arm
     cospgridIN%hgt_matrix(1:nPoints,1:gbx%Nlevels)      = gbx%zlev(start_idx:end_idx,gbx%Nlevels:1:-1)
     cospgridIN%hgt_matrix_half(1:nPoints,1:gbx%Nlevels) = gbx%zlev_half(start_idx:end_idx,gbx%Nlevels:1:-1)
     cospgridIN%sunlit(1:nPoints)                        = gbx%sunlit(start_idx:end_idx)
@@ -1239,6 +1267,7 @@ contains
              re_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
              Np_matrix(N_HYDRO,npoints,gbx%Nlevels))           
 
+    cmpGases_cloudsat = cmpGases
     do ij=1,gbx%Ncolumns
        do i=1,N_HYDRO
           hm_matrix(i,1:npoints,gbx%Nlevels:1:-1) = mr_hydro(:,ij,:,i)*1000._wp 
@@ -1249,10 +1278,38 @@ contains
                              re_matrix, Np_matrix,                                       &
                              gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
                              gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
-                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,        &
-                             cospIN%z_vol_cloudsat(1:npoints,ij,:),                      &
+                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),                 &
+                             cmpGases_cloudsat,cospIN%z_vol_cloudsat(1:npoints,ij,:),    &
                              cospIN%kr_vol_cloudsat(1:npoints,ij,:),                     &
                              cospIN%g_vol_cloudsat(1:npoints,ij,:))
+    enddo
+    
+    ! Deallocate memory
+    deallocate(hm_matrix,re_matrix,Np_matrix)
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! ARM RADAR OPTICS
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+    ! Allocate memory
+    allocate(hm_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
+             re_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
+             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))           
+
+    cmpGases_arm = cmpGases
+    do ij=1,gbx%Ncolumns
+       do i=1,N_HYDRO
+          hm_matrix(i,1:npoints,gbx%Nlevels:1:-1) = mr_hydro(:,ij,:,i)*1000._wp 
+          re_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Reff(:,ij,:,i)*1.e6_wp  
+          Np_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Np(:,ij,:,i)       
+       enddo
+       call quickbeam_optics(sd, rcfg_arm,npoints,gbx%Nlevels, R_UNDEF, hm_matrix,       &
+                             re_matrix, Np_matrix,                                       &
+                             gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
+                             gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
+                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),                 &
+                             cmpGases_arm,cospIN%z_vol_arm(1:npoints,ij,:),              &
+                             cospIN%kr_vol_arm(1:npoints,ij,:),                          &
+                             cospIN%g_vol_arm(1:npoints,ij,:))
     enddo
     
     ! Deallocate memory
@@ -1309,7 +1366,8 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cosp_gridbox
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE CONSTRUCT_cosp_gridbox(time,time_bnds,radar_freq,surface_radar,         &
+  SUBROUTINE CONSTRUCT_cosp_gridbox(time,time_bnds,radar_freq,arm_radar_freq,             &
+                                         surface_radar,arm_surface_radar,                 &
                                          use_mie_tables,use_gas_abs,do_ray,melt_lay,k2,   &
                                          Npoints,Nlevels,Ncolumns,Nhydro,Nprmts_max_hydro,&
                                          Naero,Nprmts_max_aero,Npoints_it,lidar_ice_type, &
@@ -1324,6 +1382,7 @@ contains
          time_bnds(2)     ! Time boundaries
     integer,intent(in) :: &
          surface_radar,     & ! surface=1,spaceborne=0
+         arm_surface_radar, & ! surface=1,spaceborne=0
          use_mie_tables,    & ! use a precomputed lookup table? yes=1,no=0,2=use first
                               ! column everywhere
          use_gas_abs,       & ! include gaseous absorption? yes=1,no=0
@@ -1351,6 +1410,7 @@ contains
          Ichan
     real(wp),intent(in) :: &
          radar_freq,       & ! Radar frequency [GHz]
+         arm_radar_freq,   & ! Radar frequency [GHz]
          k2,               & ! |K|^2, -1=use frequency dependent default
          isccp_emsfc_lw,   & ! 11microm surface emissivity
          co2,              & ! CO2 
@@ -1382,6 +1442,8 @@ contains
     ! Dimensions and scalars
     y%radar_freq       = radar_freq
     y%surface_radar    = surface_radar
+    y%arm_radar_freq   = arm_radar_freq
+    y%arm_surface_radar= arm_surface_radar
     y%use_mie_tables   = use_mie_tables
     y%use_gas_abs      = use_gas_abs
     y%do_ray           = do_ray

@@ -73,8 +73,8 @@ PROGRAM COSPTEST_trunk
        cosp_output_namelist = 'cosp_output_nl_v1.4.txt'
   integer,parameter :: &
        N_MAX_INPUT_FILES = 10000, &
-       N_OUT_LIST = 63,           & ! Number of possible output variables
-       N3D        = 8,            & ! Number of 3D output variables
+       N_OUT_LIST = 65,           & ! Number of possible output variables
+       N3D        = 10,           & ! Number of 3D output variables
        N2D        = 14,           & ! Number of 2D output variables
        N1D        = 40              ! Number of 1D output variables
 
@@ -84,12 +84,14 @@ PROGRAM COSPTEST_trunk
   type(cosp_config)     :: cfg     ! Configuration options
   type(cosp_vgrid)      :: vgrid   ! Information on vertical grid of stats
   type(cosp_sgradar)    :: sgradar ! Output from radar simulator
+  type(cosp_sgradar)    :: armsgradar ! Output from radar simulator
   type(cosp_sglidar)    :: sglidar ! Output from lidar simulator
   type(cosp_isccp)      :: isccp   ! Output from ISCCP simulator
   type(cosp_modis)      :: modis   ! Output from MODIS simulator
   type(cosp_misr)       :: misr    ! Output from MISR simulator
   type(cosp_rttov)      :: rttov   ! Output from RTTOV 
   type(cosp_radarstats) :: stradar ! Summary statistics from radar simulator
+  type(cosp_radarstats) :: armstradar ! Summary statistics from radar simulator
   type(cosp_lidarstats) :: stlidar ! Summary statistics from lidar simulator
   
   ! Sample input data variables
@@ -134,6 +136,7 @@ PROGRAM COSPTEST_trunk
        Nlvgrid,                   & ! Number of vertical levels for statistical outputs 
                                     ! (USE_VGRID=.true.)
        surface_radar,             & ! surface=1/spaceborne=0
+       arm_surface_radar,         & ! surface=1/spaceborne=0
        use_mie_tables,            & ! Use a precomputed lookup-table (1=yes/0=no)
        use_gas_abs,               & ! Include gaseous absorption (1=yes/0=no)
        do_ray,                    & ! Calculate output Rayleigh (1=yes/0=no)
@@ -154,6 +157,7 @@ PROGRAM COSPTEST_trunk
        Nchannels                    ! RTTOV: Number of channels to be computed
   real(wp) ::                     & !
        radar_freq,                & ! CloudSat radar frequency (GHz)
+       arm_radar_freq,            & ! arm radar frequency (GHz)
        k2,                        & ! |K|^2, -1=use frequency dependent default
        ZenAng,                    & ! RTTOV: Satellite Zenith Angle
        co2,                       & ! CO2 mixing ratio
@@ -179,8 +183,9 @@ PROGRAM COSPTEST_trunk
   
   namelist/COSP_INPUT/cmor_nl,overlap,isccp_topheight,isccp_topheight_direction, &
                       npoints,npoints_it,ncolumns,nlevels,use_vgrid,nlvgrid,     &
-                      csat_vgrid,dinput,finput,radar_freq,surface_radar,         &
-                      use_mie_tables,use_gas_abs,do_ray,melt_lay,k2,             &
+                      csat_vgrid,dinput,finput,radar_freq,arm_radar_freq,        &
+                      surface_radar,arm_surface_radar,use_mie_tables,            &
+                      use_gas_abs,do_ray,melt_lay,k2,                            &
                       Nprmts_max_hydro,Naero,Nprmts_max_aero,lidar_ice_type,     &
                       use_precipitation_fluxes,use_reff,platform,satellite,      &
                       Instrument,Nchannels,Channels,Surfem,ZenAng,co2,ch4,n2o,co
@@ -251,7 +256,8 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Allocate memory for gridbox type
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-     call construct_cosp_gridbox(time,time_bnds,radar_freq,surface_radar, use_mie_tables,&
+     call construct_cosp_gridbox(time,time_bnds,radar_freq,arm_radar_freq,surface_radar, &
+                                 arm_surface_radar,use_mie_tables,                       &
                                  use_gas_abs,do_ray,melt_lay,k2,Npoints,Nlevels,Ncolumns,&
                                  N_HYDRO,Nprmts_max_hydro,Naero,Nprmts_max_aero,         &
                                  Npoints_it,lidar_ice_type,isccp_topheight,              &
@@ -322,6 +328,8 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      if (cfg%Lradar_sim) call construct_cosp_sgradar(Npoints,Ncolumns,Nlevels,N_HYDRO,sgradar)
      if (cfg%Lradar_sim) call construct_cosp_radarstats(Npoints,Ncolumns,vgrid%Nlvgrid,N_HYDRO,stradar)  
+     if (cfg%Larmradar_sim) call construct_cosp_sgradar(Npoints,Ncolumns,Nlevels,N_HYDRO,armsgradar)
+     if (cfg%Larmradar_sim) call construct_cosp_radarstats(Npoints,Ncolumns,vgrid%Nlvgrid,N_HYDRO,armstradar)  
      if (cfg%Llidar_sim) call construct_cosp_sglidar(Npoints,Ncolumns,Nlevels,N_HYDRO,PARASOL_NREFL,sglidar)
      if (cfg%Llidar_sim) call construct_cosp_lidarstats(Npoints,Ncolumns,vgrid%Nlvgrid,N_HYDRO,PARASOL_NREFL,stlidar)
      if (cfg%Lisccp_sim) call construct_cosp_isccp(Npoints,Ncolumns,Nlevels,isccp)
@@ -332,8 +340,9 @@ PROGRAM COSPTEST_trunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
      ! Call simulator
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-     call cosp(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,isccp,misr,modis,rttov,&
-               stradar,stlidar)
+     call cosp(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,armsgradar,sglidar,isccp,misr,&
+               modis,rttov,stradar,armstradar,stlidar)
+     write(6,*) 'after cosp'
      call cpu_time(driver_time(3))
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Write outputs to CMOR-compliant netCDF format.
@@ -351,7 +360,8 @@ PROGRAM COSPTEST_trunk
         if (geomode == 1) N1 = N1D+1
         if (i .eq. 1) then
            call nc_cmor_init(cmor_nl,'replace',cfg,vgrid,gbx,sgx,sglidar,isccp,misr,     &
-                             modis,rttov,sgradar,stradar,stlidar,geomode,Nlon,Nlat,N1,   &
+                             modis,rttov,sgradar,stradar,armsgradar,armstradar,stlidar,  &
+                             geomode,Nlon,Nlat,N1, &
                              N2D,N3D,N_OUT_LIST,mgrid_zl,mgrid_zu,mgrid_z,lon_axid,      &
                              lat_axid,time_axid,height_axid, &
                              height_mlev_axid,grid_id,lonvar_id,latvar_id,column_axid,   &
@@ -363,8 +373,9 @@ PROGRAM COSPTEST_trunk
                                      column_axid,sza_axid,temp_axid,channel_axid,        &
                                      dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,       &
                                      pressure2_axid,Nlon,Nlat,vgrid,gbx,sgx,sglidar,     &
-                                     isccp,misr,modis,rttov,sgradar,stradar,stlidar,     &
-                                     N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
+                                     isccp,misr,modis,rttov,sgradar,armsgradar,          &
+                                     stradar,armstradar,stlidar,N1D,N2D,N3D,v1d(1:N1),   &
+                                     v2d,v3d)
            call nc_cmor_write_1d(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,v1d(1:N1),v2d, &
                                  v3d)
         elseif (geomode >  1) then
@@ -372,8 +383,10 @@ PROGRAM COSPTEST_trunk
                                      height_mlev_axid,column_axid,sza_axid,temp_axid,    &
                                      channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,   &
                                      tau_axid,pressure2_axid,Nlon,Nlat,vgrid,gbx,sgx,    &
-                                     sglidar,isccp,misr,modis,rttov,sgradar,stradar,     &
-                                     stlidar,N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
+                                     sglidar,isccp,misr,modis,rttov,sgradar,armsgradar,  &
+                                     stradar,armstradar,stlidar,N1D,N2D,N3D,v1d(1:N1),   &
+                                     v2d,v3d)
+                                     
            call nc_cmor_write_2d(time,time_bnds,geomode,Nlon,Nlat,N1,N2D,N3D,v1d(1:N1),  &
                                  v2d,v3d)
         endif
@@ -392,6 +405,8 @@ PROGRAM COSPTEST_trunk
      call free_cosp_vgrid(vgrid)
      if (cfg%Lradar_sim) call free_cosp_sgradar(sgradar)
      if (cfg%Lradar_sim) call free_cosp_radarstats(stradar)
+     if (cfg%Larmradar_sim) call free_cosp_sgradar(armsgradar)
+     if (cfg%Larmradar_sim) call free_cosp_radarstats(armstradar)
      if (cfg%Llidar_sim) call free_cosp_sglidar(sglidar)
      if (cfg%Llidar_sim) call free_cosp_lidarstats(stlidar)
      if (cfg%Lisccp_sim) call free_cosp_isccp(isccp)

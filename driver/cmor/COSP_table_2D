@@ -1008,6 +1008,27 @@ type:              real
 !
 
 !============
+variable_entry:    armcfadDbze35
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     histogram_of_equivalent_reflectivity_factor_over_height_above_reference_ellipsoid
+units:             1
+cell_methods:      time: point
+long_name:         ARM Radar Reflectivity CFAD
+comment:           CFADs (Cloud Frequency Altitude Diagrams) are joint height - radar reflectivity (or lidar scattering ratio) distributions  (n levelsx15 bins) .
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude alt40 dbze time1
+out_name:          armcfadDbze35
+type:              real
+!----------------------------------
+!
+
+!============
 variable_entry:    cfadLidarsr532
 !============
 modeling_realm:    atmos
@@ -3376,6 +3397,23 @@ variable_entry: dbze94
 standard_name: equivalent_reflectivity_factor
 units:         1
 long_name:     CloudSat Radar Reflectivity
+!----------------------------------	
+!
+! Additional variable information:
+!----------------------------------	
+dimensions:       longitude latitude column alevel time1
+!----------------------------------	
+
+!
+!============
+variable_entry: armdbze35
+!============
+!
+! Variable attributes:
+!----------------------------------	
+standard_name: equivalent_reflectivity_factor
+units:         1
+long_name:     ARM Radar Reflectivity
 !----------------------------------	
 !
 ! Additional variable information:

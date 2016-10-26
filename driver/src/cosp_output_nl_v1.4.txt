@@ -28,6 +28,7 @@
 &COSP_OUTPUT
   ! Simulator flags
   Lradar_sim=.true.,
+  Larmradar_sim=.true.,
   Llidar_sim=.true.,
   Lisccp_sim=.true.,
   Lmisr_sim=.true.,
@@ -38,6 +39,9 @@
   !- CloudSat
   Lcfaddbze94=.true.,
   Ldbze94=.true.,
+  !- ARM radar
+  Larmcfaddbze35=.true.,
+  Larmdbze35=.true.,
   !- CALIPSO
   Latb532=.true.,
   LcfadLidarsr532=.true.,

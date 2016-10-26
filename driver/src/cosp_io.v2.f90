@@ -60,8 +60,8 @@ contains
                                    Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,          &
                                    Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,          &
                                    Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,          & 
-                                   LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,N_out_list, &
-                                   out_list)
+                                   LcfadDbze94,Ldbze94,LarmcfadDbze35,Larmdbze35,        &
+                                   Lparasolrefl,Ltbrttov,N_out_list,out_list) 
     ! Inputs
     logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -123,6 +123,8 @@ contains
          Lcllcalipsoun,    & ! CALIPSO low-level undetected cloud fraction
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
+         LarmcfadDbze35,   & ! ARM radar reflectivity CFAD
+         Larmdbze35,       & ! ARM radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
          Ltbrttov            ! RTTOV mean clear-sky brightness temperature                                    
     integer, intent(in) :: n_out_list
@@ -191,6 +193,8 @@ contains
     if (Llwpmodis)         out_list(61) = 'lwpmodis'
     if (Liwpmodis)         out_list(62) = 'iwpmodis'
     if (Lclmodis)          out_list(63) = 'clmodis'
+    if (LarmcfadDbze35)    out_list(64)  = 'armcfadDbze35'
+    if (Larmdbze35)        out_list(65) = 'armdbze35'
 
   end subroutine construct_cospOutList
 
@@ -1274,20 +1278,22 @@ contains
     d5 = (/grid_id,column_axid,height_mlev_axid,0,0/)
     d4 = (/Npoints,Ncolumns,Nlevels,0/)
     call construct_var3d('dbze94',         d5, d4, cospOUT%cloudsat_Ze_tot,                      v3d(1),units='1')
-    call construct_var3d('atb532',         d5, d4, cospOUT%calipso_beta_tot,                     v3d(2),units='m-1 sr-1')
+    call construct_var3d('armdbze35',      d5, d4, cospOUT%arm_Ze_tot,                           v3d(2),units='1')
+    call construct_var3d('atb532',         d5, d4, cospOUT%calipso_beta_tot,                     v3d(3),units='m-1 sr-1')
     d5 = (/grid_id,dbze_axid,height_axid,0,0/)
     d4 = (/Npoints,DBZE_BINS,Nlvgrid,0/)
-    call construct_var3d('cfadDbze94',     d5, d4, cospOUT%cloudsat_cfad_ze,                      v3d(4),units='1')
+    call construct_var3d('cfadDbze94',     d5, d4, cospOUT%cloudsat_cfad_ze,                      v3d(5),units='1')
+    call construct_var3d('armcfadDbze35',  d5, d4, cospOUT%arm_cfad_ze,                           v3d(6),units='1')
     d5 = (/grid_id,sratio_axid,height_axid,0,0/)
     d4 = (/Npoints,SR_BINS,Nlvgrid,0/)
-    call construct_var3d('cfadLidarsr532', d5, d4, cospOUT%calipso_cfad_sr,                       v3d(5),units='1')
+    call construct_var3d('cfadLidarsr532', d5, d4, cospOUT%calipso_cfad_sr,                       v3d(7),units='1')
     d5 = (/grid_id,tau_axid,pressure2_axid,0,0/)
     d4 = (/Npoints,7,7,0/)
-    call construct_var3d('clisccp',        d5, d4, cospOUT%isccp_fq,                              v3d(6),units='%')
-    call construct_var3d('clmodis',        d5, d4, cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure, v3d(7), units='%')
+    call construct_var3d('clisccp',        d5, d4, cospOUT%isccp_fq,                              v3d(8),units='%')
+    call construct_var3d('clmodis',        d5, d4, cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure, v3d(9), units='%')
     d5 = (/grid_id,tau_axid,MISR_CTH_axid,0,0/)
     d4 = (/Npoints,7,numMISRHgtBins,0/)
-    call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,v3d(8),units='%')
+    call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,v3d(10),units='%')
     
   END SUBROUTINE NC_CMOR_ASSOCIATE_1D
 
@@ -1394,20 +1400,22 @@ contains
      d5 = (/lon_axid,lat_axid,column_axid,height_mlev_axid,time_axid/)
      d4 = (/Nlon,Nlat,Ncolumns,Nlevels/)
      call construct_var3d('dbze94',         d5, d4, cospOUT%cloudsat_Ze_tot,                      v3d(1), units='1')
-     call construct_var3d('atb532',         d5, d4, cospOUT%calipso_beta_tot,                     v3d(2), units='m-1 sr-1')
+     call construct_var3d('armdbze35',      d5, d4, cospOUT%arm_Ze_tot,                           v3d(2), units='1')
+     call construct_var3d('atb532',         d5, d4, cospOUT%calipso_beta_tot,                     v3d(3), units='m-1 sr-1')
      d5 = (/lon_axid,lat_axid,dbze_axid,height_axid,time_axid/)
      d4 = (/Nlon,Nlat,DBZE_BINS,Nlvgrid/)
-     call construct_var3d('cfadDbze94',     d5, d4, cospOUT%cloudsat_cfad_ze,                     v3d(4), units='1')
+     call construct_var3d('cfadDbze94',     d5, d4, cospOUT%cloudsat_cfad_ze,                     v3d(5), units='1')
+     call construct_var3d('armcfadDbze35',  d5, d4, cospOUT%arm_cfad_ze,                          v3d(6), units='1')
      d5 = (/lon_axid,lat_axid,sratio_axid,height_axid,time_axid/)
      d4 = (/Nlon,Nlat,SR_BINS,Nlvgrid/)
-     call construct_var3d('cfadLidarsr532', d5, d4, cospOUT%calipso_cfad_sr,                      v3d(5), units='1')
+     call construct_var3d('cfadLidarsr532', d5, d4, cospOUT%calipso_cfad_sr,                      v3d(7), units='1')
      d5 = (/lon_axid,lat_axid,tau_axid,pressure2_axid,time_axid/)
      d4 = (/Nlon,Nlat,7,7/)
-     call construct_var3d('clisccp',        d5, d4, cospOUT%isccp_fq,                             v3d(6), units='%')
-     call construct_var3d('clmodis',        d5, d4, cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure, v3d(7), units='%')
+     call construct_var3d('clisccp',        d5, d4, cospOUT%isccp_fq,                             v3d(8), units='%')
+     call construct_var3d('clmodis',        d5, d4, cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure, v3d(9), units='%')
      d5 = (/lon_axid,lat_axid,tau_axid,MISR_CTH_axid,time_axid/)
      d4 = (/Nlon,Nlat,7,numMISRHgtBins/)
-     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,                              v3d(8), units='%')
+     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,                              v3d(10), units='%')
    END SUBROUTINE NC_CMOR_ASSOCIATE_2D
 
   

@@ -280,7 +280,40 @@ contains
     endif   
 
   end subroutine quickbeam_column
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  !---------- SUBROUTINE arm_threshold ----------------
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE arm_threshold(npoints,nlevels,zlev,y,ythrd)
+    ! Inputs
+    integer,intent(in) :: &
+         npoints,         & ! Number of horizontal gridpoints
+         nlevels          ! Number of vertical layers
+    real(wp),dimension(npoints,nlevels),intent(in) :: zlev ! Model full levels (km)
+    real(wp),dimension(npoints,nlevels),intent(in) :: y    ! Variable to be applied by arm radar threshold
+    ! Output
+    real(wp),dimension(npoints,nlevels),intent(out) :: ythrd ! Variable with applied threshold
+    ! Local variables
+    integer :: i,j
+    real(wp) :: mds !calculated arm radar Minimum Detectable Signal
+    real(wp) :: mrs !calculated arm radar Maximum Recorded Signal
 
+    do i=1,npoints
+      do j=1,nlevels
+          mds = -50._wp+20._wp*log10(zlev(i,j))
+          mrs = 20._wp+20._wp*log10(zlev(i,j))
+          if (y(i,j) .lt. mds) then
+            ythrd(i,j) = R_UNDEF
+          else
+            ythrd(i,j) = y(i,j)
+          endif
+          if (y(i,j) .gt. mrs) then
+            ythrd(i,j) = mrs
+          endif
+      enddo
+    enddo
+    
+  END SUBROUTINE arm_threshold
   
   ! ##############################################################################################
   ! ##############################################################################################

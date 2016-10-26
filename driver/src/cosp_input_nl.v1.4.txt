@@ -44,7 +44,9 @@
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
   RADAR_FREQ=94.0, ! CloudSat radar frequency (GHz)
+  ARM_RADAR_FREQ=35.0, ! ARM radar frequency (GHz)
   SURFACE_RADAR=0, ! surface=1, spaceborne=0
+  ARM_SURFACE_RADAR=1, ! surface=1, spaceborne=0
   use_mie_tables=0,! use a precomputed lookup table? yes=1,no=0
   use_gas_abs=1,   ! include gaseous absorption? yes=1,no=0
   do_ray=0,        ! calculate/output Rayleigh refl=1, not=0

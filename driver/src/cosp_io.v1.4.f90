@@ -849,9 +849,10 @@ CONTAINS
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_INIT(cmor_nl,wmode,cfg,vgrid,gb,sg,sglidar,&
-        isccp,misr,modis,rttov,sgradar,stradar,stlidar,geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST, &
-        mgrid_zl,mgrid_zu,mgrid_z, &
-        lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id, &
+        isccp,misr,modis,rttov,sgradar,stradar,armsgradar,armstradar, &
+        stlidar,geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST, &
+        mgrid_zl,mgrid_zu,mgrid_z,lon_axid,lat_axid,time_axid, &
+        height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id, &
         column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
         sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
         v1d,v2d,v3d)
@@ -864,6 +865,8 @@ CONTAINS
      type(cosp_subgrid),intent(in)    :: sg
      type(cosp_sgradar),intent(in)    :: sgradar  ! Cloudsat radar simulator output (pixel)
      type(cosp_radarstats),intent(in) :: stradar  ! Cloudsat radar simulator output (gridbox)
+     type(cosp_sgradar),intent(in)    :: armsgradar  ! ARM radar simulator output (pixel)
+     type(cosp_radarstats),intent(in) :: armstradar  ! ARM radar simulator output (gridbox)
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
      type(cosp_isccp),intent(in)      :: isccp    ! ISCCP outputs
      type(cosp_misr),intent(in)       :: misr     ! MISR outputs
@@ -872,9 +875,10 @@ CONTAINS
      type(cosp_lidarstats),intent(in) :: stlidar  ! Summary statistics from lidar simulator
      real(wp),dimension(gb%nlevels),intent(in) :: mgrid_zl,mgrid_zu,mgrid_z
      integer,intent(in) :: geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST
-     integer,intent(out) :: grid_id,latvar_id,lonvar_id,column_axid,height_axid,dbze_axid,height_mlev_axid,sratio_axid, &
-          tau_axid,pressure2_axid,lon_axid,lat_axid,time_axid,sza_axid,MISR_CTH_axid, &
-          channel_axid,temp_axid
+     integer,intent(out) :: grid_id,latvar_id,lonvar_id,column_axid,height_axid,dbze_axid, &
+          height_mlev_axid,sratio_axid,tau_axid,pressure2_axid,lon_axid,lat_axid, &
+          time_axid,sza_axid,MISR_CTH_axid,channel_axid,temp_axid
+          
      type(var1d),intent(inout) :: v1d(N1)
      type(var2d),intent(inout) :: v2d(N2)
      type(var3d),intent(inout) :: v3d(N3)
@@ -925,8 +929,8 @@ CONTAINS
      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
      tbnds(:,1) = gb%time_bnds
      allocate(column_ax(Ncolumns),dbze_ax(DBZE_BINS),channel_ax(Nchannels), &
-          dbze_bounds(2,DBZE_BINS),vgrid_bounds(2,Nlvgrid),mgrid_bounds(2,Nlevels),sratio_bounds(2,SR_BINS), &
-          lon_bounds(2,Nlon),lat_bounds(2,Nlat))
+          dbze_bounds(2,DBZE_BINS),vgrid_bounds(2,Nlvgrid),mgrid_bounds(2,Nlevels), &
+          sratio_bounds(2,SR_BINS),lon_bounds(2,Nlon),lat_bounds(2,Nlat))
      
      ! Profile
      if (geomode == 1) then
@@ -1061,13 +1065,13 @@ CONTAINS
      if (geomode == 1) then
         call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
              temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-             Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
-             N1,N2,N3,v1d,v2d,v3d)
+             Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,armsgradar,stradar, &
+             armstradar,stlidar,N1,N2,N3,v1d,v2d,v3d)
      else
-        call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
-             temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-             Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
-             N1,N2,N3,v1d,v2d,v3d)
+        call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid, &
+             sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
+             Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,armsgradar,stradar,armstradar, &
+             stlidar,N1,N2,N3,v1d,v2d,v3d)
      endif
      v1d(:)%lout = .false.
      v2d(:)%lout = .false.
@@ -1142,8 +1146,8 @@ CONTAINS
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
         temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-        Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
-        N1D,N2D,N3D,v1d,v2d,v3d)
+        Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,armsgradar,stradar,armstradar,     &
+        stlidar,N1D,N2D,N3D,v1d,v2d,v3d)
      
      ! Arguments
      integer,intent(in) :: grid_id,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
@@ -1155,6 +1159,8 @@ CONTAINS
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
      type(cosp_sgradar),intent(in)    :: sgradar  ! Cloudsat radar simulator output (pixel)
      type(cosp_radarstats),intent(in) :: stradar  ! Cloudsat radar simulator output (gridbox)
+     type(cosp_sgradar),intent(in)    :: armsgradar  ! ARM radar simulator output (pixel)
+     type(cosp_radarstats),intent(in) :: armstradar  ! ARM radar simulator output (gridbox)
      type(cosp_isccp),intent(in)      :: isccp    ! ISCCP outputs
      type(cosp_misr),intent(in)       :: misr     ! MISR outputs
      type(cosp_modis),intent(in)      :: modis    ! MODIS outputs
@@ -1258,33 +1264,35 @@ CONTAINS
      d5 = (/grid_id,column_axid,height_mlev_axid,0,0/)
      d4 = (/Npoints,Ncolumns,Nlevels,0/)
      call construct_var3d('dbze94', d5, d4, sgradar%Ze_tot,v3d(1),units='1')
-     call construct_var3d('atb532', d5, d4, sglidar%beta_tot,v3d(2),units='m-1 sr-1')
-     call construct_var3d('fracout', d5, d4, sg%frac_out,v3d(3),units='1')
+     call construct_var3d('armdbze35', d5, d4, armsgradar%Ze_tot,v3d(2),units='1')
+     call construct_var3d('atb532', d5, d4, sglidar%beta_tot,v3d(3),units='m-1 sr-1')
+     call construct_var3d('fracout', d5, d4, sg%frac_out,v3d(4),units='1')
      ! reshape d5 = (/profile_axid,dbze_axid,height_axid,time_axid,0/)
      d5 = (/grid_id,dbze_axid,height_axid,0,0/)
      d4 = (/Npoints,DBZE_BINS,Nlvgrid,0/)
-     call construct_var3d('cfadDbze94', d5, d4, stradar%cfad_ze,v3d(4),units='1')
+     call construct_var3d('cfadDbze94', d5, d4, stradar%cfad_ze,v3d(5),units='1')
+     call construct_var3d('armcfadDbze35', d5, d4, armstradar%cfad_ze,v3d(6),units='1')
      ! reshape d5 = (/profile_axid,sratio_axid,height_axid,time_axid,0/)
      d5 = (/grid_id,sratio_axid,height_axid,0,0/)
      d4 = (/Npoints,SR_BINS,Nlvgrid,0/)
-     call construct_var3d('cfadLidarsr532', d5, d4, stlidar%cfad_sr,v3d(5),units='1')
+     call construct_var3d('cfadLidarsr532', d5, d4, stlidar%cfad_sr,v3d(7),units='1')
      ! reshape d5 = (/profile_axid,tau_axid,pressure2_axid,time_axid,0/)
      d5 = (/grid_id,tau_axid,pressure2_axid,0,0/)
      d4 = (/Npoints,7,7,0/)
-     call construct_var3d('clisccp', d5, d4, isccp%fq_isccp,v3d(6),units='%')
-     call construct_var3d('clmodis', d5, d4, modis%Optical_Thickness_vs_Cloud_Top_Pressure, v3d(7), units='%')
+     call construct_var3d('clisccp', d5, d4, isccp%fq_isccp,v3d(8),units='%')
+     call construct_var3d('clmodis', d5, d4, modis%Optical_Thickness_vs_Cloud_Top_Pressure, v3d(9), units='%')
      ! reshape d5 = (/profile_axid,tau_axid,MISR_CTH_axid,time_axid,0/)
      d5 = (/grid_id,tau_axid,MISR_CTH_axid,0,0/)
      d4 = (/Npoints,7,numMISRHgtBins,0/)
-     call construct_var3d('clMISR', d5, d4, misr%fq_MISR,v3d(8),units='%')
+     call construct_var3d('clMISR', d5, d4, misr%fq_MISR,v3d(10),units='%')
      
    END SUBROUTINE NC_CMOR_ASSOCIATE_1D
  
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   SUBROUTINE NC_CMOR_ASSOCIATE_2D(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
-        temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-        Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
+   SUBROUTINE NC_CMOR_ASSOCIATE_2D(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid, &
+        sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
+        Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,armsgradar,stradar,armstradar,stlidar, &
         N1D,N2D,N3D,v1d,v2d,v3d)
      
      ! Arguments
@@ -1297,6 +1305,8 @@ CONTAINS
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
      type(cosp_sgradar),intent(in)    :: sgradar  ! Cloudsat radar simulator output (pixel)
      type(cosp_radarstats),intent(in) :: stradar  ! Cloudsat radar simulator output (gridbox)     
+     type(cosp_sgradar),intent(in)    :: armsgradar  ! ARM radar simulator output (pixel)
+     type(cosp_radarstats),intent(in) :: armstradar  ! ARM radar simulator output (gridbox)     
      type(cosp_isccp),intent(in)      :: isccp    ! ISCCP outputs
      type(cosp_misr),intent(in)       :: misr     ! MISR outputs
      type(cosp_modis),intent(in)      :: modis    ! MODIS outputs
@@ -1395,21 +1405,23 @@ CONTAINS
      d5 = (/lon_axid,lat_axid,column_axid,height_mlev_axid,time_axid/)
      d4 = (/Nlon,Nlat,Ncolumns,Nlevels/)
      call construct_var3d('dbze94', d5, d4, sgradar%Ze_tot,v3d(1),units='1')
-     call construct_var3d('atb532', d5, d4, sglidar%beta_tot,v3d(2),units='m-1 sr-1')
-     call construct_var3d('fracout', d5, d4, sg%frac_out,v3d(3),units='1')
+     call construct_var3d('armdbze35', d5, d4, armsgradar%Ze_tot,v3d(2),units='1')
+     call construct_var3d('atb532', d5, d4, sglidar%beta_tot,v3d(3),units='m-1 sr-1')
+     call construct_var3d('fracout', d5, d4, sg%frac_out,v3d(4),units='1')
      d5 = (/lon_axid,lat_axid,dbze_axid,height_axid,time_axid/)
      d4 = (/Nlon,Nlat,DBZE_BINS,Nlvgrid/)
-     call construct_var3d('cfadDbze94', d5, d4, stradar%cfad_ze,v3d(4),units='1')
+     call construct_var3d('cfadDbze94', d5, d4, stradar%cfad_ze,v3d(5),units='1')
+     call construct_var3d('armcfadDbze35', d5, d4, armstradar%cfad_ze,v3d(6),units='1')
      d5 = (/lon_axid,lat_axid,sratio_axid,height_axid,time_axid/)
      d4 = (/Nlon,Nlat,SR_BINS,Nlvgrid/)
-     call construct_var3d('cfadLidarsr532', d5, d4, stlidar%cfad_sr,v3d(5),units='1')
+     call construct_var3d('cfadLidarsr532', d5, d4, stlidar%cfad_sr,v3d(7),units='1')
      d5 = (/lon_axid,lat_axid,tau_axid,pressure2_axid,time_axid/)
      d4 = (/Nlon,Nlat,7,7/)
-     call construct_var3d('clisccp', d5, d4, isccp%fq_isccp,v3d(6),units='%')
-     call construct_var3d('clmodis', d5, d4, modis%Optical_Thickness_vs_Cloud_Top_Pressure, v3d(7), units='%')
+     call construct_var3d('clisccp', d5, d4, isccp%fq_isccp,v3d(8),units='%')
+     call construct_var3d('clmodis', d5, d4, modis%Optical_Thickness_vs_Cloud_Top_Pressure, v3d(9), units='%')
      d5 = (/lon_axid,lat_axid,tau_axid,MISR_CTH_axid,time_axid/)
      d4 = (/Nlon,Nlat,7,numMISRHgtBins/)
-     call construct_var3d('clMISR', d5, d4, misr%fq_MISR,v3d(8),units='%')
+     call construct_var3d('clMISR', d5, d4, misr%fq_MISR,v3d(10),units='%')
    END SUBROUTINE NC_CMOR_ASSOCIATE_2D
 
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1584,10 +1596,10 @@ CONTAINS
      integer,intent(in) :: N_OUT_LIST
      ! Local variables
      integer :: i
-     logical :: Lradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,Lrttov_sim,Lparasol_sim, &
-          Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94, &
+     logical :: Lradar_sim,Larmradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,Lrttov_sim,Lparasol_sim, &
+          Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94,LarmcfadDbze35, &
           LcfadLidarsr532,Lclcalipso2,Lclcalipso,Lclhcalipso,Lclisccp,Lcllcalipso, &
-          Lclmcalipso,Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Ltauisccp,Lcltisccp, &
+          Lclmcalipso,Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Larmdbze35,Ltauisccp,Lcltisccp, &
           Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun, &
           Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun, &
           Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun, &
@@ -1600,10 +1612,10 @@ CONTAINS
           Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis, &
           Liwpmodis,Lclmodis
      
-     namelist/COSP_OUTPUT/Lradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,Lrttov_sim,Lparasol_sim, &
-          Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94, &
+     namelist/COSP_OUTPUT/Lradar_sim,Larmradar_sim,Llidar_sim,Lisccp_sim,Lmodis_sim,Lmisr_sim,Lrttov_sim, &
+          Lparasol_sim,Lalbisccp,Latb532,Lboxptopisccp,Lboxtauisccp,LcfadDbze94,LarmcfadDbze35, &
           LcfadLidarsr532,Lclcalipso2,Lclcalipso,Lclhcalipso,Lclisccp, &
-          Lcllcalipso,Lclmcalipso,Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Ltauisccp, &
+          Lcllcalipso,Lclmcalipso,Lcltcalipso,Lcltlidarradar,Lpctisccp,Ldbze94,Larmdbze35,Ltauisccp, &
           Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun, &
           Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun, &
           Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun, &
@@ -1631,6 +1643,10 @@ CONTAINS
         Lcltlidarradar = .false. ! Needs radar & lidar
         Ldbze94        = .false.
         Lclcalipso2    = .false. ! Needs radar & lidar
+     endif
+     if (.not.Larmradar_sim) then
+        LarmcfadDbze35  = .false.
+        Larmdbze35        = .false.
      endif
      if (.not.Llidar_sim) then
         Latb532 = .false.
@@ -1682,7 +1698,8 @@ CONTAINS
      if (.not.Lrttov_sim) then
         Ltbrttov = .false.
      endif
-     if ((.not.Lradar_sim).and.(.not.Llidar_sim).and. &
+     if ((.not.Lradar_sim).and.(.not.Larmradar_sim).and. &
+          (.not.Llidar_sim).and. &
           (.not.Lisccp_sim).and.(.not.Lmisr_sim)) then
         Lfracout = .false.
      endif
@@ -1709,10 +1726,11 @@ CONTAINS
      if (Lmodis_sim) Lisccp_sim = .true.
      
      cfg%Lstats = .false.
-     if ((Lradar_sim).or.(Llidar_sim).or.(Lisccp_sim)) cfg%Lstats = .true.
+     if ((Lradar_sim).or.(Larmradar_sim).or.(Llidar_sim).or.(Lisccp_sim)) cfg%Lstats = .true.
      
      ! Copy instrument flags to cfg structure
      cfg%Lradar_sim = Lradar_sim
+     cfg%Larmradar_sim = Larmradar_sim
      cfg%Llidar_sim = Llidar_sim
      cfg%Lisccp_sim = Lisccp_sim
      cfg%Lmodis_sim = Lmodis_sim
@@ -1737,6 +1755,8 @@ CONTAINS
      if (Lboxtauisccp)     cfg%out_list(i) = 'boxtauisccp'
      i = i+1
      if (LcfadDbze94)      cfg%out_list(i) = 'cfadDbze94'
+     i = i+1
+     if (LarmcfadDbze35)      cfg%out_list(i) = 'armcfadDbze35'
      i = i+1
      if (LcfadLidarsr532)  cfg%out_list(i) = 'cfadLidarsr532'
      i = i+1
@@ -1800,6 +1820,8 @@ CONTAINS
      if (Lpctisccp)        cfg%out_list(i) = 'pctisccp'
      i = i+1
      if (Ldbze94)          cfg%out_list(i) = 'dbze94'
+     i = i+1
+     if (Larmdbze35)          cfg%out_list(i) = 'armdbze35'
      i = i+1
      if (Ltauisccp)        cfg%out_list(i) = 'tauisccp'
      i = i+1
@@ -1878,6 +1900,9 @@ CONTAINS
      ! CloudSat simulator  
      cfg%Ldbze94 = Ldbze94
      cfg%LcfadDbze94 = LcfadDbze94
+     ! ARM simulator  
+     cfg%Larmdbze35 = Larmdbze35
+     cfg%LarmcfadDbze35 = LarmcfadDbze35
      ! CALIPSO/PARASOL simulator  
      cfg%LcfadLidarsr532 = LcfadLidarsr532
      cfg%Lclcalipso2 = Lclcalipso2

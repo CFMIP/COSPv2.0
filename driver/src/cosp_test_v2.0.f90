@@ -112,7 +112,8 @@ program cosp_test_v2
                                     ! iteration
        Nlvgrid,                   & ! Number of vertical levels for statistical outputs 
                                     ! (USE_VGRID=.true.)
-       surface_radar,             & ! surface=1/spaceborne=0
+       cloudsat_surface_radar,    & ! CloudSat surface=1/spaceborne=0
+       arm_surface_radar,         & ! ARM surface=1/spaceborne=0
        cloudsat_use_gas_abs,      & ! Include gaseous absorption (1=yes/0=no)
        cloudsat_do_ray,           & ! Calculate output Rayleigh (1=yes/0=no)
        lidar_ice_type,            & ! Ice particle shape in lidar calculations 
@@ -126,6 +127,7 @@ program cosp_test_v2
        rttov_Nchannels              ! RTTOV: Number of channels to be computed
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
+       arm_radar_freq,            & ! ARM radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
        rttov_ZenAng,              & ! RTTOV: Satellite Zenith Angle
        co2,                       & ! CO2 mixing ratio
@@ -152,14 +154,16 @@ program cosp_test_v2
        fileIN                       ! dinput+finput
   namelist/COSP_INPUT/overlap,isccp_topheight,isccp_topheight_direction,npoints,         &
                       npoints_it,ncolumns,nlevels,use_vgrid,Nlvgrid,csat_vgrid,dinput,   &
-                      finput,cloudsat_radar_freq,surface_radar,cloudsat_use_gas_abs,     &
+                      finput,cloudsat_radar_freq,arm_radar_freq,cloudsat_surface_radar,  &
+                      arm_surface_radar,cloudsat_use_gas_abs,                            &
                       cloudsat_do_ray,cloudsat_k2,cloudsat_micro_scheme,lidar_ice_type,  &
                       use_precipitation_fluxes,rttov_platform,rttov_satellite,           &
                       rttov_Instrument,rttov_Nchannels,rttov_Channels,rttov_Surfem,      &
                       rttov_ZenAng,co2,ch4,n2o,co
 
   ! Output namelist
-  logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
+  logical :: Lcfaddbze94,Ldbze94,Larmcfaddbze35,Larmdbze35,Latb532,LcfadLidarsr532,      &
+             Lclcalipso,Lclhcalipso,                                                     &
              Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,Lclcalipsoliq,             &
              Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice, &
              Lclcalipsotmpun,Lclhcalipsoliq,Lcllcalipsoliq,Lclmcalipsoliq,               &
@@ -171,7 +175,8 @@ program cosp_test_v2
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
              Lclmodis,Ltbrttov
-  namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
+  namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Larmcfaddbze35,Larmdbze35,Latb532,            &
+                       LcfadLidarsr532,Lclcalipso,                                       &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
                        Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,Lclhcalipsoliq, &
@@ -196,12 +201,13 @@ program cosp_test_v2
        lmisr     = .false., & !
        lcalipso  = .false., & !
        lcloudsat = .false., & !
+       larm      = .false., & !
        lrttov    = .false., & !
        lparasol  = .false.    !
   type(size_distribution) :: &
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
-       rcfg_cloudsat     ! Radar configuration
+       rcfg_cloudsat,rcfg_arm     ! Radar configuration
   type(cosp_outputs) :: &
        cospOUT           ! COSP simulator outputs
   type(cosp_optical_inputs) :: &
@@ -248,8 +254,8 @@ program cosp_test_v2
 
   ! Fields used solely for output
   integer,parameter :: &
-       n_out_list = 63,           & ! Number of possible output variables
-       N3D        = 8,            & ! Number of 3D output variables
+       n_out_list = 65,           & ! Number of possible output variables
+       N3D        = 10,            & ! Number of 3D output variables
        N2D        = 14,           & ! Number of 2D output variables
        N1D        = 40              ! Number of 1D output variables  
   character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
@@ -318,6 +324,7 @@ program cosp_test_v2
        Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
        Lcltlidarradar) lcalipso = .true.
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
+  if (LarmcfadDbze35 .or. Larmdbze35) Larm = .true.
   if (Lparasolrefl) Lparasol = .true.
   if (Ltbrttov) Lrttov = .true.
   
@@ -346,10 +353,11 @@ program cosp_test_v2
   call hydro_class_init(R_UNDEF,lsingle,ldouble,sd)
   
   ! Initialize COSP simulator
-  call COSP_INIT(Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov,                 &
-       Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,cloudsat_use_gas_abs,  &
-                 cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,surface_radar,&
-                 rcfg_cloudsat,rttov_Nchannels,rttov_Channels,rttov_platform,           &
+  call COSP_INIT(Lisccp,Lmodis,Lmisr,Lcloudsat,Larm,Lcalipso,Lparasol,Lrttov,           &
+                 Npoints,Nlevels,cloudsat_radar_freq,arm_radar_freq,cloudsat_k2,        &
+                 cloudsat_use_gas_abs,cloudsat_do_ray,isccp_topheight,                  &
+                 isccp_topheight_direction,cloudsat_surface_radar,arm_surface_radar,    &
+                 rcfg_cloudsat,rcfg_arm,rttov_Nchannels,rttov_Channels,rttov_platform,  &
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &
                  cloudsat_micro_scheme,cospOUT)
   call cpu_time(driver_time(3))
@@ -371,6 +379,7 @@ program cosp_test_v2
                               Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun, &
                               Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq,&
                               Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,          &
+                              LarmcfadDbze35,Larmdbze35,                                 &
                               Lparasolrefl,Ltbrttov,Npoints,Ncolumns,Nlevels,Nlvgrid,    &
                               rttov_Nchannels,cospOUT)
 
@@ -416,14 +425,14 @@ program cosp_test_v2
      ! surface-2-TOA, whereas COSP expects all fields to be ordered from TOA-2-SFC. So the
      ! vertical fields are flipped prior to storing to COSP input type.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     cospstateIN%hgt_matrix           = zlev(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%hgt_matrix(:,:)      = zlev(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%sunlit               = sunlit(start_idx:end_idx)
      cospstateIN%skt                  = skt(start_idx:end_idx)
      cospstateIN%land                 = landmask(start_idx:end_idx)
-     cospstateIN%qv                   = sh(start_idx:end_idx,Nlevels:1:-1) 
-     cospstateIN%at                   = T(start_idx:end_idx,Nlevels:1:-1) 
-     cospstateIN%pfull                = p(start_idx:end_idx,Nlevels:1:-1) 
-     cospstateIN%o3                   = mr_ozone(start_idx:end_idx,Nlevels:1:-1)*(amd/amO3)*1e6
+     cospstateIN%qv(:,:)              = sh(start_idx:end_idx,Nlevels:1:-1) 
+     cospstateIN%at(:,:)              = T(start_idx:end_idx,Nlevels:1:-1) 
+     cospstateIN%pfull(:,:)           = p(start_idx:end_idx,Nlevels:1:-1) 
+     cospstateIN%o3(:,:)              = mr_ozone(start_idx:end_idx,Nlevels:1:-1)*(amd/amO3)*1e6
      cospstateIN%u_sfc                = u_wind(start_idx:end_idx)
      cospstateIN%v_sfc                = v_wind(start_idx:end_idx)
      cospstateIN%emis_sfc             = rttov_surfem
@@ -443,7 +452,8 @@ program cosp_test_v2
      cospIN%tautot_S_ice              = 0._wp
      cospIN%emsfc_lw                  = emsfc_lw
      cospIN%rcfg_cloudsat             = rcfg_cloudsat
-     
+     cospIN%rcfg_arm                  = rcfg_arm
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Compute subcolumns and optical inputs to COSP in the same manner as in v1.4, call
      ! subsample_and_optics.
@@ -494,7 +504,8 @@ program cosp_test_v2
                              Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,  &
                              Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq, &
                              Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,           &
-                             Lparasolrefl,Ltbrttov,N_OUT_LIST,out_list)  
+                             LarmcfadDbze35,Larmdbze35,Lparasolrefl,Ltbrttov,            &
+                             N_OUT_LIST,out_list)  
 
   ! Time information for cmor output.
   time           = 8*1._wp/8._wp
@@ -587,6 +598,7 @@ contains
                                              MODIS_opticalThicknessIce
     real(wp),dimension(:,:,:,:),allocatable :: mr_hydro,Reff,Np
     logical :: cmpGases=.true.
+    logical :: cmpGases_cloudsat,cmpGases_arm
 
     if (Ncolumns .gt. 1) then
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -845,6 +857,7 @@ contains
              Np_matrix(nHydro,nPoints,nLevels))           
     
     ! Loop over all subcolumns
+    cmpGases_cloudsat = cmpGases
     do k=1,nColumns
        do i=1,nHydro
           hm_matrix(i,1:nPoints,nLevels:1:-1) = mr_hydro(:,k,:,i)*1000._wp
@@ -853,9 +866,33 @@ contains
        enddo
 
        call quickbeam_optics(sd,cospIN%rcfg_cloudsat,nPoints,nLevels,R_UNDEF,hm_matrix,    &
-            re_matrix,Np_matrix,cospstateIN%pfull,cospstateIN%at,cospstateIN%qv,cmpGases,  &
+            re_matrix,Np_matrix,cospstateIN%pfull,cospstateIN%at,cospstateIN%qv,           &
+            cmpGases_cloudsat,             &
             cospIN%z_vol_cloudsat(1:nPoints,k,:),cospIN%kr_vol_cloudsat(1:nPoints,k,:),    &
             cospIN%g_vol_cloudsat(1:nPoints,k,:))
+    enddo
+    deallocate(hm_matrix,re_matrix,Np_matrix)
+    
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! ARM RADAR OPTICS
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    allocate(hm_matrix(nHydro,nPoints,nLevels),re_matrix(nHydro,nPoints,nLevels),          &
+             Np_matrix(nHydro,nPoints,nLevels))           
+    
+    ! Loop over all subcolumns
+    cmpGases_arm = cmpGases
+    do k=1,nColumns
+       do i=1,nHydro
+          hm_matrix(i,1:nPoints,nLevels:1:-1) = mr_hydro(:,k,:,i)*1000._wp
+          re_matrix(i,1:nPoints,nLevels:1:-1) = Reff(:,k,:,i)*1.e6_wp  
+          Np_matrix(i,1:nPoints,nLevels:1:-1) = Np(:,k,:,i)       
+       enddo
+
+       call quickbeam_optics(sd,cospIN%rcfg_arm,nPoints,nLevels,R_UNDEF,hm_matrix,    &
+            re_matrix,Np_matrix,cospstateIN%pfull,cospstateIN%at,cospstateIN%qv,      &
+            cmpGases_arm,                &
+            cospIN%z_vol_arm(1:nPoints,k,:),cospIN%kr_vol_arm(1:nPoints,k,:),    &
+            cospIN%g_vol_arm(1:nPoints,k,:))
     enddo
     deallocate(hm_matrix,re_matrix,Np_matrix)
     
