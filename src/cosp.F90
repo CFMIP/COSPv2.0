@@ -579,7 +579,7 @@ CONTAINS
        modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),                              &
             mask = cospgridIN%sunlit > 0)
        modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),                              &
-            mask = .not. cospgridIN%sunlit <= 0)
+            mask = .not. cospgridIN%sunlit > 0)
        modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
     endif
 
@@ -743,9 +743,12 @@ CONTAINS
                    modisRetrievedCloudTopPressure(modisIN%nSunlit,modisIN%nColumns))
           ! Call simulator
           do i = 1, modisIN%nSunlit
-             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels, modisIN%pres(i,:),   &
-                                  modisIN%tau(i,:,:),modisIN%liqFrac(i,:,:),             &
-                                  modisIN%g(i,:,:),modisIN%w0(i,:,:),                    &
+             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,                      &
+                                  modisIN%pres(int(modisIN%sunlit(i)),:),                &
+                                  modisIN%tau(int(modisIN%sunlit(i)),:,:),               &
+                                  modisIN%liqFrac(int(modisIN%sunlit(i)),:,:),           &
+                                  modisIN%g(int(modisIN%sunlit(i)),:,:),                 &
+                                  modisIN%w0(int(modisIN%sunlit(i)),:,:),                &
                                   isccp_boxtau(int(modisIN%sunlit(i)),:),                &
                                   isccp_boxptop(int(modisIN%sunlit(i)),:),               &
                                   modisRetrievedPhase(i,:),                              &
