@@ -1442,6 +1442,8 @@ contains
     
     ! RTTOV channels and sfc. emissivity
     allocate(y%ichan(Nchan),y%surfem(Nchan))
+    y%ichan  = ichan
+    y%surfem = surfem
     
     ! Initialize    
     y%zlev      = 0.0

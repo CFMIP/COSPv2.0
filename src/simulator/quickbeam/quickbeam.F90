@@ -274,8 +274,6 @@ contains
              cfad_ze(i,:,j) = hist1D(Ncolumns,Ze_tot(i,:,j),DBZE_BINS,cloudsat_histRef)
           enddo
        enddo
-       ! DJS2015: In v1.4.0, cfad_ze was set to 0.
-       where(cfad_ze .eq. 0)       cfad_ze = R_UNDEF!0
        where(cfad_ze .ne. R_UNDEF) cfad_ze = cfad_ze/Ncolumns
     endif   
 

@@ -927,7 +927,7 @@ CONTAINS
                          cospgridIN%hgt_matrix,cospgridIN%hgt_matrix_half,               &
                          cospOUT%calipso_cldlayerphase(ij:ik,:,:),                       &
                          cospOUT%calipso_lidarcldtmp(ij:ik,:,:))                                      
-       cospOUT%calipso_srbval = calipso_histBsct
+       if (associated(cospOUT%calipso_srbval)) cospOUT%calipso_srbval = calipso_histBsct
 
        ! Free up memory (if necessary)
        if (allocated(out1D_1)) then
@@ -1637,7 +1637,7 @@ CONTAINS
     if (LlidarBetaMol532) allocate(x%calipso_beta_mol(Npoints,Nlevels))
     if (Latb532)          allocate(x%calipso_beta_tot(Npoints,Ncolumns,Nlevels))
     if (LcfadLidarsr532)  then
-        allocate(x%calipso_srbval(SR_BINS))
+        allocate(x%calipso_srbval(SR_BINS+1))
         allocate(x%calipso_cfad_sr(Npoints,SR_BINS,Nlvgrid))
         allocate(x%calipso_betaperp_tot(Npoints,Ncolumns,Nlevels))  
     endif
