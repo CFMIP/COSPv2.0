@@ -510,7 +510,7 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: ibox,j,ilev
+    INTEGER :: ibox,j,ilev,ilev2
     REAL(WP) :: boxarea
     REAL(WP),dimension(npoints,ncol) :: albedocld,fluxtop2
     INTEGER, dimension(npoints) :: ipres,itau
@@ -549,8 +549,20 @@ contains
     box_cloudy(1:npoints,1:ncol) = .false.
     
     ! Reset frequencies
-    fq_isccp = spread(spread(merge(0._wp,output_missing_value,sunlit .eq. 1 .or. isccp_top_height .eq. 3),2,7),2,7)
+    !fq_isccp = spread(spread(merge(0._wp,output_missing_value,sunlit .eq. 1 .or. isccp_top_height .eq. 3),2,7),2,7)
+    do ilev=1,7
+       do ilev2=1,7
+          do j=1,npoints ! 
+             if (sunlit(j).eq.1 .or. isccp_top_height .eq. 3) then 
+                fq_isccp(j,ilev,ilev2)= 0.
+	     else 
+                fq_isccp(j,ilev,ilev2)= output_missing_value
+             end if
+          enddo
+       enddo
+    enddo
 
+    
     ! Reset variables need for averaging cloud properties
     where(sunlit .eq. 1 .or. isccp_top_height .eq. 3)
        totalcldarea(1:npoints)  = 0._wp
