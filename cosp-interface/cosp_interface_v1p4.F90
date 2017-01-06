@@ -973,7 +973,8 @@ contains
        else
           sgx%frac_out(start_idx:end_idx,:,:) = 1  
        endif
-
+       cospIN%frac_out=sgx%frac_out(start_idx:end_idx,:,:)
+       
        ! Sum up precipitation rates
        allocate(ls_p_rate(npoints,gbx%Nlevels),cv_p_rate(npoints,gbx%Nlevels))
        if(gbx%use_precipitation_fluxes) then
