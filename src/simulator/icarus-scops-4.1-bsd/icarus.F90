@@ -406,11 +406,11 @@ contains
           do k1=1,nlev-1
              ilev = merge(nlev-k1,k1,isccp_top_height_direction .eq. 2)        
              do j=1,npoints 
-                if (ilev          .ge. itrop(j)   .and. &
-                     at(j,ilev)   .ge. tb(j,ibox) .and. &  
-                     at(j,ilev+1) .le. tb(j,ibox) .or.  &
-                     at(j,ilev)   .le. tb(j,ibox) .and. &
-                     at(j,ilev+1) .ge. tb(j,ibox)) then 
+                if (ilev           .ge. itrop(j)     .and. &
+                     ((at(j,ilev)  .ge. tb(j,ibox)   .and. &  
+                      at(j,ilev+1) .le. tb(j,ibox))  .or.  &
+                      (at(j,ilev)  .le. tb(j,ibox)   .and. &
+                      at(j,ilev+1) .ge. tb(j,ibox)))) then 
                    nmatch(j)=nmatch(j)+1
                    match(j,nmatch(j))=ilev
                 endif
