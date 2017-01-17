@@ -380,9 +380,12 @@ contains
     ! ########################################################################################
     ! Normalize pixel counts to fraction. 
     ! ########################################################################################
-    Cloud_Fraction_High_Mean(1:nPoints)  = Cloud_Fraction_High_Mean(1:nPoints) /nSubcols
-    Cloud_Fraction_Mid_Mean(1:nPoints)   = Cloud_Fraction_Mid_Mean(1:nPoints)  /nSubcols
-    Cloud_Fraction_Low_Mean(1:nPoints)   = Cloud_Fraction_Low_Mean(1:nPoints)  /nSubcols
+    Cloud_Fraction_High_Mean(1:nPoints)  = Cloud_Fraction_High_Mean(1:nPoints)  /nSubcols
+    Cloud_Fraction_Mid_Mean(1:nPoints)   = Cloud_Fraction_Mid_Mean(1:nPoints)   /nSubcols
+    Cloud_Fraction_Low_Mean(1:nPoints)   = Cloud_Fraction_Low_Mean(1:nPoints)   /nSubcols
+    Cloud_Fraction_Total_Mean(1:nPoints) = Cloud_Fraction_Total_Mean(1:nPoints) /nSubcols
+    Cloud_Fraction_Ice_Mean(1:nPoints)   = Cloud_Fraction_Ice_Mean(1:nPoints)   /nSubcols
+    Cloud_Fraction_Water_Mean(1:nPoints) = Cloud_Fraction_Water_Mean(1:nPoints) /nSubcols
     
     ! ########################################################################################
     ! Joint histograms
