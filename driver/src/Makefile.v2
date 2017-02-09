@@ -4,7 +4,7 @@
 ########################################################################
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -O3 #-fpp -traceback #-check all
+F90FLAGS = -O3 -traceback#-fpp -traceback #-check all
 F90_LIB  = /usr/local/ifort
 # Portland Group (pgf90)
 #F90      = pgf90

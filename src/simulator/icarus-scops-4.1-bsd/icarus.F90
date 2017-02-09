@@ -613,8 +613,8 @@ contains
                                      output_missing_value,totalcldarea(1:npoints) .gt. 0)
 
     ! Represent in percent
-    totalcldarea = totalcldarea*100._wp
-    fq_isccp     = fq_isccp*100._wp
+    where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp
+    where(fq_isccp     .ne. output_missing_value) fq_isccp     = fq_isccp*100._wp
     
     
   end SUBROUTINE ICARUS_column
