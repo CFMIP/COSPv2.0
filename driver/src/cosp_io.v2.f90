@@ -981,10 +981,17 @@ contains
        mgrid_bounds(2,i) = mgrid_zu(i)
     enddo
     ! Height of std grid
-    do i=1,Nlvgrid
-       vgrid_bounds(1,i) = vgrid_zl(i)
-       vgrid_bounds(2,i) = vgrid_zu(i)
-    enddo
+    if (Nlevels .ne. Nlvgrid) then
+       do i=1,Nlvgrid
+          vgrid_bounds(1,i) = vgrid_zl(i)
+          vgrid_bounds(2,i) = vgrid_zu(i)
+       enddo
+    else
+       do i=1,Nlevels
+          vgrid_bounds(1,i) = mgrid_zl(i)
+          vgrid_bounds(2,i) = mgrid_zu(i)
+       enddo
+    end if
     ! Lidar scattering ratio bounds (They are output by cosp_cfad_sr->diag_lidar in lmd_ipsl_stats.f90)
 !    sratio_bounds(2,:)         = cospOUT%calipso_srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
 !    sratio_bounds(1,2:SR_BINS) = cospOUT%calipso_srbval(1:SR_BINS-1)
@@ -1051,8 +1058,15 @@ contains
     endif
     column_axid  = cmor_axis(table=table, table_entry='column', units='1', length=Ncolumns, coord_vals=column_ax)
     channel_axid = cmor_axis(table=table, table_entry='channel', units='1', length=Nchannels, coord_vals=channel_ax)
-    height_axid  = cmor_axis(table=table, table_entry='alt40', units='m', length=Nlvgrid, &
-         coord_vals=vgrid_z,cell_bounds=vgrid_bounds)
+    if (Nlevels .ne. Nlvgrid) then
+       height_axid  = cmor_axis(table=table, table_entry='alt40', units='m', length=Nlvgrid, &
+            coord_vals=vgrid_z,cell_bounds=vgrid_bounds)
+    else
+       height_axid  = cmor_axis(table=table, table_entry='alt40', units='m', length=Nlvgrid, &
+            coord_vals=mgrid_z,cell_bounds=vgrid_bounds)
+    endif
+    !height_axid  = cmor_axis(table=table, table_entry='alt40', units='m', length=Nlvgrid, &
+    !        coord_vals=vgrid_z,cell_bounds=vgrid_bounds)
     temp_axid    = cmor_axis(table=table, table_entry='temp', units='C', length=LIDAR_NTEMP, &
          coord_vals=LIDAR_PHASE_TEMP,cell_bounds=LIDAR_PHASE_TEMP_BNDS)
     dbze_axid    = cmor_axis(table=table, table_entry='dbze', units='dBZ', length=DBZE_BINS, &

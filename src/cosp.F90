@@ -1241,10 +1241,10 @@ CONTAINS
 
     ! CLOUDSAT/CALIPSO products
     if (Lradar_lidar_tcc .or. Llidar_only_freq_cloud) then
-       
-       allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,Nlvgrid),                       &
-                radar_lidar_tcc(cloudsatIN%Npoints))
+      
        if (use_vgrid) then
+          allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,Nlvgrid),                    &
+               radar_lidar_tcc(cloudsatIN%Npoints))
           allocate(t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),                        &
                    betamol_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),                  &
                    tmpFlip(cloudsatIN%Npoints,1,Nlvgrid),                                &
@@ -1252,32 +1252,39 @@ CONTAINS
                    pnormFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),            &
                    pnorm_perpFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),       &
                    Ze_totFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
-          t_in(:,1,:)=cospgridIN%at(:,:)
+
+          t_in(:,1,:)=cospgridIN%at(:,cloudsatIN%Nlevels:1:-1)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
-                                         cospgridIN%hgt_matrix,                          &
-                                         cospgridIN%hgt_matrix_half,t_in,Nlvgrid,        &
-                                         vgrid_zl,vgrid_zu,tmpFlip)
-          betamol_in(:,1,:) = calipso_beta_mol!(ij:ik,:)
+               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),                         &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),t_in,Nlvgrid,       &
+               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),tmpFlip(:,1,Nlvgrid:1:-1))
+          
+          betamol_in(:,1,:) = calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
-                                         cospgridIN%hgt_matrix,                          &
-                                         cospgridIN%hgt_matrix_half,betamol_in,          &
-                                         Nlvgrid,vgrid_zl,vgrid_zu,betamolFlip)
+               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),                         &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),betamol_in,         &
+               Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),                    &
+               betamolFlip(:,1,Nlvgrid:1:-1))
+    
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
-                                         cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
-                                         cospgridIN%hgt_matrix_half,                     &
-                                         calipso_beta_tot,&!(ij:ik,:,:),                    &
-                                         Nlvgrid,vgrid_zl,vgrid_zu,pnormFlip)
+               cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
+               calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                    &
+               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),pnormFlip(:,:,Nlvgrid:1:-1))
+          
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
-                                         cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
-                                         cospgridIN%hgt_matrix_half,                     &
-                                         calipso_betaperp_tot,&!(ij:ik,:,:),                &
-                                         Nlvgrid,vgrid_zl,vgrid_zu,pnorm_perpFlip)      
+               cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
+               calipso_betaperp_tot(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                &
+               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),                            &
+               pnorm_perpFlip(:,:,Nlvgrid:1:-1))
+          
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
-                                         cloudsatIN%Nlevels,cospgridIN%hgt_matrix,       &
-                                         cospgridIN%hgt_matrix_half,cloudsatDBZe,        &
-                                         Nlvgrid,vgrid_zl,vgrid_zu,                      &
-                                         Ze_totFlip,log_units=.true.)                               
-                                                           
+               cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
+               cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
+               vgrid_zu(Nlvgrid:1:-1),Ze_totFlip(:,:,Nlvgrid:1:-1),log_units=.true.)    
+
           call cosp_lidar_only_cloud(cloudsatIN%Npoints,cloudsatIN%Ncolumns,             &
                                      Nlvgrid,tmpFlip,pnormFlip,pnorm_perpFlip,           &
                                      betamolFlip,Ze_totFlip,                             &
@@ -1285,10 +1292,15 @@ CONTAINS
           deallocate(t_in,betamol_in,tmpFlip,betamolFlip,pnormFlip,pnorm_perpFlip,       &
                      ze_totFlip)
        else
+          allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,cloudsatIN%Nlevels),         &
+               radar_lidar_tcc(cloudsatIN%Npoints))
           call cosp_lidar_only_cloud(cloudsatIN%Npoints,cloudsatIN%Ncolumns,             &
-                                     cospIN%Nlevels,cospgridIN%at,calipso_beta_tot,      &
-                                     calipso_betaperp_tot,calipso_beta_mol,cloudsatDBZe, &
-                                     lidar_only_freq_cloud,radar_lidar_tcc)
+               cospIN%Nlevels,cospgridIN%at(:,cloudsatIN%Nlevels:1:-1),                  &
+               calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),                            &
+               calipso_betaperp_tot(:,:,cloudsatIN%Nlevels:1:-1),                        &
+               calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1),                              &
+               cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),lidar_only_freq_cloud,          &
+               radar_lidar_tcc)
        endif
        
        ! Store, when necessary
@@ -1381,6 +1393,9 @@ CONTAINS
           vgrid_zu(Nlvgrid-i+1) = i*zstep
        enddo
        vgrid_z = (vgrid_zl+vgrid_zu)/2._wp
+    else
+       Nlvgrid = Nlevels
+       allocate(vgrid_zl(Nlvgrid),vgrid_zu(Nlvgrid),vgrid_z(Nlvgrid))
     endif
 
     ! Initialize simulators

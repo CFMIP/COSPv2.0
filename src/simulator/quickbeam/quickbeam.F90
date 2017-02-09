@@ -254,8 +254,9 @@ contains
     
     if (use_vgrid) then
        ! Regrid in the vertical
-       call cosp_change_vertical_grid(Npoints,Ncolumns,Nlevels,zlev,zlev_half,Ze_tot, &
-            llm,vgrid_zl,vgrid_zu,Ze_totFlip,log_units=.true.)
+       call cosp_change_vertical_grid(Npoints,Ncolumns,Nlevels,zlev(:,nlevels:1:-1),&
+            zlev_half(:,nlevels:1:-1),Ze_tot(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),&
+            vgrid_zu(llm:1:-1),Ze_totFlip(:,:,llm:1:-1),log_units=.true.)
 
        ! Effective reflectivity histogram
        do i=1,Npoints
@@ -263,8 +264,6 @@ contains
              cfad_ze(i,:,j) = hist1D(Ncolumns,Ze_totFlip(i,:,j),DBZE_BINS,cloudsat_histRef)
           enddo
        enddo
-       ! DJS2015: In v1.4.0, cfad_ze was set to 0.
-       where(cfad_ze .eq. 0)       cfad_ze = R_UNDEF!0
        where(cfad_ze .ne. R_UNDEF) cfad_ze = cfad_ze/Ncolumns
 
     else
@@ -278,13 +277,11 @@ contains
     endif   
 
   end subroutine quickbeam_column
+  ! ##############################################################################################
+  ! ##############################################################################################
 
   
   ! ##############################################################################################
-  ! ##############################################################################################
-
-  ! ##############################################################################################
-
   ! ##############################################################################################
   subroutine load_scale_LUTs(rcfg)
     

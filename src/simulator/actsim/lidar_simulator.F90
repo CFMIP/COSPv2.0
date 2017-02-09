@@ -297,19 +297,19 @@ contains
 
     ! Vertically regrid input data
     if (use_vgrid) then 
-       t_in(:,1,:)=tmp(:,:)
-       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev,zlev_half,t_in,llm,vgrid_zl,&
-                                      vgrid_zu,tmpFlip)
-       ph_in(:,1,:) = pplay(:,:)
-       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev,zlev_half,ph_in,llm,        &
-                                      vgrid_zl,vgrid_zu,pplayFlip)
-       betamol_in(:,1,:) = pmol(:,:)
-       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev,zlev_half,betamol_in,llm,   &
-                                      vgrid_zl,vgrid_zu,betamolFlip)
-       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev,zlev_half,pnorm,llm,     &
-                                      vgrid_zl,vgrid_zu,pnormFlip)
-       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev,zlev_half,pnorm_perp,llm,&
-                                      vgrid_zl,vgrid_zu,pnorm_perpFlip)
+       t_in(:,1,:)=tmp(:,nlevels:1:-1)
+       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+            t_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),tmpFlip(:,1,llm:1:-1))
+       ph_in(:,1,:) = pplay(:,nlevels:1:-1)
+       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+            ph_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pplayFlip(:,1,llm:1:-1))
+       betamol_in(:,1,:) = pmol(:,nlevels:1:-1)
+       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+            betamol_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),betamolFlip(:,1,llm:1:-1))
+       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+            pnorm(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnormFlip(:,:,llm:1:-1))
+       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+            pnorm_perp(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnorm_perpFlip(:,:,llm:1:-1))
     endif
 
     ! Initialization (The histogram bins, are set up during initialization and the
@@ -1025,6 +1025,6 @@ contains
     enddo
     
     RETURN
-  END SUBROUTINE COSP_CLDFRAC  
-  
+  END SUBROUTINE COSP_CLDFRAC
+
 end module mod_lidar_simulator

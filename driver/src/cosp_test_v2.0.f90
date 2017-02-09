@@ -34,7 +34,8 @@ program cosp_test_v2
   use mod_cosp_config,     only: RTTOV_MAX_CHANNELS,N_HYDRO,numMODISTauBins,modis_histTau,&
                                  modis_histTauEdges,modis_histTauCenters,ntau,ntauV1p4,   &
                                  tau_binBounds,tau_binEdges,tau_binCenters,R_UNDEF,       &
-                                 tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4
+                                 tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4,   &
+                                 Nlvgrid_local  => Nlvgrid
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,nc_cmor_init
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics
@@ -353,7 +354,7 @@ program cosp_test_v2
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &
                  cloudsat_micro_scheme,cospOUT)
   call cpu_time(driver_time(3))
-
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived type.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -371,7 +372,7 @@ program cosp_test_v2
                               Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun, &
                               Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq,&
                               Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,          &
-                              Lparasolrefl,Ltbrttov,Npoints,Ncolumns,Nlevels,Nlvgrid,    &
+                              Lparasolrefl,Ltbrttov,Npoints,Ncolumns,Nlevels,Nlvgrid_local,&
                               rttov_Nchannels,cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -504,14 +505,18 @@ program cosp_test_v2
 
   ! Model grid info for cmor output
   allocate(mgrid_z(Nlevels),mgrid_zl(Nlevels),mgrid_zu(Nlevels))
-  mgrid_z             = cospstateIN%hgt_matrix(1,:)
-  mgrid_zl            = cospstateIN%hgt_matrix_half(1,:)
-  mgrid_zu(2:Nlevels) = cospstateIN%hgt_matrix_half(1,1:Nlevels-1)
-  mgrid_zu(1)         = cospstateIN%hgt_matrix(1,1)+(cospstateIN%hgt_matrix(1,1)-mgrid_zl(1))
+  !mgrid_z             = cospstateIN%hgt_matrix(1,Nlevels:-1)
+  !mgrid_zl            = cospstateIN%hgt_matrix_half(1,Nlevels:1:-1)
+  !mgrid_zu(2:Nlevels) = cospstateIN%hgt_matrix_half(1,Nlevels-1:1:-1)
+  !mgrid_zu(1)         = cospstateIN%hgt_matrix(1,1)+(cospstateIN%hgt_matrix(1,1)-mgrid_zl(1))
+  mgrid_z  = zlev(1,:)
+  mgrid_zl = zlev_half(1,:)
+  mgrid_zu(1:Nlevels-1) = zlev_half(1,2:Nlevels)
+  mgrid_zu(Nlevels)     = zlev(1,Nlevels) + (zlev(1,Nlevels) - mgrid_zl(Nlevels))
   
   if (geomode .eq. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_1D.txt','replace',nPoints,nColumns,nLevels, &
-                       rttov_nChannels,nLvgrid,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
+                       rttov_nChannels,nLvgrid_local,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
                        geomode,Nlon,Nlat,N1D+1,N2D,N3D,N_OUT_LIST,out_list,lon_axid,     &
                        lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,&
                        latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,  &
@@ -520,14 +525,14 @@ program cosp_test_v2
      call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,           &
                                column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
                                sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
-                               Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid,    &
+                               Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid_local,    &
                                cospOUT,N1D+1,N2D,N3D,v1d,v2d,v3d)
      call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1D+1,N2D,N3D,  &
                            v1d(1:N1D+1),v2d,v3d)
   endif
   if (geomode .gt. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_2D.txt','replace',nPoints,nColumns,nLevels, &
-                       rttov_nChannels,nLvgrid,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
+                       rttov_nChannels,nLvgrid_local,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
                        geomode,Nlon,Nlat,N1D,N2D,N3D,N_OUT_LIST,out_list,lon_axid,       &
                        lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,&
                        latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,  &
@@ -536,7 +541,7 @@ program cosp_test_v2
      call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid, &
                                column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
                                sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
-                               Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid,    &
+                               Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid_local,    &
                                cospOUT,N1D,N2D,N3D,v1d(1:N1D),v2d,v3d)
      call nc_cmor_write_2d(time_bnds,geomode,Nlon,Nlat,N1D,N2D,N3D,v1d(1:N1D),v2d,v3d)
   endif
