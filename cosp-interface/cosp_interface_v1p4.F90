@@ -815,10 +815,10 @@ contains
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.
 
        if (cfg%LlidarBetaMol532) then
-          sglidar%beta_mol         = cospOUT%calipso_beta_mol(:,sglidar%Nlevels:1:-1)
+          sglidar%beta_mol         = cospOUT%calipso_beta_mol!(:,sglidar%Nlevels:1:-1)
        endif
        if (cfg%Latb532) then
-          cospOUT%calipso_beta_tot = cospOUT%calipso_beta_tot(:,:,sglidar%Nlevels:1:-1)
+          !cospOUT%calipso_beta_tot = cospOUT%calipso_beta_tot(:,:,sglidar%Nlevels:1:-1)
           sglidar%beta_tot         = cospOUT%calipso_beta_tot
        endif
        if (cfg%LcfadLidarsr532)  then
@@ -863,7 +863,7 @@ contains
        ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.    
        if (cfg%Ldbze94) then
-          sgradar%Ze_tot = cospOUT%cloudsat_Ze_tot(:,:,sgradar%Nlevels:1:-1)  
+          sgradar%Ze_tot = cospOUT%cloudsat_Ze_tot!(:,:,sgradar%Nlevels:1:-1)  
        endif
        if (cfg%LcfadDbze94) then 
           stradar%cfad_ze = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)              

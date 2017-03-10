@@ -573,14 +573,23 @@ CONTAINS
        modisIN%g         => cospIN%asym
        modisIN%w0        => cospIN%ss_alb
        modisIN%Nsunlit   = count(cospgridIN%sunlit > 0)
-       allocate(modisIN%sunlit(modisIN%Nsunlit),                                         &
-                modisIN%notSunlit(count(cospgridIN%sunlit <= 0)),                        &       
-                modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))             
-       modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),                              &
-            mask = cospgridIN%sunlit > 0)
-       modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),                              &
-            mask = .not. cospgridIN%sunlit > 0)
-       modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
+       if (modisIN%Nsunlit .gt. 0) then
+          allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
+          modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
+          modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
+       endif
+       if (count(cospgridIN%sunlit <= 0) .gt. 0) then
+          allocate(modisIN%notSunlit(count(cospgridIN%sunlit <= 0)))
+          modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),mask = .not. cospgridIN%sunlit > 0)
+       endif
+       !allocate(modisIN%sunlit(modisIN%Nsunlit),                                         &
+       !         modisIN%notSunlit(count(cospgridIN%sunlit <= 0)),                        &       
+       !         modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))             
+       !modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),                              &
+       !     mask = cospgridIN%sunlit > 0)
+       !modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),                              &
+       !     mask = .not. cospgridIN%sunlit > 0)
+       !modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
     endif
 
     if (Lrttov_column) then
@@ -685,9 +694,9 @@ CONTAINS
                             calipso_beta_tot(:,:,:),calipso_betaperp_tot(:,:,:))
        ! Store output (if requested)
        if (associated(cospOUT%calipso_beta_mol))                                         &
-            cospOUT%calipso_beta_mol(ij:ik,:) = calipso_beta_mol
+            cospOUT%calipso_beta_mol(ij:ik,calipsoIN%Nlevels:1:-1) = calipso_beta_mol
        if (associated(cospOUT%calipso_beta_tot))                                         &
-            cospOUT%calipso_beta_tot(ij:ik,:,:) = calipso_beta_tot
+            cospOUT%calipso_beta_tot(ij:ik,:,calipsoIN%Nlevels:1:-1) = calipso_beta_tot
        if (associated(cospOUT%calipso_betaperp_tot))                                     &
             cospOUT%calipso_betaperp_tot(ij:ik,:,:) = calipso_betaperp_tot
 
@@ -728,7 +737,7 @@ CONTAINS
        enddo
        ! Store output (if requested)
        if (associated(cospOUT%cloudsat_Ze_tot)) then
-          cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe
+          cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1)
        endif
     endif
     call cpu_time(cosp_time(8))
