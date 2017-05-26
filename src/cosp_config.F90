@@ -250,19 +250,12 @@ MODULE MOD_COSP_CONFIG
        DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
        CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
        CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
-!    real(wp),parameter :: &
-!       DBZE_MIN      = -100.0, & ! Minimum value for radar reflectivity
-!       DBZE_MAX      =   80.0, & ! Maximum value for radar reflectivity
-!       CFAD_ZE_MIN   =  -50.0, & ! Lower value of the first CFAD Ze bin
-!       CFAD_ZE_WIDTH =    5.0    ! Bin width (dBZe)
-    real(wp),parameter,dimension(SR_BINS+1) :: &
+
+    real(wp),parameter,dimension(DBZE_BINS+1) :: &
        cloudsat_histRef = (/DBZE_MIN,(/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),             &
-                            int(CFAD_ZE_MIN+(SR_BINS-1)*CFAD_ZE_WIDTH),                  &
+                            int(CFAD_ZE_MIN+(DBZE_BINS-1)*CFAD_ZE_WIDTH),                &
                             int(CFAD_ZE_WIDTH))/),DBZE_MAX/)
-!        cloudsat_histRef = (/DBZE_MIN,                                          &
-!                       real((/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),             &
-!                       int(CFAD_ZE_MIN+(SR_BINS-1)*CFAD_ZE_WIDTH),              &
-!                       int(CFAD_ZE_WIDTH))/),wp),DBZE_MAX/)
+
     ! ####################################################################################
     ! CALISPO backscatter histogram bins 
     ! ####################################################################################
@@ -272,10 +265,7 @@ MODULE MOD_COSP_CONFIG
        S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
     real(wp),dimension(SR_BINS+1) :: &
        calipso_histBsct = (/0.0,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0, &
-                            60.0,80.0,100000.0/)         ! Backscatter histogram bins
-!    real(wp),dimension(SR_BINS) :: &
-!       calipso_histBsct = (/0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0, &
-!                            60.0,80.0,100000.0/)         ! Backscatter histogram bins
+                            60.0,80.0,100000.0/)         ! Backscatter histogram bin boundaries
 
     ! ####################################################################################
     ! Parameters used by the lidar simulator

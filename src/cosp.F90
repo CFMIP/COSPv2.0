@@ -591,7 +591,7 @@ CONTAINS
        !     mask = .not. cospgridIN%sunlit > 0)
        !modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
     endif
-
+    
     if (Lrttov_column) then
        rttovIN%nPoints    => Npoints
        rttovIN%nLevels    => cospIN%nLevels
@@ -752,8 +752,7 @@ CONTAINS
                    modisRetrievedCloudTopPressure(modisIN%nSunlit,modisIN%nColumns))
           ! Call simulator
           do i = 1, modisIN%nSunlit
-             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,                      &
-                                  modisIN%pres(int(modisIN%sunlit(i)),:),                &
+             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,modisIN%pres(i,:),    &
                                   modisIN%tau(int(modisIN%sunlit(i)),:,:),               &
                                   modisIN%liqFrac(int(modisIN%sunlit(i)),:,:),           &
                                   modisIN%g(int(modisIN%sunlit(i)),:,:),                 &
