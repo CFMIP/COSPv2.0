@@ -43,7 +43,7 @@ contains
       INTEGER nlev          !  number of model levels in column
       INTEGER ncol          !  number of subcolumns
 
-      INTEGER i,j,ilev,ibox,cv_col
+      INTEGER j,ilev,ibox,cv_col
       
       REAL(WP) ls_p_rate(npoints,nlev),cv_p_rate(npoints,nlev)
 

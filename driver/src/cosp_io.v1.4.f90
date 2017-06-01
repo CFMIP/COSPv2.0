@@ -424,7 +424,7 @@ CONTAINS
    SUBROUTINE NC_READ_INPUT_FILE(fname,Npnts,Nl,Nhydro,lon,lat,p,ph,z,zh,T,qv,rh,tca,cca, &
         mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
         fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,dem_c,skt,landmask, &
-        mr_ozone,u_wind,v_wind,sunlit,emsfc_lw,mode,Nlon,Nlat,verbosity)
+        mr_ozone,u_wind,v_wind,sunlit,emsfc_lw,mode,Nlon,Nlat)
      
      !Arguments
      character(len=512),intent(in) :: fname ! File name
@@ -437,7 +437,6 @@ CONTAINS
      real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit
      real(wp),intent(out) :: emsfc_lw
      integer,intent(out) :: mode,Nlon,Nlat
-     integer,optional :: verbosity
      
      !Local variables
      integer :: Npoints,Nlevels,i,j,k
@@ -551,7 +550,6 @@ CONTAINS
            call cosp_error(routine_name,errmsg,errcode=errst)
         endif
         ! Read in into temporary array of correct shape
-        !if (present(verbosity).and.(verbosity == 1)) print *, 'Reading '//trim(vname)//' ...'
         if (vrank == 1) then
            Na = dimsize(vdimid(1))
            allocate(x1(Na))
@@ -850,7 +848,6 @@ CONTAINS
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_INIT(cmor_nl,wmode,cfg,vgrid,gb,sg,sglidar,&
         isccp,misr,modis,rttov,sgradar,stradar,stlidar,geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST, &
-        mgrid_zl,mgrid_zu,mgrid_z, &
         lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,latvar_id, &
         column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
         sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
@@ -870,7 +867,6 @@ CONTAINS
      type(cosp_modis),intent(in)      :: modis    ! MODIS outputs
      type(cosp_rttov),intent(in)      :: rttov    ! RTTOV outputs
      type(cosp_lidarstats),intent(in) :: stlidar  ! Summary statistics from lidar simulator
-     real(wp),dimension(gb%nlevels),intent(in) :: mgrid_zl,mgrid_zu,mgrid_z
      integer,intent(in) :: geomode,Nlon,Nlat,N1,N2,N3,N_OUT_LIST
      integer,intent(out) :: grid_id,latvar_id,lonvar_id,column_axid,height_axid,dbze_axid,height_mlev_axid,sratio_axid, &
           tau_axid,pressure2_axid,lon_axid,lat_axid,time_axid,sza_axid,MISR_CTH_axid, &
@@ -894,7 +890,6 @@ CONTAINS
      real(wp),dimension(:),allocatable :: profile_ax,column_ax,dbze_ax,channel_ax
      real(wp),dimension(:,:),allocatable :: dbze_bounds,vgrid_bounds,sratio_bounds, &
           lon_bounds,lat_bounds,mgrid_bounds
-     integer :: d2(2),d3(3),d4(4),d5(5)
      double precision :: tbnds(2,1)
      character(len=64) :: pro_name = 'NC_CMOR_INIT'
      
@@ -1059,14 +1054,14 @@ CONTAINS
      ! Associate table of variables. Needed here to fill in the table with names.
      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
      if (geomode == 1) then
-        call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
+        call nc_cmor_associate_1d(grid_id,height_axid,height_mlev_axid,column_axid,sza_axid, &
              temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-             Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
+             gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
              N1,N2,N3,v1d,v2d,v3d)
      else
         call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
              temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-             Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
+             Nlon,Nlat,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
              N1,N2,N3,v1d,v2d,v3d)
      endif
      v1d(:)%lout = .false.
@@ -1140,16 +1135,15 @@ CONTAINS
    END SUBROUTINE NC_CMOR_INIT
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
+   SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,height_axid,height_mlev_axid,column_axid,sza_axid, &
         temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-        Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
+        gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar,                 &
         N1D,N2D,N3D,v1d,v2d,v3d)
      
      ! Arguments
-     integer,intent(in) :: grid_id,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
+     integer,intent(in) :: grid_id,height_axid,height_mlev_axid,column_axid,sza_axid, &
           temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid
-     integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
-     type(cosp_vgrid),intent(in)      :: vgrid
+     integer,intent(in) :: N1D,N2D,N3D
      type(cosp_gridbox),intent(in)    :: gb
      type(cosp_subgrid),intent(in)    :: sg
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
@@ -1284,14 +1278,13 @@ CONTAINS
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    SUBROUTINE NC_CMOR_ASSOCIATE_2D(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
         temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid, &
-        Nlon,Nlat,vgrid,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
+        Nlon,Nlat,gb,sg,sglidar,isccp,misr,modis,rttov,sgradar,stradar,stlidar, &
         N1D,N2D,N3D,v1d,v2d,v3d)
      
      ! Arguments
      integer,intent(in) :: lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,column_axid,sza_axid, &
           temp_axid,channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid
      integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
-     type(cosp_vgrid),intent(in) :: vgrid
      type(cosp_gridbox),intent(in)    :: gb
      type(cosp_subgrid),intent(in)    :: sg
      type(cosp_sglidar),intent(in)    :: sglidar  ! Subgrid lidar
@@ -1424,7 +1417,6 @@ CONTAINS
      type(var3d),intent(inout) :: v3d(N1)
      !--- Local variables ---
      integer :: error_flag,i
-     real(wp),allocatable :: y2(:,:),y3(:,:,:),y4(:,:,:,:)
      character(len=64) :: pro_name = 'NC_WRITE_COSP_1D'
      
      

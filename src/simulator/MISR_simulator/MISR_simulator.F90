@@ -222,14 +222,12 @@ contains
   ! ######################################################################################
   ! SUBROUTINE misr_column
   ! ######################################################################################
-  SUBROUTINE MISR_COLUMN(npoints,ncol,nlev,box_MISR_ztop,sunlit,tau,MISR_cldarea,        &
-                          MISR_mean_ztop,fq_MISR_TAU_v_CTH)
+  SUBROUTINE MISR_COLUMN(npoints,ncol,box_MISR_ztop,sunlit,tau,MISR_cldarea,MISR_mean_ztop,fq_MISR_TAU_v_CTH)
 
     ! INPUTS
     INTEGER, intent(in) :: &
          npoints,        & ! Number of horizontal gridpoints
-         ncol,           & ! Number of subcolumns
-         nlev              ! Number of vertical layers
+         ncol              ! Number of subcolumns
     INTEGER, intent(in),dimension(npoints) :: &
          sunlit            ! 1 for day points, 0 for night time
     REAL(WP),intent(in),dimension(npoints,ncol) :: &

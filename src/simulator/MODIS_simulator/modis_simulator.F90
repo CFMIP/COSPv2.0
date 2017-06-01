@@ -112,8 +112,8 @@ contains
   !       alogrithm in this simulator we simply report the values from the ISCCP simulator. 
   ! ########################################################################################
   subroutine modis_subcolumn(nSubCols, nLevels, pressureLevels, optical_thickness,       & 
-                         tauLiquidFraction, g, w0, isccpTau, isccpCloudTopPressure, &
-                         retrievedPhase, retrievedCloudTopPressure,                 &
+                         tauLiquidFraction, g, w0,isccpCloudTopPressure,                 &
+                         retrievedPhase, retrievedCloudTopPressure,                      &
                          retrievedTau,   retrievedSize)
 
     ! INPUTS
@@ -128,7 +128,6 @@ contains
          g,                         & ! Subcolumn assymetry parameter  
          w0                           ! Subcolumn single-scattering albedo 
     real(wp),dimension(nSubCols),intent(in) :: &
-         isccpTau,                  & ! ISCCP Column-integrated optical thickness
          isccpCloudTopPressure        ! ISCCP retrieved cloud top pressure (Pa)
 
     ! OUTPUTS
@@ -284,7 +283,7 @@ contains
     ! LOCAL VARIABLES
     real(wp), parameter :: &
          LWP_conversion = 2._wp/3._wp * 1000._wp ! MKS units  
-    integer :: i, j
+    integer :: j
     logical, dimension(nPoints,nSubCols) :: &
          cloudMask,      &
          waterCloudMask, &

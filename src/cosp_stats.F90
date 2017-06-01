@@ -169,9 +169,8 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   ! (c) 2008, Lawrence Livermore National Security Limited Liability Corporation.
   ! All rights reserved.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_LIDAR_ONLY_CLOUD(Npoints,Ncolumns,Nlevels,temp_tot,beta_tot, &
-                                   betaperp_tot,beta_mol,Ze_tot, &
-                                   lidar_only_freq_cloud,tcc)
+  SUBROUTINE COSP_LIDAR_ONLY_CLOUD(Npoints,Ncolumns,Nlevels,beta_tot, &
+                                   beta_mol,Ze_tot,lidar_only_freq_cloud,tcc)
     ! Inputs
     integer,intent(in) :: &
          Npoints,       & ! Number of horizontal gridpoints
@@ -181,8 +180,6 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
          beta_mol         ! Molecular backscatter
     real(wp),dimension(Npoints,Ncolumns,Nlevels),intent(in) :: &
          beta_tot,      & ! Total backscattered signal
-         temp_tot,      & ! Total backscattered signal
-         betaperp_tot,  & ! perpendicular Total backscattered signal
          Ze_tot           ! Radar reflectivity
     ! Outputs
     real(wp),dimension(Npoints,Nlevels),intent(out) :: &
