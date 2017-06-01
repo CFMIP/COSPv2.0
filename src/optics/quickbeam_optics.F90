@@ -113,16 +113,13 @@ contains
     
     ! INTERNAL VARIABLES   
     integer :: &
-         phase, ns,tp,j,k,pr,itt, &
-         iff,iRe_type,n,max_bin,i,ii    
+         phase, ns,tp,j,k,pr,itt,iRe_type,n 
     logical :: &
          hydro
     real(wp) :: &
          t_kelvin
     real(wp) :: &
-         rho_a,half_g_atten_current,half_g_atten_above,half_a_atten_current,         &
-         half_a_atten_above,kr,ze,zr,scale_factor,tc,Re,ld,tmp1,ze2,kr2,apm,bpm,Np,  &
-         base, step 
+         rho_a,kr,ze,zr,scale_factor,Re,Np,base,step 
 
     real(wp),dimension(:),allocatable :: &
          Deq,     & ! Discrete drop sizes (um)
@@ -187,8 +184,7 @@ contains
                 ! Compute effective radius from number concentration and distribution parameters
                 if (re_matrix(tp,pr,k) .eq. 0) then
                    call calc_Re(hm_matrix(tp,pr,k),Np_matrix(tp,pr,k),rho_a, &
-                        sd%dtype(tp),sd%dmin(tp),sd%dmax(tp),sd%apm(tp),sd%bpm(tp), &
-                        sd%rho(tp),sd%p1(tp),sd%p2(tp),sd%p3(tp),Re)
+                        sd%dtype(tp),sd%apm(tp),sd%bpm(tp),sd%rho(tp),sd%p1(tp),sd%p2(tp),sd%p3(tp),Re)
                    re_matrix(tp,pr,k)=Re
                 else
                    if (Np_matrix(tp,pr,k) > 0) then
@@ -364,7 +360,7 @@ contains
   end subroutine quickbeam_optics
   ! ##############################################################################################
   ! ##############################################################################################
-  subroutine calc_Re(Q,Np,rho_a,dtype,dmin,dmax,apm,bpm,rho_c,p1,p2,p3,Re)  
+  subroutine calc_Re(Q,Np,rho_a,dtype,apm,bpm,rho_c,p1,p2,p3,Re)  
     ! ##############################################################################################
     ! Purpose:
     !   Calculates Effective Radius (1/2 distribution 3rd moment / 2nd moment). 
@@ -382,8 +378,6 @@ contains
     !
     !   Distribution parameters as per quickbeam documentation.
     !   [dtype]    distribution type
-    !   [dmin]     minimum size cutoff (um)
-    !   [dmax]     maximum size cutoff (um)
     !   [apm]      a parameter for mass (kg m^[-bpm])
     !   [bmp]      b params for mass 
     !   [p1],[p2],[p3]  distribution parameters
@@ -400,7 +394,7 @@ contains
     ! ##############################################################################################
     
     ! Inputs
-    real(wp), intent(in)    :: Q,Np,rho_a,dmin,dmax,rho_c,p1,p2,p3
+    real(wp), intent(in)    :: Q,Np,rho_a,rho_c,p1,p2,p3
     integer,  intent(in)    :: dtype
     real(wp), intent(inout) :: apm,bpm  
     
@@ -648,7 +642,7 @@ contains
          dmin_mm,dmax_mm,ahp,bhp, & ! power law variables
          rg,log_sigma_g,          & ! lognormal variables
          rho_e,                   & ! particle density (kg m^-3)
-         tmp1,tmp2,rc,tc
+         tmp1,tmp2,tc
     integer :: &
          k,lidx,uidx
     
@@ -665,8 +659,7 @@ contains
     ! if only Np given then calculate Re
     ! if neigher than use other defaults (p1,p2,p3) following quickbeam documentation
     if(Re==0 .and. Np>0) then
-       call calc_Re(Q,Np,rho_a, &
-            dtype,dmin,dmax,apm,bpm,rho_c,p1,p2,p3,Re)
+       call calc_Re(Q,Np,rho_a,dtype,apm,bpm,rho_c,p1,p2,p3,Re)
     endif
     select case(dtype)
        
@@ -957,7 +950,6 @@ contains
          conv_f  = 0.299792458    ! Conversion for radar frequency (to m)
     complex(wp),dimension(nsizes) ::&
          m0             ! Complex index of refraction
-    real(wp) :: count0,count1,tblock1,tblock2,tblock3
     
     ! Initialize
     z0_ray = 0._wp
@@ -1100,7 +1092,7 @@ contains
          gases, th, e, p, sumo, gm0, a0, ap, term1,    &
          term2, term3, bf, be, term4, npp,e_th,one_th, &
          pth3,eth35,aux1,aux2,aux3, aux4,gm,delt,x,y,  &
-         gm2,fpp_o2,fpp_h2o,s_o2,s_h2o,w,ws,es
+         gm2,fpp_o2,fpp_h2o,s_o2,s_h2o
     integer :: i
 
     ! Table1 parameters  v0, a1, a2, a3, a4, a5, a6  
@@ -1249,7 +1241,7 @@ contains
     gases = 0.182_wp*f*npp
     
   end function gases
- subroutine hydro_class_init(undef,lsingle,ldouble,sd)
+ subroutine hydro_class_init(lsingle,ldouble,sd)
     ! ##############################################################################################
     ! Purpose:
     !
@@ -1258,7 +1250,6 @@ contains
     !   
     ! Inputs:  
     !   NAME            SIZE        DESCRIPTION
-    !   [undef]         (1)         Mising data value
     !   [lsingle]       (1)         Logical flag to use single moment
     !   [ldouble]       (1)         Logical flag to use two moment
     ! Outputs:
@@ -1331,8 +1322,6 @@ contains
     ! P3 - Set to the natural logarithm of the geometric standard deviation.
     ! ####################################################################################
     ! INPUTS
-    real(wp),intent(in) :: &
-       undef      ! Mising data value
     logical,intent(in) :: &
        lsingle, & ! True -> use single moment
        ldouble    ! True -> use two moment 

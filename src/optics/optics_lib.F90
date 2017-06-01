@@ -140,7 +140,7 @@ contains
          n_i     ! Imaginary part of index of refraction
 
     ! Internal variables
-    integer  :: i,lt1,lt2,j
+    integer  :: i,lt1,lt2
     real(wp) :: alam,pi,t1,t2, &
          x,x1,x2,y,y1,y2,ylo,yhi,tk
 

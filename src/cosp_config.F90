@@ -46,18 +46,18 @@ MODULE MOD_COSP_CONFIG
    ! Common COSP information
    ! #####################################################################################
     character(len=32) ::   &
-       COSP_VERSION              ! COSP Version ID (set in cosp_interface_init)
+         COSP_VERSION              ! COSP Version ID (set in cosp_interface_init)
     real(wp),parameter ::  &
-       R_UNDEF      = -1.0E30, & ! Missing value
-       R_GROUND     = -1.0E20, & ! Flag for below ground results
-       scops_ccfrac = 0.05       ! Fraction of column (or subcolumn) covered with convective
-                                 ! precipitation (default is 5%). *NOTE* This quantity may vary
-                                 ! between modeling centers.
-       logical :: &
-       use_vgrid                 ! True=Use new grid for L3 CLOUDAT and CALIPSO
+         R_UNDEF      = -1.0E30, & ! Missing value
+         R_GROUND     = -1.0E20, & ! Flag for below ground results
+         scops_ccfrac = 0.05       ! Fraction of column (or subcolumn) covered with convective
+                                   ! precipitation (default is 5%). *NOTE* This quantity may vary
+                                   ! between modeling centers.
+    logical :: &
+         use_vgrid                 ! True=Use new grid for L3 CLOUDAT and CALIPSO
     integer,parameter ::   &
-       SR_BINS = 15,           & ! Number of bins in backscatter histogram bin
-       N_HYDRO = 9               ! Number of hydrometeor classes used by quickbeam_optics
+         SR_BINS = 15,           & ! Number of bins (backscattering coefficient) in CALOPSO LIDAR simulator.
+         N_HYDRO = 9               ! Number of hydrometeor classes used by quickbeam radar simulator.
 
     ! ####################################################################################  
     ! Joint histogram bin-boundaries
@@ -72,15 +72,15 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################
     ! Optical depth bin axis
     integer,parameter :: &
-       ntau=7  
+         ntau=7  
     real(wp),parameter,dimension(ntau+1) :: &
-       tau_binBounds = (/0.0, 0.3, 1.3, 3.6, 9.4, 23., 60., 10000./)  
+         tau_binBounds = (/0.0, 0.3, 1.3, 3.6, 9.4, 23., 60., 10000./)  
     real(wp),parameter,dimension(ntau) :: &
-       tau_binCenters = (/0.15, 0.80, 2.45, 6.5, 16.2, 41.5, 100.0/)
+         tau_binCenters = (/0.15, 0.80, 2.45, 6.5, 16.2, 41.5, 100.0/)
     real(wp),parameter,dimension(2,ntau) :: &
-       tau_binEdges = reshape(source=(/0.0, 0.3,  0.3,  1.3,  1.3,  3.6,      3.6,      &
-                                        9.4, 9.4, 23.0, 23.0, 60.0, 60.0, 100000.0/),    &
-                                        shape=(/2,ntau/)) 
+         tau_binEdges = reshape(source=(/0.0, 0.3,  0.3,  1.3,  1.3,  3.6,      3.6,     &
+                                         9.4, 9.4, 23.0, 23.0, 60.0, 60.0, 100000.0/),   &
+                                         shape=(/2,ntau/)) 
 
     ! Optical depth bin axes (ONLY USED BY MODIS SIMULATOR IN v1.4)
     integer :: l,k
@@ -90,101 +90,127 @@ MODULE MOD_COSP_CONFIG
          tau_binBoundsV1p4 = (/0.3, 1.3, 3.6, 9.4, 23., 60., 10000./)
     real(wp),parameter,dimension(2,ntauV1p4) :: &
          tau_binEdgesV1p4 = reshape(source =(/tau_binBoundsV1p4(1),((tau_binBoundsV1p4(k),l=1,2),   &
-                                    k=2,ntauV1p4),100000._wp/),shape = (/2,ntauV1p4/)) 
+                                             k=2,ntauV1p4),100000._wp/),shape = (/2,ntauV1p4/)) 
     real(wp),parameter,dimension(ntauV1p4) :: &
          tau_binCentersV1p4 = (tau_binEdgesV1p4(1,:)+tau_binEdgesV1p4(2,:))/2._wp  
     
     ! Cloud-top height pressure bin axis
     integer,parameter :: &
-       npres = 7     
+         npres = 7     
     real(wp),parameter,dimension(npres+1) :: &
-       pres_binBounds = (/0., 180., 310., 440., 560., 680., 800., 10000./)
+         pres_binBounds = (/0., 180., 310., 440., 560., 680., 800., 10000./)
     real(wp),parameter,dimension(npres) :: &
-       pres_binCenters = (/90000., 74000., 62000., 50000., 37500., 24500., 9000./)   
+         pres_binCenters = (/90000., 74000., 62000., 50000., 37500., 24500., 9000./)   
     real(wp),parameter,dimension(2,npres) :: &
-       pres_binEdges = reshape(source=(/100000.0, 80000.0, 80000.0, 68000.0, 68000.0,    &
-                                         56000.0, 56000.0, 44000.0, 44000.0, 31000.0,    &
-                                         31000.0, 18000.0, 18000.0,     0.0/),           &
-                                         shape=(/2,npres/))
+         pres_binEdges = reshape(source=(/100000.0, 80000.0, 80000.0, 68000.0, 68000.0,    &
+                                           56000.0, 56000.0, 44000.0, 44000.0, 31000.0,    &
+                                           31000.0, 18000.0, 18000.0,     0.0/),           &
+                                           shape=(/2,npres/))
 
     ! Cloud-top height bin axis #1
     integer,parameter :: &
-       nhgt = 16
+         nhgt = 16
     real(wp),parameter,dimension(nhgt+1) :: &
-       hgt_binBounds = (/-.99,0.,0.5,1.,1.5,2.,2.5,3.,4.,5.,7.,9.,11.,13.,15.,17.,99./)
+         hgt_binBounds = (/-.99,0.,0.5,1.,1.5,2.,2.5,3.,4.,5.,7.,9.,11.,13.,15.,17.,99./)
     real(wp),parameter,dimension(nhgt) :: &
-       hgt_binCenters = 1000*(/0.,0.25,0.75,1.25,1.75,2.25,2.75,3.5,4.5,6.,8.,10.,12.,   &
-                                14.5,16.,18./)  
+         hgt_binCenters = 1000*(/0.,0.25,0.75,1.25,1.75,2.25,2.75,3.5,4.5,6.,8.,10.,12.,   &
+         14.5,16.,18./)  
     real(wp),parameter,dimension(2,nhgt) :: &
-       hgt_binEdges = 1000.0*reshape(source=(/-99.0, 0.0, 0.0, 0.5, 0.5, 1.0, 1.0, 1.5,  &
-                                                1.5, 2.0, 2.0, 2.5, 2.5, 3.0, 3.0, 4.0,  &
-                                                4.0, 5.0, 5.0, 7.0, 7.0, 9.0, 9.0,11.0,  &
-                                               11.0,13.0,13.0,15.0,15.0,17.0,17.0,99.0/),&
-                                                shape=(/2,nhgt/))    
+         hgt_binEdges = 1000.0*reshape(source=(/-99.0, 0.0, 0.0, 0.5, 0.5, 1.0, 1.0, 1.5,  &
+                                                  1.5, 2.0, 2.0, 2.5, 2.5, 3.0, 3.0, 4.0,  &
+                                                  4.0, 5.0, 5.0, 7.0, 7.0, 9.0, 9.0,11.0,  &
+                                                  11.0,13.0,13.0,15.0,15.0,17.0,17.0,99.0/),&
+                                                  shape=(/2,nhgt/))    
 
     ! Liquid and Ice particle bins for MODIS joint histogram of optical-depth and particle
     ! size
     integer :: i,j
     integer,parameter :: &
-       nReffLiq = 6, & ! Number of bins for tau/ReffLiq joint-histogram
-       nReffIce = 6    ! Number of bins for tau/ReffICE joint-histogram
+         nReffLiq = 6, & ! Number of bins for tau/ReffLiq joint-histogram
+         nReffIce = 6    ! Number of bins for tau/ReffICE joint-histogram
     real(wp),parameter,dimension(nReffLiq+1) :: &
          reffLIQ_binBounds = (/0., 8e-6, 1.0e-5, 1.3e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
     real(wp),parameter,dimension(nReffIce+1) :: &
          reffICE_binBounds = (/0., 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 6.0e-5, 9.0e-5/)
     real(wp),parameter,dimension(2,nReffICE) :: &
-       reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
-                                  l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
-                                  shape = (/2,nReffICE/)) 
+         reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
+                                    l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
+                                    shape = (/2,nReffICE/)) 
     real(wp),parameter,dimension(2,nReffLIQ) :: &
-       reffLIQ_binEdges = reshape(source=(/reffLIQ_binBounds(1),((reffLIQ_binBounds(k),  &
-                                  l=1,2),k=2,nReffLIQ),reffLIQ_binBounds(nReffICE+1)/),  &
-                                  shape = (/2,nReffLIQ/))             
+         reffLIQ_binEdges = reshape(source=(/reffLIQ_binBounds(1),((reffLIQ_binBounds(k),  &
+                                    l=1,2),k=2,nReffLIQ),reffLIQ_binBounds(nReffICE+1)/),  &
+                                    shape = (/2,nReffLIQ/))             
     real(wp),parameter,dimension(nReffICE) :: &
-       reffICE_binCenters = (reffICE_binEdges(1,:)+reffICE_binEdges(2,:))/2._wp
+         reffICE_binCenters = (reffICE_binEdges(1,:)+reffICE_binEdges(2,:))/2._wp
     real(wp),parameter,dimension(nReffLIQ) :: &
-       reffLIQ_binCenters = (reffLIQ_binEdges(1,:)+reffLIQ_binEdges(2,:))/2._wp
+         reffLIQ_binCenters = (reffLIQ_binEdges(1,:)+reffLIQ_binEdges(2,:))/2._wp
 
     ! ####################################################################################  
-    ! Constants used by RTTOV
+    ! Constants used by RTTOV.
     ! ####################################################################################  
     integer,parameter :: &
-       RTTOV_MAX_CHANNELS = 20
+         RTTOV_MAX_CHANNELS = 20
     character(len=256),parameter :: &
          rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
+    
     ! ####################################################################################  
-    ! Constants used by the PARASOL simulator   
+    ! Constants used by the PARASOL simulator.
     ! ####################################################################################  
     integer,parameter :: &
-       PARASOL_NREFL = 5    ! Number of parasol reflectances
+         PARASOL_NREFL = 5,  & ! Number of angles in LUT
+         PARASOL_NTAU  = 7     ! Number of optical depths in LUT
     real(wp),parameter,dimension(PARASOL_NREFL) :: &
-       PARASOL_SZA = (/0.0, 20.0, 40.0, 60.0, 80.0/)    
+         PARASOL_SZA = (/0.0, 20.0, 40.0, 60.0, 80.0/)
+    REAL(WP),parameter,dimension(PARASOL_NTAU) :: &
+         PARASOL_TAU = (/0., 1., 5., 10., 20., 50., 100./)
+    
+    ! LUTs
+    REAL(WP),parameter,dimension(PARASOL_NREFL,PARASOL_NTAU) :: &
+         ! LUT for liquid particles
+         rlumA = reshape(source=(/ 0.03,     0.03,     0.03,     0.03,     0.03,         &
+                                   0.090886, 0.072185, 0.058410, 0.052498, 0.034730,     &
+                                   0.283965, 0.252596, 0.224707, 0.175844, 0.064488,     &
+                                   0.480587, 0.436401, 0.367451, 0.252916, 0.081667,     &
+                                   0.695235, 0.631352, 0.509180, 0.326551, 0.098215,     &
+                                   0.908229, 0.823924, 0.648152, 0.398581, 0.114411,     &
+                                   1.0,      0.909013, 0.709554, 0.430405, 0.121567/),   &
+                                   shape=(/PARASOL_NREFL,PARASOL_NTAU/)),                & 
+         ! LUT for ice particles         			     
+         rlumB = reshape(source=(/ 0.03,     0.03,     0.03,     0.03,     0.03,         &
+                                   0.092170, 0.087082, 0.083325, 0.084935, 0.054157,     &
+                                   0.311941, 0.304293, 0.285193, 0.233450, 0.089911,     &
+                                   0.511298, 0.490879, 0.430266, 0.312280, 0.107854,     &
+                                   0.712079, 0.673565, 0.563747, 0.382376, 0.124127,     &
+                                   0.898243, 0.842026, 0.685773, 0.446371, 0.139004,     &
+                                   0.976646, 0.912966, 0.737154, 0.473317, 0.145269/),   &
+                                   shape=(/PARASOL_NREFL,PARASOL_NTAU/))  
+    
 
     ! ####################################################################################
     ! ISCCP simulator tau/CTP joint histogram information
     ! ####################################################################################
     integer,parameter :: &
-       numISCCPTauBins  = ntau, & ! Number of optical depth bins
-       numISCCPPresBins = npres   ! Number of pressure bins     
+         numISCCPTauBins  = ntau, &              ! Number of optical depth bins
+         numISCCPPresBins = npres                ! Number of pressure bins     
     real(wp),parameter,dimension(ntau+1) :: &
-       isccp_histTau = tau_binBounds           ! Joint-histogram boundaries (optical depth)
+         isccp_histTau = tau_binBounds           ! Joint-histogram boundaries (optical depth)
     real(wp),parameter,dimension(npres+1) :: &
-       isccp_histPres = pres_binBounds        ! Joint-histogram boundaries (cloud pressure)
+         isccp_histPres = pres_binBounds         ! Joint-histogram boundaries (cloud pressure)
     real(wp),parameter,dimension(ntau) :: &
-       isccp_histTauCenters = tau_binCenters   ! Joint histogram bin centers (optical depth)
+         isccp_histTauCenters = tau_binCenters   ! Joint histogram bin centers (optical depth)
     real(wp),parameter,dimension(npres) :: &   
-       isccp_histPresCenters = pres_binCenters ! Joint histogram bin centers (cloud pressure) 
+         isccp_histPresCenters = pres_binCenters ! Joint histogram bin centers (cloud pressure) 
     real(wp),parameter,dimension(2,ntau) :: &
-       isccp_histTauEdges = tau_binEdges       ! Joint histogram bin edges (optical depth)
+         isccp_histTauEdges = tau_binEdges       ! Joint histogram bin edges (optical depth)
     real(wp),parameter,dimension(2,npres) :: &    
-       isccp_histPresEdges = pres_binEdges     ! Joint histogram bin edges (cloud pressure)   
+         isccp_histPresEdges = pres_binEdges     ! Joint histogram bin edges (cloud pressure)   
     
     ! ####################################################################################
     ! MISR simulator tau/CTH joint histogram information 
     ! ####################################################################################
     integer,parameter ::  &
-         numMISRHgtBins = nhgt, & ! Number of cloud-top height bins
-         numMISRTauBins = ntau     ! Number of optical depth bins
+         numMISRHgtBins = nhgt, &             ! Number of cloud-top height bins
+         numMISRTauBins = ntau                ! Number of optical depth bins
     ! Joint histogram boundaries
     real(wp),parameter,dimension(numMISRHgtBins+1) :: &
          misr_histHgt = hgt_binBounds         ! Joint-histogram boundaries (cloud height)
@@ -223,53 +249,54 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################
     ! Ice
     integer,parameter :: &
-       numMODISReffIceBins = nReffIce                ! Number of bins for joint-histogram
+         numMODISReffIceBins = nReffIce                ! Number of bins for joint-histogram
     real(wp),parameter,dimension(nReffIce+1) :: &
-       modis_histReffIce = reffICE_binBounds         ! Effective radius bin boundaries
+         modis_histReffIce = reffICE_binBounds         ! Effective radius bin boundaries
     real(wp),parameter,dimension(nReffIce) :: &
-       modis_histReffIceCenters = reffICE_binCenters ! Effective radius bin centers
+         modis_histReffIceCenters = reffICE_binCenters ! Effective radius bin centers
     real(wp),parameter,dimension(2,nReffICE) :: &
-       modis_histReffIceEdges = reffICE_binEdges     ! Effective radius bin edges
+         modis_histReffIceEdges = reffICE_binEdges     ! Effective radius bin edges
        
     ! Liquid
     integer,parameter :: &
-       numMODISReffLiqBins = nReffLiq                ! Number of bins for joint-histogram
+         numMODISReffLiqBins = nReffLiq                ! Number of bins for joint-histogram
     real(wp),parameter,dimension(nReffLiq+1) :: &
-       modis_histReffLiq = reffLIQ_binBounds         ! Effective radius bin boundaries 
+         modis_histReffLiq = reffLIQ_binBounds         ! Effective radius bin boundaries 
     real(wp),parameter,dimension(nReffLiq) :: &
-       modis_histReffLiqCenters = reffICE_binCenters ! Effective radius bin centers
+         modis_histReffLiqCenters = reffICE_binCenters ! Effective radius bin centers
     real(wp),parameter,dimension(2,nReffICE) :: &
-       modis_histReffLiqEdges = reffLIQ_binEdges     ! Effective radius bin edges
+         modis_histReffLiqEdges = reffLIQ_binEdges     ! Effective radius bin edges
 
     ! ####################################################################################
     ! CLOUDSAT reflectivity histogram information 
     ! ####################################################################################
     integer,parameter :: &
-       DBZE_BINS     =   15, & ! Number of dBZe bins in histogram (cfad)
-       DBZE_MIN      = -100, & ! Minimum value for radar reflectivity
-       DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
-       CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
-       CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
-
+         DBZE_BINS     =   15, & ! Number of dBZe bins in histogram (cfad)
+         DBZE_MIN      = -100, & ! Minimum value for radar reflectivity
+         DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
+         CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
+         CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
+    
     real(wp),parameter,dimension(DBZE_BINS+1) :: &
-       cloudsat_histRef = (/DBZE_MIN,(/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),             &
-                            int(CFAD_ZE_MIN+(DBZE_BINS-1)*CFAD_ZE_WIDTH),                &
-                            int(CFAD_ZE_WIDTH))/),DBZE_MAX/)
+         cloudsat_histRef = (/DBZE_MIN,(/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),           &
+                              int(CFAD_ZE_MIN+(DBZE_BINS-1)*CFAD_ZE_WIDTH),              &
+                              int(CFAD_ZE_WIDTH))/),DBZE_MAX/)
 
+    
     ! ####################################################################################
-    ! CALISPO backscatter histogram bins 
-    ! ####################################################################################
-    real(wp),parameter ::     &
-       S_cld       = 5.0,     & ! Threshold for cloud detection
-       S_att       = 0.01,    & !
-       S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
-    real(wp),dimension(SR_BINS+1) :: &
-       calipso_histBsct = (/0.0,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0, &
-                            60.0,80.0,100000.0/)         ! Backscatter histogram bin boundaries
-
-    ! ####################################################################################
-    ! Parameters used by the lidar simulator
+    ! Parameters used by the CALIPSO LIDAR simulator
     ! #################################################################################### 
+    ! CALISPO backscatter histogram bins 
+    real(wp),parameter ::     &
+         S_cld       = 5.0,     & ! Threshold for cloud detection
+         S_att       = 0.01,    & !
+         S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
+    
+    ! CALIPSO LIDAR histogram bin boundaries (Backscatter coefficients)
+    real(wp),dimension(SR_BINS+1) :: &
+         calipso_histBsct = (/0.0,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,    &
+                              50.0,60.0,80.0,100000.0/)
+
     integer,parameter  ::     &
        LIDAR_NTEMP = 40, & 
        LIDAR_NCAT  = 4     ! Number of categories for cloudtop heights (high/mid/low/tot)
@@ -295,13 +322,10 @@ MODULE MOD_COSP_CONFIG
     ! New vertical grid used by CALIPSO and CLOUDSAT L3 (set up during initialization)
     ! ####################################################################################
     integer :: &
-       Nlvgrid      ! Number of levels in New grid
+         Nlvgrid      ! Number of levels in New grid
     real(wp),dimension(:),allocatable :: &
-       vgrid_zl,  & ! New grid bottoms
-       vgrid_zu,  & ! New grid tops
-       vgrid_z!,   & ! New grid center
-       !mgrid_zl,  & ! Model grid botton
-       !mgrid_zu,  & ! Model grid tops
-       !mgrid_z      ! Model grid center
+         vgrid_zl,  & ! New grid bottoms
+         vgrid_zu,  & ! New grid tops
+         vgrid_z      ! New grid center
 
 END MODULE MOD_COSP_CONFIG

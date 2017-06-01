@@ -105,8 +105,6 @@ contains
     ! OUTPUTS
     real(wp),intent(out),dimension(dim1,dim2,dim3) :: &
          varOUT    ! Merged output field
-    ! LOCAL VARIABLES
-    integer :: j
     
     varOUT(1:dim1,1:dim2,1:dim3) = 0._wp
    where(flag(:,:,:) .eq. 1)
@@ -169,10 +167,9 @@ contains
   !                                   MODIS_OPTICS
   ! 
   ! ########################################################################################
-  subroutine modis_optics(nPoints,nLevels,nSubCols,num_trial_res,tauLIQ,sizeLIQ,tauICE,sizeICE,&
-                          fracLIQ, g, w0)
+  subroutine modis_optics(nPoints,nLevels,nSubCols,tauLIQ,sizeLIQ,tauICE,sizeICE,fracLIQ, g, w0)
     ! INPUTS
-    integer, intent(in)                                      :: nPoints,nLevels,nSubCols,num_trial_res
+    integer, intent(in)                                      :: nPoints,nLevels,nSubCols
     real(wp),intent(in),dimension(nPoints,nSubCols,nLevels)  :: tauLIQ, sizeLIQ, tauICE, sizeICE
     ! OUTPUTS
     real(wp),intent(out),dimension(nPoints,nSubCols,nLevels) :: g,w0,fracLIQ
@@ -219,7 +216,7 @@ contains
   ! ######################################################################################
   subroutine lidar_optics(npoints,ncolumns,nlev,npart,ice_type,q_lsliq, q_lsice,     &
                               q_cvliq, q_cvice,ls_radliq,ls_radice,cv_radliq,cv_radice,  &
-                              pres,presf,temp,beta_mol,betatot,tau_part,tau_mol,tautot,  &
+                              pres,presf,temp,beta_mol,betatot,tau_mol,tautot,  &
                               tautot_S_liq,tautot_S_ice,betatot_ice,betatot_liq,         &
                               tautot_ice,tautot_liq)
     ! ####################################################################################
@@ -251,8 +248,6 @@ contains
          presf           ! Pressure at half levels
     
     ! OUTPUTS
-    REAL(WP),intent(out),dimension(npoints,ncolumns,nlev,npart) :: &
-         tau_part          !
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot,        & ! 
          tautot            ! Optical thickess integrated from top
@@ -274,7 +269,7 @@ contains
     REAL(WP),dimension(npoints,nlev)                :: rhoair,alpha_mol
     REAL(WP),dimension(npoints,nlev+1)              :: zheight          
     REAL(WP),dimension(npoints,nlev,npart)          :: rad_part,kp_part,qpart
-    REAL(WP),dimension(npoints,ncolumns,nlev,npart) :: alpha_part
+    REAL(WP),dimension(npoints,ncolumns,nlev,npart) :: alpha_part,tau_part
     INTEGER                                         :: i,k,icol
     
     ! Local data

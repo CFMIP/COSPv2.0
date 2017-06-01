@@ -67,7 +67,7 @@ contains
   ! SUBROTUINE cosp_modis_init
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_MODIS_INIT()
-    integer :: k, l,i 
+    integer :: i 
     
     ! Retrieval parameters
     min_OpticalThickness          = 0.3_wp     ! Minimum detectable optical thickness

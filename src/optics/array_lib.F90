@@ -76,7 +76,7 @@ contains
     ! Internal Variables
     real(wp), dimension(size(list)) :: lists
     integer :: nlist, result, tmp(1), sort_list
-    integer, dimension(size(list)) :: mask, idx
+    integer, dimension(size(list)) :: mask
     
     sort_list = 0
     

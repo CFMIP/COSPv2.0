@@ -63,8 +63,8 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                              SUBROUTINE cosp_cloudsat_in
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CLOUDSAT_INIT(radar_freq,k2,use_gas_abs,do_ray,undef,nhydro,Npoints,   &
-                                Nlevels,surface_radar,rcfg,cloudsat_micro_scheme,load_LUT)
+  SUBROUTINE COSP_CLOUDSAT_INIT(radar_freq,k2,use_gas_abs,do_ray,undef,nhydro,   &
+                                surface_radar,rcfg,cloudsat_micro_scheme,load_LUT)
     ! INPUTS
     real(wp),intent(in) :: &
          radar_freq,  & ! Radar frequency (GHz)
@@ -75,8 +75,6 @@ CONTAINS
                         ! 2 = calculate absorption for first profile on all profiles
          do_ray,      & !
          nhydro,      & !
-         Npoints,     & !
-         Nlevels,     & !
          surface_radar
     logical,intent(in),optional :: &
          load_LUT
@@ -90,7 +88,7 @@ CONTAINS
     ! LOCAL VARIABLES
     character(len=240) :: LUT_file_name
     logical       :: local_load_LUT
-    integer       :: i,j
+    integer       :: j
     
     if (present(load_LUT)) then
        local_load_LUT = load_LUT
