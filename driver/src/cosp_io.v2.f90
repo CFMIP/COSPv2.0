@@ -60,8 +60,10 @@ contains
                                    Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,          &
                                    Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,          &
                                    Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,          & 
-                                   LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,N_out_list, &
-                                   out_list)
+                                   Lclopaquecalipso,Lclthincalipso,Lclzopaquecalipso,    &
+                                   Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,    &
+                                   Lclcalipsoopacity,LcfadDbze94,Ldbze94,Lparasolrefl,   &
+                                   Ltbrttov,N_out_list,out_list)
     ! Inputs
     logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -121,6 +123,13 @@ contains
          Lcllcalipsoliq,   & ! CALIPSO low-level liquid cloud fraction
          Lcllcalipsoice,   & ! CALIPSO low-level ice cloud fraction
          Lcllcalipsoun,    & ! CALIPSO low-level undetected cloud fraction
+         Lclopaquecalipso, & ! CALIPSO opaque cloud cover
+         Lclthincalipso,   & ! CALIPSO thin cloud cover
+         Lclzopaquecalipso,& ! CALIPSO mean z_opaque altitude (opaque clouds only)
+         Lclcalipsoopaque, & ! CALIPSO 3D opaque cloud profile fraction
+         Lclcalipsothin,   & ! CALIPSO 3D thin cloud profile fraction
+         Lclcalipsozopaque,& ! CALIPSO 3D z_opaque fraction
+         Lclcalipsoopacity,& ! CALIPSO 3D opacity fraction
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
@@ -191,6 +200,13 @@ contains
     if (Llwpmodis)         out_list(61) = 'lwpmodis'
     if (Liwpmodis)         out_list(62) = 'iwpmodis'
     if (Lclmodis)          out_list(63) = 'clmodis'
+    if (Lclopaquecalipso)  out_list(64) = 'clopaquecalipso'
+    if (Lclthincalipso)    out_list(65) = 'clthincalipso'
+    if (Lclzopaquecalipso) out_list(66) = 'clzopaquecalipso'
+    if (Lclcalipsoopaque)  out_list(67) = 'clcalipsoopaque'
+    if (Lclcalipsothin)    out_list(68) = 'clcalipsothin'
+    if (Lclcalipsozopaque) out_list(69) = 'clcalipsozopaque'
+    if (Lclcalipsoopacity) out_list(70) = 'clcalipsoopacity'
 
   end subroutine construct_cospOutList
 
@@ -1245,6 +1261,9 @@ contains
     call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(39),units='%')
     call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(40),units='%')
     call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(41),units='%')
+    call construct_var1d('clopaquecalipso',d3, d2, cospOUT%calipso_cldtype(:,1),                 v1d(42),units='%')
+    call construct_var1d('clthincalipso',  d3, d2, cospOUT%calipso_cldtype(:,2),                 v1d(43),units='%')
+    call construct_var1d('clzopaquecalipso',d3,d2, cospOUT%calipso_cldtype(:,3),                 v1d(44),units='m')
     ! 2D variables
     d4 = (/grid_id,height_axid,0,0/)
     d3 = (/Npoints,Nlvgrid,0/)
@@ -1274,6 +1293,12 @@ contains
     d4 = (/grid_id,channel_axid,0,0/) 
     d3 = (/Npoints,Nchannels,0/) 
     call construct_var2d('tbrttov',        d4, d3, cospOUT%rttov_tbs,                            v2d(14),units='K') 
+    d4 = (/grid_id,height_axid,0,0/)
+    d3 = (/Npoints,Nlvgrid,0/)
+    call construct_var2d('clcalipsoopaque',d4, d3, cospOUT%calipso_lidarcldtype(:,:,1),          v2d(15),units='%')
+    call construct_var2d('clcalipsothin',  d4, d3, cospOUT%calipso_lidarcldtype(:,:,2),          v2d(16),units='%')
+    call construct_var2d('clcalipsozopaque',d4,d3, cospOUT%calipso_lidarcldtype(:,:,3),          v2d(17),units='%')
+    call construct_var2d('clcalipsoopacity',d4,d3, cospOUT%calipso_lidarcldtype(:,:,4),          v2d(18),units='%')
     
     ! 3D variables
     d5 = (/grid_id,column_axid,height_mlev_axid,0,0/)
@@ -1365,6 +1390,9 @@ contains
      call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(38),units='%')
      call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(39),units='%')
      call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(40),units='%')
+     call construct_var1d('clopaquecalipso',d3, d2, cospOUT%calipso_cldtype(:,1),                 v1d(41),units='%')
+     call construct_var1d('clthincalipso',  d3, d2, cospOUT%calipso_cldtype(:,2),                 v1d(42),units='%')
+     call construct_var1d('clzopaquecalipso',d3,d2, cospOUT%calipso_cldtype(:,3),                 v1d(43),units='m')
      ! 2D variables
      d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
      d3 = (/Nlon,Nlat,Nlvgrid/)
@@ -1394,6 +1422,12 @@ contains
      d4 = (/lon_axid,lat_axid,channel_axid,time_axid/)
      d3 = (/Nlon,Nlat,Nchannels/)
      call construct_var2d('tbrttov',        d4, d3, cospOUT%rttov_tbs,                            v2d(14),units='K') 
+     d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
+     d3 = (/Nlon,Nlat,Nlvgrid/)
+     call construct_var2d('clcalipsoopaque',d4, d3, cospOUT%calipso_lidarcldtype(:,:,1),          v2d(15),units='%')
+     call construct_var2d('clcalipsothin',  d4, d3, cospOUT%calipso_lidarcldtype(:,:,2),          v2d(16),units='%')
+     call construct_var2d('clcalipsozopaque',d4,d3, cospOUT%calipso_lidarcldtype(:,:,3),          v2d(17),units='%')
+     call construct_var2d('clcalipsoopacity',d4,d3, cospOUT%calipso_lidarcldtype(:,:,4),          v2d(18),units='%')
      
      ! 3D variables
      d5 = (/lon_axid,lat_axid,column_axid,height_mlev_axid,time_axid/)
