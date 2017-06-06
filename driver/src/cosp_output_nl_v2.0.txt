@@ -58,6 +58,14 @@
   Lcllcalipsoun=.true.,
   Lclmcalipsoun=.true.,
   Lcltcalipsoun=.true.,
+  ! CALIPSO OPAQ diagnostics
+  Lclopaquecalipso=.true.,
+  Lclthincalipso=.true.,
+  Lclzopaquecalipso=.true.,
+  Lclcalipsoopaque=.true.,
+  Lclcalipsothin=.true.,
+  Lclcalipsozopaque=.true.,
+  Lclcalipsoopacity=.true.,
   !- ISCCP
   Lalbisccp=.true.,
   Lboxptopisccp=.true.,

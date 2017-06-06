@@ -31,7 +31,7 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp_test_v2
   use cosp_kinds,          only: wp                         
-  USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,SR_BINS,                &
+  USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
                                  N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
                                  DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
                                  numMODISTauBins,numMODISPresBins,                        &
@@ -41,7 +41,8 @@ program cosp_test_v2
                                  modis_histTauEdges,tau_binEdges,                         &
                                  modis_histTauCenters,tau_binCenters,ntauV1p4,            &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
-                                 Nlvgrid_local  => Nlvgrid
+                                 Nlvgrid_local  => Nlvgrid,                               &
+                                 vgrid_z_local  => vgrid_z
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,nc_cmor_init
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics
@@ -128,6 +129,8 @@ program cosp_test_v2
        rttov_satellite,           & ! RTTOV: Satellite
        rttov_instrument,          & ! RTTOV: Instrument
        rttov_Nchannels              ! RTTOV: Number of channels to be computed
+  real(wp),dimension(:),allocatable :: &
+       vgrid_z                      ! mid-level altitude of the vertical grid
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
@@ -168,7 +171,9 @@ program cosp_test_v2
              Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice, &
              Lclcalipsotmpun,Lclhcalipsoliq,Lcllcalipsoliq,Lclmcalipsoliq,               &
              Lcltcalipsoliq,Lclhcalipsoice,Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice, &
-             Lclhcalipsoun,Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,          &
+             Lclhcalipsoun,Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lclopaquecalipso,   &
+             Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,Lclcalipsothin,           &
+             Lclcalipsozopaque,Lclcalipsoopacity,Lalbisccp,                              &
              Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,          &
              Lmeantbisccp,Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,   &
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
@@ -181,7 +186,9 @@ program cosp_test_v2
                        Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,Lclhcalipsoliq, &
                        Lcllcalipsoliq,Lclmcalipsoliq,Lcltcalipsoliq,Lclhcalipsoice,      &
                        Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice,Lclhcalipsoun,       &
-                       Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,Lboxptopisccp,&
+                       Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lclopaquecalipso,       &
+                       Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,Lclcalipsothin, &
+                       Lclcalipsozopaque,Lclcalipsoopacity,Lalbisccp,Lboxptopisccp,      &
                        Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,Lmeantbisccp, &
                        Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,      &
                        LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,         &
@@ -252,10 +259,10 @@ program cosp_test_v2
 
   ! Fields used solely for output
   integer,parameter :: &
-       n_out_list = 63,           & ! Number of possible output variables
+       n_out_list = 70,           & ! Number of possible output variables
        N3D        = 8,            & ! Number of 3D output variables
-       N2D        = 14,           & ! Number of 2D output variables
-       N1D        = 40              ! Number of 1D output variables  
+       N2D        = 18,           & ! Number of 2D output variables
+       N1D        = 43              ! Number of 1D output variables  
   character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
   integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
              latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
@@ -320,7 +327,9 @@ program cosp_test_v2
        Lclhcalipsoliq .or. Lclhcalipsoice .or. Lclhcalipsoun .or. Lclmcalipsoliq .or.    &
        Lclmcalipsoice .or. Lclmcalipsoun .or. Lcllcalipsoliq .or. Lcllcalipsoice .or.    &
        Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
-       Lcltlidarradar) lcalipso = .true.
+       Lcltlidarradar .or. Lclopaquecalipso .or. Lclthincalipso .or. Lclzopaquecalipso   &
+       .or. Lclcalipsoopaque .or. Lclcalipsothin .or. Lclcalipsozopaque .or.             &
+       Lclcalipsoopacity) lcalipso = .true.
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
   if (Ltbrttov) Lrttov = .true.
@@ -355,7 +364,7 @@ program cosp_test_v2
                  cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,surface_radar,&
                  rcfg_cloudsat,rttov_Nchannels,rttov_Channels,rttov_platform,           &
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &
-                 cloudsat_micro_scheme,cospOUT)
+                 vgrid_z_local,cloudsat_micro_scheme,cospOUT)
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -374,7 +383,10 @@ program cosp_test_v2
                               Lclcalipsotmpun,Lcltcalipsoliq,Lcltcalipsoice,             &
                               Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun, &
                               Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq,&
-                              Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,          &
+                              Lcllcalipsoice,Lcllcalipsoun,Lclopaquecalipso,             &
+                              Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,         &
+                              Lclcalipsothin,Lclcalipsozopaque,Lclcalipsoopacity,        &
+                              LcfadDbze94,Ldbze94,                                       &
                               Lparasolrefl,Ltbrttov,Npoints,Ncolumns,Nlevels,Nlvgrid_local,&
                               rttov_Nchannels,cospOUT)
 
@@ -497,7 +509,10 @@ program cosp_test_v2
                              Lclcalipsotmpun,Lcltcalipsoliq,Lcltcalipsoice,              &
                              Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,  &
                              Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq, &
-                             Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,           &
+                             Lcllcalipsoice,Lcllcalipsoun,Lclopaquecalipso,              &
+                             Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,          &
+                             Lclcalipsothin,Lclcalipsozopaque,Lclcalipsoopacity,         &
+                             LcfadDbze94,Ldbze94,                                        &
                              Lparasolrefl,Ltbrttov,N_OUT_LIST,out_list)  
 
   ! Time information for cmor output.
@@ -994,7 +1009,9 @@ contains
                                     Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,         &
                                     Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,         &
                                     Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,         & 
-                                    LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov, &
+                                    Lclopaquecalipso,Lclthincalipso,Lclzopaquecalipso,   &
+                                    Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,   &
+                                    Lclcalipsoopacity,LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov, &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
@@ -1055,6 +1072,13 @@ contains
          Lcllcalipsoliq,   & ! CALIPSO low-level liquid cloud fraction
          Lcllcalipsoice,   & ! CALIPSO low-level ice cloud fraction
          Lcllcalipsoun,    & ! CALIPSO low-level undetected cloud fraction
+         Lclopaquecalipso, & ! CALIPSO opaque cloud cover (2D Map)
+         Lclthincalipso,   & ! CALIPSO thin cloud cover (2D Map)
+         Lclzopaquecalipso,& ! CALIPSO mean z_opaque altitude for opaque clouds only (2D Map)
+         Lclcalipsoopaque, & ! CALIPSO opaque cloud profiles 3D fraction
+         Lclcalipsothin,   & ! CALIPSO thin cloud profiles 3D fraction
+         Lclcalipsozopaque,& ! CALIPSO z_opaque 3D fraction
+         Lclcalipsoopacity,& ! CALIPSO opacity 3D fraction
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
@@ -1140,6 +1164,12 @@ contains
         Lclhcalipsoliq .or. Lcltcalipsoliq .or. Lcllcalipsoun  .or.                   &
         Lclmcalipsoun  .or. Lclhcalipsoun  .or. Lcltcalipsoun) then
         allocate(x%calipso_cldlayerphase(Npoints,LIDAR_NCAT,6))     
+    endif
+    if (Lclopaquecalipso .or. Lclthincalipso .or. Lclzopaquecalipso) then
+        allocate(x%calipso_cldtype(Npoints,LIDAR_NTYPE))
+    endif
+    if (Lclcalipsoopaque .or. Lclcalipsothin .or. Lclcalipsozopaque .or. Lclcalipsoopacity) then
+        allocate(x%calipso_lidarcldtype(Npoints,Nlvgrid,LIDAR_NTYPE+1))
     endif
     ! These 2 outputs are part of the calipso output type, but are not controlled by an 
     ! logical switch in the output namelist, so if all other fields are on, then allocate
@@ -1262,6 +1292,10 @@ contains
         deallocate(y%calipso_lidarcldphase)
         nullify(y%calipso_lidarcldphase)     
      endif
+     if (associated(y%calipso_lidarcldtype))     then
+        deallocate(y%calipso_lidarcldtype)
+        nullify(y%calipso_lidarcldtype)
+     endif
      if (associated(y%calipso_cldlayerphase))     then
         deallocate(y%calipso_cldlayerphase)
         nullify(y%calipso_cldlayerphase)     
@@ -1273,6 +1307,10 @@ contains
      if (associated(y%calipso_cldlayer))          then
         deallocate(y%calipso_cldlayer)
         nullify(y%calipso_cldlayer)     
+     endif
+     if (associated(y%calipso_cldtype))          then
+        deallocate(y%calipso_cldtype)
+        nullify(y%calipso_cldtype)
      endif
      if (associated(y%calipso_lidarcld))         then
         deallocate(y%calipso_lidarcld)
