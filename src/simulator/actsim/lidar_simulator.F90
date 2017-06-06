@@ -70,7 +70,7 @@
 module mod_lidar_simulator
   USE COSP_KINDS,         ONLY: wp
   USE MOD_COSP_CONFIG,    ONLY: SR_BINS,S_CLD,S_ATT,S_CLD_ATT,R_UNDEF,calipso_histBsct,  &
-                                use_vgrid,vgrid_zl,vgrid_zu
+                                use_vgrid,vgrid_zl,vgrid_zu,vgrid_z
   USE MOD_COSP_STATS,     ONLY: COSP_CHANGE_VERTICAL_GRID,hist1d
   implicit none
   
@@ -236,9 +236,9 @@ contains
   ! SUBROUTINE lidar_column
   ! ######################################################################################
   subroutine lidar_column(npoints,ncol,nlevels,llm,max_bin,tmp, pnorm,                   &
-                           pnorm_perp, pmol, pplay, ok_lidar_cfad, ncat, cfad2,    &
-                           lidarcld, lidarcldphase, cldlayer, zlev, zlev_half,           &
-                           cldlayerphase, lidarcldtmp)
+                           pnorm_perp, pmol, pplay, ok_lidar_cfad, ncat, ntype, cfad2,   &
+                           lidarcld, lidarcldphase, lidarcldtype, cldlayer, cldtype,     &
+                           zlev, zlev_half, cldlayerphase, lidarcldtmp, vgrid_z)
     integer,parameter :: &
          nphase = 6 ! Number of cloud layer phase types
 
@@ -249,7 +249,8 @@ contains
          nlevels, & ! Number of vertical layers (OLD grid)
          llm,     & ! Number of vertical layers (NEW grid)
          max_bin, & ! Number of bins for SR CFADs
-         ncat       ! Number of cloud layer types (low,mid,high,total)
+         ncat,    & ! Number of cloud layer types (low,mid,high,total)
+         ntype      ! Number of OPAQ products (opaque/thin cloud + z_opaque)
     real(wp),intent(in),dimension(npoints,ncol,Nlevels) :: &
          pnorm,   & ! Lidar ATB
          pnorm_perp ! Lidar perpendicular ATB
@@ -263,14 +264,20 @@ contains
          zlev        ! Model full levels
     real(wp),intent(in),dimension(npoints,nlevels+1) :: &
          zlev_half   ! Model half levels
+    real(wp),intent(in),dimension(llm) :: &
+         vgrid_z     ! mid-level altitude of the output vertical grid
          
     ! Outputs
     real(wp),intent(inout),dimension(npoints,llm) :: &
          lidarcld      ! 3D "lidar" cloud fraction
     real(wp),intent(inout),dimension(npoints,ncat) :: &
          cldlayer      ! "lidar" cloud layer fraction (low, mid, high, total)
+    real(wp),intent(inout),dimension(npoints,ntype) :: &
+         cldtype       ! "lidar" OPAQ type covers (opaque/thin cloud + z_opaque)
     real(wp),intent(inout),dimension(npoints,llm,nphase) :: &
          lidarcldphase ! 3D "lidar" phase cloud fraction
+    real(wp),intent(inout),dimension(npoints,llm,ntype+1) :: &
+         lidarcldtype ! 3D "lidar" OPAQ type fraction
     real(wp),intent(inout),dimension(npoints,40,5) :: &
          lidarcldtmp   ! 3D "lidar" phase cloud fraction as a function of temp
     real(wp),intent(inout),dimension(npoints,ncat,nphase) :: &
@@ -279,7 +286,7 @@ contains
          cfad2         ! CFADs of SR
 
     ! Local Variables
-    integer :: ic,i,j
+    integer :: ic,k,i,j
     real(wp),dimension(npoints,ncol,llm) :: &
          x3d
     real(wp),dimension(npoints,llm) :: &
@@ -326,7 +333,10 @@ contains
        ! Diagnose cloud fractions for subcolumn lidar scattering ratios
        CALL COSP_CLDFRAC(npoints,ncol,llm,ncat,nphase,tmpFlip,x3d,pnormFlip,             &
                          pnorm_perpFlip,pplayFlip,S_att,S_cld,S_cld_att,R_UNDEF,         &
-                         lidarcld,cldlayer,lidarcldphase,cldlayerphase,lidarcldtmp)                           
+                         lidarcld,cldlayer,lidarcldphase,cldlayerphase,lidarcldtmp)
+       CALL COSP_OPAQ(npoints,ncol,llm,ntype,x3d,S_cld,R_UNDEF,lidarcldtype,             &
+                      cldtype,vgrid_z)
+
     else
        do ic = 1, ncol
           pnorm_c = pnorm(:,ic,:)
@@ -341,6 +351,8 @@ contains
        CALL COSP_CLDFRAC(npoints,ncol,nlevels,ncat,nphase,tmp,x3d,pnorm,pnorm_perp,pplay,&
                          S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,  &
                          cldlayerphase,lidarcldtmp)
+       CALL COSP_OPAQ(npoints,ncol,llm,ntype,x3d,S_cld,R_UNDEF,lidarcldtype,             &
+                      cldtype,vgrid_z)
     endif
 
     ! CFADs
@@ -358,8 +370,11 @@ contains
     ! Unit conversions
     where(lidarcld /= R_UNDEF)      lidarcld      = lidarcld*100._wp
     where(cldlayer /= R_UNDEF)      cldlayer      = cldlayer*100._wp
+    where(cldtype(:,1) /= R_UNDEF)  cldtype(:,1)  = cldtype(:,1)*100._wp
+    where(cldtype(:,2) /= R_UNDEF)  cldtype(:,2)  = cldtype(:,2)*100._wp
     where(cldlayerphase /= R_UNDEF) cldlayerphase = cldlayerphase*100._wp
     where(lidarcldphase /= R_UNDEF) lidarcldphase = lidarcldphase*100._wp
+    where(lidarcldtype /= R_UNDEF)  lidarcldtype  = lidarcldtype*100._wp
     where(lidarcldtmp /= R_UNDEF)   lidarcldtmp   = lidarcldtmp*100._wp
    
   end subroutine lidar_column
@@ -1021,5 +1036,193 @@ contains
     
     RETURN
   END SUBROUTINE COSP_CLDFRAC
+
+! BEGINNING OF OPAQ subroutine
+    ! ####################################################################################
+    ! SUBROUTINE cosp_opaq
+    ! Conventions: Ntype must be equal to 3
+    ! ####################################################################################
+    SUBROUTINE COSP_OPAQ(Npoints,Ncolumns,Nlevels,Ntype,x,S_cld,undef,lidarcldtype,   & !OPAQ
+                         cldtype,vgrid_z)                                               !OPAQ
+
+    ! Local parameter
+    real(wp),parameter  :: &
+       S_att_opaq = 0.06_wp ! Fully Attenuated threshold, from Guzman et al. 2017, JGR-A
+
+	! Inputs
+    integer,intent(in) :: &
+       Npoints,  & ! Number of gridpoints
+       Ncolumns, & ! Number of subcolumns
+       Nlevels,  & ! Number of vertical levels
+       Ntype       ! Number of OPAQ cloud types (opaque, thin clouds and z_opaque)
+    real(wp),intent(in) :: &
+!       S_att,    & !
+       S_cld,    & ! Cloud detection threshold
+       undef       ! Undefined value
+    real(wp),intent(in),dimension(Nlevels) :: &
+       vgrid_z     ! mid-level vertical profile altitude (subcolumns)
+    real(wp),intent(in),dimension(Npoints,Ncolumns,Nlevels) :: &
+       x           ! SR profiles (subcolumns)
+
+	! Outputs
+    real(wp),intent(out),dimension(Npoints,Nlevels,Ntype) :: &
+       lidarcldtype ! 3D OPAQ product fraction (opaque, thin clouds and z_opaque)
+    real(wp),intent(out),dimension(Npoints,Ntype) :: &
+       cldtype      ! Opaque/thin cloud covers + mean z_opaque altitude
+   
+    ! Local variables
+    integer  :: &
+       ip, k, zopac, ic, iz 
+    real(wp),dimension(Npoints,Nlevels) :: &
+       nsub, nsubopaq 
+    real(wp),dimension(Npoints,Ncolumns,Ntype+1) :: & ! Opaque, thin, z_opaque and all cloud cover
+       cldlay, nsublay   
+    real(wp),dimension(Npoints,Ntype) :: &
+       nsublayer
+    real(wp),dimension(Npoints,Ncolumns,Nlevels) :: &   
+       cldy,     & ! 
+       cldyopaq, & ! 
+       srok,     & !
+       srokopaq    !
+
+    ! ####################################################################################
+	! 1) Initialize    
+    ! ####################################################################################
+    cldtype(:,:)          = 0._wp
+    lidarcldtype(:,:,:)   = 0._wp
+    nsub                  = 0._wp
+    nsubopaq              = 0._wp
+    cldlay                = 0._wp
+    nsublay               = 0._wp
+    nsublayer             = 0._wp
+
+    ! ####################################################################################
+    ! 2) Cloud detection and Fully attenuated layer detection
+    ! ####################################################################################
+    do k=1,Nlevels
+       ! Cloud detection at subgrid-scale:
+       where ( (x(:,:,k) .gt. S_cld) .and. (x(:,:,k) .ne. undef) )
+          cldy(:,:,k)=1._wp
+       elsewhere
+          cldy(:,:,k)=0._wp
+       endwhere
+       ! Fully attenuated layer detection at subgrid-scale:
+       where ( (x(:,:,k) .lt. S_att_opaq) .and. (x(:,:,k) .ne. undef) )
+          cldyopaq(:,:,k)=1._wp
+       elsewhere
+          cldyopaq(:,:,k)=0._wp
+       endwhere
+
+
+       ! Number of usefull sub-column layers:
+       where ( (x(:,:,k) .gt. S_att) .and. (x(:,:,k) .ne. undef) )
+          srok(:,:,k)=1._wp
+       elsewhere
+          srok(:,:,k)=0._wp
+       endwhere
+       ! Number of usefull sub-columns layers for z_opaque 3D fraction:
+       where ( (x(:,:,k) .ne. undef) )
+          srokopaq(:,:,k)=1._wp
+       elsewhere
+          srokopaq(:,:,k)=0._wp
+       endwhere
+    enddo
+
+    ! ####################################################################################
+    ! 3) Grid-box 3D OPAQ product fraction and cloud type cover (opaque/thin) + mean z_opaque
+    ! ####################################################################################
+
+    do k=1,Nlevels
+       do ic = 1, Ncolumns
+          do ip = 1, Npoints
+
+             cldlay(ip,ic,1)   = MAX(cldlay(ip,ic,1),cldyopaq(ip,ic,k)) ! Opaque cloud
+             cldlay(ip,ic,4)   = MAX(cldlay(ip,ic,4),cldy(ip,ic,k))     ! All cloud
+
+             nsublay(ip,ic,1)  = MAX(nsublay(ip,ic,1),srok(ip,ic,k))
+             nsublay(ip,ic,2)  = MAX(nsublay(ip,ic,2),srok(ip,ic,k))
+!             nsublay(ip,ic,4)  = MAX(nsublay(ip,ic,4),srok(ip,ic,k))
+             nsub(ip,k)        = nsub(ip,k) + srok(ip,ic,k)
+             nsubopaq(ip,k)    = nsubopaq(ip,k) + srokopaq(ip,ic,k)
+
+          enddo
+       enddo
+    enddo   
+
+
+! OPAQ variables
+     do ic = 1, Ncolumns
+        do ip = 1, Npoints
+
+     ! Declaring non-opaque cloudy profiles as thin cloud profiles
+	   if ( cldlay(ip,ic,4).gt. 0. .and. cldlay(ip,ic,1) .eq. 0. ) then
+	      cldlay(ip,ic,2)  =  1._wp
+ 	   endif
+
+     ! Filling in 3D and 2D variables
+
+     ! Opaque cloud profiles
+	   if ( cldlay(ip,ic,1) .eq. 1. ) then
+	      zopac = 0._wp
+	      do k=1,Nlevels-1
+     ! Declaring opaque cloud fraction and z_opaque altitude for 3D and 2D variables
+     ! From SFC-2-TOA ( actually from vgrid_z(SFC+1) = vgrid_z(Nlevels-1) )
+	         if ( cldy(ip,ic,Nlevels-k) .eq. 1. .and. zopac .eq. 0. ) then
+		    lidarcldtype(ip,Nlevels-k + 1,3) = lidarcldtype(ip,Nlevels-k + 1,3) + 1._wp
+		    cldlay(ip,ic,3)                  = vgrid_z(Nlevels-k+1)
+		    nsublay(ip,ic,3)                 = 1._wp
+		    zopac = 1._wp
+		 endif
+	         if ( cldy(ip,ic,Nlevels-k) .eq. 1. ) then
+		    lidarcldtype(ip,Nlevels-k ,1)    = lidarcldtype(ip,Nlevels-k ,1) + 1._wp
+                 endif
+	      enddo
+	   endif
+
+     ! Thin cloud profiles
+	   if ( cldlay(ip,ic,2) .eq. 1. ) then
+	      do k=1,Nlevels
+     ! Declaring thin cloud fraction for 3D variable
+     ! From TOA-2-SFC
+                 if ( cldy(ip,ic,k) .eq. 1. ) then
+                    lidarcldtype(ip,k,2) = lidarcldtype(ip,k,2) + 1._wp
+                 endif
+	      enddo
+           endif
+
+       enddo
+    enddo   
+
+    ! 3D cloud types fraction (opaque=1 and thin=2 clouds)
+    where ( nsub(:,:) .gt. 0. )
+       lidarcldtype(:,:,1) = lidarcldtype(:,:,1)/nsub(:,:)
+       lidarcldtype(:,:,2) = lidarcldtype(:,:,2)/nsub(:,:)
+    elsewhere
+       lidarcldtype(:,:,1) = undef
+       lidarcldtype(:,:,2) = undef
+    endwhere
+    ! 3D z_opaque fraction (=3)
+    where ( nsubopaq(:,:) .gt. 0. )
+       lidarcldtype(:,:,3) = lidarcldtype(:,:,3)/nsubopaq(:,:)
+    elsewhere
+       lidarcldtype(:,:,3) = undef
+    endwhere
+
+    ! Layered cloud types (opaque, thin and z_opaque 2D variables)
+
+    do iz = 1, Ntype
+       do ic = 1, Ncolumns
+          cldtype(:,iz)  = cldtype(:,iz)  + cldlay(:,ic,iz)
+          nsublayer(:,iz) = nsublayer(:,iz) + nsublay(:,ic,iz)
+       enddo
+    enddo
+    where (nsublayer(:,:) .gt. 0.)
+       cldtype(:,:) = cldtype(:,:)/nsublayer(:,:)
+    elsewhere
+       cldtype(:,:) = undef
+    endwhere
+
+  END SUBROUTINE COSP_OPAQ
+! END OF OPAQ subroutine
 
 end module mod_lidar_simulator
