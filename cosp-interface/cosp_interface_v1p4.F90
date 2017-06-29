@@ -850,8 +850,6 @@ contains
             cfg%Lcllcalipsoun,cfg%Lclmcalipsoun,cfg%Lcltcalipsoun])) then
           sglidar%temp_tot = cospOUT%calipso_temp_tot(:,sglidar%Nlevels:1:-1)
           sglidar%tau_tot  = cospOUT%calipso_tau_tot(:,:,sglidar%Nlevels:1:-1)
-       else
-          print*,'CALIPSO simulator turned on, but no diagnostics reque!sted!!!'
        endif       
     endif
     
