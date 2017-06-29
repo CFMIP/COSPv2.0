@@ -989,16 +989,15 @@ contains
           enddo
        enddo
     enddo
-
     
     ! Check temperature cloud fraction
     do i=1,Npoints
        do itemp=1,Ntemp
           checktemp=lidarcldtemp(i,itemp,2)+lidarcldtemp(i,itemp,3)+lidarcldtemp(i,itemp,4)
-          if(checktemp .NE. lidarcldtemp(i,itemp,1))then
-             print *, i,itemp
-             print *, lidarcldtemp(i,itemp,1:4)
-          endif
+          !if(checktemp .NE. lidarcldtemp(i,itemp,1))then
+          !   print *, i,itemp
+          !   print *, lidarcldtemp(i,itemp,1:4)
+          !endif
           
        enddo
     enddo

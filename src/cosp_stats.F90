@@ -52,32 +52,32 @@ SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,Ngle
    integer,intent(in) :: Npoints  !# of grid points
    integer,intent(in) :: Nlevels  !# of levels
    integer,intent(in) :: Ncolumns !# of columns
-   real,dimension(Npoints,Nlevels),intent(in) :: zfull ! Height at model levels [m] (Bottom of model layer)
-   real,dimension(Npoints,Nlevels),intent(in) :: zhalf ! Height at half model levels [m] (Bottom of model layer)
-   real,dimension(Npoints,Ncolumns,Nlevels),intent(in) :: y     ! Variable to be changed to a different grid
+   real(wp),dimension(Npoints,Nlevels),intent(in) :: zfull ! Height at model levels [m] (Bottom of model layer)
+   real(wp),dimension(Npoints,Nlevels),intent(in) :: zhalf ! Height at half model levels [m] (Bottom of model layer)
+   real(wp),dimension(Npoints,Ncolumns,Nlevels),intent(in) :: y     ! Variable to be changed to a different grid
    integer,intent(in) :: Nglevels  !# levels in the new grid
-   real,dimension(Nglevels),intent(in) :: newgrid_bot ! Lower boundary of new levels  [m]
-   real,dimension(Nglevels),intent(in) :: newgrid_top ! Upper boundary of new levels  [m]
+   real(wp),dimension(Nglevels),intent(in) :: newgrid_bot ! Lower boundary of new levels  [m]
+   real(wp),dimension(Nglevels),intent(in) :: newgrid_top ! Upper boundary of new levels  [m]
    logical,optional,intent(in) :: log_units ! log units, need to convert to linear units
    ! Output
-   real,dimension(Npoints,Ncolumns,Nglevels),intent(out) :: r ! Variable on new grid
+   real(wp),dimension(Npoints,Ncolumns,Nglevels),intent(out) :: r ! Variable on new grid
 
    ! Local variables
    integer :: i,j,k
    logical :: lunits
    integer :: l
-   real :: w ! Weight
-   real :: dbb, dtb, dbt, dtt ! Distances between edges of both grids
+   real(wp) :: w ! Weight
+   real(wp) :: dbb, dtb, dbt, dtt ! Distances between edges of both grids
    integer :: Nw  ! Number of weights
-   real :: wt  ! Sum of weights
-   real,dimension(Nlevels) :: oldgrid_bot,oldgrid_top ! Lower and upper boundaries of model grid
-   real :: yp ! Local copy of y at a particular point.
+   real(wp) :: wt  ! Sum of weights
+   real(wp),dimension(Nlevels) :: oldgrid_bot,oldgrid_top ! Lower and upper boundaries of model grid
+   real(wp) :: yp ! Local copy of y at a particular point.
               ! This allows for change of units.
 
    lunits=.false.
    if (present(log_units)) lunits=log_units
 
-   r = 0.0
+   r = 0._wp
 
    do i=1,Npoints
      ! Calculate tops and bottoms of new and old grids
@@ -88,7 +88,7 @@ SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,Ngle
      ! Loop over levels in the new grid
      do k = 1,Nglevels
        Nw = 0 ! Number of weigths
-       wt = 0.0 ! Sum of weights
+       wt = 0._wp ! Sum of weights
        ! Loop over levels in the old grid and accumulate total for weighted average
        do
          l = l + 1
@@ -120,9 +120,9 @@ SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,Ngle
              do j=1,Ncolumns
                if (lunits) then
                  if (y(i,j,l) /= R_UNDEF) then
-                   yp = 10.0**(y(i,j,l)/10.0)
+                   yp = 10._wp**(y(i,j,l)/10._wp)
                  else
-                   yp = 0.0
+                   yp = 0._wp
                  endif
                else
                  yp = y(i,j,l)
@@ -152,7 +152,7 @@ SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,Ngle
              if (r(i,j,k) <= 0.0) then
                r(i,j,k) = R_UNDEF
              else
-               r(i,j,k) = 10.0*log10(r(i,j,k))
+               r(i,j,k) = 10._wp*log10(r(i,j,k))
              endif
            endif
          else ! Level below surface
