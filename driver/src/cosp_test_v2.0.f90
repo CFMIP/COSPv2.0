@@ -809,14 +809,14 @@ contains
        cospIN%frac_out(:,:,:) = 1  
        allocate(mr_hydro(nPoints, 1,nLevels,nHydro),Reff(nPoints,1,nLevels,nHydro),  &
             Np(nPoints,1,nLevels,nHydro))
-       mr_hydro(:,1,:,I_LSCLIQ) = mr_lsliq(1:nPoints,1:nLevels:-1)
-       mr_hydro(:,1,:,I_LSCICE) = mr_lsice(1:nPoints,1:nLevels:-1)
-       mr_hydro(:,1,:,I_CVCLIQ) = mr_ccliq(1:nPoints,1:nLevels:-1)
-       mr_hydro(:,1,:,I_CVCICE) = mr_ccice(1:nPoints,1:nLevels:-1)
-       Reff(:,1,:,:)            = ReffIN(:,1:nLevels:-1,:)
+       mr_hydro(:,1,:,I_LSCLIQ) = mr_lsliq(1:nPoints,Nlevels:1:-1)
+       mr_hydro(:,1,:,I_LSCICE) = mr_lsice(1:nPoints,Nlevels:1:-1)
+       mr_hydro(:,1,:,I_CVCLIQ) = mr_ccliq(1:nPoints,Nlevels:1:-1)
+       mr_hydro(:,1,:,I_CVCICE) = mr_ccice(1:nPoints,Nlevels:1:-1)
+       Reff(:,1,:,:)            = ReffIN(:,Nlevels:1:-1,:)    
        Np(:,1,:,:)              = 0._wp! Should be inputs
     endif
-    
+        
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 11 micron emissivity
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
