@@ -5,8 +5,8 @@
 # Compiler and flags
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -O3 #-fpp#-pg # -traceback -check bounds
-F90_LIB  = /usr/local/ifort
+F90FLAGS = -O3 
+F90_LIB  = /sw/rhel6-x64/intel/intel-17.0.2
 
 # Portland Group (pgf90)
 #F90      = pgf90
@@ -19,6 +19,7 @@ OBJ_PATH = obj/
 # Libraries
 INC      = /usr/local/include
 LIB      = /usr/local/lib
+
 # Simulator directories
 SIM_PATH     = simulator
 RT_PATH      = $(SIM_PATH)/rttov
@@ -31,7 +32,7 @@ MODIS_PATH   = $(SIM_PATH)/MODIS_simulator
 PARASOL_PATH = $(SIM_PATH)/parasol
 
 # RTTOV setup
-RTTOV_PATH       = /Projects/Clouds/dswales/RTTOV/rttov_11.3
+RTTOV_PATH       = $(HOME)/work/Tools/RTTOV/rttov113
 RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib 
 RTTOV_INC_PATH   = $(RTTOV_PATH)/include 
 RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod

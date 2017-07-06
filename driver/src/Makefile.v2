@@ -4,8 +4,8 @@
 ########################################################################
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -O3 -traceback#-fpp -traceback #-check all
-F90_LIB  = /usr/local/ifort
+F90FLAGS = -O3 
+F90_LIB  = /sw/rhel6-x64/intel/intel-17.0.2
 # Portland Group (pgf90)
 #F90      = pgf90
 #F90FLAGS = -Mpreprocess -O0 -g
@@ -16,25 +16,26 @@ F90_LIB  = /usr/local/ifort
 #F90_LIB  = /usr/local/gfortran
 
 INC = /usr/local/include
-LIB = /usr/local/lib
 
-NCDF_INC    = $(F90_LIB)/include
-NCDF_LIB    = $(F90_LIB)/lib
-CMOR_INC    = $(F90_LIB)/include
-CMOR_LIB    = $(F90_LIB)/lib
-UDUNITS_LIB = $(F90_LIB)/lib
-UDUNITS_INC = $(F90_LIB)/include
-UUID_LIB    = $(F90_LIB)/lib
-UUID_INC    = $(F90_LIB)/include
+NCDF_C_LIB = /sw/rhel6-x64/netcdf/netcdf_c-4.3.2-intel14/lib
 
-# COSP source directory
-SRC_F90  = /home/dswales/Projects/COSP/COSPv2.0/src
+NCDF_INC    = /sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/include
+NCDF_LIB    = /sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/lib
+CMOR_INC    = /sw/rhel6-x64/cmor-2.9.2-intel14/include
+CMOR_LIB    = /sw/rhel6-x64/cmor-2.9.2-intel14/lib
+UDUNITS_LIB = /sw/rhel6-x64/util/udunits-2.2.17-intel15/lib
+UDUNITS_INC = /sw/rhel6-x64/util/udunits-2.2.17-intel15/include
+UUID_LIB    = /pf/b/b380333/usr/uuid-1.6.2/lib
+UUID_INC    = /pf/b/b380333/usr/uuid-1.6.2/include
+
+# Cos source directory
+SRC_F90  = $(HOME)/github/Tools/COSPv2.0/src
 OBJ_PATH = ${SRC_F90}/obj
 PROG     = cosp_test_v2.0
-COSP_INTERFACE_F90 = /home/dswales/Projects/COSP/COSPv2.0/cosp-interface
+COSP_INTERFACE_F90 = $(HOME)/github/Tools/COSPv2.0/cosp-interface
 
 # RTTOV setup
-RTTOV_PATH       = /Projects/Clouds/dswales/RTTOV/rttov_11.3
+RTTOV_PATH       = $(HOME)/work/Tools/RTTOV/rttov113
 RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib 
 RTTOV_INC_PATH   = $(RTTOV_PATH)/include 
 RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod
@@ -61,11 +62,12 @@ all: $(PROG)
 $(PROG): $(OBJS)
 	$(F90) $(F90FLAGS) $(PROG).f90 $(OBJS) \
 	-L${CMOR_LIB} -L. -lcmor -I$(CMOR_INC) \
-	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff -lnetcdf -L{LIB} -lnetcdf \
+	-I$(NCDF_INC) -L${NCDF_LIB} -lnetcdff -L${NCDF_C_LIB} -lnetcdf \
 	-L${RTTOV_LIB_PATH} $(RTTOV_LIBS) \
 	-I$(OBJ_PATH) \
 	-L${UDUNITS_LIB} -Wl,-rpath=${UDUNITS_LIB} -ludunits2 -lexpat -I${UDUNITS_INC} \
 	-L${UUID_LIB} -Wl,-rpath=${UUID_LIB} -luuid -I$(UUID_INC) \
+	-Wl,-rpath,/sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/lib -Wl,-rpath,/sw/rhel6-x64/netcdf/netcdf_c-4.3.2-intel14/lib \
 	-o $(PROG)
 
 $(PROG).o          : $(OBJ_PATH)/cosp_config.o $(OBJ_PATH)/cosp.o cosp_io.v2.o   \
@@ -112,7 +114,7 @@ cosp_utils.o :  $(SRC_F90)/optics/cosp_utils.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 	
 cosp_io.v2.o: cosp_io.v2.f90
-	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(OBJ_PATH) $<
+	$(F90) $(F90FLAGS) -c -I $(CMOR_INC) -I $(OBJ_PATH) -I $(NCDF_INC) $<
 
 cosp_errorHandling.o : $(COSP_INTERFACE_F90)/cosp_errorHandling.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
