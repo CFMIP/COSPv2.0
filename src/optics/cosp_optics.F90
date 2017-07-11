@@ -462,63 +462,63 @@ contains
   ! Optical functions used by MODIS_OPTICS
   ! ########################################################################################
   elemental function get_g_nir (phase, re)
+    !
     ! Polynomial fit for asummetry parameter g in MODIS band 7 (near IR) as a function 
-    ! of size for ice and water
+    !   of size for ice and water
     ! Fits from Steve Platnick
+    !
     
-    ! INPUTS
     integer, intent(in) :: phase
-    real(wp),intent(in) :: re
-    ! OUTPUTS
-    real(wp)            :: get_g_nir 
-    ! LOCAL VARIABLES(parameters)
-    real(wp), dimension(3), parameter :: &
-         ice_coefficients         = (/ 0.7432,  4.5563e-3, -2.8697e-5 /), & 
-         small_water_coefficients = (/ 0.8027, -1.0496e-2,  1.7071e-3 /), & 
-         big_water_coefficients   = (/ 0.7931,  5.3087e-3, -7.4995e-5 /) 
+    real(wp),    intent(in) :: re
+    real(wp) :: get_g_nir 
+
+    real(wp), dimension(3), parameter :: ice_coefficients         = (/ 0.7490, 6.5153e-3, -5.4136e-5 /), &
+                                         small_water_coefficients = (/ 1.0364, -8.8800e-2, 7.0000e-3 /)
+    real(wp), dimension(4), parameter :: big_water_coefficients   = (/ 0.6035, 2.8993e-2, -1.1051e-3, 1.5134e-5 /)
     
-    ! approx. fits from MODIS Collection 5 LUT scattering calculations
-    if(phase == phaseIsLiquid) then
-       if(re < 8.) then 
+    ! approx. fits from MODIS Collection 6 LUT scattering calculations for 3.7 µm channel size retrievals
+    if(phase == phaseIsLiquid) then 
+       if(re < 7.) then
           get_g_nir = fit_to_quadratic(re, small_water_coefficients)
           if(re < re_water_min) get_g_nir = fit_to_quadratic(re_water_min, small_water_coefficients)
        else
-          get_g_nir = fit_to_quadratic(re,   big_water_coefficients)
-          if(re > re_water_max) get_g_nir = fit_to_quadratic(re_water_max, big_water_coefficients)
+          get_g_nir = fit_to_cubic(re, big_water_coefficients)
+          if(re > re_water_max) get_g_nir = fit_to_cubic(re_water_max, big_water_coefficients)
        end if
     else
        get_g_nir = fit_to_quadratic(re, ice_coefficients)
-       if(re < re_ice_min) get_g_nir = fit_to_quadratic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_g_nir = fit_to_quadratic(re_ice_max, ice_coefficients)
-    end if
+      if(re < re_ice_min) get_g_nir = fit_to_quadratic(re_ice_min, ice_coefficients)
+      if(re > re_ice_max) get_g_nir = fit_to_quadratic(re_ice_max, ice_coefficients)
+    end if 
     
   end function get_g_nir
-  elemental function get_ssa_nir (phase, re)
-    ! Polynomial fit for single scattering albedo in MODIS band 7 (near IR) as a function 
-    !   of size for ice and water
-    ! Fits from Steve Platnick
-    
-    ! INPUTS
-    integer, intent(in) :: phase
-    real(wp),intent(in) :: re
-    ! OUTPUTS
-    real(wp)            :: get_ssa_nir
-    ! LOCAL VARIABLES (parameters)
-    real(wp), dimension(4), parameter :: ice_coefficients   = (/ 0.9994, -4.5199e-3, 3.9370e-5, -1.5235e-7 /)
-    real(wp), dimension(3), parameter :: water_coefficients = (/ 1.0008, -2.5626e-3, 1.6024e-5 /) 
-    
-    ! approx. fits from MODIS Collection 5 LUT scattering calculations
-    if(phase == phaseIsLiquid) then
-       get_ssa_nir = fit_to_quadratic(re, water_coefficients)
-       if(re < re_water_min) get_ssa_nir = fit_to_quadratic(re_water_min, water_coefficients)
-       if(re > re_water_max) get_ssa_nir = fit_to_quadratic(re_water_max, water_coefficients)
-    else
-       get_ssa_nir = fit_to_cubic(re, ice_coefficients)
-       if(re < re_ice_min) get_ssa_nir = fit_to_cubic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_ssa_nir = fit_to_cubic(re_ice_max, ice_coefficients)
-    end if
-    
-  end function get_ssa_nir
+
+  ! --------------------------------------------
+    elemental function get_ssa_nir (phase, re)
+        integer, intent(in) :: phase
+        real(wp),    intent(in) :: re
+        real(wp)                :: get_ssa_nir
+        !
+        ! Polynomial fit for single scattering albedo in MODIS band 7 (near IR) as a function 
+        !   of size for ice and water
+        ! Fits from Steve Platnick
+        !
+        real(wp), dimension(4), parameter :: ice_coefficients   = (/ 0.9625, -1.8069e-2, 3.3281e-4,-2.2865e-6/)
+        real(wp), dimension(3), parameter :: water_coefficients = (/ 1.0044, -1.1397e-2, 1.3300e-4 /)
+        
+        ! approx. fits from MODIS Collection 6 LUT scattering calculations
+        if(phase == phaseIsLiquid) then
+          get_ssa_nir = fit_to_quadratic(re, water_coefficients)
+          if(re < re_water_min) get_ssa_nir = fit_to_quadratic(re_water_min, water_coefficients)
+          if(re > re_water_max) get_ssa_nir = fit_to_quadratic(re_water_max, water_coefficients)
+        else
+          get_ssa_nir = fit_to_cubic(re, ice_coefficients)
+          if(re < re_ice_min) get_ssa_nir = fit_to_cubic(re_ice_min, ice_coefficients)
+          if(re > re_ice_max) get_ssa_nir = fit_to_cubic(re_ice_max, ice_coefficients)
+        end if 
+
+      end function get_ssa_nir
+
   pure function fit_to_cubic(x, coefficients) 
     ! INPUTS
     real(wp),               intent(in) :: x
@@ -528,6 +528,8 @@ contains
     
     fit_to_cubic = coefficients(1) + x * (coefficients(2) + x * (coefficients(3) + x * coefficients(4)))
   end function fit_to_cubic
+    
+  ! ########################################################################################
   pure function fit_to_quadratic(x, coefficients) 
     ! INPUTS
     real(wp),               intent(in) :: x
@@ -537,5 +539,6 @@ contains
     
     fit_to_quadratic = coefficients(1) + x * (coefficients(2) + x * (coefficients(3)))
   end function fit_to_quadratic
+
   
 end module cosp_optics
