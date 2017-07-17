@@ -63,8 +63,8 @@ module mod_modis_sim
   ! ##########################################################################
   ! Retrieval parameters
    integer, parameter :: &
-       num_trial_res = 15              ! Increase to make the linear pseudo-retrieval of size more accurate
-
+        num_trial_res = 15              ! Increase to make the linear pseudo-retrieval of size more accurate
+   
    real(wp) :: &
        min_OpticalThickness,          & ! Minimum detectable optical thickness
        CO2Slicing_PressureLimit,      & ! Cloud with higher pressures use thermal methods, units Pa
@@ -372,6 +372,30 @@ contains
     Cloud_Fraction_Total_Mean(1:nPoints) = Cloud_Fraction_Total_Mean(1:nPoints) /nSubcols
     Cloud_Fraction_Ice_Mean(1:nPoints)   = Cloud_Fraction_Ice_Mean(1:nPoints)   /nSubcols
     Cloud_Fraction_Water_Mean(1:nPoints) = Cloud_Fraction_Water_Mean(1:nPoints) /nSubcols
+    
+    ! ########################################################################################
+    ! Set clear-scenes to undefined
+    ! ########################################################################################
+    where (Cloud_Fraction_Total_Mean == 0)
+       Optical_Thickness_Total_Mean      = R_UNDEF
+       Optical_Thickness_Total_MeanLog10 = R_UNDEF
+       Cloud_Top_Pressure_Total_Mean     = R_UNDEF
+    endwhere
+    where (Cloud_Fraction_Water_Mean == 0)
+       Optical_Thickness_Water_Mean      = R_UNDEF
+       Optical_Thickness_Water_MeanLog10 = R_UNDEF
+       Cloud_Particle_Size_Water_Mean    = R_UNDEF
+       Liquid_Water_Path_Mean            = R_UNDEF
+    endwhere
+    where (Cloud_Fraction_Ice_Mean == 0)
+       Optical_Thickness_Ice_Mean        = R_UNDEF
+       Optical_Thickness_Ice_MeanLog10   = R_UNDEF
+       Cloud_Particle_Size_Ice_Mean      = R_UNDEF
+       Ice_Water_Path_Mean               = R_UNDEF
+    endwhere
+    where (Cloud_Fraction_High_Mean == 0)  Cloud_Fraction_High_Mean = R_UNDEF
+    where (Cloud_Fraction_Mid_Mean == 0)   Cloud_Fraction_Mid_Mean = R_UNDEF
+    where (Cloud_Fraction_Low_Mean == 0)   Cloud_Fraction_Low_Mean = R_UNDEF
     
     ! ########################################################################################
     ! Joint histograms

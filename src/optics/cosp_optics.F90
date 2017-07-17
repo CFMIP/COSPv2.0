@@ -34,26 +34,12 @@ module cosp_optics
   USE COSP_KINDS, ONLY: wp,dp
   USE COSP_MATH_CONSTANTS,  ONLY: pi
   USE COSP_PHYS_CONSTANTS,  ONLY: rholiq,km,rd,grav
+  USE MOD_MODIS_SIM,        ONLY: get_g_nir,get_ssa_nir,phaseIsLiquid,phaseIsIce
   implicit none
   
   real(wp),parameter ::        & !
-       ice_density   = 0.93_wp,& ! Ice density used in MODIS phase partitioning
-       re_water_min  = 4._wp,  & ! Minimum effective radius (liquid)
-       re_water_max  = 30._wp, & ! Maximum effective radius (liquid)
-       re_ice_min    = 5._wp,  & ! Minimum effective radius (ice)
-       re_ice_max    = 90._wp    ! Minimum effective radius (ice)
-  integer, parameter ::        & !
-       num_trial_res = 15,     & ! Increase to make the linear pseudo-retrieval of size 
-       phaseIsLiquid = 1,      & !
-       phaseIsIce    = 2         !
-  ! Precompute near-IR optical params vs size for retrieval scheme
-  integer, private :: i 
-  real(wp), dimension(num_trial_res), parameter :: & 
-       trial_re_w = re_water_min + (re_water_max - re_water_min)/ &
-       (num_trial_res-1) * (/ (i - 1, i = 1, num_trial_res) /),   &
-       trial_re_i = re_ice_min   + (re_ice_max -   re_ice_min)/   &
-       (num_trial_res-1) * (/ (i - 1, i = 1, num_trial_res) /)
-  
+       ice_density   = 0.93_wp   ! Ice density used in MODIS phase partitioning
+
   interface cosp_simulator_optics
      module procedure cosp_simulator_optics2D, cosp_simulator_optics3D
   end interface cosp_simulator_optics
@@ -453,85 +439,4 @@ contains
     enddo
     
   end subroutine lidar_optics
-  
-  ! ########################################################################################
-  ! Optical functions used by MODIS_OPTICS
-  ! ########################################################################################
-  elemental function get_g_nir (phase, re)
-    ! Polynomial fit for asummetry parameter g in MODIS band 7 (near IR) as a function 
-    ! of size for ice and water
-    ! Fits from Steve Platnick
-    
-    ! INPUTS
-    integer, intent(in) :: phase
-    real(wp),intent(in) :: re
-    ! OUTPUTS
-    real(wp)            :: get_g_nir 
-    ! LOCAL VARIABLES(parameters)
-    real(wp), dimension(3), parameter :: &
-         ice_coefficients         = (/ 0.7432,  4.5563e-3, -2.8697e-5 /), & 
-         small_water_coefficients = (/ 0.8027, -1.0496e-2,  1.7071e-3 /), & 
-         big_water_coefficients   = (/ 0.7931,  5.3087e-3, -7.4995e-5 /) 
-    
-    ! approx. fits from MODIS Collection 5 LUT scattering calculations
-    if(phase == phaseIsLiquid) then
-       if(re < 8.) then 
-          get_g_nir = fit_to_quadratic(re, small_water_coefficients)
-          if(re < re_water_min) get_g_nir = fit_to_quadratic(re_water_min, small_water_coefficients)
-       else
-          get_g_nir = fit_to_quadratic(re,   big_water_coefficients)
-          if(re > re_water_max) get_g_nir = fit_to_quadratic(re_water_max, big_water_coefficients)
-       end if
-    else
-       get_g_nir = fit_to_quadratic(re, ice_coefficients)
-       if(re < re_ice_min) get_g_nir = fit_to_quadratic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_g_nir = fit_to_quadratic(re_ice_max, ice_coefficients)
-    end if
-    
-  end function get_g_nir
-  elemental function get_ssa_nir (phase, re)
-    ! Polynomial fit for single scattering albedo in MODIS band 7 (near IR) as a function 
-    !   of size for ice and water
-    ! Fits from Steve Platnick
-    
-    ! INPUTS
-    integer, intent(in) :: phase
-    real(wp),intent(in) :: re
-    ! OUTPUTS
-    real(wp)            :: get_ssa_nir
-    ! LOCAL VARIABLES (parameters)
-    real(wp), dimension(4), parameter :: ice_coefficients   = (/ 0.9994, -4.5199e-3, 3.9370e-5, -1.5235e-7 /)
-    real(wp), dimension(3), parameter :: water_coefficients = (/ 1.0008, -2.5626e-3, 1.6024e-5 /) 
-    
-    ! approx. fits from MODIS Collection 5 LUT scattering calculations
-    if(phase == phaseIsLiquid) then
-       get_ssa_nir = fit_to_quadratic(re, water_coefficients)
-       if(re < re_water_min) get_ssa_nir = fit_to_quadratic(re_water_min, water_coefficients)
-       if(re > re_water_max) get_ssa_nir = fit_to_quadratic(re_water_max, water_coefficients)
-    else
-       get_ssa_nir = fit_to_cubic(re, ice_coefficients)
-       if(re < re_ice_min) get_ssa_nir = fit_to_cubic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_ssa_nir = fit_to_cubic(re_ice_max, ice_coefficients)
-    end if
-    
-  end function get_ssa_nir
-  pure function fit_to_cubic(x, coefficients) 
-    ! INPUTS
-    real(wp),               intent(in) :: x
-    real(wp), dimension(4), intent(in) :: coefficients
-    ! OUTPUTS
-    real(wp)                           :: fit_to_cubic  
-    
-    fit_to_cubic = coefficients(1) + x * (coefficients(2) + x * (coefficients(3) + x * coefficients(4)))
-  end function fit_to_cubic
-  pure function fit_to_quadratic(x, coefficients) 
-    ! INPUTS
-    real(wp),               intent(in) :: x
-    real(wp), dimension(3), intent(in) :: coefficients
-    ! OUTPUTS
-    real(wp)                           :: fit_to_quadratic
-    
-    fit_to_quadratic = coefficients(1) + x * (coefficients(2) + x * (coefficients(3)))
-  end function fit_to_quadratic
-  
 end module cosp_optics
