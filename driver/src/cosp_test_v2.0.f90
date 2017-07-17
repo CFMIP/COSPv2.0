@@ -53,7 +53,7 @@ program cosp_test_v2
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
-                                 modis_optics_partition,num_trial_res
+                                 modis_optics_partition
   ! OUTPUT ONLY
   use mod_cosp_io,         only: var1d,var2d,var3d,construct_cospOutList,nc_cmor_init,    &
                                  nc_cmor_associate_1d,nc_cmor_write_1d,nc_cmor_close,     &
