@@ -251,7 +251,7 @@ contains
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot,        & ! 
          tautot            ! Optical thickess integrated from top
-    REAL(WP),optional,intent(out),dimension(npoints,ncolumns,nlev)       :: &
+    REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot_ice,    & ! Backscatter coefficient for ice particles
          betatot_liq,    & ! Backscatter coefficient for liquid particles
          tautot_ice,     & ! Total optical thickness of ice
@@ -353,12 +353,10 @@ contains
     
     betatot    (1:npoints,1:ncolumns,1:nlev) = spread(beta_mol(1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
     tautot     (1:npoints,1:ncolumns,1:nlev) = spread(tau_mol (1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
-    if (present(betatot_ice) .and. present(betatot_liq) .and. present(tautot_ice) .and. present(tautot_liq)) then
-       betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
-       betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
-       tautot_liq (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
-       tautot_ice (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
-    endif
+    betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
+    betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
+    tautot_liq (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
+    tautot_ice (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
     
     ! ##############################################################################
     ! *) Particles alpha, beta and optical thickness
@@ -427,23 +425,21 @@ contains
        ! ##############################################################################
        ! Beta and optical thickness (liquid/ice)
        ! ##############################################################################
-       if (present(betatot_ice) .and. present(betatot_liq) .and. present(tautot_ice) .and. present(tautot_liq)) then
-          ! Ice
-          betatot_ice(1:npoints,icol,1:nlev) = betatot_ice(1:npoints,icol,1:nlev)+ &
-               kp_part(1:npoints,1:nlev,INDX_LSICE)*alpha_part(1:npoints,icol,1:nlev,INDX_LSICE)+ &
-               kp_part(1:npoints,1:nlev,INDX_CVICE)*alpha_part(1:npoints,icol,1:nlev,INDX_CVICE)
-          tautot_ice(1:npoints,icol,1:nlev) = tautot_ice(1:npoints,icol,1:nlev)  + &
-               tau_part(1:npoints,icol,1:nlev,INDX_LSICE) + &
-               tau_part(1:npoints,icol,1:nlev,INDX_CVICE)
-          
-          ! Liquid
-          betatot_liq(1:npoints,icol,1:nlev) = betatot_liq(1:npoints,icol,1:nlev)+ &
-               kp_part(1:npoints,1:nlev,INDX_LSLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_LSLIQ)+ &
-               kp_part(1:npoints,1:nlev,INDX_CVLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
-          tautot_liq(1:npoints,icol,1:nlev) = tautot_liq(1:npoints,icol,1:nlev)  + &
-               tau_part(1:npoints,icol,1:nlev,INDX_LSLIQ) + &
-               tau_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
-       endif
+       ! Ice
+       betatot_ice(1:npoints,icol,1:nlev) = betatot_ice(1:npoints,icol,1:nlev)+ &
+            kp_part(1:npoints,1:nlev,INDX_LSICE)*alpha_part(1:npoints,icol,1:nlev,INDX_LSICE)+ &
+            kp_part(1:npoints,1:nlev,INDX_CVICE)*alpha_part(1:npoints,icol,1:nlev,INDX_CVICE)
+       tautot_ice(1:npoints,icol,1:nlev) = tautot_ice(1:npoints,icol,1:nlev)  + &
+            tau_part(1:npoints,icol,1:nlev,INDX_LSICE) + &
+            tau_part(1:npoints,icol,1:nlev,INDX_CVICE)
+       
+       ! Liquid
+       betatot_liq(1:npoints,icol,1:nlev) = betatot_liq(1:npoints,icol,1:nlev)+ &
+            kp_part(1:npoints,1:nlev,INDX_LSLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_LSLIQ)+ &
+            kp_part(1:npoints,1:nlev,INDX_CVLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
+       tautot_liq(1:npoints,icol,1:nlev) = tautot_liq(1:npoints,icol,1:nlev)  + &
+            tau_part(1:npoints,icol,1:nlev,INDX_LSLIQ) + &
+            tau_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
     enddo
     
     ! ##############################################################################    
