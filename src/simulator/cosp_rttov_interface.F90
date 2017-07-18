@@ -32,6 +32,7 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
+  use rttov_const,         only : errorstatus_success, errorstatus_fatal
   USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
                               coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
@@ -39,7 +40,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   IMPLICIT NONE
 #include "rttov_read_coefs.interface"
 #include "rttov_read_scattcoeffs.interface"
-
+#include "rttov_user_options_checkinput.interface"
+  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,9 +101,9 @@ CONTAINS
          channelsIN     ! RTTOV channels
 
     ! Local variables
-    character(len=256) :: coef_file,scat_file
+    character(len=256) :: coef_file,scat_file,coef_file_scaer,coef_file_sccld
     integer :: errorstatus
-    
+    logical :: exists
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     nChannels  = NchanIN
     platform   = platformIN 
@@ -123,19 +125,37 @@ CONTAINS
     opts_scatt%interp_mode             = 1
     opts_scatt%reg_limit_extrap        = .true.
     opts_scatt%use_q2m                 = .true.
-    opts%rt_mw%clw_data                = .true. 
-        
+    opts%rt_mw%clw_data                = .false. 
+
+
     ! Read in scattering coefficient file.
     coef_file = trim(rttovDir)//"rtcoef_rttov11/rttov7pred54L/"// &
          trim(construct_rttov_coeffilename(platform,satellite,sensor))
-    call rttov_read_coefs(errorstatus,coef_rttov, opts, file_coef=trim(coef_file))
 
+    coef_file_scaer = trim(rttovDIR)//"rtcoef_rttov11/rttov7pred54L/"//"scaercoef_msg_3_seviri.dat" 
+    coef_file_sccld = trim(rttovDIR)//"rtcoef_rttov11/rttov7pred54L/"//"sccldcoef_msg_3_seviri.dat"   
+    
+    inquire(file=coef_file, exist=exists)
+    if(exists.EQ..FALSE.) stop("coef file doesn't exist")
+    call rttov_read_coefs(errorstatus,coef_rttov, opts, file_coef=trim(coef_file),file_scaer=trim(coef_file_scaer),&
+         file_sccld=trim(coef_file_sccld))
+    
+    call rttov_user_options_checkinput(errorstatus, opts, coef_rttov)
+    if (errorstatus /= errorstatus_success) then
+       stop('ERROR : read coef function unsuccessful')
+       return
+    endif
+    
+    
     ! Read in scattering (clouds+aerosol) coefficient file. *ONLY NEEDED IF DOING RTTOV ALL-SKY.*
-    !scat_file = trim(rttovDir)//"rtcoef_rttov11/cldaer/"//&
-    !     trim(construct_rttov_scatfilename(platform,satellite,sensor))
-    ! Can't pass filename to rttov_read_scattcoeffs!!!!!
-    !call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt,)
- 
+    ! scat_file = trim(rttovDir)//"rtcoef_rttov11/cldaer/"//&
+    !      trim(construct_rttov_scatfilename(platform,satellite,sensor))
+    ! inquire(file=coef_file, exist=exists)
+    ! if(exists.EQ..FALSE.) stop("coef file doesn't exist")
+
+    ! call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt)
+    
+    
   END SUBROUTINE COSP_RTTOV_INIT
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE

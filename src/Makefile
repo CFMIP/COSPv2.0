@@ -2,23 +2,34 @@
 ########################################################################
 # COSP Makefile
 ########################################################################
+
+basedir=$(HOME)/github/Tools/COSPv2.0/src
+
+obj  = $(basedir)/obj
+lib = $(basedir)/lib
+mod = $(basedir)/mod
+
 # Compiler and flags
 # Intel (ifort)
 F90      = ifort
-F90FLAGS = -O3 #-fpp#-pg # -traceback -check bounds
-F90_LIB  = /usr/local/ifort
+##F90FLAGS = -g -debug all -fpe0 -traceback -check bounds -check all -O0 
+F90FLAGS = -O0 -module $(mod) -fpp
+# F90_LIB  = /sw/rhel6-x64/intel/intel-17.0.2
 
 # Portland Group (pgf90)
 #F90      = pgf90
 #F90FLAGS = -Mpreprocess -O0 -g
 #F90_LIB  = /usr/local/pgf90
 
-SRC_PATH = src/
-OBJ_PATH = obj/
+#F90      = gfortran
+#F90FLAGS = -O0 -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan -g
+##F90FLAGS = -cpp -O0 -fbacktrace -fbounds-check
+
 
 # Libraries
 INC      = /usr/local/include
 LIB      = /usr/local/lib
+
 # Simulator directories
 SIM_PATH     = simulator
 RT_PATH      = $(SIM_PATH)/rttov
@@ -29,9 +40,10 @@ ISCCP_PATH   = $(SIM_PATH)/icarus-scops-4.1-bsd
 MISR_PATH    = $(SIM_PATH)/MISR_simulator
 MODIS_PATH   = $(SIM_PATH)/MODIS_simulator
 PARASOL_PATH = $(SIM_PATH)/parasol
+RTTOVSTUB_PATH = $(SIM_PATH)/rttov
 
 # RTTOV setup
-RTTOV_PATH       = /Projects/Clouds/dswales/RTTOV/rttov_11.3
+RTTOV_PATH       = $(HOME)/work/Tools/RTTOV/rttov113
 RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib 
 RTTOV_INC_PATH   = $(RTTOV_PATH)/include 
 RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod
@@ -39,89 +51,107 @@ RTTOV_LIBS       = -lrttov11_mw_scatt -lrttov11_brdf_atlas -lrttov11_emis_atlas 
                    -lrttov11_other -lrttov11_parallel -lrttov11_coef_io        \
                    -lrttov11_main
 
-OBJS =  cosp_kinds.o cosp_constants.o cosp_cloudsat_interface.o cosp_config.o  \
-        prec_scops.o cosp.o cosp_stats.o quickbeam.o parasol.o                 \
-        lidar_simulator.o icarus.o cosp_calipso_interface.o                    \
-        cosp_isccp_interface.o cosp_misr_interface.o MISR_simulator.o          \
-        cosp_modis_interface.o modis_simulator.o cosp_rttov_interfaceSTUB.o        \
-        cosp_rttovSTUB.o cosp_parasol_interface.o
+# List of library files that will be created
+# ---------------------------------------------------------------------------------------------------------------------------------------
+LIB_COSP = $(lib)/libcosp.a
 
-%.o: $(SIM_PATH)/%.F90
-	@echo $(F90) $(F90FLAGS) -c $<
-	$(F90) $(F90FLAGS) -c $<
-	@echo "-----------------------------"
+FLAG_LIB_COSP = -L$(lib) -lcosp
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
-%.o: %.F90
-	@echo $(F90) $(F90FLAGS) -c $<
-	$(F90) $(F90FLAGS) -c $<
-	@echo "-----------------------------"
+# Final flag indicating the library and include paths
+# ---------------------------------------------------------------------------------------------------------------------------------------
+FLAGS_COSP = $(FLAG_LIB_COSP)
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
-# Dependencies
-cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o                   \
-                            cosp_rttov_interfaceSTUB.o cosp_misr_interface.o cosp_isccp_interface.o    \
-                            cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_stats.o        \
-			    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interfaceSTUB.o       \
-                            quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o
-cosp_config.o             : cosp_kinds.o
-cosp_stats.o              : cosp_kinds.o cosp_config.o
-cosp_calipso_interface.o  : cosp_kinds.o lidar_simulator.o
-cosp_cloudsat_interface.o : cosp_kinds.o cosp_config.o quickbeam.o
-cosp_isccp_interface.o    : cosp_kinds.o icarus.o
-cosp_misr_interface.o     : cosp_kinds.o 
-cosp_modis_interface.o    : cosp_kinds.o cosp_config.o modis_simulator.o
-cosp_rttov_interfaceSTUB.o    : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
-cosp_parasol_interface.o  : cosp_kinds.o 
-cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
-MISR_simulator.o          : cosp_kinds.o cosp_config.o cosp_stats.o
-modis_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
-lidar_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
-icarus.o	          : cosp_kinds.o cosp_constants.o  cosp_stats.o
-parasol.o                 : cosp_kinds.o cosp_config.o cosp_constants.o
+# List of all objects
+# ---------------------------------------------------------------------------------------------------------------------------------------
+LIST_OBJ_COSP = $(obj)/cosp_kinds.o \
+		$(obj)/cosp_config.o \
+		$(obj)/cosp_stats.o \
+		$(obj)/cosp_constants.o \
+		$(obj)/quickbeam.o \
+		$(obj)/parasol.o \
+		$(obj)/icarus.o \
+		$(obj)/cosp_rttovSTUB.o \
+		$(obj)/MISR_simulator.o \
+		$(obj)/modis_simulator.o \
+		$(obj)/lidar_simulator.o \
+		$(obj)/cosp_calipso_interface.o \
+		$(obj)/cosp_cloudsat_interface.o \
+		$(obj)/cosp_isccp_interface.o \
+		$(obj)/cosp_misr_interface.o \
+		$(obj)/cosp_parasol_interface.o \
+		$(obj)/cosp_modis_interface.o \
+		$(obj)/cosp_rttov_interfaceSTUB.o \
+		$(obj)/cosp.o
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
-install:
-	make
-	mv *.mod *.o $(OBJ_PATH)
+install : $(LIST_OBJ_COSP)
+	ar r $(LIB_COSP) $(LIST_OBJ_COSP)
+
 clean:	
-	rm -f $(OBJ_PATH)*.mod $(OBJ_PATH)*.o fort.* *.mod *.o
+	rm -f $(obj)/*.o $(mod)/*.mod $(lib)/*.a
 
-icarus.o : $(ISCCP_PATH)/icarus.F90
-	$(F90) $(F90FLAGS) -c $<
 
-quickbeam.o: $(RS_PATH)/quickbeam.F90
-	$(F90) $(F90FLAGS) -c $<
+# Creation of the object files
+# ---------------------------------------------------------------------------------------------------------------------------------------
+$(obj)/icarus.o : $(ISCCP_PATH)/icarus.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-MISR_simulator.o : $(MISR_PATH)/MISR_simulator.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/quickbeam.o: $(RS_PATH)/quickbeam.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-modis_simulator.o : $(MODIS_PATH)/modis_simulator.F90 
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/cosp_calipso_interface.o : $(SIM_PATH)/cosp_calipso_interface.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-cosp_rttov_interfaceSTUB.o : simulator/cosp_rttov_interfaceSTUB.F90
-	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+$(obj)/cosp_cloudsat_interface.o : $(SIM_PATH)/cosp_cloudsat_interface.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-cosp_rttovSTUB.o : $(RT_PATH)/cosp_rttovSTUB.F90 
-	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+$(obj)/cosp_isccp_interface.o : $(SIM_PATH)/cosp_isccp_interface.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-lidar_simulator.o : $(CS_PATH)/lidar_simulator.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/cosp_misr_interface.o : $(SIM_PATH)/cosp_misr_interface.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-parasol.o : $(PARASOL_PATH)/parasol.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/cosp_parasol_interface.o : $(SIM_PATH)/cosp_parasol_interface.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-cosp_constants.o :  hooks/cosp_constants.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/cosp_modis_interface.o : $(SIM_PATH)/cosp_modis_interface.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-cosp_kinds.o : hooks/cosp_kinds.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/cosp_rttov_interfaceSTUB.o : $(SIM_PATH)/cosp_rttov_interfaceSTUB.F90
+	$(F90) $(F90FLAGS) -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) -c $< -o $@
 
-mo_rng.o : rng/mo_rng.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/MISR_simulator.o : $(MISR_PATH)/MISR_simulator.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-cosp_config.o :  cosp_config.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/modis_simulator.o : $(MODIS_PATH)/modis_simulator.F90 
+	$(F90) $(F90FLAGS) -c $< -o $@
 
-cosp.o :  cosp.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/cosp_rttovSTUB.o : $(RTTOVSTUB_PATH)/cosp_rttovSTUB.F90
+	$(F90) $(F90FLAGS) -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) -c $< -o $@
 
-cosp_stats.o :  cosp_stats.F90
-	$(F90) $(F90FLAGS) -c $<
+$(obj)/lidar_simulator.o : $(CS_PATH)/lidar_simulator.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/parasol.o : $(PARASOL_PATH)/parasol.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/cosp_constants.o :  hooks/cosp_constants.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/cosp_kinds.o : hooks/cosp_kinds.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/mo_rng.o : rng/mo_rng.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/cosp_config.o :  cosp_config.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/cosp_stats.o :  cosp_stats.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+
+$(obj)/cosp.o :  cosp.F90
+	$(F90) $(F90FLAGS) -c $< -o $@
+# ---------------------------------------------------------------------------------------------------------------------------------------

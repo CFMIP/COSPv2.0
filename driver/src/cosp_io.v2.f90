@@ -197,9 +197,9 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE nc_read_input_file
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE NC_READ_INPUT_FILE(fname,Npnts,Nl,Nhydro,lon,lat,p,ph,z,zh,T,qv,rh,tca,cca, &
+  SUBROUTINE nc_read_input_file(fname,Npnts,Nl,Nhydro,lon,lat,p,ph,z,zh,T,qv,rh,tca,cca, &
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
-                                fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
+                                fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,Np,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
                                 emsfc_lw,mode,Nlon,Nlat)
      
@@ -210,7 +210,7 @@ contains
     real(wp),dimension(Npnts,Nl),target,intent(out) :: p,ph,z,zh,T,qv,rh,tca,cca, &
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
-    real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
+    real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff, Np
     real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
@@ -247,6 +247,7 @@ contains
     Llon  =.false.
     Lpoint=.false.
     errst = nf90_inquire(ncid, ndims, nvars, ngatts, recdim)
+    
     if (errst /= 0) then
        errmsg="Error in  nf90_inquire"
        call cosp_error(routine_name,errmsg,errcode=errst)
@@ -318,6 +319,7 @@ contains
     do vid = 1,nvars
        vdimid=0
        errst = nf90_Inquire_Variable(ncid, vid, name=vname, ndims=vrank, dimids=vdimid)
+       
        if (errst /= 0) then
           write(straux, *)  vid
           errmsg='Error in nf90_Inquire_Variable, vid '//trim(straux)
@@ -341,6 +343,7 @@ contains
           Nc = dimsize(vdimid(3))
           allocate(x3(Na,Nb,Nc))
           errst = nf90_get_var(ncid, vid, x3, start=(/1,1,1/), count=(/Na,Nb,Nc/))
+          
           if ((mode == 2).or.(mode == 3)) then
              if ((Na == Nlon).and.(Nb == Nlat)) then
                 mode = 2
@@ -516,6 +519,12 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x4=x4,y3=Reff)
           endif
+       case ('Np')
+          if (Lpoint) then
+             Np(1:Npoints,:,:) = x3(1:Npoints,1:Nlevels,:)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x4=x4,y3=Np)
+          endif
        case ('skt')
           if (Lpoint) then
              skt(1:Npoints) = x1(1:Npoints)
@@ -615,7 +624,7 @@ contains
        errmsg='Error in nf90_close'
        call cosp_error(routine_name,errmsg,errcode=errst)
     endif 
-  END SUBROUTINE NC_READ_INPUT_FILE
+  END SUBROUTINE nc_read_input_file
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE map_point_to_ll
