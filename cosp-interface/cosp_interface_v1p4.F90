@@ -45,8 +45,8 @@ MODULE MOD_COSP_INTERFACE_v1p4
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins
   use mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics_init,&
                                  quickbeam_optics
-  use cosp_optics,         only: cosp_simulator_optics,lidar_optics,num_trial_res,        &
-                                 modis_optics,modis_optics_partition
+  use cosp_optics,         only: cosp_simulator_optics,lidar_optics,modis_optics,         &
+                                 modis_optics_partition
   use quickbeam,           only: maxhclass,nRe_types,nd,mt_ntt,radar_cfg
   use mod_rng,             only: rng_state, init_rng
   use mod_scops,           only: scops

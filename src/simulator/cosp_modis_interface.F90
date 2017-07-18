@@ -34,11 +34,11 @@ MODULE MOD_COSP_Modis_INTERFACE
   USE MOD_COSP_CONFIG, ONLY: R_UNDEF
   use mod_modis_sim,   ONLY: num_trial_res,min_OpticalThickness,CO2Slicing_PressureLimit,&
                              CO2Slicing_TauLimit,phase_TauLimit,size_TauLimit,re_fill,   &
-                             get_ssa_nir,phaseDiscrimination_Threshold,re_water_min,     &
-                             re_water_max,get_g_nir,re_ice_min,re_ice_max,               &
+                             phaseDiscrimination_Threshold,re_water_min,     &
+                             re_water_max,re_ice_min,re_ice_max,               &
                              highCloudPressureLimit,lowCloudPressureLimit,phaseIsNone,   &
                              phaseIsLiquid,phaseIsIce,phaseIsUndetermined,trial_re_w,    &
-                             trial_re_i,g_w,g_i,w0_w,w0_i
+                             trial_re_i,g_w,g_i,w0_w,w0_i, get_g_nir,get_ssa_nir
   implicit none
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

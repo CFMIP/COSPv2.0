@@ -34,26 +34,12 @@ module cosp_optics
   USE COSP_KINDS, ONLY: wp,dp
   USE COSP_MATH_CONSTANTS,  ONLY: pi
   USE COSP_PHYS_CONSTANTS,  ONLY: rholiq,km,rd,grav
+  USE MOD_MODIS_SIM,        ONLY: get_g_nir,get_ssa_nir,phaseIsLiquid,phaseIsIce
   implicit none
   
   real(wp),parameter ::        & !
-       ice_density   = 0.93_wp,& ! Ice density used in MODIS phase partitioning
-       re_water_min  = 4._wp,  & ! Minimum effective radius (liquid)
-       re_water_max  = 30._wp, & ! Maximum effective radius (liquid)
-       re_ice_min    = 5._wp,  & ! Minimum effective radius (ice)
-       re_ice_max    = 90._wp    ! Minimum effective radius (ice)
-  integer, parameter ::        & !
-       num_trial_res = 15,     & ! Increase to make the linear pseudo-retrieval of size 
-       phaseIsLiquid = 1,      & !
-       phaseIsIce    = 2         !
-  ! Precompute near-IR optical params vs size for retrieval scheme
-  integer, private :: i 
-  real(wp), dimension(num_trial_res), parameter :: & 
-       trial_re_w = re_water_min + (re_water_max - re_water_min)/ &
-       (num_trial_res-1) * (/ (i - 1, i = 1, num_trial_res) /),   &
-       trial_re_i = re_ice_min   + (re_ice_max -   re_ice_min)/   &
-       (num_trial_res-1) * (/ (i - 1, i = 1, num_trial_res) /)
-  
+       ice_density   = 0.93_wp   ! Ice density used in MODIS phase partitioning
+
   interface cosp_simulator_optics
      module procedure cosp_simulator_optics2D, cosp_simulator_optics3D
   end interface cosp_simulator_optics
@@ -251,7 +237,7 @@ contains
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot,        & ! 
          tautot            ! Optical thickess integrated from top
-    REAL(WP),optional,intent(out),dimension(npoints,ncolumns,nlev)       :: &
+    REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot_ice,    & ! Backscatter coefficient for ice particles
          betatot_liq,    & ! Backscatter coefficient for liquid particles
          tautot_ice,     & ! Total optical thickness of ice
@@ -353,12 +339,10 @@ contains
     
     betatot    (1:npoints,1:ncolumns,1:nlev) = spread(beta_mol(1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
     tautot     (1:npoints,1:ncolumns,1:nlev) = spread(tau_mol (1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
-    if (present(betatot_ice) .and. present(betatot_liq) .and. present(tautot_ice) .and. present(tautot_liq)) then
-       betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
-       betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
-       tautot_liq (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
-       tautot_ice (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
-    endif
+    betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
+    betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
+    tautot_liq (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
+    tautot_ice (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
     
     ! ##############################################################################
     ! *) Particles alpha, beta and optical thickness
@@ -427,23 +411,21 @@ contains
        ! ##############################################################################
        ! Beta and optical thickness (liquid/ice)
        ! ##############################################################################
-       if (present(betatot_ice) .and. present(betatot_liq) .and. present(tautot_ice) .and. present(tautot_liq)) then
-          ! Ice
-          betatot_ice(1:npoints,icol,1:nlev) = betatot_ice(1:npoints,icol,1:nlev)+ &
-               kp_part(1:npoints,1:nlev,INDX_LSICE)*alpha_part(1:npoints,icol,1:nlev,INDX_LSICE)+ &
-               kp_part(1:npoints,1:nlev,INDX_CVICE)*alpha_part(1:npoints,icol,1:nlev,INDX_CVICE)
-          tautot_ice(1:npoints,icol,1:nlev) = tautot_ice(1:npoints,icol,1:nlev)  + &
-               tau_part(1:npoints,icol,1:nlev,INDX_LSICE) + &
-               tau_part(1:npoints,icol,1:nlev,INDX_CVICE)
-          
-          ! Liquid
-          betatot_liq(1:npoints,icol,1:nlev) = betatot_liq(1:npoints,icol,1:nlev)+ &
-               kp_part(1:npoints,1:nlev,INDX_LSLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_LSLIQ)+ &
-               kp_part(1:npoints,1:nlev,INDX_CVLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
-          tautot_liq(1:npoints,icol,1:nlev) = tautot_liq(1:npoints,icol,1:nlev)  + &
-               tau_part(1:npoints,icol,1:nlev,INDX_LSLIQ) + &
-               tau_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
-       endif
+       ! Ice
+       betatot_ice(1:npoints,icol,1:nlev) = betatot_ice(1:npoints,icol,1:nlev)+ &
+            kp_part(1:npoints,1:nlev,INDX_LSICE)*alpha_part(1:npoints,icol,1:nlev,INDX_LSICE)+ &
+            kp_part(1:npoints,1:nlev,INDX_CVICE)*alpha_part(1:npoints,icol,1:nlev,INDX_CVICE)
+       tautot_ice(1:npoints,icol,1:nlev) = tautot_ice(1:npoints,icol,1:nlev)  + &
+            tau_part(1:npoints,icol,1:nlev,INDX_LSICE) + &
+            tau_part(1:npoints,icol,1:nlev,INDX_CVICE)
+       
+       ! Liquid
+       betatot_liq(1:npoints,icol,1:nlev) = betatot_liq(1:npoints,icol,1:nlev)+ &
+            kp_part(1:npoints,1:nlev,INDX_LSLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_LSLIQ)+ &
+            kp_part(1:npoints,1:nlev,INDX_CVLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
+       tautot_liq(1:npoints,icol,1:nlev) = tautot_liq(1:npoints,icol,1:nlev)  + &
+            tau_part(1:npoints,icol,1:nlev,INDX_LSLIQ) + &
+            tau_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
     enddo
     
     ! ##############################################################################    
@@ -457,6 +439,7 @@ contains
     enddo
     
   end subroutine lidar_optics
+<<<<<<< HEAD
   
   ! ########################################################################################
   ! Optical functions used by MODIS_OPTICS
@@ -541,4 +524,6 @@ contains
   end function fit_to_quadratic
 
   
+=======
+>>>>>>> upstream/master
 end module cosp_optics
