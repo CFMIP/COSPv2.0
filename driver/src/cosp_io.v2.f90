@@ -199,7 +199,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE nc_read_input_file(fname,Npnts,Nl,Nhydro,lon,lat,p,ph,z,zh,T,qv,rh,tca,cca, &
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
-                                fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
+                                fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,Np,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
                                 emsfc_lw,mode,Nlon,Nlat)
      
@@ -210,7 +210,7 @@ contains
     real(wp),dimension(Npnts,Nl),target,intent(out) :: p,ph,z,zh,T,qv,rh,tca,cca, &
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
-    real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
+    real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff, Np
     real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
@@ -518,6 +518,12 @@ contains
              Reff(1:Npoints,:,:) = x3(1:Npoints,1:Nlevels,:)
           else
              call map_ll_to_point(Na,Nb,Npoints,x4=x4,y3=Reff)
+          endif
+       case ('Np')
+          if (Lpoint) then
+             Np(1:Npoints,:,:) = x3(1:Npoints,1:Nlevels,:)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x4=x4,y3=Np)
           endif
        case ('skt')
           if (Lpoint) then

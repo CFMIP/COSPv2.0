@@ -138,7 +138,7 @@ contains
          clw,    & ! Cloud liquid
          rain,   & ! Precipitation flux (kg/m2/s)
          snow      ! Precipitation flux (kg/m2/s)
-
+    
     ! Outputs
     real(wp),dimension(nPoints,nChannels) :: &
          Tb        ! RTTOV brightness temperature.
@@ -175,6 +175,8 @@ contains
 #include "rttov_print_profile.interface"
 #include "rttov_boundaryconditions.interface"
 
+    write(*,*) "run rttov"
+    
     ! Initialize some things
     totalice   = 0._wp
     Tbs(:,:,:) = 0._wp
@@ -225,12 +227,15 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Initialize emissivity atlas data for chosen sensor.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    opts%config%verbose = .TRUE.
+    
     call rttov_setup_emis_atlas(errorstatus,opts,month,coef_rttov,path=trim(rttovDir)//"emis_data/")
     if (errorstatus /= errorstatus_success) then
        error = 'ERROR (rttov_column): Error reading emis atlas data!'
        return
     endif
-    
+       
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Some quality control prior to RTTOV call
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -242,6 +247,7 @@ contains
           return
        endif
     endif
+
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Call to RTTOV
@@ -271,6 +277,7 @@ contains
                               seaice(istart:istop),lat(istart:istop),lon(istart:istop),   &
                               Tb(istart:istop,:))  
        endif
+
        ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        ! All-sky brightness temperature
        ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -278,6 +285,7 @@ contains
           ! Loop over all subcolumns
           do subcol = 1, nSubCols	
              ! Call RTTOV
+
              call cosp_rttov_mwscatt(nChannels,iChannel,surfem,nPoints,nlevels,platform,  &
                                      satellite,sensor,opts,opts_scatt,coef_rttov,         &
                                      coef_scatt,zenang,p(istart:istop,:)/100._wp,         &
@@ -300,6 +308,7 @@ contains
        endif 
     enddo
 
+    
     ! For all-sky calculation we need to average together all of the cloudy subcolumns.
     if (lallSky) then
        do subcol = 1, nSubCols
@@ -843,6 +852,8 @@ contains
     calcemis  = .true.
     emissivity % emis_in = 0.0
 
+    write(*,*) "setup indices"
+    
     ! setup indices
     call rttov_scatt_setupindex ( 	&
 	 & prf_num_in,      			& ! in
@@ -852,6 +863,8 @@ contains
 	 & chanprof,        			& ! out
 	 & frequencies)       		      ! out
 
+    stop
+    
     ! allocate profiles (input) and radiance (output) structures
     asw = 1
     call rttov_alloc_prof( errorstatus,prf_num_in,profiles,nlevels_in,opts,asw, init = .true.)
@@ -962,6 +975,7 @@ contains
     !-------- end section --------
     !***************************************************************************
   end subroutine cosp_rttov_mwscatt
+  
   function construct_rttov_coeffilename(platform,satellite,instrument)
     ! Inputs
     integer,intent(in) :: platform,satellite,instrument
@@ -978,7 +992,8 @@ contains
     if (platform .eq. 1)  coef_file = 'rtcoef_noaa_'
     if (platform .eq. 10) coef_file = 'rtcoef_metop_'
     if (platform .eq. 11) coef_file = 'rtcoef_envisat_'
-    if (platform .ne. 1 .and. platform .ne. 10 .and. platform .ne. 11) then
+    if (platform .eq. 12) coef_file = 'rtcoef_msg_'
+    if (platform .ne. 1 .and. platform .ne. 10 .and. platform .ne. 11 .and. platform .ne. 12 ) then
        error=error+1
        write ( *,* ) 'Unsupported platform ID ',platform
        return
@@ -990,22 +1005,23 @@ contains
     else if (satellite .lt. 100) then
        coef_file = trim(coef_file) // char(int(satellite/10)+48)
        coef_file = trim(coef_file) // char(satellite-int(satellite/10)*10+48)
-    else
+    else        
        error=error+1
        write ( *,* ) 'Unsupported satellite number ',satellite
        return
     endif
-
+    
     ! Sensor
     if (sensor .eq. 3)  coef_file = trim(coef_file) // '_amsua.dat'
     if (sensor .eq. 5)  coef_file = trim(coef_file) // '_avhrr.dat'
     if (sensor .eq. 49) coef_file = trim(coef_file) // '_mwr.dat'
-    if (sensor .ne. 3 .and. sensor .ne. 5 .and. sensor .ne. 49) then
+    if (sensor .eq. 21) coef_file = trim(coef_file) // '_seviri.dat'    
+    if (sensor .ne. 3 .and. sensor .ne. 5 .and. sensor .ne. 49 .and. sensor.ne.21 ) then
        error=error+1
        write ( *,* ) 'Unsupported sensor number ', sensor
        return
     endif
-
+    
     if (error .eq. 0) construct_rttov_coeffilename=coef_file
     
   end function construct_rttov_coeffilename
@@ -1025,7 +1041,8 @@ contains
     if (platform .eq. 1)  coef_file = 'sccldcoef_noaa_'
     if (platform .eq. 10) coef_file = 'sccldcoef_metop_'
     if (platform .eq. 11) coef_file = 'sccldcoef_envisat_'
-    if (platform .ne. 1 .and. platform .ne. 10 .and. platform .ne. 11) then
+    if (platform .eq. 12) coef_file = 'sccldcoef_msg_'    
+    if (platform .ne. 1 .and. platform .ne. 10 .and. platform .ne. 11 .and. platform.ne.12) then
        error=error+1
        write ( *,* ) 'Unsupported platform ID ',platform
        return
@@ -1046,8 +1063,9 @@ contains
     ! Sensor
     if (sensor .eq. 3)  coef_file = trim(coef_file) // '_amsua.dat'
     if (sensor .eq. 5)  coef_file = trim(coef_file) // '_avhrr.dat'
-    if (sensor .eq. 49) coef_file = trim(coef_file) // '_mwr.dat'
-    if (sensor .ne. 3 .and. sensor .ne. 5 .and. sensor .ne. 49) then
+    if (sensor .eq. 49) coef_file = trim(coef_file) // '_mwr.dat' 
+    if (sensor .eq. 21) coef_file = trim(coef_file) // '_seviri.dat'   
+    if (sensor .ne. 3 .and. sensor .ne. 5 .and. sensor .ne. 49 .and. sensor .ne. 21) then
        error=error+1
        write ( *,* ) 'Unsupported sensor number ', sensor
        return

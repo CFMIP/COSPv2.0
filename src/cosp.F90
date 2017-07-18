@@ -1209,7 +1209,7 @@ CONTAINS
     endif
     call cpu_time(cosp_time(15))
     if (debug) print*,'   Time to run modis_column:                             ',cosp_time(15)-cosp_time(14)
-    
+
     ! RTTOV
     if (lrttov_column) then
        call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
@@ -1219,11 +1219,8 @@ CONTAINS
                          rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
                          rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
                          cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1),           &
-                         ! Optional arguments for surface emissivity calculation
-                         month=rttovIN%month)
-                         ! Optional arguments to rttov for all-sky calculation
-                         ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
-                         ! rttovIN%fl_rain,rttovIN%fl_snow)
+                         rttovIN%surfem,rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
+                         rttovIN%fl_rain,rttovIN%fl_snow)
     endif
     call cpu_time(cosp_time(16))
     if (debug) print*,'   Time to run rttov_column:                             ',cosp_time(16)-cosp_time(15)
@@ -1231,7 +1228,7 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+    
     ! CLOUDSAT/CALIPSO products
     if (Lradar_lidar_tcc .or. Llidar_only_freq_cloud) then
       
@@ -1376,9 +1373,9 @@ CONTAINS
     if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
-    !if (Lrttov) call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,     &
-    !     rttov_instrument,rttov_channels)
-    if (Lrttov) call cosp_rttov_init()
+    if (Lrttov) call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,     &
+        rttov_instrument,rttov_channels)
+    ! if (Lrttov) call cosp_rttov_init()
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
          rcfg,cloudsat_micro_scheme)

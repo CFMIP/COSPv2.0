@@ -25,7 +25,7 @@
 
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
-  NPOINTS=375193, ! Number of gridpoints 153,27840,7081,6912
+  NPOINTS=4, !375193, ! Number of gridpoints 153,27840,7081,6912
   NPOINTS_IT=500,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=1,  ! Number of subcolumns
   NLEVELS=150,   ! Number of model levels
@@ -47,7 +47,7 @@
   cloudsat_do_ray=0,        ! calculate/output Rayleigh refl=1, not=0
   cloudsat_k2=-1,           ! |K|^2, -1=use frequency dependent default
   use_precipitation_fluxes=.true.,  ! True if precipitation fluxes are input to the algorithm 
-  cloudsat_micro_scheme='MMF_v3_single_moment', !'MMF_v3.5_two_moment'
+  cloudsat_micro_scheme= 'MMF_v3_single_moment' ! 'MMF_v3.5_two_moment'
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to lidar simulations
   !----------------------------------------------------------------------------------
@@ -83,12 +83,12 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-  rttov_Platform=1,    ! satellite platform
-  rttov_Satellite=15,  ! satellite
-  rttov_Instrument=5,  ! instrument
-  rttov_Nchannels=3,   ! Number of channels to be computed
-  rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
-  rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
+  rttov_Platform=12,    ! satellite platform
+  rttov_Satellite=3,  ! satellite
+  rttov_Instrument=21,  ! instrument
+  rttov_Nchannels=1,   ! Number of channels to be computed
+  rttov_Channels=1, ! Channel numbers (please be sure that you supply Nchannels)
+  rttov_Surfem=0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
   rttov_ZenAng=50.0, ! Satellite Zenith Angle
   CO2=5.241e-04, ! Mixing ratios of trace gases
   CH4=9.139e-07,

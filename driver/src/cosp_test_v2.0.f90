@@ -1,3 +1,4 @@
+
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! Copyright (c) 2016, Regents of the University of Colorado
 ! All rights reserved.
@@ -115,7 +116,7 @@ program cosp_test_v2
   real(wp),dimension(:,:,:),allocatable,target :: &
        frac_out,  & ! Subcolumn cloud cover (0/1)
        Reff, &         ! Subcolumn effective radius
-       Reff_rev
+       Reff_rev, Np, Np_rev
   
   ! Input namelist fields
   integer ::                      & !
@@ -302,6 +303,7 @@ program cosp_test_v2
            fl_lsrain(Npoints,Nlevels),fl_lssnow(Npoints,Nlevels),                        &
            fl_lsgrpl(Npoints,Nlevels),fl_ccrain(Npoints,Nlevels),                        &
            fl_ccsnow(Npoints,Nlevels),Reff(Npoints,Nlevels,N_HYDRO),                     &
+           Np(Npoints,Nlevels,N_HYDRO), &
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
@@ -310,10 +312,9 @@ program cosp_test_v2
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
-                          fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
+                          fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,Np,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
                           emsfc_lw,geomode,Nlon,Nlat)
-
   
   call cpu_time(driver_time(2))
 
@@ -473,6 +474,7 @@ program cosp_test_v2
           fl_lsrain_rev(Npoints,Nlevels),fl_lssnow_rev(Npoints,Nlevels), &
           fl_lsgrpl_rev(Npoints,Nlevels),fl_ccrain_rev(Npoints,Nlevels), &
           fl_ccsnow_rev(Npoints,Nlevels),Reff_rev(Npoints,Nlevels,N_HYDRO), &
+          Np_rev(Npoints,Nlevels,N_HYDRO), &
           dtau_s_rev(Npoints,Nlevels),dtau_c_rev(Npoints,Nlevels), &
           dem_s_rev(Npoints,Nlevels), dem_c_rev(Npoints,Nlevels))
      
@@ -488,6 +490,7 @@ program cosp_test_v2
      mr_ccliq_rev=mr_ccliq(start_idx:end_idx,Nlevels:1:-1)
      mr_ccice_rev=mr_ccice(start_idx:end_idx,Nlevels:1:-1)
      Reff_rev=Reff(start_idx:end_idx,Nlevels:1:-1,:)
+     Np_rev=Np(start_idx:end_idx,Nlevels:1:-1,:)     
      dtau_c_rev=dtau_c(start_idx:end_idx,nLevels:1:-1)
      dtau_s_rev=dtau_s(start_idx:end_idx,nLevels:1:-1)
      dem_c_rev=dem_c(start_idx:end_idx,nLevels:1:-1)
@@ -502,7 +505,7 @@ program cosp_test_v2
           use_precipitation_fluxes,lidar_ice_type,sd,tca_rev,cca_rev,             &
           fl_lsrain_rev,fl_lssnow_rev,fl_lsgrpl_rev,fl_ccrain_rev, &
           fl_ccsnow_rev,mr_lsliq_rev, mr_lsice_rev,mr_ccliq_rev,   &
-          mr_ccice_rev,Reff_rev, dtau_c_rev,dtau_s_rev,       &
+          mr_ccice_rev,Reff_rev, Np_rev,dtau_c_rev,dtau_s_rev,       &
           dem_c_rev,dem_s_rev, cospstateIN,cospIN)
      
      call cpu_time(driver_time(6))
@@ -510,7 +513,7 @@ program cosp_test_v2
 
      deallocate(tca_rev,cca_rev,mr_lsliq_rev,mr_lsice_rev,mr_ccliq_rev,mr_ccice_rev,&
           fl_lsrain_rev,fl_lssnow_rev, fl_lsgrpl_rev,fl_ccrain_rev, fl_ccsnow_rev,Reff_rev, &
-          dtau_s_rev,dtau_c_rev, dem_s_rev, dem_c_rev)
+          Np_rev,dtau_s_rev,dtau_c_rev, dem_s_rev, dem_c_rev)
      
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
@@ -612,14 +615,14 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine subsample_and_optics(nPoints,nLevels,nColumns,nHydro,overlap,                  &
        use_precipitation_fluxes,lidar_ice_type,sd,tca,cca,fl_lsrainIN,fl_lssnowIN,          &
-       fl_lsgrplIN,fl_ccrainIN,fl_ccsnowIN,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,reffIN,dtau_c,&
-       dtau_s,dem_c,dem_s,cospstateIN,cospIN)
+       fl_lsgrplIN,fl_ccrainIN,fl_ccsnowIN,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,reffIN,NpIN,&
+       dtau_c,dtau_s,dem_c,dem_s,cospstateIN,cospIN)
     ! Inputs
     integer,intent(in) :: nPoints,nLevels,nColumns,nHydro,overlap,lidar_ice_type
     real(wp),intent(in),dimension(nPoints,nLevels) :: tca,cca,mr_lsliq,mr_lsice,mr_ccliq,   &
          mr_ccice,dtau_c,dtau_s,dem_c,dem_s,fl_lsrainIN,fl_lssnowIN,fl_lsgrplIN,     &
          fl_ccrainIN,fl_ccsnowIN
-    real(wp),intent(in),dimension(nPoints,nLevels,nHydro) :: reffIN
+    real(wp),intent(in),dimension(nPoints,nLevels,nHydro) :: reffIN, NpIN
     logical,intent(in) :: use_precipitation_fluxes
     type(size_distribution),intent(inout) :: sd
     

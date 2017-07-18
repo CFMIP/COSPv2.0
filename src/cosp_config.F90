@@ -151,7 +151,7 @@ MODULE MOD_COSP_CONFIG
     integer,parameter :: &
          RTTOV_MAX_CHANNELS = 20
     character(len=256),parameter :: &
-         rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
+         rttovDir = "/pf/b/b380333/work/Tools/RTTOV/rttov113/"
     
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator.
