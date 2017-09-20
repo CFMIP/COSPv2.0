@@ -722,8 +722,8 @@ contains
                    fl_lsgrpl(j,k) = fl_lsgrplIN(j,k)/prec_ls(j,k)
                 endif
                 if (prec_cv(j,k) .ne. 0.) then
-                   fl_ccrain(j,k) = fl_ccrainIN(j,Nlevels-k+1)/prec_cv(j,k)
-                   fl_ccsnow(j,k) = fl_ccsnowIN(j,Nlevels-k+1)/prec_cv(j,k)
+                   fl_ccrain(j,k) = fl_ccrainIN(j,k)/prec_cv(j,k)
+                   fl_ccsnow(j,k) = fl_ccsnowIN(j,k)/prec_cv(j,k)
                 endif
              else
                 if (prec_ls(j,k) .ne. 0.) then
