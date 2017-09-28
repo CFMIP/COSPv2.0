@@ -709,7 +709,7 @@ contains
        ! This subroutine essentially contains all of the pieces of code that were removed
        ! from the simulators during the v2.0 reconstruction.
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-       call subsample_and_optics(overlap,gbx,sgx,Nptsperit,start_idx,end_idx,cospIN,     &
+       call subsample_and_optics(overlap,gbx,sgx,cfg,Nptsperit,start_idx,end_idx,cospIN,     &
                                  cospstateIN)
        
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -883,11 +883,12 @@ contains
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    ! SUBROUTINE subsample_and_optics
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine subsample_and_optics(overlap,gbx,sgx,npoints,start_idx,end_idx,cospIN,cospgridIN)
+  subroutine subsample_and_optics(overlap,gbx,sgx,cfg,npoints,start_idx,end_idx,cospIN,cospgridIN)
 
     ! Inputs
     integer, intent(in) :: overlap  ! Overlap type in SCOPS: 1=max, 2=rand, 3=max/rand
     type(cosp_gridbox),intent(in)    :: gbx   ! Grid box description
+    type(cosp_config),intent(in)     :: cfg   ! Configuration information
     type(cosp_subgrid),intent(inout) :: sgx   ! Sub-grid scale description
     integer,intent(in) :: &
          npoints,     & ! Number of points
@@ -903,7 +904,7 @@ contains
     integer :: i,j,k,ij
     real(wp),dimension(npoints,gbx%Nlevels) :: column_frac_out,column_prec_out
     real(wp),dimension(:,:),    allocatable :: frac_ls,frac_cv,prec_ls,prec_cv,ls_p_rate,&
-                                               cv_p_rate
+                                               cv_p_rate,g_vol
     real(wp),dimension(:,:,:),allocatable :: hm_matrix,re_matrix,                        &
                                              Np_matrix,MODIS_cloudWater,MODIS_cloudIce,  &
                                              MODIS_watersize,MODIS_iceSize,              &
@@ -1211,93 +1212,97 @@ contains
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! LIDAR Polarized optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    call lidar_optics(npoints,gbx%Ncolumns,gbx%Nlevels,4,gbx%lidar_ice_type,             &
-                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCLIQ),                    &
-                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCICE),                    &
-                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCLIQ),                    &
-                          mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                    &
-                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCLIQ),      &
-                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCICE),      &
-                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCLIQ),      &
-                          gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCICE),      & 
-                          cospgridIN%pfull,cospgridIN%phalf,cospgridIN%at,               &
-                          cospIN%beta_mol,cospIN%betatot,cospIN%tau_mol,cospIN%tautot,   &
-                          cospIN%tautot_S_liq,cospIN%tautot_S_ice,                       &
-                          betatot_ice = cospIN%betatot_ice,                              &
-                          betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,   &
-                          tautot_liq = cospIN%tautot_liq)
-    
+    if (cfg%Llidar_sim) then
+       call lidar_optics(npoints,gbx%Ncolumns,gbx%Nlevels,4,gbx%lidar_ice_type,          &
+                         mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCLIQ),                     &
+                         mr_hydro(:,:,cospIN%Nlevels:1:-1,I_LSCICE),                     &
+                         mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCLIQ),                     &
+                         mr_hydro(:,:,cospIN%Nlevels:1:-1,I_CVCICE),                     &
+                         gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCLIQ),       &
+                         gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_LSCICE),       &
+                         gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCLIQ),       &
+                         gbx%Reff(start_idx:end_idx,cospIN%Nlevels:1:-1,I_CVCICE),       & 
+                         cospgridIN%pfull,cospgridIN%phalf,cospgridIN%at,                &
+                         cospIN%beta_mol,cospIN%betatot,cospIN%tau_mol,cospIN%tautot,    &
+                         cospIN%tautot_S_liq,cospIN%tautot_S_ice,                        &
+                         betatot_ice = cospIN%betatot_ice,                               &
+                         betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,    &
+                         tautot_liq = cospIN%tautot_liq)
+    endif
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! CLOUDSAT RADAR OPTICS
-    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-    ! Allocate memory
-    allocate(hm_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
-             re_matrix(N_HYDRO,npoints,gbx%Nlevels),                                     &
-             Np_matrix(N_HYDRO,npoints,gbx%Nlevels))           
-
-    do ij=1,gbx%Ncolumns
-       do i=1,N_HYDRO
-          hm_matrix(i,1:npoints,gbx%Nlevels:1:-1) = mr_hydro(:,ij,:,i)*1000._wp 
-          re_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Reff(:,ij,:,i)*1.e6_wp  
-          Np_matrix(i,1:npoints,gbx%Nlevels:1:-1) = Np(:,ij,:,i)       
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if (cfg%Lradar_sim) then
+       allocate(g_vol(nPoints,gbx%Nlevels))
+       do ij=1,gbx%Ncolumns
+          if (ij .eq. 1) then
+             cmpGases = .true.
+             call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF,       &
+                  mr_hydro(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1000._wp,                    &
+                  Reff(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1.e6_wp,                         &
+                  Np(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO),                                   &
+                  gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                             & 
+                  gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                             &
+                  gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,                   &
+                  cospIN%z_vol_cloudsat(1:npoints,ij,:),                                 &
+                  cospIN%kr_vol_cloudsat(1:npoints,ij,:),                                &
+                  cospIN%g_vol_cloudsat(1:npoints,ij,:),g_vol_out=g_vol)
+          else
+             cmpGases = .false.
+             call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF,       &
+                  mr_hydro(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1000._wp,                    &
+                  Reff(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1.e6_wp,                         &
+                  Np(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO),                                   &
+                  gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                             & 
+                  gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                             &
+                  gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,                   &
+                  cospIN%z_vol_cloudsat(1:npoints,ij,:),                                 &
+                  cospIN%kr_vol_cloudsat(1:npoints,ij,:),                                &
+                  cospIN%g_vol_cloudsat(1:npoints,ij,:),g_vol_in=g_vol)
+          end if
        enddo
-       call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF, hm_matrix,  &
-                             re_matrix, Np_matrix,                                       &
-                             gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                  & 
-                             gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                  &
-                             gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,        &
-                             cospIN%z_vol_cloudsat(1:npoints,ij,:),                      &
-                             cospIN%kr_vol_cloudsat(1:npoints,ij,:),                     &
-                             cospIN%g_vol_cloudsat(1:npoints,ij,:))
-    enddo
-    
-    ! Deallocate memory
-    deallocate(hm_matrix,re_matrix,Np_matrix)
-
+    end if
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MODIS optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Allocate memory
-    allocate(MODIS_cloudWater(npoints,gbx%Ncolumns,gbx%Nlevels),                         &
-             MODIS_cloudIce(npoints,gbx%Ncolumns,gbx%Nlevels),                           &
-             MODIS_waterSize(npoints,gbx%Ncolumns,gbx%Nlevels),                          &
-             MODIS_iceSize(npoints,gbx%Ncolumns,gbx%Nlevels),                            &
-             MODIS_opticalThicknessLiq(npoints,gbx%Ncolumns,gbx%Nlevels),                &
-             MODIS_opticalThicknessIce(npoints,gbx%Ncolumns,gbx%Nlevels))
-    ! Cloud water
-    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
-                               sgx%frac_out(start_idx:end_idx,:,:),                      &
-                               mr_hydro(:,:,:,I_CVCLIQ),mr_hydro(:,:,:,I_LSCLIQ),        &
-                               MODIS_cloudWater(:, :, gbx%Nlevels:1:-1))   
-    ! Cloud ice
-    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
-                               sgx%frac_out(start_idx:end_idx,:,:),                      &
-                               mr_hydro(:,:,:,I_CVCICE), mr_hydro(:,:,:,I_LSCICE),       &
-                               MODIS_cloudIce(:, :, gbx%Nlevels:1:-1))  
-    ! Water droplet size
-    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
-                               sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCLIQ), &
-                               reff(:,:,:,I_LSCLIQ),                                     &
-                               MODIS_waterSize(:, :, gbx%Nlevels:1:-1))
-    ! Ice crystal size
-    call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                         &
-                               sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCICE), &
-                               reff(:,:,:,I_LSCICE),                                     &
-                               MODIS_iceSize(:, :, gbx%Nlevels:1:-1))
-    ! Partition optical thickness into liquid and ice parts
-    call modis_optics_partition(npoints,gbx%Nlevels,gbx%Ncolumns,                        &
-                                MODIS_cloudWater,MODIS_cloudIce,MODIS_waterSize,         &
-                                MODIS_iceSize,cospIN%tau_067,MODIS_opticalThicknessLiq,  &
-                                MODIS_opticalThicknessIce)
-    ! Compute assymetry parameter and single scattering albedo 
-    call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,MODIS_opticalThicknessLiq,        &
-                      MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,                &
-                      MODIS_iceSize*1.0e6_wp,cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
-    
-    ! Deallocate memory
-    deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,            &
-               MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,             &
-               Reff,Np)
+    if (cfg%Lmodis_sim) then
+       ! Allocate memory
+       allocate(MODIS_cloudWater(npoints,gbx%Ncolumns,gbx%Nlevels),                      &
+                MODIS_cloudIce(npoints,gbx%Ncolumns,gbx%Nlevels),                        &
+                MODIS_waterSize(npoints,gbx%Ncolumns,gbx%Nlevels),                       &
+                MODIS_iceSize(npoints,gbx%Ncolumns,gbx%Nlevels),                         &
+                MODIS_opticalThicknessLiq(npoints,gbx%Ncolumns,gbx%Nlevels),             &
+                MODIS_opticalThicknessIce(npoints,gbx%Ncolumns,gbx%Nlevels))
+       ! Cloud water
+       call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                      &
+            sgx%frac_out(start_idx:end_idx,:,:),mr_hydro(:,:,:,I_CVCLIQ),                &
+            mr_hydro(:,:,:,I_LSCLIQ),MODIS_cloudWater(:, :, gbx%Nlevels:1:-1))   
+       ! Cloud ice
+       call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                      &
+            sgx%frac_out(start_idx:end_idx,:,:),mr_hydro(:,:,:,I_CVCICE),                &
+            mr_hydro(:,:,:,I_LSCICE),MODIS_cloudIce(:, :, gbx%Nlevels:1:-1))  
+       ! Water droplet size
+       call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                      &
+            sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCLIQ),                    &
+            reff(:,:,:,I_LSCLIQ),MODIS_waterSize(:, :, gbx%Nlevels:1:-1))
+       ! Ice crystal size
+       call cosp_simulator_optics(npoints,gbx%Ncolumns,gbx%Nlevels,                      &
+            sgx%frac_out(start_idx:end_idx,:,:),reff(:,:,:,I_CVCICE),                    &
+            reff(:,:,:,I_LSCICE),MODIS_iceSize(:, :, gbx%Nlevels:1:-1))
+       ! Partition optical thickness into liquid and ice parts
+       call modis_optics_partition(npoints,gbx%Nlevels,gbx%Ncolumns,MODIS_cloudWater,    &
+            MODIS_cloudIce,MODIS_waterSize,MODIS_iceSize,cospIN%tau_067,                 &
+            MODIS_opticalThicknessLiq, MODIS_opticalThicknessIce)
+       ! Compute assymetry parameter and single scattering albedo 
+       call modis_optics(npoints,gbx%Nlevels,gbx%Ncolumns,MODIS_opticalThicknessLiq,     &
+            MODIS_waterSize*1.0e6_wp,MODIS_opticalThicknessIce,MODIS_iceSize*1.0e6_wp,   &
+            cospIN%fracLiq, cospIN%asym, cospIN%ss_alb)
+       
+       ! Deallocate memory
+       deallocate(MODIS_cloudWater,MODIS_cloudIce,MODIS_WaterSize,MODIS_iceSize,         &
+                  MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce,mr_hydro,          &
+                  Reff,Np)
+    end if
     
   end subroutine subsample_and_optics
   

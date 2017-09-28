@@ -81,7 +81,7 @@ contains
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
                               Np_matrix, p_matrix, t_matrix, sh_matrix,cmpGases,         &
-                              z_vol,kr_vol,g_vol)
+                              z_vol,kr_vol,g_vol,g_vol_in,g_vol_out)
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -97,10 +97,10 @@ contains
          p_matrix,      & ! Pressure profile (hPa)
          t_matrix,      & ! Temperature profile (K)
          sh_matrix        ! Specific humidity profile (%) -- only needed if gaseous aborption calculated.
-    real(wp),intent(in),dimension(rcfg%nhclass,nprof,ngate) :: &
-         hm_matrix        ! Table of hydrometeor mixing ratios (g/kg)
-    real(wp),intent(inout),dimension(rcfg%nhclass,nprof,ngate) :: &
+    real(wp),intent(in),dimension(nprof,ngate,rcfg%nhclass) :: &
          re_matrix,     & ! Table of hydrometeor effective radii.       0 ==> use defaults. (units=microns)
+         hm_matrix        ! Table of hydrometeor mixing ratios (g/kg)
+    real(wp),intent(inout),dimension(nprof,ngate,rcfg%nhclass) :: &
          Np_matrix        ! Table of hydrometeor number concentration.  0 ==> use defaults. (units = 1/kg)
     logical,intent(inout) :: &
          cmpGases         ! Compute gaseous attenuation for all profiles
@@ -110,14 +110,18 @@ contains
          z_vol,         & ! Effective reflectivity factor (mm^6/m^3)
          kr_vol,        & ! Attenuation coefficient hydro (dB/km)
          g_vol            ! Attenuation coefficient gases (dB/km)
+       
+    ! OPTIONAL
+    real(wp),dimension(nprof,ngate),optional :: &
+         g_vol_in,g_vol_out
     
     ! INTERNAL VARIABLES   
     integer :: &
          phase, ns,tp,j,k,pr,itt,iRe_type,n 
     logical :: &
-         hydro
+         hydro,g_vol_in_present,g_vol_out_present
     real(wp) :: &
-         t_kelvin
+         t_kelvin,Re_internal
     real(wp) :: &
          rho_a,kr,ze,zr,scale_factor,Re,Np,base,step 
 
@@ -137,6 +141,9 @@ contains
          DO_NP_TEST  = .false.    !
     real(wp), parameter :: &
          one_third   = 1._wp/3._wp    !
+
+    g_vol_in_present  = present(g_vol_in)
+    g_vol_out_present = present(g_vol_out)
     
     ! Initialization
     if (.not. lQuickbeamInit) call quickbeam_optics_init()
@@ -146,10 +153,13 @@ contains
 
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
-
+          if (g_vol_in_present) then
+             g_vol(pr,k) = g_vol_in(pr,k)
+          endif
+          
           ! Gas attenuation (only need to do this for the first subcolumn (i.e. cmpGases=true)
           if (cmpGases) then
-             if (rcfg%use_gas_abs == 1 .or. rcfg%use_gas_abs == 2 .and. pr .eq. 1) then
+             if (rcfg%use_gas_abs == 1 .or. (rcfg%use_gas_abs == 2 .and. pr .eq. 1)) then
                 g_vol(pr,k) = gases(p_matrix(pr,k),t_matrix(pr,k),sh_matrix(pr,k),rcfg%freq)
              endif
           endif
@@ -157,7 +167,7 @@ contains
           ! Determine if hydrometeor(s) present in volume
           hydro = .false.
           do j=1,rcfg%nhclass
-             if ((hm_matrix(j,pr,k) > 1E-12) .and. (sd%dtype(j) > 0)) then
+             if ((hm_matrix(pr,k,j) > 1E-12) .and. (sd%dtype(j) > 0)) then
                 hydro = .true.
                 exit
              endif
@@ -170,7 +180,9 @@ contains
              
              ! Loop over hydrometeor type
              do tp=1,rcfg%nhclass
-                if (hm_matrix(tp,pr,k) <= 1E-12) cycle
+                Re_internal = re_matrix(pr,k,tp)
+
+                if (hm_matrix(pr,k,tp) <= 1E-12) cycle
                 
                 ! Index into temperature dimension of scaling tables
                 !   These tables have regular steps -- exploit this and abandon infind
@@ -182,15 +194,17 @@ contains
                 endif
                 
                 ! Compute effective radius from number concentration and distribution parameters
-                if (re_matrix(tp,pr,k) .eq. 0) then
-                   call calc_Re(hm_matrix(tp,pr,k),Np_matrix(tp,pr,k),rho_a, &
+                if (Re_internal .eq. 0) then
+                   call calc_Re(hm_matrix(pr,k,tp),Np_matrix(pr,k,tp),rho_a, &
                         sd%dtype(tp),sd%apm(tp),sd%bpm(tp),sd%rho(tp),sd%p1(tp),sd%p2(tp),sd%p3(tp),Re)
-                   re_matrix(tp,pr,k)=Re
+                   Re_internal=Re
+                   !re_matrix(pr,k,tp)=Re
                 else
-                   if (Np_matrix(tp,pr,k) > 0) then
+                   if (Np_matrix(pr,k,tp) > 0) then
                       call errorMessage('WARNING(optics/quickbeam_optics.f90): Re and Np set for the same volume & hydrometeor type.  Np is being ignored.')
                    endif
-                   Re = re_matrix(tp,pr,k)
+                   Re = Re_internal
+                   !Re = re_matrix(pr,k,tp)
                 endif
                 
                 ! Index into particle size dimension of scaling tables 
@@ -218,7 +232,8 @@ contains
                       rcfg%Z_scale_flag(tp,itt,iRe_type)=.false.
                    else
                       ! Set value in re_matrix to closest values in LUT
-                      if (.not. DO_LUT_TEST) re_matrix(tp,pr,k)=Re
+                      if (.not. DO_LUT_TEST) re_internal=Re
+                      !if (.not. DO_LUT_TEST) re_matrix(pr,k,tp)=Re
                    endif
                 endif
                 
@@ -226,7 +241,7 @@ contains
                 ! if not we will calculate Ze, Zr, and Kr from the distribution parameters
 !                if( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. .not. DO_LUT_TEST)  then
 !                   ! can use z scaling
-!                   scale_factor=rho_a*hm_matrix(tp,pr,k)
+!                   scale_factor=rho_a*hm_matrix(pr,k,tp)
 !                   zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
 !                   ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
 !                   kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
@@ -245,7 +260,7 @@ contains
                       Di = D
                       Ni = 0._wp
                    end select
-                   call dsd(hm_matrix(tp,pr,k),re_matrix(tp,pr,k),Np_matrix(tp,pr,k), &
+                   call dsd(hm_matrix(pr,k,tp),re_internal,Np_matrix(pr,k,tp), &
                         Di,Ni,ns,sd%dtype(tp),rho_a,t_kelvin, &
                         sd%dmin(tp),sd%dmax(tp),sd%apm(tp),sd%bpm(tp), &
                         sd%rho(tp),sd%p1(tp),sd%p2(tp),sd%p3(tp))
@@ -299,10 +314,10 @@ contains
                    ! Test code ... compare Np value input to routine with sum of DSD
                    ! NOTE: if .not. DO_LUT_TEST, then you are checking the LUT approximation 
                    ! not just the DSD representation given by Ni
-                   if(Np_matrix(tp,pr,k)>0 .and. DO_NP_TEST ) then
+                   if(Np_matrix(pr,k,tp)>0 .and. DO_NP_TEST ) then
                       Np = path_integral(Ni,Di,1,ns-1)/rho_a*1.E6_wp
                       ! Note: Representation is not great or small Re < 2 
-                      if( (Np_matrix(tp,pr,k)-Np)/Np_matrix(tp,pr,k)>0.1 ) then
+                      if( (Np_matrix(pr,k,tp)-Np)/Np_matrix(pr,k,tp)>0.1 ) then
                          call errorMessage('ERROR(optics/quickbeam_optics.f90): Error: Np input does not match sum(N)')
                       endif
                    endif
@@ -313,7 +328,7 @@ contains
                    ! LUT test code
                    ! This segment of code compares full calculation to scaling result
                    if ( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. DO_LUT_TEST )  then
-                      scale_factor=rho_a*hm_matrix(tp,pr,k)
+                      scale_factor=rho_a*hm_matrix(pr,k,tp)
                       ! if more than 2 dBZe difference print error message/parameters.
                       if ( abs(10*log10(ze) - 10*log10(rcfg%Ze_scaled(tp,itt,iRe_type) * &
                            scale_factor)) > 2 ) then
@@ -322,7 +337,7 @@ contains
                    endif
                 else
                    ! Use z scaling
-                   scale_factor=rho_a*hm_matrix(tp,pr,k)
+                   scale_factor=rho_a*hm_matrix(pr,k,tp)
                    zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
                    ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
                    kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
@@ -335,7 +350,7 @@ contains
                 ! Construct Ze_scaled, Zr_scaled, and kr_scaled ... if we can
                 if ( .not. rcfg%Z_scale_flag(tp,itt,iRe_type) ) then
                    if (iRe_type>1) then
-                      scale_factor=rho_a*hm_matrix(tp,pr,k)
+                      scale_factor=rho_a*hm_matrix(pr,k,tp)
                       rcfg%Ze_scaled(tp,itt,iRe_type) = ze/ scale_factor
                       rcfg%Zr_scaled(tp,itt,iRe_type) = zr/ scale_factor
                       rcfg%kr_scaled(tp,itt,iRe_type) = kr/ scale_factor
