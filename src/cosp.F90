@@ -156,89 +156,89 @@ MODULE MOD_COSP
 
      ! CALIPSO outputs
      real(wp),dimension(:,:,:),pointer :: &
-          calipso_betaperp_tot,  & ! Total backscattered signal
-          calipso_beta_tot,      & ! Total backscattered signal
-          calipso_tau_tot,       & ! Optical thickness integrated from top to level z
-          calipso_lidarcldphase, & ! 3D "lidar" phase cloud fraction 
-          calipso_cldlayerphase, & ! low, mid, high-level lidar phase cloud cover
-          calipso_lidarcldtmp,   & ! 3D "lidar" phase cloud temperature
-          calipso_cfad_sr          ! CFAD of scattering ratio
+          calipso_betaperp_tot => null(),  & ! Total backscattered signal
+          calipso_beta_tot => null(),      & ! Total backscattered signal
+          calipso_tau_tot => null(),       & ! Optical thickness integrated from top to level z
+          calipso_lidarcldphase => null(), & ! 3D "lidar" phase cloud fraction 
+          calipso_cldlayerphase => null(), & ! low, mid, high-level lidar phase cloud cover
+          calipso_lidarcldtmp => null(),   & ! 3D "lidar" phase cloud temperature
+          calipso_cfad_sr => null()          ! CFAD of scattering ratio
      real(wp), dimension(:,:),pointer :: &
-          calipso_lidarcld,      & ! 3D "lidar" cloud fraction 
-          calipso_cldlayer,      & ! low, mid, high-level, total lidar cloud cover
-          calipso_beta_mol,      & ! Molecular backscatter
-          calipso_temp_tot
+          calipso_lidarcld => null(),      & ! 3D "lidar" cloud fraction 
+          calipso_cldlayer => null(),      & ! low, mid, high-level, total lidar cloud cover
+          calipso_beta_mol => null(),      & ! Molecular backscatter
+          calipso_temp_tot => null()
      real(wp), dimension(:),pointer :: &
-          calipso_srbval           ! SR bins in cfad_sr
+          calipso_srbval => null()           ! SR bins in cfad_sr
      
      ! PARASOL outputs
      real(wp),dimension(:,:,:),pointer :: &
-          parasolPix_refl            ! PARASOL reflectances (subcolumn)    
+          parasolPix_refl => null()            ! PARASOL reflectances (subcolumn)    
      real(wp),dimension(:,:),pointer :: &
-          parasolGrid_refl           ! PARASOOL reflectances (column)
+          parasolGrid_refl => null()           ! PARASOOL reflectances (column)
 
      ! CLOUDSAT outputs
      real(wp),dimension(:,:,:),pointer :: &
-          cloudsat_Ze_tot,         & ! Effective reflectivity factor (Npoints,Ncolumns,Nlevels)     
-          cloudsat_cfad_ze           ! Ze CFAD(Npoints,dBZe_bins,Nlevels)
+          cloudsat_Ze_tot => null(),         & ! Effective reflectivity factor (Npoints,Ncolumns,Nlevels)     
+          cloudsat_cfad_ze => null()           ! Ze CFAD(Npoints,dBZe_bins,Nlevels)
      real(wp), dimension(:,:),pointer :: &
-          lidar_only_freq_cloud      ! (Npoints,Nlevels)
+          lidar_only_freq_cloud => null()      ! (Npoints,Nlevels)
      real(wp),dimension(:),pointer :: &
-          radar_lidar_tcc            ! Radar&lidar total cloud amount, grid-box scale (Npoints)
+          radar_lidar_tcc => null()            ! Radar&lidar total cloud amount, grid-box scale (Npoints)
           
      ! ISCCP outputs       
      real(wp),dimension(:),pointer :: &
-          isccp_totalcldarea, & ! The fraction of model grid box columns with cloud 
-           				        ! somewhere in them. (%)
-          isccp_meantb,       & ! Mean all-sky 10.5 micron brightness temperature. (K)
-          isccp_meantbclr,    & ! Mean clear-sky 10.5 micron brightness temperature. (K)
-          isccp_meanptop,     & ! Mean cloud top pressure (mb).
-          isccp_meantaucld,   & ! Mean optical thickness. (1)
-          isccp_meanalbedocld   ! Mean cloud albedo. (1)
+          isccp_totalcldarea => null(), & ! The fraction of model grid box columns with cloud 
+           		                  ! somewhere in them. (%)
+          isccp_meantb => null(),       & ! Mean all-sky 10.5 micron brightness temperature. (K)
+          isccp_meantbclr => null(),    & ! Mean clear-sky 10.5 micron brightness temperature. (K)
+          isccp_meanptop => null(),     & ! Mean cloud top pressure (mb).
+          isccp_meantaucld => null(),   & ! Mean optical thickness. (1)
+          isccp_meanalbedocld => null()   ! Mean cloud albedo. (1)
      real(wp),dimension(:,:),pointer ::&
-          isccp_boxtau,       & ! Optical thickness in each column. (1)
-          isccp_boxptop         ! Cloud top pressure in each column. (mb)
+          isccp_boxtau => null(),       & ! Optical thickness in each column. (1)
+          isccp_boxptop => null()         ! Cloud top pressure in each column. (mb)
      real(wp),dimension(:,:,:),pointer :: &
-          isccp_fq              ! The fraction of the model grid box covered by each of
-                                ! the 49 ISCCP D level cloud types. (%)
+          isccp_fq  => null()             ! The fraction of the model grid box covered by each of
+                                          ! the 49 ISCCP D level cloud types. (%)
      
      ! MISR outptus  			    
      real(wp),dimension(:,:,:),pointer ::   & !
-          misr_fq          ! Fraction of the model grid box covered by each of the MISR 
+          misr_fq => null()          ! Fraction of the model grid box covered by each of the MISR 
                            ! cloud types
      real(wp),dimension(:,:),pointer ::   & !
-          misr_dist_model_layertops !  
+          misr_dist_model_layertops => null() !  
      real(wp),dimension(:),pointer ::   & !
-          misr_meanztop, & ! Mean MISR cloud top height
-          misr_cldarea     ! Mean MISR cloud cover area         			    
+          misr_meanztop => null(), & ! Mean MISR cloud top height
+          misr_cldarea => null()     ! Mean MISR cloud cover area         			    
 
      ! MODIS outptus		    
      real(wp),pointer,dimension(:) ::      & !  
-          modis_Cloud_Fraction_Total_Mean,       & ! L3 MODIS retrieved cloud fraction (total) 
-          modis_Cloud_Fraction_Water_Mean,       & ! L3 MODIS retrieved cloud fraction (liq) 
-          modis_Cloud_Fraction_Ice_Mean,         & ! L3 MODIS retrieved cloud fraction (ice) 
-          modis_Cloud_Fraction_High_Mean,        & ! L3 MODIS retrieved cloud fraction (high) 
-          modis_Cloud_Fraction_Mid_Mean,         & ! L3 MODIS retrieved cloud fraction (middle) 
-          modis_Cloud_Fraction_Low_Mean,         & ! L3 MODIS retrieved cloud fraction (low ) 
-          modis_Optical_Thickness_Total_Mean,    & ! L3 MODIS retrieved optical thickness (tot)
-          modis_Optical_Thickness_Water_Mean,    & ! L3 MODIS retrieved optical thickness (liq)
-          modis_Optical_Thickness_Ice_Mean,      & ! L3 MODIS retrieved optical thickness (ice)
-          modis_Optical_Thickness_Total_LogMean, & ! L3 MODIS retrieved log10 optical thickness 
-          modis_Optical_Thickness_Water_LogMean, & ! L3 MODIS retrieved log10 optical thickness 
-          modis_Optical_Thickness_Ice_LogMean,   & ! L3 MODIS retrieved log10 optical thickness
-          modis_Cloud_Particle_Size_Water_Mean,  & ! L3 MODIS retrieved particle size (liquid)
-          modis_Cloud_Particle_Size_Ice_Mean,    & ! L3 MODIS retrieved particle size (ice)
-          modis_Cloud_Top_Pressure_Total_Mean,   & ! L3 MODIS retrieved cloud top pressure
-          modis_Liquid_Water_Path_Mean,          & ! L3 MODIS retrieved liquid water path
-          modis_Ice_Water_Path_Mean                ! L3 MODIS retrieved ice water path
+          modis_Cloud_Fraction_Total_Mean => null(),       & ! L3 MODIS retrieved cloud fraction (total) 
+          modis_Cloud_Fraction_Water_Mean => null(),       & ! L3 MODIS retrieved cloud fraction (liq) 
+          modis_Cloud_Fraction_Ice_Mean => null(),         & ! L3 MODIS retrieved cloud fraction (ice) 
+          modis_Cloud_Fraction_High_Mean => null(),        & ! L3 MODIS retrieved cloud fraction (high) 
+          modis_Cloud_Fraction_Mid_Mean => null(),         & ! L3 MODIS retrieved cloud fraction (middle) 
+          modis_Cloud_Fraction_Low_Mean => null(),         & ! L3 MODIS retrieved cloud fraction (low ) 
+          modis_Optical_Thickness_Total_Mean => null(),    & ! L3 MODIS retrieved optical thickness (tot)
+          modis_Optical_Thickness_Water_Mean => null(),    & ! L3 MODIS retrieved optical thickness (liq)
+          modis_Optical_Thickness_Ice_Mean => null(),      & ! L3 MODIS retrieved optical thickness (ice)
+          modis_Optical_Thickness_Total_LogMean => null(), & ! L3 MODIS retrieved log10 optical thickness 
+          modis_Optical_Thickness_Water_LogMean => null(), & ! L3 MODIS retrieved log10 optical thickness 
+          modis_Optical_Thickness_Ice_LogMean => null(),   & ! L3 MODIS retrieved log10 optical thickness
+          modis_Cloud_Particle_Size_Water_Mean => null(),  & ! L3 MODIS retrieved particle size (liquid)
+          modis_Cloud_Particle_Size_Ice_Mean => null(),    & ! L3 MODIS retrieved particle size (ice)
+          modis_Cloud_Top_Pressure_Total_Mean => null(),   & ! L3 MODIS retrieved cloud top pressure
+          modis_Liquid_Water_Path_Mean => null(),          & ! L3 MODIS retrieved liquid water path
+          modis_Ice_Water_Path_Mean => null()                ! L3 MODIS retrieved ice water path
      real(wp),pointer,dimension(:,:,:) ::  &
-          modis_Optical_Thickness_vs_Cloud_Top_Pressure, & ! Tau/Pressure joint histogram          			    
-          modis_Optical_Thickness_vs_ReffICE,            & ! Tau/ReffICE joint histogram
-          modis_Optical_Thickness_vs_ReffLIQ               ! Tau/ReffLIQ joint histogram
+          modis_Optical_Thickness_vs_Cloud_Top_Pressure => null(), & ! Tau/Pressure joint histogram          			    
+          modis_Optical_Thickness_vs_ReffICE => null(),            & ! Tau/ReffICE joint histogram
+          modis_Optical_Thickness_vs_ReffLIQ => null()               ! Tau/ReffLIQ joint histogram
 
      ! RTTOV outputs
      real(wp),pointer :: &
-          rttov_tbs(:,:) ! Brightness Temperature	    
+          rttov_tbs(:,:) => null() ! Brightness Temperature	    
      
   end type cosp_outputs
 
@@ -311,9 +311,7 @@ CONTAINS
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
     real(wp),dimension(:,:,:),allocatable :: &
        betamol_in,betamolFlip,pnormFlip,ze_totFlip
-    real(wp),dimension(20) :: cosp_time
 
-    call cpu_time(cosp_time(1))
     ! Initialize error reporting for output
     cosp_simulator(:)=''
 
@@ -479,10 +477,7 @@ CONTAINS
        Lradar_lidar_tcc    = .true.
        Llidar_only_freq_cloud = .true.
     endif
-    
-    call cpu_time(cosp_time(2))
-    if (debug) print*,'   Time to check outputs to see which simualtor to run:  ',cosp_time(2)-cosp_time(1)
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2b) Error Checking
     !     Enforce bounds on input fields. If input field is out-of-bounds, report error 
@@ -494,8 +489,6 @@ CONTAINS
                          Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
                          Lparasol_subcolumn,Lparasol_column,Lradar_lidar_tcc,            &
                          Llidar_only_freq_cloud,cospOUT,cosp_simulator,nError)
-    call cpu_time(cosp_time(3))
-    if (debug) print*,'   Time for cosp_errorCheck:                             ',cosp_time(3)-cosp_time(2)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -614,8 +607,6 @@ CONTAINS
        rttovIN%fl_rain    => cospgridIN%fl_rain
        rttovIN%fl_snow    => cospgridIN%fl_snow
     endif
-    call cpu_time(cosp_time(3))
-    if (debug) print*,'   Time to populate simulator imputs:                    ',cosp_time(3)-cosp_time(2)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4) Call subcolumn simulators
@@ -646,8 +637,6 @@ CONTAINS
           cospOUT%isccp_meantbclr(ij:ik) = isccp_meantbclr
        endif
    endif
-   call cpu_time(cosp_time(4))
-   if (debug) print*,'   Time to run isccp_subcolumn:                          ',cosp_time(4)-cosp_time(3)
 
    ! MISR subcolumn simulator
     if (Lmisr_subcolumn) then
@@ -664,8 +653,6 @@ CONTAINS
           cospOUT%misr_dist_model_layertops(ij:ik,:) = misr_dist_model_layertops
        endif
     endif
-   call cpu_time(cosp_time(5))
-   if (debug) print*,'   Time to run misr_subcolumn:                           ',cosp_time(5)-cosp_time(4)
 
     ! Calipso subcolumn simulator
     if (Lcalipso_subcolumn) then
@@ -689,8 +676,6 @@ CONTAINS
             cospOUT%calipso_betaperp_tot(ij:ik,:,:) = calipso_betaperp_tot
 
     endif
-   call cpu_time(cosp_time(6))
-   if (debug) print*,'   Time to run lidar_subcolumn:                          ',cosp_time(6)-cosp_time(5)
 
     ! PARASOL subcolumn simulator
     if (Lparasol_subcolumn) then
@@ -709,8 +694,6 @@ CONTAINS
           endif
        enddo
     endif    
-    call cpu_time(cosp_time(7))
-    if (debug) print*,'   Time to run parasol_subcolumn:                        ',cosp_time(7)-cosp_time(6)
 
     ! Cloudsat (quickbeam) subcolumn simulator
     if (Lcloudsat_subcolumn) then
@@ -728,9 +711,7 @@ CONTAINS
           cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1)
        endif
     endif
-    call cpu_time(cosp_time(8))
-    if (debug) print*,'   Time to run radar_subcolumn:                          ',cosp_time(8)-cosp_time(7)
-   
+
     if (Lmodis_subcolumn) then
        if(modisiN%nSunlit > 0) then 
           ! Allocate space for local variables
@@ -752,9 +733,6 @@ CONTAINS
           end do
        endif
     endif
-    call cpu_time(cosp_time(9))
-    if (debug) print*,'   Time to run modis_subcolum:                           ',cosp_time(9)-cosp_time(8)
-
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 5) Call column simulators
@@ -834,9 +812,7 @@ CONTAINS
           nullify(cospOUT%isccp_fq)
        endif
     endif
-    call cpu_time(cosp_time(10))
-    if (debug) print*,'   Time to run isccp_column:                             ',cosp_time(10)-cosp_time(9)
-
+    
     ! MISR
     if (Lmisr_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -875,8 +851,6 @@ CONTAINS
           nullify(cospOUT%misr_fq)
        endif
     endif
-    call cpu_time(cosp_time(11))
-    if (debug) print*,'   Time to run misr_column:                              ',cosp_time(11)-cosp_time(10)
     
     ! CALIPSO LIDAR Simulator
     if (Lcalipso_column) then
@@ -948,8 +922,6 @@ CONTAINS
           nullify(cospOUT%calipso_lidarcldtmp)
        endif
     endif
-    call cpu_time(cosp_time(12))
-    if (debug) print*,'   Time to run lidar_column:                             ',cosp_time(12)-cosp_time(11)
 
     ! PARASOL
     if (Lparasol_column) then
@@ -958,9 +930,7 @@ CONTAINS
                             cospOUT%parasolGrid_refl(ij:ik,:))
        if (allocated(parasolPix_refl)) deallocate(parasolPix_refl)
     endif
-    call cpu_time(cosp_time(13))
-    if (debug) print*,'   Time to run parasol_column:                           ',cosp_time(13)-cosp_time(12)
-    
+
     ! CLOUDSAT
     if (Lcloudsat_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
@@ -979,8 +949,6 @@ CONTAINS
           nullify(cospOUT%cloudsat_cfad_ze)
        endif
     endif
-    call cpu_time(cosp_time(14))
-    if (debug) print*,'   Time to run radar_column:                             ',cosp_time(14)-cosp_time(13)
 
     ! MODIS
     if (Lmodis_column) then
@@ -1207,9 +1175,7 @@ CONTAINS
        if (allocated(isccp_meantbclr))                 deallocate(isccp_meantbclr)
        if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
     endif
-    call cpu_time(cosp_time(15))
-    if (debug) print*,'   Time to run modis_column:                             ',cosp_time(15)-cosp_time(14)
-    
+
     ! RTTOV
     if (lrttov_column) then
        call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
@@ -1225,9 +1191,7 @@ CONTAINS
                          ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
                          ! rttovIN%fl_rain,rttovIN%fl_snow)
     endif
-    call cpu_time(cosp_time(16))
-    if (debug) print*,'   Time to run rttov_column:                             ',cosp_time(16)-cosp_time(15)
-    
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1286,10 +1250,45 @@ CONTAINS
        endif
 
     endif
-    call cpu_time(cosp_time(17))
-    if (debug) print*,'   Time to create joint products:                        ',cosp_time(17)-cosp_time(16)
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 7) Cleanup
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if (Lisccp_subcolumn .or. Lmodis_subcolumn) then
+       nullify(isccpIN%Npoints,isccpIN%Ncolumns,isccpIN%Nlevels,isccpIN%emsfc_lw,        &
+               isccpIN%skt,isccpIN%qv,isccpIN%at,isccpIN%frac_out,isccpIN%dtau,          &
+               isccpIN%dem,isccpIN%phalf,isccpIN%sunlit,isccpIN%pfull)
+    endif
     
-    ! Cleanup 
+    if (Lmisr_subcolumn) then
+       nullify(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,misrIN%sunlit,  &
+               misrIN%zfull,misrIN%at)
+    endif
+
+    if (Lcalipso_subcolumn) then
+       nullify(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels,calipsoIN%beta_mol,&
+               calipsoIN%betatot,calipsoIN%betatot_liq,calipsoIN%betatot_ice,            &
+               calipsoIN%tau_mol,calipsoIN%tautot,calipsoIN%tautot_liq,calipsoIN%tautot_ice)
+    endif
+    
+    if (Lparasol_subcolumn) then
+       nullify(parasolIN%Npoints,parasolIN%Nlevels,parasolIN%Ncolumns,parasolIN%Nrefl,   &
+            parasolIN%tautot_S_liq,parasolIN%tautot_S_ice)
+    endif
+    
+    if (Lcloudsat_subcolumn) then
+       nullify(cloudsatIN%Npoints,cloudsatIN%Nlevels,cloudsatIN%Ncolumns,cloudsatIN%rcfg,&
+               cloudsatIN%kr_vol,cloudsatIN%g_vol,cloudsatIN%z_vol,cloudsatIN%hgt_matrix)
+    endif
+
+    if (Lmodis_subcolumn) then
+       nullify(modisIN%Npoints,modisIN%Ncolumns,modisIN%Nlevels,modisIN%tau,modisIN%g,   &
+               modisIN%liqFrac,modisIN%w0)
+       if (allocated(modisIN%sunlit))    deallocate(modisIN%sunlit)
+       if (allocated(modisIN%notSunlit)) deallocate(modisIN%notSunlit)
+       if (allocated(modisIN%pres))      deallocate(modisIN%pres)
+    endif
+
     if (allocated(calipso_beta_tot))      deallocate(calipso_beta_tot)
     if (allocated(calipso_beta_mol))      deallocate(calipso_beta_mol)
     if (allocated(calipso_betaperp_tot))  deallocate(calipso_betaperp_tot)
@@ -1385,39 +1384,6 @@ CONTAINS
     if (Lcalipso) call cosp_calipso_init()
     if (Lparasol) call cosp_parasol_init()
 
-    ! Set all output diagnostics as disassociated.
-    nullify(cospOUT%calipso_betaperp_tot,cospOUT%calipso_beta_tot,                       &
-            cospOUT%calipso_tau_tot,cospOUT%calipso_lidarcldphase,                       &
-            cospOUT%calipso_cldlayerphase,cospOUT%calipso_lidarcldtmp,                   &
-            cospOUT%calipso_cfad_sr,cospOUT%calipso_lidarcld,cospOUT%calipso_cldlayer,   &
-            cospOUT%calipso_beta_mol,cospOUT%calipso_temp_tot,cospOUT%calipso_srbval,    &          
-            cospOUT%parasolPix_refl,cospOUT%parasolGrid_refl,cospOUT%cloudsat_Ze_tot,    &   
-            cospOUT%cloudsat_cfad_ze,cospOUT%lidar_only_freq_cloud,                      &
-            cospOUT%radar_lidar_tcc,cospOUT%isccp_totalcldarea,cospOUT%isccp_meantb,     &
-            cospOUT%isccp_meantbclr,cospOUT%isccp_meanptop,cospOUT%isccp_meantaucld,     &
-            cospOUT%isccp_meanalbedocld,cospOUT%isccp_boxtau,cospOUT%isccp_boxptop,      &
-            cospOUT%isccp_fq,cospOUT%misr_fq,cospOUT%misr_dist_model_layertops,          &
-            cospOUT%misr_meanztop,cospOUT%misr_cldarea,                                  &
-            cospOUT%modis_Cloud_Fraction_Total_Mean,                                     &
-            cospOUT%modis_Cloud_Fraction_Water_Mean,                                     &
-            cospOUT%modis_Cloud_Fraction_Ice_Mean,                                       &
-            cospOUT%modis_Cloud_Fraction_High_Mean,                                      &
-            cospOUT%modis_Cloud_Fraction_Mid_Mean,                                       &
-            cospOUT%modis_Cloud_Fraction_Low_Mean,                                       &
-            cospOUT%modis_Optical_Thickness_Total_Mean,                                  &
-            cospOUT%modis_Optical_Thickness_Water_Mean,                                  &
-            cospOUT%modis_Optical_Thickness_Ice_Mean,                                    &
-            cospOUT%modis_Optical_Thickness_Total_LogMean,                               &
-            cospOUT%modis_Optical_Thickness_Water_LogMean,                               &
-            cospOUT%modis_Optical_Thickness_Ice_LogMean,                                 &
-            cospOUT%modis_Cloud_Particle_Size_Water_Mean,                                &
-            cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                                  &
-            cospOUT%modis_Cloud_Top_Pressure_Total_Mean,                                 &
-            cospOUT%modis_Liquid_Water_Path_Mean,cospOUT%modis_Ice_Water_Path_Mean,      &
-            cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure,                       &	    
-            cospOUT%modis_Optical_Thickness_vs_ReffICE,                                  &
-            cospOUT%modis_Optical_Thickness_vs_ReffLIQ,cospOUT%rttov_tbs)	    
-    
     linitialization = .FALSE.
   END SUBROUTINE COSP_INIT
 
