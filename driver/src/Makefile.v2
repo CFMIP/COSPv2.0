@@ -95,7 +95,7 @@ clean_all:
 	rm -f $(PROG) $(OBJ_PATH)/*.o $(OBJ_PATH)/*.mod *.o *.mod fort.*
 
 clean:	
-	rm -f $(PROG) *.o *.mod fort.*
+	rm -f $(PROG) *.o *.mod fort.* obj/*
 
 cosp:
 	make -C ../../src/ install
