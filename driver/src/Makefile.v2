@@ -6,6 +6,7 @@
 F90      = ifort
 F90FLAGS = -O3 -traceback#-fpp -traceback #-check all
 F90_LIB  = /usr/local/ifort
+F90_LIB   = /scratch/bmcinnes/usr/local/ifort
 # Portland Group (pgf90)
 #F90      = pgf90
 #F90FLAGS = -Mpreprocess -O0 -g
