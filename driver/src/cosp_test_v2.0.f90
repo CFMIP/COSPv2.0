@@ -703,6 +703,12 @@ contains
        ! Convert the subcolumn mixing ratio and precipitation fluxes from gridbox mean
        ! values to fraction-based values. 
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       ! Initialize
+       fl_lsrain(:,:) = 0._wp
+       fl_lssnow(:,:) = 0._wp
+       fl_lsgrpl(:,:) = 0._wp
+       fl_ccrain(:,:) = 0._wp
+       fl_ccsnow(:,:) = 0._wp
        do k=1,nLevels
           do j=1,nPoints
              ! In-cloud mixing ratios.
