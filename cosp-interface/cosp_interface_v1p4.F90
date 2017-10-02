@@ -952,8 +952,8 @@ contains
        allocate(rngs(Npoints),seed(Npoints))
        seed(:)=0
        seed = int(gbx%psfc)  ! In case of Npoints=1
-       if (Npoints .gt. 1) seed=int((gbx%psfc(start_idx:end_idx)-minval(gbx%psfc))/      &
-            (maxval(gbx%psfc)-minval(gbx%psfc))*100000) + 1
+       if (Npoints .gt. 1) seed=int((gbx%psfc(start_idx:end_idx)-minval(gbx%psfc(start_idx:end_idx)))/      &
+            (maxval(gbx%psfc(start_idx:end_idx))-minval(gbx%psfc(start_idx:end_idx)))*100000) + 1
        call init_rng(rngs, seed)  
 
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

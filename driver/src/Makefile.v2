@@ -92,7 +92,7 @@ clean_objs:
 	rm -f $(OBJ_PATH) *.mod *.o
 
 clean_all:	
-	rm -f $(PROG) $(OBJ_PATH)/*.o $(OBJ_PATH)/*.mod *.o *.mod fort.*
+	rm -f $(PROG) $(OBJ_PATH)/*.o $(OBJ_PATH)/*.mod *.o *.mod fort.* obj/*
 
 clean:	
 	rm -f $(PROG) *.o *.mod fort.* obj/*
