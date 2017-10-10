@@ -207,7 +207,7 @@ contains
           frac_out(1:npoints,ibox,ilev) = merge(1,0,tca(1:npoints,ilev).gt.threshold(1:npoints,ibox))
           
           ! Code to partition boxes into startiform and convective parts goes here
-          where(threshold(1:npoints,ibox).le.conv(1:npoints,ilev)) frac_out(1:npoints,ibox,ilev)=2
+          where(threshold(1:npoints,ibox).le.conv(1:npoints,ilev) .and. conv(1:npoints,ilev).gt.0.) frac_out(1:npoints,ibox,ilev)=2
        ENDDO ! ibox
        
        
