@@ -585,7 +585,7 @@ contains
     type(cosp_gridbox),intent(inout),target :: gbx ! COSP gridbox type from v1.4
                                                           ! Shares memory with new type
  
-    ! Outputs from cosp_interface_v1p5
+    ! Outputs from COSP2
     type(cosp_outputs),target :: cospOUT  ! NEW derived type output that contains all 
     					                  ! simulator information
     ! Local variables
@@ -855,7 +855,7 @@ contains
     
     ! Cloudsat             
     if (cfg%Lradar_sim) then
-       ! *NOTE* In COSPv1.5 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
+       ! *NOTE* In COSP2 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.    
        if (cfg%Ldbze94) then
           sgradar%Ze_tot = cospOUT%cloudsat_Ze_tot!(:,:,sgradar%Nlevels:1:-1)  

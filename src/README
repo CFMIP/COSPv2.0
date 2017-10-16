@@ -1,40 +1,31 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
-dustin.swales@noaa.gov
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (dustin.swales@noaa.gov) 2017
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Overview:
-This directory contains the main cosp engine (ie. the piece of code
-that calls the individual simulators), configuration information and
-code common across simulators.
+This directory contains version 2.0 of the Cloud Feedback Model Intercomparison Project
+Observational Simulator Package (COSP2)
 
-Contents:
+Directory contents:
 cosp.f90: Contains the following subroutines and derived types:
  *) type(cosp_grid_inputs)  - COSP inputs directly from model state
  *) type(cosp_inputs)       - COSP inputs derived from model state (optics)
  *) type(cosp_outputs)      - COSP outputs
  *) cosp_simulator          - Main cosp engine
  *) cosp_init               - COSP Initialization 
- *) construct_cospIN        - Allocates derived (optical) inputs to COSP
- *) construct_cospstateIN   - Allocates model field inputs to COSP
- *) construct_cosp_outsputs - Allocates COSP outputs
- *) destroy_cospIN          - Deallocates derived (optical) inputs to COSP
- *) destroy_cospstateIN     - Deallocates model field inputs to COSP
- *) destroy_cosp_outputs    - Deallocates COSP outputs.
  *) cosp_errorCheck         - Error checking for inputs
-cosp_config.f90: Configuration information needed by BOTH the model/testcode
-                 and the individual simulators is declared here
-		 (ie. histogram bin boundaries)
-cosp_stats.f90:  Contains statistical subroutines used by multiple
-                 simulators (ie. Joint-histogram computation)
+cosp_config.F90: Configuration information needed by the host model and COSP
+                 (e.g. joint-histogram bin boundaries)
+cosp_stats.F90:  Contains statistical subroutines used by multiple simulators
+                 (e.g. Joint-histogram computation)
 
 Subdirectories:
-simulators/: Contains interfaces between COSP and the simulators, in
-             addition to the individual simulators.
-rng/:        Contains code to generate random numbers.
-optics/:     Contains code for computing the derived optical fields from
-             the model state. Called by subsample_and_optics in example
-	     interfaces.
-hooks/:      Contains code that is used by all of COSP
-subcol/:     Contains code used to generate sub-columns 
- 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+simulators/: Contains the instrument simulators, along with interfaces between COSP and each
+             of the individual instrument simulators.
+rng/:        Contains sample code to generate random numbers.
+optics/:     Contains sample code for computing the derived optical fields from the model
+             state. In the examples provided with COSP2, these routines are called within the
+	     subsample_and_optics 
+hooks/:      Contains information (e.g. physical constants) shared thourghout all of COSP2.
+subcol/:     Contains sample code used to generate sub-columns (SCOPS and PREC_SCOPS). 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

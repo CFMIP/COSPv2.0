@@ -1,19 +1,13 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
-dustin.swales@noaa.gov
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (dustin.swales@noaa.gov) 2017
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Overview:
-This directory contains codes that act as interfaces between the host
-model (or testing codes) and COSP.
+This directory contains an interface between COSP1 and COSP2. This allows to call COSP2 just
+as COSP1 (e.g. Used for inline drop in replacement of COSP1 with COSP2).
 
 Contents:
-cosp_interface_v1p4.f90: Interface between COSPv1.4.0 and model/test.
-                         It should be noted that the core of COSP is
-			 v1.5.0 and this interface is essentially a
-			 wrapper around v1.5.0. This is done to
-			 preserve backward capability with v1.4.0.
-cosp_interface_v1p5.f90: Interface between COSPv1.5.0 and model/test.
-cosp_defs.h: Pre-processing file that contains the microphysical
-             scheme used by the radar simulator, quickbeam.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cosp_interface_v1p4.f90: Interface between COSP1 and COSP2
+cosp_defs.h:             Pre-processing file that contains the microphysical scheme used by
+                         the radar simulator, quickbeam.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

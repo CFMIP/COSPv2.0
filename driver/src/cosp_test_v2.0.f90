@@ -190,8 +190,6 @@ program cosp_test_v2
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov
 
   ! Local variables
-  character(len=32),parameter :: &
-       cospvID = 'COSP v1.5'        ! COSP version I
   logical :: &
        lsingle   = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
        ldouble   = .false., & ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme

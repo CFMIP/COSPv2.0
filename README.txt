@@ -1,26 +1,25 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (dustin.swales@noaa.gov) 2016
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 General notes:
 vN.N is version number (e.g. v2.0)
 We will assume that the software will be installed in ~/cosp.
 
-Written by Dustin Swales (dustin.swales@noaa.gov) 2016
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 1) ABOUT THE CODE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The CFMIP Observation Simulator Package (COSP) takes the models representation of the
 atmosphere and simulates the retrievals for several passive (ISCCP, MISR and MODIS) and active
-(radar and lidar) sensors.
+(CLUDSAT(radar) and CALIPSO(lidar)) sensors.
 
 COSP Version 2.0 (COSPv2.0) is a major reorganization and modernization of the previous
-generation. Some of the major differences between v2.0 and previous versions of COSP (i.e.
-v1.3.2 and v1.4.0) are...
+generation. Some of the major differences between v2.0 and previous versions of COSP (e.g.
+1.4.0) are...
 *) COSPv2.0 now expects subcolumn inputs. In previous versions, the subclumns were drawn
-   internally by COSP and were provided as an output. 
-*) Many calculations that were internal to COSPv1.4.0 are no longer part of COSPv2.0, but rather
-   it's the responsibilty of the user to provide these fields to COSP. The fields in question
-   are optical quantities derived from the model state (i.e. 0.67micron optical depth). Having
-   these calculations done outside of COSP allows simulators to share common inputs. Code is
-   provided to calculate the necessary optical inputs from the model state, which makes this
-   step transparent, but allows flexibility if necessary. 
+   internally by COSP and provided as an output. In COSP2, we provide the resources to
+   calculate subcolumn optical-inputs as were done in previous versions of COSP, however we
+   encourage users to provide COSP with as much information about the host-model as possible.
 *) Explicit initialization of static fields
 *) Paramaterized working precision.
 
@@ -111,20 +110,20 @@ a) Compilation
       *) NetCDF4 (http://www.unidata.ucar.edu/software/netcdf/)
       *) CMOR2 (www2-pcmdi.llnl.gov/cmor/download/)
 
-      The drivers are located at COSPv2.0/driver/src/ and you need to build the main COSP code
-      BEFORE building the drivers.
+      The drivers are located at driver/src/
+      You need to build the main COSP code prior to building the drivers.
         cd driver/src
         make -f Makefile.v1.4 cosp     ! Build COSP source code
         make -f Makefile.v1.4          ! Build driver for COSP (v1.4.0)
-      This will make the executable cosp_test_v2.0	
+      This will make the executable cosp_test_v1.4	
                OR
         make -f Makefile.v2.0 cosp     ! Build COSP source code (same for both v1.4 and v2.0)
         make -f Makefile.v2.0          ! Build driver for COSP (v2.0)
-      This will make the executable cosp_test_v1.4
+      This will make the executable cosp_test_v2.0
       For a detailed description of the two drivers, see the user documentation.
       
    *) COSP source code ONLY.
-      The main COSP source code is located at COSPv2.0/src/. The Makefile will need to be
+      The main COSP source code is located in src/. The Makefile will need to be
       modified to fit your systems architecture.
         cd src/
         make clean
@@ -132,7 +131,7 @@ a) Compilation
       This will create all of the object files and modules needed to call COSP.
       
 b) Running
-   i)  Set up input (driver/src/cosp_input_nl.vXX.txt) and output (driver/src/cosp_output_nl_vXX.txt)
+   i)  Set up COSP input (driver/src/cosp_input_nl.vXX.txt) and output (driver/src/cosp_output_nl_vXX.txt)
        namelists, where XX is either 1.4 or 2.0. The input namelist controls the COSP setup
        (i.e. Numebr of subcolumns to be used, etc...) and simulator specific information
        (i.e. Radar simulator frequency). The output namelist contains a list of logicals, one
