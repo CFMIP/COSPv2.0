@@ -1,28 +1,27 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
-dustin.swales@noaa.gov
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (dustin.swales@noaa.gov) 2017
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Overview:
-This directory contains source code to test COSP.
-There are two codes here demonstrating teo different ways to call COSP:
-1) Call to COSPv1.4 (cosp_test_v1.4.f90)
-   This driver makes use of the derived types and subroutines used in
-   COSPv1.4and maps them to v2.0 input/output structures. This allows
-   the user to call COSP v2.0 the same way as v1.4. This driver
-   can be thought of as a COSPv1.4 wrapper around COSPv2.0.
+This directory contains example code on how to call COSP2. Provided are two interfaces, both
+demonstrating different ways to call COSP2:
+
+1) COSPv1.4 Interface (cosp_test_v1.4.f90)
+   This driver makes use of the derived types and subroutines used in COSP1 and maps them
+   onto COSP2 input/output structures. This allows the user to call COSP2 just as COSP1.
+   Essentially, this driver can be thought of as a COSP1 wrapper around COSP2.
    *) cosp_test_v1.4.f90      - Main driver code
    *) cosp_io.v1.4.f90        - Input/output module for offline code
    *) cosp_input_nl.v1.4.txt  - Input namelist 
    *) cosp_output_nl.v1.4.txt - Output namelist
    *) Makefile.v1.4           - Makefile
    *) cosp_defs.h             - File needed for preprocessing
-2) Call to COSPv2.0 (cosp_test_v2.0.f90)
-   The call to COSPv2.0 requires the user to provide more fileds than
-   in v1.4.0 (i.e. optical inputs). Many of the optical calculations
-   in v1.4.0 were part of the simulators, but in v2.0 it is the users
-   responsibility to provide these to COSP. In this driver there are
-   examples of how to compute these optical fields needed by COSP,
-   which are then passed to COSP.
+   
+2) COSPv2.0 (cosp_test_v2.0.f90)
+   This driver illustrates how to directly call COSP2. However, it should be noted that in
+   this example, the same microphysics assumed in COSP1 are used here (e.g. SCOPS is used to
+   draw subcolumns). We encourage users to provide COSP2 with as much information from the
+   host-model as possible.
    *) cosp_test_v2.0.f90      - Main driver code
    *) cosp_io.v2.0.f90        - Input/output module for offline code
    *) cosp_input_nl.v2.0.txt  - Input namelist
@@ -30,17 +29,12 @@ There are two codes here demonstrating teo different ways to call COSP:
    *) Makefile.v2.0           - Makefile
 
 *NOTE*
-These makefiles build the interface to COSP, not COSP itself. Be sure
-to build build the COSPv2.0 source code BEFORE building the interface.
-To build COSPv2.0 from this directory:
+These makefiles build the interface to COSP, not COSP itself. Be sure to build build the
+COSP2 source code BEFORE building the interface.
+To build COSP2 from this directory:
    make -f Makefile.v1.4 cosp
             OR
    make -f Makefile.v2.0 cosp
-You can also build COSPv2.0 in the src/ directory:
+You can also build COSP2 in the src/ directory:
    make install
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

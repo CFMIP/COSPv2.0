@@ -1,17 +1,15 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
-dustin.swales@noaa.gov
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (dustin.swales@noaa.gov) 2017
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Overview: This directory contains codes that tie COSP to the host model,
-          or the testing code.
+Overview:
+This directory contains code that is specific to the host-model. This is where you:
+   *) Set working types used COSP.
+   *) Set physical and mathematical constants used in COSP.
+   *) Handle error reporting.
 
 Contents:
-cosp_constants.f90: Physical and mathematical constants used within COSP
-cosp_kinds.f90: Type(s) used within COSP.
+cosp_constants.f90:     Physical and mathematical constants used within COSP
+cosp_kinds.f90:         Type(s) used within COSP.
 cosp_errorHandling.f90: Controls error reporting.
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

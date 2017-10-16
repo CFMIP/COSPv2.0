@@ -1,18 +1,17 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (University of Colorado/NOAA-ESRL-PSD)
-dustin.swales@noaa.gov
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Written by Dustin Swales (dustin.swales@noaa.gov) 2017
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Overview: This directory contains codes that interface between COSP
-          and the instrument simulators.
+Overview: This directory contains codes that interface between COSP and the instrument simulators.
 
 Contents:
-cosp_calipso_interface.f90
-cosp_cloudsat_interface.f90
-cosp_isccp_interface.f90
-cosp_misr_interface.f90
-cosp_modis_interface.f90
-cosp_parasol_interface.f90
-cosp_rttov_interface.f90
+cosp_calipso_interface.F90
+cosp_cloudsat_interface.F90
+cosp_isccp_interface.F90
+cosp_misr_interface.F90
+cosp_modis_interface.F90
+cosp_parasol_interface.F90
+cosp_rttov_interface.F90
 
 Subdirectories:     
 actsim/:               LIDAR simulator source code
@@ -21,7 +20,5 @@ MISR_simulator/:       MISR simulator source code
 MODIS_simulator/:      MODIS simulator source code
 parasol/:              PARASOL simulator source code
 quickbeam/:            RADAR simulator source code
-rttov/:                RTTOV simulator
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+rttov/:                RTTOV simulator interface (RTTOV source NOT distributed with COSP!)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
