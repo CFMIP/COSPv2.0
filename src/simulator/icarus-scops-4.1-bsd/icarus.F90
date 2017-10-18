@@ -574,8 +574,13 @@ contains
           totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin))/ncol
              
           ! Subcolumn cloud albedo
-          albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
-               0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+          !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
+          !     0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+          where(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+             albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
+          elsewhere
+             albedocld(j,1:ncol) = 0._wp
+          endwhere
           
           ! Column cloud albedo
           meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
@@ -586,12 +591,21 @@ contains
     enddo
     
     ! Compute mean cloud properties. Set to mssing value in the event that totalcldarea=0
-    meanptop(1:npoints)      = merge(100._wp*meanptop(1:npoints)/totalcldarea(1:npoints),&
-                                     output_missing_value,totalcldarea(1:npoints) .gt. 0)
-    meanalbedocld(1:npoints) = merge(meanalbedocld(1:npoints)/totalcldarea(1:npoints), &
-                                     output_missing_value,totalcldarea(1:npoints) .gt. 0)
-    meantaucld(1:npoints)    = merge((6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp), &
-                                     output_missing_value,totalcldarea(1:npoints) .gt. 0)
+    where(totalcldarea(1:npoints) .gt. 0)
+       meanptop(1:npoints)      = 100._wp*meanptop(1:npoints)/totalcldarea(1:npoints)
+       meanalbedocld(1:npoints) = meanalbedocld(1:npoints)/totalcldarea(1:npoints)
+       meantaucld(1:npoints)    = (6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp)
+    elsewhere
+       meanptop(1:nPoints)      = output_missing_value
+       meanalbedocld(1:nPoints) = output_missing_value
+       meantaucld(1:nPoints)    = output_missing_value
+    endwhere
+    !meanptop(1:npoints)      = merge(100._wp*meanptop(1:npoints)/totalcldarea(1:npoints),&
+    !                                 output_missing_value,totalcldarea(1:npoints) .gt. 0)
+    !meanalbedocld(1:npoints) = merge(meanalbedocld(1:npoints)/totalcldarea(1:npoints), &
+    !                                 output_missing_value,totalcldarea(1:npoints) .gt. 0)
+    !meantaucld(1:npoints)    = merge((6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp), &
+    !                                 output_missing_value,totalcldarea(1:npoints) .gt. 0)
 
     ! Represent in percent
     where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp
