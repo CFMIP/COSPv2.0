@@ -319,47 +319,45 @@ contains
     ! ########################################################################################
     ! Compute column amounts.
     ! ########################################################################################
-
     where(Cloud_Fraction_Total_Mean(1:nPoints) > 0)
        Optical_Thickness_Total_Mean(1:nPoints) = sum(optical_thickness, mask = cloudMask,      dim = 2) / &
             Cloud_Fraction_Total_Mean(1:nPoints)
+       Optical_Thickness_Total_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = cloudMask, &
+            dim = 2) / Cloud_Fraction_Total_Mean(1:nPoints)
+    elsewhere
+       Optical_Thickness_Total_Mean      = 0._wp
+       Optical_Thickness_Total_MeanLog10 = 0._wp
     endwhere
     where(Cloud_Fraction_Water_Mean(1:nPoints) > 0)
        Optical_Thickness_Water_Mean(1:nPoints) = sum(optical_thickness, mask = waterCloudMask, dim = 2) / &
             Cloud_Fraction_Water_Mean(1:nPoints)
+       Liquid_Water_Path_Mean(1:nPoints) = LWP_conversion*sum(particle_size*optical_thickness, &
+            mask=waterCloudMask,dim=2)/Cloud_Fraction_Water_Mean(1:nPoints)
+       Optical_Thickness_Water_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = waterCloudMask,&
+            dim = 2) / Cloud_Fraction_Water_Mean(1:nPoints)
+       Cloud_Particle_Size_Water_Mean(1:nPoints) = sum(particle_size, mask = waterCloudMask, dim = 2) / &
+            Cloud_Fraction_Water_Mean(1:nPoints)
+    elsewhere
+       Optical_Thickness_Water_Mean      = 0._wp
+       Optical_Thickness_Water_MeanLog10 = 0._wp
+       Cloud_Particle_Size_Water_Mean    = 0._wp
+       Liquid_Water_Path_Mean            = 0._wp
     endwhere
     where(Cloud_Fraction_Ice_Mean(1:nPoints) > 0)
        Optical_Thickness_Ice_Mean(1:nPoints)   = sum(optical_thickness, mask = iceCloudMask,   dim = 2) / &
             Cloud_Fraction_Ice_Mean(1:nPoints)
-    endwhere
-    where(Cloud_Fraction_Total_Mean(1:nPoints) > 0)
-       Optical_Thickness_Total_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = cloudMask, &
-            dim = 2) / Cloud_Fraction_Total_Mean(1:nPoints)
-    endwhere
-    where(Cloud_Fraction_Water_Mean(1:nPoints) > 0)
-       Optical_Thickness_Water_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = waterCloudMask,&
-            dim = 2) / Cloud_Fraction_Water_Mean(1:nPoints)
-    endwhere
-    where(Cloud_Fraction_Ice_Mean(1:nPoints) > 0)
+       Ice_Water_Path_Mean(1:nPoints) = LWP_conversion * ice_density*sum(particle_size*optical_thickness,&
+            mask=iceCloudMask,dim = 2) /Cloud_Fraction_Ice_Mean(1:nPoints) 
        Optical_Thickness_Ice_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = iceCloudMask,&
             dim = 2) / Cloud_Fraction_Ice_Mean(1:nPoints)
-    endwhere
-    where(Cloud_Fraction_Water_Mean(1:nPoints) > 0)
-       Cloud_Particle_Size_Water_Mean(1:nPoints) = sum(particle_size, mask = waterCloudMask, dim = 2) / &
-            Cloud_Fraction_Water_Mean(1:nPoints)
-    endwhere
-    where(Cloud_Fraction_Ice_Mean(1:nPoints) > 0)
        Cloud_Particle_Size_Ice_Mean(1:nPoints) = sum(particle_size, mask = iceCloudMask,   dim = 2) / &
-            Cloud_Fraction_Ice_Mean(1:nPoints)
+            Cloud_Fraction_Ice_Mean(1:nPoints)    
+    elsewhere
+       Optical_Thickness_Ice_Mean        = 0._wp
+       Optical_Thickness_Ice_MeanLog10   = 0._wp
+       Cloud_Particle_Size_Ice_Mean      = 0._wp
+       Ice_Water_Path_Mean               = 0._wp
     endwhere
-    Cloud_Top_Pressure_Total_Mean(1:nPoints) = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
-         max(1, count(cloudMask, dim = 2))
-    Liquid_Water_Path_Mean(1:nPoints) = LWP_conversion*sum(particle_size*optical_thickness, &
-         mask=waterCloudMask,dim=2)/Cloud_Fraction_Water_Mean(1:nPoints)
-    Ice_Water_Path_Mean(1:nPoints) = LWP_conversion * ice_density*sum(particle_size*optical_thickness,&
-         mask=iceCloudMask,dim = 2) /Cloud_Fraction_Ice_Mean(1:nPoints)    
-    
-    ! Cloud-top pressure
     Cloud_Top_Pressure_Total_Mean  = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
                                      max(1, count(cloudMask, dim = 2))
 
@@ -372,30 +370,6 @@ contains
     Cloud_Fraction_Total_Mean(1:nPoints) = Cloud_Fraction_Total_Mean(1:nPoints) /nSubcols
     Cloud_Fraction_Ice_Mean(1:nPoints)   = Cloud_Fraction_Ice_Mean(1:nPoints)   /nSubcols
     Cloud_Fraction_Water_Mean(1:nPoints) = Cloud_Fraction_Water_Mean(1:nPoints) /nSubcols
-    
-    ! ########################################################################################
-    ! Set clear-scenes to undefined
-    ! ########################################################################################
-    where (Cloud_Fraction_Total_Mean == 0)
-       Optical_Thickness_Total_Mean      = R_UNDEF
-       Optical_Thickness_Total_MeanLog10 = R_UNDEF
-       Cloud_Top_Pressure_Total_Mean     = R_UNDEF
-    endwhere
-    where (Cloud_Fraction_Water_Mean == 0)
-       Optical_Thickness_Water_Mean      = R_UNDEF
-       Optical_Thickness_Water_MeanLog10 = R_UNDEF
-       Cloud_Particle_Size_Water_Mean    = R_UNDEF
-       Liquid_Water_Path_Mean            = R_UNDEF
-    endwhere
-    where (Cloud_Fraction_Ice_Mean == 0)
-       Optical_Thickness_Ice_Mean        = R_UNDEF
-       Optical_Thickness_Ice_MeanLog10   = R_UNDEF
-       Cloud_Particle_Size_Ice_Mean      = R_UNDEF
-       Ice_Water_Path_Mean               = R_UNDEF
-    endwhere
-    where (Cloud_Fraction_High_Mean == 0)  Cloud_Fraction_High_Mean = R_UNDEF
-    where (Cloud_Fraction_Mid_Mean == 0)   Cloud_Fraction_Mid_Mean = R_UNDEF
-    where (Cloud_Fraction_Low_Mean == 0)   Cloud_Fraction_Low_Mean = R_UNDEF
     
     ! ########################################################################################
     ! Joint histograms
@@ -781,6 +755,7 @@ contains
       ! Conservative scattering
       if (beam == 1) then
           rh = (gamma1*tau+(gamma3-gamma1*xmu)*(1-exp(-tau/xmu)))
+  
           ref = rh / (1._wp + gamma1 * tau)
           tra = 1._wp - ref       
       else if(beam == 2) then
@@ -807,7 +782,7 @@ contains
       t5 = r5
 
       beta = -r5 / r4         
-      
+  
       e1 = min(rk * tau, 500._wp) 
       e2 = min(tau / xmu, 500._wp) 
       
