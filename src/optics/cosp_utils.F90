@@ -63,23 +63,23 @@ SUBROUTINE COSP_PRECIP_MXRATIO(Npoints,Nlevels,Ncolumns,p,T,prec_frac,prec_type,
     mxratio = 0.0
 
     if (n_ax >= 0.0) then ! N_ax is used to control which hydrometeors need to be computed
-        xi      = d_x/(alpha_x + b_x - n_bx + 1.0)
-        rho0    = 1.29
+        xi      = d_x/(alpha_x + b_x - n_bx + 1._wp)
+        rho0    = 1.29_wp
         sigma   = (gamma2/(gamma1*c_x))*(n_ax*a_x*gamma2)**xi
-        one_over_xip1 = 1.0/(xi + 1.0)
-        gamma_4_3_2 = 0.5*gamma4/gamma3
-        delta = (alpha_x + b_x + d_x - n_bx + 1.0)
+        one_over_xip1 = 1._wp/(xi + 1._wp)
+        gamma_4_3_2 = 0.5_wp*gamma4/gamma3
+        delta = (alpha_x + b_x + d_x - n_bx + 1._wp)
         
         do k=1,Nlevels
             do j=1,Ncolumns
                 do i=1,Npoints
                     if ((prec_frac(i,j,k)==prec_type).or.(prec_frac(i,j,k)==3.)) then
-                        rho = p(i,k)/(287.05*T(i,k))
+                        rho = p(i,k)/(287.05_wp*T(i,k))
                         mxratio(i,j,k)=(flux(i,k)*((rho/rho0)**g_x)*sigma)**one_over_xip1
                         mxratio(i,j,k)=mxratio(i,j,k)/rho
                         ! Compute effective radius
-                        if ((reff(i,j,k) <= 0.0).and.(flux(i,k) /= 0.0)) then
-                           lambda_x = (a_x*c_x*((rho0/rho)**g_x)*n_ax*gamma1/flux(i,k))**(1./delta)
+                        if ((reff(i,j,k) <= 0._wp).and.(flux(i,k) /= 0._wp)) then
+                           lambda_x = (a_x*c_x*((rho0/rho)**g_x)*n_ax*gamma1/flux(i,k))**(1._wp/delta)
                            reff(i,j,k) = gamma_4_3_2/lambda_x
                         endif
                     endif
