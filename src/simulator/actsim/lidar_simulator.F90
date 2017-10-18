@@ -219,14 +219,16 @@ contains
           WHERE (pnorm(1:npoints,icol,k) .eq. 0)
              pnorm_perp_tot(1:npoints,icol,k)=0._wp
           ELSEWHERE
-             pnorm_perp_tot(1:npoints,icol,k) = merge((beta_perp_ice(1:npoints,icol,k)+  &
-                  beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/   &
-                  0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))/                   &
-                  (2._wp*tautot_lay(1:npoints))*                                         &
-                  (1._wp-EXP(-2._wp*tautot_lay(1:npoints))),                             &
-                  (beta_perp_ice(1:npoints,icol,k)+beta_perp_liq(1:npoints,icol,k)-      &
-                  (beta_mol(1:npoints,k)/(1._wp+1._wp/0.0284_wp)))*                      &
-                  EXP(-2._wp*tautot(1:npoints,icol,k-1)),tautot_lay(1:npoints) .gt. 0.)
+             where(tautot_lay(1:npoints) .gt. 0.)
+                pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
+                   beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
+                   0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))/                  &
+                   (2._wp*tautot_lay(1:npoints))* (1._wp-EXP(-2._wp*tautot_lay(1:npoints)))
+             elsewhere
+                pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
+                   beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
+                   0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))
+             endwhere 
           ENDWHERE
        END DO
     enddo
