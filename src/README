@@ -7,7 +7,6 @@ This directory contains version 2.0 of the Cloud Feedback Model Intercomparison 
 Observational Simulator Package (COSP2)
 
 Directory contents:
-cosp/
 cosp.f90: Contains the following subroutines and derived types:
  *) type(cosp_grid_inputs)  - COSP inputs directly from model state
  *) type(cosp_inputs)       - COSP inputs derived from model state (optics)
