@@ -19,7 +19,7 @@ OBJ_PATH = ../obj/
 INC      = /usr/local/include
 LIB      = /usr/local/lib
 # Simulator directories
-SIM_PATH     = cosp/simulator
+SIM_PATH     = simulator
 RT_PATH      = $(SIM_PATH)/rttov
 RS_PATH      = $(SIM_PATH)/quickbeam
 CS_PATH      = $(SIM_PATH)/actsim
@@ -93,7 +93,7 @@ MISR_simulator.o : $(MISR_PATH)/MISR_simulator.F90
 modis_simulator.o : $(MODIS_PATH)/modis_simulator.F90 
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_rttov_interfaceSTUB.o : cosp/simulator/cosp_rttov_interfaceSTUB.F90
+cosp_rttov_interfaceSTUB.o : simulator/cosp_rttov_interfaceSTUB.F90
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
 cosp_rttovSTUB.o : $(RT_PATH)/cosp_rttovSTUB.F90 
@@ -114,11 +114,11 @@ cosp_kinds.o : hooks/cosp_kinds.F90
 mo_rng.o : subcol/rng/mo_rng.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_config.o :  cosp/cosp_config.F90
+cosp_config.o :  cosp_config.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp.o :  cosp/cosp.F90
+cosp.o :  cosp.F90
 	$(F90) $(F90FLAGS) -c $<
 
-cosp_stats.o :  cosp/cosp_stats.F90
+cosp_stats.o :  cosp_stats.F90
 	$(F90) $(F90FLAGS) -c $<
