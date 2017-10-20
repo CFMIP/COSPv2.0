@@ -7,6 +7,7 @@ This directory contains version 2.0 of the Cloud Feedback Model Intercomparison 
 Observational Simulator Package (COSP2)
 
 Directory contents:
+cosp/
 cosp.f90: Contains the following subroutines and derived types:
  *) type(cosp_grid_inputs)  - COSP inputs directly from model state
  *) type(cosp_inputs)       - COSP inputs derived from model state (optics)
@@ -18,14 +19,6 @@ cosp_config.F90: Configuration information needed by the host model and COSP
                  (e.g. joint-histogram bin boundaries)
 cosp_stats.F90:  Contains statistical subroutines used by multiple simulators
                  (e.g. Joint-histogram computation)
-
-Subdirectories:
-simulators/: Contains the instrument simulators, along with interfaces between COSP and each
-             of the individual instrument simulators.
-rng/:        Contains sample code to generate random numbers.
-optics/:     Contains sample code for computing the derived optical fields from the model
-             state. In the examples provided with COSP2, these routines are called within the
-	     subsample_and_optics 
 hooks/:      Contains information (e.g. physical constants) shared thourghout all of COSP2.
-subcol/:     Contains sample code used to generate sub-columns (SCOPS and PREC_SCOPS). 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

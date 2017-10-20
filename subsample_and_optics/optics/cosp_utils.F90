@@ -36,11 +36,7 @@ MODULE MOD_COSP_UTILS
   USE MOD_COSP_CONFIG
   IMPLICIT NONE
 
-  INTERFACE COSP_CHECK_INPUT
-    MODULE PROCEDURE COSP_CHECK_INPUT_1D,COSP_CHECK_INPUT_2D,COSP_CHECK_INPUT_3D
-  END INTERFACE
 CONTAINS
-
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !------------------- SUBROUTINE COSP_PRECIP_MXRATIO --------------
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,112 +84,6 @@ SUBROUTINE COSP_PRECIP_MXRATIO(Npoints,Nlevels,Ncolumns,p,T,prec_frac,prec_type,
         enddo
     endif
 END SUBROUTINE COSP_PRECIP_MXRATIO
-
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!----------------- SUBROUTINES COSP_CHECK_INPUT_1D ---------------
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CHECK_INPUT_1D(vname,x,min_val,max_val)
-    character(len=*) :: vname
-    real(wp),intent(inout) :: x(:)
-    real(wp),intent(in),optional :: min_val,max_val
-    logical :: l_min,l_max
-    character(len=128) :: pro_name='COSP_CHECK_INPUT_1D'
-    
-    l_min=.false.
-    l_max=.false.
-    
-    if (present(min_val)) then
-!       if (x < min_val) x = min_val
-      if (any(x < min_val)) then 
-      l_min = .true.
-        where (x < min_val)
-          x = min_val
-        end where
-      endif
-    endif    
-    if (present(max_val)) then
-!       if (x > max_val) x = max_val
-      if (any(x > max_val)) then 
-        l_max = .true.
-        where (x > max_val)
-          x = max_val
-        end where  
-      endif    
-    endif    
-    
-    if (l_min) print *,'----- WARNING: '//trim(pro_name)//': minimum value of '//trim(vname)//' set to: ',min_val
-    if (l_max) print *,'----- WARNING: '//trim(pro_name)//': maximum value of '//trim(vname)//' set to: ',max_val
-  END SUBROUTINE COSP_CHECK_INPUT_1D
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!----------------- SUBROUTINES COSP_CHECK_INPUT_2D ---------------
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CHECK_INPUT_2D(vname,x,min_val,max_val)
-    character(len=*) :: vname
-    real(wp),intent(inout) :: x(:,:)
-    real(wp),intent(in),optional :: min_val,max_val
-    logical :: l_min,l_max
-    character(len=128) :: pro_name='COSP_CHECK_INPUT_2D'
-    
-    l_min=.false.
-    l_max=.false.
-    
-    if (present(min_val)) then
-!       if (x < min_val) x = min_val
-      if (any(x < min_val)) then 
-      l_min = .true.
-        where (x < min_val)
-          x = min_val
-        end where
-      endif
-    endif    
-    if (present(max_val)) then
-!       if (x > max_val) x = max_val
-      if (any(x > max_val)) then 
-        l_max = .true.
-        where (x > max_val)
-          x = max_val
-        end where  
-      endif    
-    endif    
-    
-    if (l_min) print *,'----- WARNING: '//trim(pro_name)//': minimum value of '//trim(vname)//' set to: ',min_val
-    if (l_max) print *,'----- WARNING: '//trim(pro_name)//': maximum value of '//trim(vname)//' set to: ',max_val
-  END SUBROUTINE COSP_CHECK_INPUT_2D
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!----------------- SUBROUTINES COSP_CHECK_INPUT_3D ---------------
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CHECK_INPUT_3D(vname,x,min_val,max_val)
-    character(len=*) :: vname
-    real(wp),intent(inout) :: x(:,:,:)
-    real(wp),intent(in),optional :: min_val,max_val
-    logical :: l_min,l_max
-    character(len=128) :: pro_name='COSP_CHECK_INPUT_3D'
-    
-    l_min=.false.
-    l_max=.false.
-    
-    if (present(min_val)) then
-!       if (x < min_val) x = min_val
-      if (any(x < min_val)) then 
-      l_min = .true.
-        where (x < min_val)
-          x = min_val
-        end where
-      endif
-    endif    
-    if (present(max_val)) then
-!       if (x > max_val) x = max_val
-      if (any(x > max_val)) then 
-        l_max = .true.
-        where (x > max_val)
-          x = max_val
-        end where  
-      endif    
-    endif    
-    
-    if (l_min) print *,'----- WARNING: '//trim(pro_name)//': minimum value of '//trim(vname)//' set to: ',min_val
-    if (l_max) print *,'----- WARNING: '//trim(pro_name)//': maximum value of '//trim(vname)//' set to: ',max_val
-  END SUBROUTINE COSP_CHECK_INPUT_3D
 
 
 END MODULE MOD_COSP_UTILS
