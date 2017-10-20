@@ -44,7 +44,7 @@ MODULE MOD_COSP_IO
                              LIDAR_NTEMP,LIDAR_PHASE_TEMP,LIDAR_PHASE_TEMP_BNDS,misr_histHgtCenters,&
                              misr_histHgtEdges,numMISRHgtBins,PARASOL_NREFL,SR_BINS,   &
                              isccp_histTauEdges,isccp_histPresEdges,PARASOL_SZA,          &
-                             isccp_histPresCenters,isccp_histTauCenters
+                             isccp_histPresCenters,isccp_histTauCenters,calipso_histBsct
   USE MOD_COSP_INTERFACE_v1p4, ONLY: cosp_gridbox,cosp_sgradar,cosp_radarstats,     &
                                      cosp_sglidar,cosp_lidarstats,cosp_isccp,cosp_misr,  &
                                      cosp_modis,cosp_rttov,cosp_vgrid,cosp_subgrid,      &
@@ -955,11 +955,13 @@ CONTAINS
         vgrid_bounds(2,i) = vgrid%zu(i)
      enddo
      ! Lidar scattering ratio bounds (They are output by cosp_cfad_sr->diag_lidar in lmd_ipsl_stats.f90)
-     sratio_bounds(2,:)         = stlidar%srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
-     sratio_bounds(1,2:SR_BINS) = stlidar%srbval(1:SR_BINS-1)
-     sratio_bounds(1,1)         = 0.0
-     sratio_bounds(2,SR_BINS)   = 1.e5 ! This matches with Chepfer et al., JGR, 2009. However, it is not consistent 
+     !sratio_bounds(2,:)         = stlidar%srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
+     !sratio_bounds(1,2:SR_BINS) = stlidar%srbval(1:SR_BINS-1)
+     !sratio_bounds(1,1)         = 0.0
+     !sratio_bounds(2,SR_BINS)   = 1.e5 ! This matches with Chepfer et al., JGR, 2009. However, it is not consistent 
      ! with the upper limit in lmd_ipsl_stats.f90, which is LIDAR_UNDEF-1=998.999
+     sratio_bounds(2,:) = calipso_histBsct(2:SR_BINS+1)
+     sratio_bounds(1,:) = calipso_histBsct(1:SR_BINS)
      ! Lat lon axes
      if (geomode == 2) then
         lon_ax = gb%longitude(1:Nlon)
