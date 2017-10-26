@@ -98,8 +98,7 @@ MODULE MOD_COSP_CONFIG
     integer,parameter :: &
          npres = 7     
     real(wp),parameter,dimension(npres+1) :: &
-         pres_binBounds = (/1000., 800., 680., 560., 440., 310., 180., 0./)
-
+         pres_binBounds = (/0., 180., 310., 440., 560., 680., 800., 10000./)
     real(wp),parameter,dimension(npres) :: &
          pres_binCenters = (/90000., 74000., 62000., 50000., 37500., 24500., 9000./)   
     real(wp),parameter,dimension(2,npres) :: &
