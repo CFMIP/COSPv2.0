@@ -100,7 +100,7 @@ contains
   ! ######################################################################################
   !subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,&
   !                               a_to_vol,g_to_vol,dBZe,Ze_non,Ze_ray)
-  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,dBZe)
+  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,dBZe,Ze_non)
 
     ! INPUTS
     type(radar_cfg),intent(inout) :: &
@@ -116,7 +116,7 @@ contains
     
     ! OUTPUTS
     real(wp), intent(out),dimension(nprof,ngate) :: &
-!         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
+         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
 !         Ze_ray,        & ! Rayleigh reflectivity (dBZ)
 !         g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
 !         a_to_vol,      & ! Hydromets attenuation, radar to vol (dB)
@@ -125,7 +125,7 @@ contains
     ! LOCAL VARIABLES
     integer :: k,pr,start_gate,end_gate,d_gate
     real(wp),dimension(nprof,ngate) :: &
-         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
+         !Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
          Ze_ray,        & ! Rayleigh reflectivity (dBZ)
          g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
          a_to_vol,      & ! Hydromets attenuation, radar to vol (dB) 

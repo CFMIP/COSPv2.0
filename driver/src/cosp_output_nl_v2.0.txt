@@ -97,4 +97,21 @@
   Lclmodis=.true.,
   !- RTTOV
   Ltbrttov=.false.,
+  ! -CLOUDSAT precipitation frequency/occurence diagnostics
+  Lptradarflag0=.true.,
+  Lptradarflag1=.true.,
+  Lptradarflag2=.true.,
+  Lptradarflag3=.true.,
+  Lptradarflag4=.true.,
+  Lptradarflag5=.true.,
+  Lptradarflag6=.true.,
+  Lptradarflag7=.true.,
+  Lptradarflag8=.true.,
+  Lptradarflag9=.true.,
+  Lradarpia=.true.,
+  Lptradarcvrain=.true.,
+  Lptradarcvsnow=.true.,
+  Lptradarlsrain=.true.,
+  Lptradarlssnow=.true.,
+  Lptradarlsgrpl=.true.
 /

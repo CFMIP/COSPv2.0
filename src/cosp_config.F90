@@ -285,8 +285,13 @@ MODULE MOD_COSP_CONFIG
                                    l=1,2),k=2,DBZE_BINS),cloudsat_histRef(DBZE_BINS+1)/),&
                                    shape = (/2,DBZE_BINS/))     
     real(wp),parameter,dimension(DBZE_BINS) :: &
-         cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp  
+         cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp
 
+    ! Vertical level index(Nlvgrid) for Cloudsat precipitation occurence/frequency diagnostics.
+    ! Level 2 of Nlvgrid is 480-960m.
+    integer, parameter :: &
+         cloudsat_preclvl = 2
+         
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator
     ! #################################################################################### 

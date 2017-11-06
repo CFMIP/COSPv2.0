@@ -60,8 +60,13 @@ contains
                                    Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,          &
                                    Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,          &
                                    Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,          & 
-                                   LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,N_out_list, &
-                                   out_list)
+                                   LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,            &
+                                   Lptradarflag0,Lptradarflag1,Lptradarflag2,            &
+                                   Lptradarflag3,Lptradarflag4,Lptradarflag5,            &
+                                   Lptradarflag6,Lptradarflag7,Lptradarflag8,            &
+                                   Lptradarflag9,Lradarpia,Lptradarcvrain,               &
+                                   Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,         &
+                                   Lptradarlsgrpl,N_out_list,out_list)
     ! Inputs
     logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -124,7 +129,23 @@ contains
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
-         Ltbrttov            ! RTTOV mean clear-sky brightness temperature                                    
+         Ltbrttov,         & ! RTTOV mean clear-sky brightness temperature
+         Lptradarflag0,    & ! CLOUDSAT 
+         Lptradarflag1,    & ! CLOUDSAT 
+         Lptradarflag2,    & ! CLOUDSAT 
+         Lptradarflag3,    & ! CLOUDSAT 
+         Lptradarflag4,    & ! CLOUDSAT 
+         Lptradarflag5,    & ! CLOUDSAT 
+         Lptradarflag6,    & ! CLOUDSAT 
+         Lptradarflag7,    & ! CLOUDSAT 
+         Lptradarflag8,    & ! CLOUDSAT 
+         Lptradarflag9,    & ! CLOUDSAT 
+         Lradarpia,        & ! CLOUDSAT 
+         Lptradarcvrain,   & ! CLOUDSAT 
+         Lptradarcvsnow,   & ! CLOUDSAT 
+         Lptradarlsrain,   & ! CLOUDSAT 
+         Lptradarlssnow,   & ! CLOUDSAT 
+         Lptradarlsgrpl      ! CLOUDSAT 
     integer, intent(in) :: n_out_list
 
     ! Outputs
@@ -191,6 +212,22 @@ contains
     if (Llwpmodis)         out_list(61) = 'lwpmodis'
     if (Liwpmodis)         out_list(62) = 'iwpmodis'
     if (Lclmodis)          out_list(63) = 'clmodis'
+    if (Lptradarflag0)     out_list(64) = 'ptradarflag0'
+    if (Lptradarflag1)     out_list(65) = 'ptradarflag1'
+    if (Lptradarflag2)     out_list(66) = 'ptradarflag2'
+    if (Lptradarflag3)     out_list(67) = 'ptradarflag3'
+    if (Lptradarflag4)     out_list(68) = 'ptradarflag4'
+    if (Lptradarflag5)     out_list(69) = 'ptradarflag5'
+    if (Lptradarflag6)     out_list(70) = 'ptradarflag6'
+    if (Lptradarflag7)     out_list(71) = 'ptradarflag7'
+    if (Lptradarflag8)     out_list(72) = 'ptradarflag8'
+    if (Lptradarflag9)     out_list(73) = 'ptradarflag9'
+    if (Lradarpia)         out_list(74) = 'radarpia'
+    if (Lptradarcvrain)    out_list(75) = 'ptradarcvrain'
+    if (Lptradarcvsnow)    out_list(76) = 'ptradarcvsnow' 
+    if (Lptradarlsrain)    out_list(77) = 'ptradarlsrain'
+    if (Lptradarlssnow)    out_list(78) = 'ptradarlssnow'
+    if (Lptradarlsgrpl)    out_list(79) = 'ptradarlsgrpl'
 
   end subroutine construct_cospOutList
 
@@ -278,7 +315,7 @@ contains
           Nlat = dimsize(i)
        endif
     enddo
-    
+
     ! Get lon and lat
     if (Llon.and.Llat) then ! 2D mode
        if ((Npnts) > Nlon*Nlat) Npoints=Nlon*Nlat
@@ -1035,7 +1072,7 @@ contains
          institute_id=trim(institute_id),parent_experiment_rip=trim(parent_experiment_rip), &
          initialization_method=initialization_method,physics_version=physics_version)
     error_flag = cmor_set_cur_dataset_attribute('cosp_version',trim(COSP_VERSION))
-    
+
     !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     ! Define axis
     !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1245,6 +1282,23 @@ contains
     call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(39),units='%')
     call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(40),units='%')
     call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(41),units='%')
+    call construct_var1d('ptradarflag0',   d3, d2, cospOUT%cloudsat_precip_cover(:,1),           v1d(42),units='%')
+    call construct_var1d('ptradarflag1',   d3, d2, cospOUT%cloudsat_precip_cover(:,2),           v1d(43),units='%')
+    call construct_var1d('ptradarflag2',   d3, d2, cospOUT%cloudsat_precip_cover(:,3),           v1d(44),units='%')
+    call construct_var1d('ptradarflag3',   d3, d2, cospOUT%cloudsat_precip_cover(:,4),           v1d(45),units='%')
+    call construct_var1d('ptradarflag4',   d3, d2, cospOUT%cloudsat_precip_cover(:,5),           v1d(46),units='%')
+    call construct_var1d('ptradarflag5',   d3, d2, cospOUT%cloudsat_precip_cover(:,6),           v1d(47),units='%')
+    call construct_var1d('ptradarflag6',   d3, d2, cospOUT%cloudsat_precip_cover(:,7),           v1d(48),units='%')
+    call construct_var1d('ptradarflag7',   d3, d2, cospOUT%cloudsat_precip_cover(:,8),           v1d(49),units='%')
+    call construct_var1d('ptradarflag8',   d3, d2, cospOUT%cloudsat_precip_cover(:,9),           v1d(50),units='%')
+    call construct_var1d('ptradarflag9',   d3, d2, cospOUT%cloudsat_precip_cover(:,10),          v1d(51),units='%')
+    call construct_var1d('radarpia',       d3, d2, cospOUT%cloudsat_pia,                         v1d(52),units='%')
+    call construct_var1d('ptradarcvrain',  d3, d2, cospOUT%cloudsat_precip_rate(:,1),            v1d(53),units='%')
+    call construct_var1d('ptradarcvsnow',  d3, d2, cospOUT%cloudsat_precip_rate(:,2),            v1d(54),units='%')
+    call construct_var1d('ptradarlsrain',  d3, d2, cospOUT%cloudsat_precip_rate(:,3),            v1d(55),units='%')
+    call construct_var1d('ptradarlssnow',  d3, d2, cospOUT%cloudsat_precip_rate(:,4),            v1d(56),units='%')
+    call construct_var1d('ptradarlsgrpl',  d3, d2, cospOUT%cloudsat_precip_rate(:,5),            v1d(57),units='%')
+    
     ! 2D variables
     d4 = (/grid_id,height_axid,0,0/)
     d3 = (/Npoints,Nlvgrid,0/)
@@ -1365,6 +1419,23 @@ contains
      call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(38),units='%')
      call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(39),units='%')
      call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(40),units='%')
+     call construct_var1d('ptradarflag0',   d3, d2, cospOUT%cloudsat_precip_cover(:,1),           v1d(42),units='%')
+     call construct_var1d('ptradarflag1',   d3, d2, cospOUT%cloudsat_precip_cover(:,2),           v1d(43),units='%')
+     call construct_var1d('ptradarflag2',   d3, d2, cospOUT%cloudsat_precip_cover(:,3),           v1d(44),units='%')
+     call construct_var1d('ptradarflag3',   d3, d2, cospOUT%cloudsat_precip_cover(:,4),           v1d(45),units='%')
+     call construct_var1d('ptradarflag4',   d3, d2, cospOUT%cloudsat_precip_cover(:,5),           v1d(46),units='%')
+     call construct_var1d('ptradarflag5',   d3, d2, cospOUT%cloudsat_precip_cover(:,6),           v1d(47),units='%')
+     call construct_var1d('ptradarflag6',   d3, d2, cospOUT%cloudsat_precip_cover(:,7),           v1d(48),units='%')
+     call construct_var1d('ptradarflag7',   d3, d2, cospOUT%cloudsat_precip_cover(:,8),           v1d(49),units='%')
+     call construct_var1d('ptradarflag8',   d3, d2, cospOUT%cloudsat_precip_cover(:,9),           v1d(50),units='%')
+     call construct_var1d('ptradarflag9',   d3, d2, cospOUT%cloudsat_precip_cover(:,10),          v1d(51),units='%')
+     call construct_var1d('radarpia',       d3, d2, cospOUT%cloudsat_pia,                         v1d(52),units='%')
+     call construct_var1d('ptradarcvrain',  d3, d2, cospOUT%cloudsat_precip_rate(:,1),            v1d(53),units='%')
+     call construct_var1d('ptradarcvsnow',  d3, d2, cospOUT%cloudsat_precip_rate(:,2),            v1d(54),units='%')
+     call construct_var1d('ptradarlsrain',  d3, d2, cospOUT%cloudsat_precip_rate(:,3),            v1d(55),units='%')
+     call construct_var1d('ptradarlssnow',  d3, d2, cospOUT%cloudsat_precip_rate(:,4),            v1d(56),units='%')
+     call construct_var1d('ptradarlsgrpl',  d3, d2, cospOUT%cloudsat_precip_rate(:,5),            v1d(57),units='%')
+
      ! 2D variables
      d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
      d3 = (/Nlon,Nlat,Nlvgrid/)
