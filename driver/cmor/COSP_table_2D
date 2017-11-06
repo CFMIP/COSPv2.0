@@ -3820,3 +3820,322 @@ long_name:     Mean clear-sky brightness temperature as calculated by RTTOV
 dimensions:    longitude latitude channel time1
 !----------------------------------
 !
+
+!============
+variable_entry: ptradarflag0
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag0
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag0
+type:      real
+!----------------------------------
+!
+!============
+variable_entry: ptradarflag1
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag1
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag1
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag2
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag2
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag2
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag3
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag3
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag3
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag4
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag4
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag4
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag5
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag5
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag5
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag6
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag6
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag6
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag7
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag7
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag7
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag8
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag8
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag8
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarflag9
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:  precipitation_cover
+units:         1
+long_name:          CLOUDSAT precipitation cover for flag9
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarflag9
+type:      real
+!----------------------------------
+!
+
+
+!============
+variable_entry: radarpia
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: path_integrated_attenuation
+units:         1
+long_name:          CLOUDSAT path integrated attenuation
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  radarpia
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarcvrain
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: precipitation_rate
+units:         1
+long_name:          CLOUDSAT precipitation rate for CVRAIN
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarcvrain
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarcvsnow
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: precipitation_rate
+units:         1
+long_name:          CLOUDSAT precipitation rate for CVSNOW
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarcvsnow
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarlsrain
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: precipitation_rate
+units:         1
+long_name:          CLOUDSAT precipitation rate for LSRAIN
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarlsrain
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarlssnow
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: precipitation_rate
+units:         1
+long_name:          CLOUDSAT precipitation rate for LSSNOW
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarlssnow
+type:      real
+!----------------------------------
+!
+
+!============
+variable_entry: ptradarlsgrpl
+!============
+modeling_realm:  atmos
+
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name: precipitation_rate
+units:         1
+long_name:          CLOUDSAT precipitation rate for LSGRPL
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:      longitude latitude time1
+out_name:  ptradarlsgrpl
+type:      real
+!----------------------------------

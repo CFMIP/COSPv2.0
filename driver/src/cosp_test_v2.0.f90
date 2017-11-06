@@ -41,7 +41,8 @@ program cosp_test_v2
                                  modis_histTauEdges,tau_binEdges,                         &
                                  modis_histTauCenters,tau_binCenters,ntauV1p4,            &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
-                                 Nlvgrid_local  => Nlvgrid
+                                 Nlvgrid_local  => Nlvgrid, vgrid_zl, vgrid_zu,           &
+                                 cloudsat_preclvl
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,nc_cmor_init
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics
@@ -54,6 +55,8 @@ program cosp_test_v2
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
+  use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID
+  
   ! OUTPUT ONLY
   use mod_cosp_io,         only: var1d,var2d,var3d,construct_cospOutList,nc_cmor_init,    &
                                  nc_cmor_associate_1d,nc_cmor_write_1d,nc_cmor_close,     &
@@ -174,7 +177,10 @@ program cosp_test_v2
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
-             Lclmodis,Ltbrttov
+             Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
+             Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
+             Lptradarflag9,Lradarpia,Lptradarcvrain,Lptradarcvsnow,Lptradarlsrain,       &
+             Lptradarlssnow,Lptradarlsgrpl
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -187,7 +193,11 @@ program cosp_test_v2
                        LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,         &
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
-                       Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov
+                       Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov,    &
+                       Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
+                       Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
+                       Lptradarflag8,Lptradarflag9,Lradarpia,Lptradarcvrain,             &
+                       Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,Lptradarlsgrpl
 
   ! Local variables
   logical :: &
@@ -250,10 +260,10 @@ program cosp_test_v2
 
   ! Fields used solely for output
   integer,parameter :: &
-       n_out_list = 63,           & ! Number of possible output variables
+       n_out_list = 79,           & ! Number of possible output variables
        N3D        = 8,            & ! Number of 3D output variables
        N2D        = 14,           & ! Number of 2D output variables
-       N1D        = 40              ! Number of 1D output variables  
+       N1D        = 59              ! Number of 1D output variables  
   character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
   integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
              latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
@@ -321,7 +331,11 @@ program cosp_test_v2
        Lclmcalipsoice .or. Lclmcalipsoun .or. Lcllcalipsoliq .or. Lcllcalipsoice .or.    &
        Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
        Lcltlidarradar) lcalipso = .true.
-  if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
+  if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar .or. Lptradarflag0 .or. Lptradarflag1 &
+       .or. Lptradarflag2 .or. Lptradarflag3 .or. Lptradarflag4 .or. Lptradarflag5 .or.  &
+       Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
+       Lradarpia .or. Lptradarcvrain .or. Lptradarcvsnow .or. Lptradarlsrain .or.        &
+       Lptradarlssnow .or. Lptradarlsgrpl) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
   if (Ltbrttov) Lrttov = .true.
   
@@ -374,7 +388,10 @@ program cosp_test_v2
        Lclcalipsotmpun, Lcltcalipsoliq, Lcltcalipsoice, Lcltcalipsoun, Lclhcalipsoliq,   &
        Lclhcalipsoice, Lclhcalipsoun, Lclmcalipsoliq, Lclmcalipsoice, Lclmcalipsoun,     &
        Lcllcalipsoliq, Lcllcalipsoice, Lcllcalipsoun, LcfadDbze94, Ldbze94, Lparasolrefl,&
-       Ltbrttov, Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
+       Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
+       Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
+       Lptradarcvrain,Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,Lptradarlsgrpl,       &
+       Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
@@ -497,7 +514,11 @@ program cosp_test_v2
                              Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,  &
                              Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq, &
                              Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,           &
-                             Lparasolrefl,Ltbrttov,N_OUT_LIST,out_list)  
+                             Lparasolrefl,Ltbrttov,Lptradarflag0,Lptradarflag1,          &
+                             Lptradarflag2,Lptradarflag3,Lptradarflag4,Lptradarflag5,    &
+                             Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,    &
+                             Lradarpia,Lptradarcvrain,Lptradarcvsnow,Lptradarlsrain,     &
+                             Lptradarlssnow,Lptradarlsgrpl,N_OUT_LIST,out_list)  
 
   ! Time information needed by cmor output.
   time           = 8*1._wp/8._wp
@@ -531,11 +552,12 @@ program cosp_test_v2
   if (geomode .gt. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_2D.txt','replace',nPoints,nColumns,nLevels, &
                        rttov_nChannels,nLvgrid_local,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
-                       geomode,Nlon,Nlat,N1D,N2D,N3D,N_OUT_LIST,out_list,lon_axid,       &
+                       geomode,Nlon,Nlat,N1D+1,N2D,N3D,N_OUT_LIST,out_list,lon_axid,     &
                        lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,&
                        latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,  &
-                       sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D),v2d, &
-                       v3d)
+                       sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D+1),   &
+                       v2d,v3d)
+
      call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid, &
                                column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
                                sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
@@ -589,6 +611,7 @@ contains
          mr_hydro, Reff, Np
     real(wp),dimension(nPoints,nLevels) :: &
          column_frac_out, column_prec_out, fl_lsrain, fl_lssnow, fl_lsgrpl, fl_ccrain, fl_ccsnow
+    real(wp),dimension(nPoints,nColumns,Nlvgrid_local) :: tempOut
     logical :: cmpGases=.true.
 
     if (Ncolumns .gt. 1) then
@@ -847,8 +870,38 @@ contains
                   cospIN%kr_vol_cloudsat(1:nPoints,k,:),                          &
                   cospIN%g_vol_cloudsat(1:nPoints,k,:),g_vol_in=g_vol)
           endif
+
+          ! What fraction of the precipitation is frozen?
+          where(mr_hydro(:,k,:,I_LSRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_LSSNOW) .gt. 0 .or. &
+                mr_hydro(:,k,:,I_CVRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_CVSNOW) .gt. 0 .or. &
+                mr_hydro(:,k,:,I_LSGRPL) .gt. 0)
+             cospIN%fracPrecipIce(:,k,:) = (mr_hydro(:,k,:,I_LSSNOW) + mr_hydro(:,k,:,I_CVSNOW) + &
+                                            mr_hydro(:,k,:,I_LSGRPL)) / &
+                                           (mr_hydro(:,k,:,I_LSSNOW) + mr_hydro(:,k,:,I_CVSNOW) + &
+                                            mr_hydro(:,k,:,I_LSGRPL) + mr_hydro(:,k,:,I_LSRAIN) + &
+                                            mr_hydro(:,k,:,I_CVRAIN))
+          elsewhere
+             cospIN%fracPrecipIce(:,k,:) = 0._wp
+          endwhere
        enddo
+
+       ! For each precipitation hydrometeor type, pull out precipitation mixing ratios at
+       ! critical level (480-960m). This index is defined in cosp_config.F90.
+       do k=1,nhydro
+          if (k .eq. I_LSRAIN .or. k .eq. I_LSSNOW .or. k .eq. I_LSGRPL .or.              &
+               k .eq. I_CVRAIN .or. k .eq. I_CVSNOW) then
+             call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels,                   &
+                  cospstateIN%hgt_matrix(:,Nlevels:1:-1),                                 &
+                  cospstateIN%hgt_matrix_half(:,Nlevels:1:-1),                            &
+                  mr_hydro(:,:,Nlevels:1:-1,k), Nlvgrid_local, vgrid_zl(Nlvgrid_local:1:-1),         &
+                  vgrid_zu(Nlvgrid_local:1:-1), tempOut)
+             cospIN%mr_hydro_preclvl(:,:,k) = tempOut(:,:,cloudsat_preclvl)
+          else
+             cospIN%mr_hydro_preclvl(:,:,k) = 0._wp             
+          endif
+       end do
     endif
+   
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MODIS optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -927,9 +980,11 @@ contains
 
     endif
     if (Lcloudsat) then
-       allocate(y%z_vol_cloudsat(npoints, ncolumns,nlevels),&
-                y%kr_vol_cloudsat(npoints,ncolumns,nlevels),&
-                y%g_vol_cloudsat(npoints, ncolumns,nlevels))
+       allocate(y%z_vol_cloudsat(npoints,  ncolumns,nlevels),&
+                y%kr_vol_cloudsat(npoints, ncolumns,nlevels),&
+                y%g_vol_cloudsat(npoints,  ncolumns,nlevels),&
+                y%fracPrecipIce(npoints,   ncolumns,nlevels),&
+                y%mr_hydro_preclvl(npoints,ncolumns,N_HYDRO))
     endif
     if (Lmodis) then
        allocate(y%fracLiq(npoints,        ncolumns,nlevels),&
@@ -984,8 +1039,13 @@ contains
                                     Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,         &
                                     Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,         &
                                     Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,         & 
-                                    LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov, &
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
+                                    LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,           &
+                                    Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
+                                    Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
+                                    Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
+                                    Lptradarflag9,Lradarpia,Lptradarcvrain,              &
+                                    Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,        &
+                                    Lptradarlsgrpl,Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1048,8 +1108,24 @@ contains
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
-         Ltbrttov            ! RTTOV mean clear-sky brightness temperature
-     
+         Ltbrttov,         & ! RTTOV mean clear-sky brightness temperature
+         Lptradarflag0,    & ! CLOUDSAT 
+         Lptradarflag1,    & ! CLOUDSAT 
+         Lptradarflag2,    & ! CLOUDSAT 
+         Lptradarflag3,    & ! CLOUDSAT 
+         Lptradarflag4,    & ! CLOUDSAT 
+         Lptradarflag5,    & ! CLOUDSAT 
+         Lptradarflag6,    & ! CLOUDSAT 
+         Lptradarflag7,    & ! CLOUDSAT 
+         Lptradarflag8,    & ! CLOUDSAT 
+         Lptradarflag9,    & ! CLOUDSAT 
+         Lradarpia,        & ! CLOUDSAT 
+         Lptradarcvrain,   & ! CLOUDSAT 
+         Lptradarcvsnow,   & ! CLOUDSAT 
+         Lptradarlsrain,   & ! CLOUDSAT 
+         Lptradarlssnow,   & ! CLOUDSAT 
+         Lptradarlsgrpl      ! CLOUDSAT 
+         
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
           Ncolumns,        & ! Number of subgrid columns
@@ -1154,6 +1230,16 @@ contains
     ! Cloudsat simulator
     if (Ldbze94)        allocate(x%cloudsat_Ze_tot(Npoints,Ncolumns,Nlevels))
     if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,DBZE_BINS,Nlvgrid))
+    if (Lptradarflag0 .or. Lptradarflag1 .or. Lptradarflag2 .or. Lptradarflag3 .or. &
+        Lptradarflag4 .or. Lptradarflag5 .or. Lptradarflag6 .or. Lptradarflag7 .or. &
+        Lptradarflag8 .or. Lptradarflag9) then
+       allocate(x%cloudsat_precip_cover(Npoints,DBZE_BINS))
+    endif
+    if (Lptradarcvrain .or. Lptradarcvsnow .or. Lptradarlsrain .or. Lptradarlssnow .or. &
+         Lptradarlsgrpl) then
+       allocate(x%cloudsat_precip_rate(Npoints,N_HYDRO))
+    endif
+    if (Lradarpia) allocate(x%cloudsat_pia(Npoints))
 
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
@@ -1189,7 +1275,9 @@ contains
     if (allocated(y%asym))            deallocate(y%asym)
     if (allocated(y%ss_alb))          deallocate(y%ss_alb)
     if (allocated(y%fracLiq))         deallocate(y%fracLiq)
-
+    if (allocated(y%fracPrecipIce))   deallocate(y%fracPrecipIce)
+    if (allocated(y%mr_hydro_preclvl)) deallocate(y%mr_hydro_preclvl)
+    
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
@@ -1291,6 +1379,18 @@ contains
      if (associated(y%cloudsat_cfad_ze))          then
         deallocate(y%cloudsat_cfad_ze)
         nullify(y%cloudsat_cfad_ze)     
+     endif
+     if (associated(y%cloudsat_precip_cover))     then
+        deallocate(y%cloudsat_precip_cover)
+        nullify(y%cloudsat_precip_cover)
+     endif
+     if (associated(y%cloudsat_precip_rate))      then
+        deallocate(y%cloudsat_precip_rate)
+        nullify(y%cloudsat_precip_rate)
+     endif
+     if (associated(y%cloudsat_pia))              then
+        deallocate(y%cloudsat_pia)
+        nullify(y%cloudsat_pia)
      endif
      if (associated(y%radar_lidar_tcc))           then
         deallocate(y%radar_lidar_tcc) 
