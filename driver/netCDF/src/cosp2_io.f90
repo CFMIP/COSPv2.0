@@ -131,7 +131,7 @@ contains
     if (associated(cospOUT%calipso_betaperp_tot)) then
        status = nf90_def_var(fileID,"atb532_perp",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(9))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(9),"long_name","Calipso Attenuated Total Perpendicular Bacscatter (532nm)")
+       status = nf90_put_att(fileID,varID(9),"long_name","Calipso Attenuated Total Perpendicular Backscatter (532nm)")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(9),"units",        "m-1 sr-1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
@@ -139,7 +139,7 @@ contains
     if (associated(cospOUT%calipso_beta_tot)) then
        status = nf90_def_var(fileID,"atb532",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(10))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(10),"long_name","Calipso Attenuated Total Bacscatter (532nm)")
+       status = nf90_put_att(fileID,varID(10),"long_name","Calipso Attenuated Total Backscatter (532nm)")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(10),"units",        "m-1 sr-1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
@@ -327,7 +327,7 @@ contains
     if (associated(cospOUT%calipso_beta_mol)) then
        status = nf90_def_var(fileID,"lidarBetaMol532",nf90_float, (/dimID(1),dimID(3)/),varID(18))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(18),"long_name","Calipso molecular bacscatter coefficient")
+       status = nf90_put_att(fileID,varID(18),"long_name","Calipso molecular backscatter coefficient")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(18),"units",        "1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
