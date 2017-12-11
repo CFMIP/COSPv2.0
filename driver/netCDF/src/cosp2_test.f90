@@ -261,17 +261,17 @@ program cosp2_test
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)       
 
   ! Fields used solely for output
-  integer,parameter :: &
-       n_out_list = 79,           & ! Number of possible output variables
-       N3D        = 8,            & ! Number of 3D output variables
-       N2D        = 14,           & ! Number of 2D output variables
-       N1D        = 59              ! Number of 1D output variables  
-  character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
-  integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
-             latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
-             MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid 
-  double precision :: time,time_bnds(2),time_step,half_time_step
-  real(wp),dimension(:),allocatable :: mgrid_z,mgrid_zu,mgrid_zl
+  !integer,parameter :: &
+  !     n_out_list = 79,           & ! Number of possible output variables
+  !     N3D        = 8,            & ! Number of 3D output variables
+  !     N2D        = 14,           & ! Number of 2D output variables
+  !     N1D        = 59              ! Number of 1D output variables  
+  !character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
+  !integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
+  !           latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
+  !           MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid 
+  !double precision :: time,time_bnds(2),time_step,half_time_step
+  !real(wp),dimension(:),allocatable :: mgrid_z,mgrid_zu,mgrid_zl
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -1174,27 +1174,27 @@ contains
   subroutine destroy_cospIN(y)
     type(cosp_optical_inputs),intent(inout) :: y
 
-    if (allocated(y%tau_067))         deallocate(y%tau_067)
-    if (allocated(y%emiss_11))        deallocate(y%emiss_11)
-    if (allocated(y%frac_out))        deallocate(y%frac_out)
-    if (allocated(y%beta_mol))        deallocate(y%beta_mol)
-    if (allocated(y%tau_mol))         deallocate(y%tau_mol)
-    if (allocated(y%betatot))         deallocate(y%betatot)
-    if (allocated(y%betatot_ice))     deallocate(y%betatot_ice)
-    if (allocated(y%betatot_liq))     deallocate(y%betatot_liq)
-    if (allocated(y%tautot))          deallocate(y%tautot)
-    if (allocated(y%tautot_ice))      deallocate(y%tautot_ice)
-    if (allocated(y%tautot_liq))      deallocate(y%tautot_liq)
-    if (allocated(y%tautot_S_liq))    deallocate(y%tautot_S_liq)
-    if (allocated(y%tautot_S_ice))    deallocate(y%tautot_S_ice)
-    if (allocated(y%z_vol_cloudsat))  deallocate(y%z_vol_cloudsat)
-    if (allocated(y%kr_vol_cloudsat)) deallocate(y%kr_vol_cloudsat)
-    if (allocated(y%g_vol_cloudsat))  deallocate(y%g_vol_cloudsat)
-    if (allocated(y%asym))            deallocate(y%asym)
-    if (allocated(y%ss_alb))          deallocate(y%ss_alb)
-    if (allocated(y%fracLiq))         deallocate(y%fracLiq)
-    if (allocated(y%fracPrecipIce))   deallocate(y%fracPrecipIce)
-    if (allocated(y%mr_hydro_preclvl)) deallocate(y%mr_hydro_preclvl)
+    if (associated(y%tau_067))         deallocate(y%tau_067)
+    if (associated(y%emiss_11))        deallocate(y%emiss_11)
+    if (associated(y%frac_out))        deallocate(y%frac_out)
+    if (associated(y%beta_mol))        deallocate(y%beta_mol)
+    if (associated(y%tau_mol))         deallocate(y%tau_mol)
+    if (associated(y%betatot))         deallocate(y%betatot)
+    if (associated(y%betatot_ice))     deallocate(y%betatot_ice)
+    if (associated(y%betatot_liq))     deallocate(y%betatot_liq)
+    if (associated(y%tautot))          deallocate(y%tautot)
+    if (associated(y%tautot_ice))      deallocate(y%tautot_ice)
+    if (associated(y%tautot_liq))      deallocate(y%tautot_liq)
+    if (associated(y%tautot_S_liq))    deallocate(y%tautot_S_liq)
+    if (associated(y%tautot_S_ice))    deallocate(y%tautot_S_ice)
+    if (associated(y%z_vol_cloudsat))  deallocate(y%z_vol_cloudsat)
+    if (associated(y%kr_vol_cloudsat)) deallocate(y%kr_vol_cloudsat)
+    if (associated(y%g_vol_cloudsat))  deallocate(y%g_vol_cloudsat)
+    if (associated(y%asym))            deallocate(y%asym)
+    if (associated(y%ss_alb))          deallocate(y%ss_alb)
+    if (associated(y%fracLiq))         deallocate(y%fracLiq)
+    if (associated(y%fracPrecipIce))   deallocate(y%fracPrecipIce)
+    if (associated(y%mr_hydro_preclvl)) deallocate(y%mr_hydro_preclvl)
     
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1203,27 +1203,27 @@ contains
   subroutine destroy_cospstateIN(y)
     type(cosp_column_inputs),intent(inout) :: y
 
-    if (allocated(y%sunlit))          deallocate(y%sunlit)
-    if (allocated(y%skt))             deallocate(y%skt)
-    if (allocated(y%land))            deallocate(y%land)
-    if (allocated(y%at))              deallocate(y%at)
-    if (allocated(y%pfull))           deallocate(y%pfull)
-    if (allocated(y%phalf))           deallocate(y%phalf)
-    if (allocated(y%qv))              deallocate(y%qv)
-    if (allocated(y%o3))              deallocate(y%o3)
-    if (allocated(y%hgt_matrix))      deallocate(y%hgt_matrix)
-    if (allocated(y%u_sfc))           deallocate(y%u_sfc)
-    if (allocated(y%v_sfc))           deallocate(y%v_sfc)
-    if (allocated(y%lat))             deallocate(y%lat)
-    if (allocated(y%lon))             deallocate(y%lon)
-    if (allocated(y%emis_sfc))        deallocate(y%emis_sfc)
-    if (allocated(y%cloudIce))        deallocate(y%cloudIce)
-    if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
-    if (allocated(y%seaice))          deallocate(y%seaice)
-    if (allocated(y%fl_rain))         deallocate(y%fl_rain)
-    if (allocated(y%fl_snow))         deallocate(y%fl_snow)
-    if (allocated(y%tca))             deallocate(y%tca)
-    if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
+    if (associated(y%sunlit))          deallocate(y%sunlit)
+    if (associated(y%skt))             deallocate(y%skt)
+    if (associated(y%land))            deallocate(y%land)
+    if (associated(y%at))              deallocate(y%at)
+    if (associated(y%pfull))           deallocate(y%pfull)
+    if (associated(y%phalf))           deallocate(y%phalf)
+    if (associated(y%qv))              deallocate(y%qv)
+    if (associated(y%o3))              deallocate(y%o3)
+    if (associated(y%hgt_matrix))      deallocate(y%hgt_matrix)
+    if (associated(y%u_sfc))           deallocate(y%u_sfc)
+    if (associated(y%v_sfc))           deallocate(y%v_sfc)
+    if (associated(y%lat))             deallocate(y%lat)
+    if (associated(y%lon))             deallocate(y%lon)
+    if (associated(y%emis_sfc))        deallocate(y%emis_sfc)
+    if (associated(y%cloudIce))        deallocate(y%cloudIce)
+    if (associated(y%cloudLiq))        deallocate(y%cloudLiq)
+    if (associated(y%seaice))          deallocate(y%seaice)
+    if (associated(y%fl_rain))         deallocate(y%fl_rain)
+    if (associated(y%fl_snow))         deallocate(y%fl_snow)
+    if (associated(y%tca))             deallocate(y%tca)
+    if (associated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
     
   end subroutine destroy_cospstateIN
   
