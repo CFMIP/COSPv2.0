@@ -84,7 +84,7 @@ MODULE MOD_COSP
           hgt_matrix,          & ! Height of hydrometeors                 (km)
           hgt_matrix_half        ! Height of hydrometeors at half levels  (km)
 
-     real(wp),allocatable,dimension(:) :: &
+     real(wp),pointer,dimension(:) :: &
           land,                & ! Land/Sea mask                          (0-1)
           skt                    ! Surface temperature                    (K)
      ! Fields used ONLY by RTTOV
@@ -96,14 +96,14 @@ MODULE MOD_COSP
           ch4,                 & ! Methane                                (kg/kg)
           n2o,                 & ! N2O                                    (kg/kg)
           co                     ! CO                                     (kg/kg)
-     real(wp),allocatable,dimension(:) :: &
+     real(wp),pointer,dimension(:) :: &
           emis_sfc,            & ! Surface emissivity                     (1)
           u_sfc,               & ! Surface u-wind                         (m/s)
           v_sfc,               & ! Surface v-wind                         (m/s)
           seaice,              & ! Sea-ice fraction                       (0-1)
           lat,                 & ! Latitude                              (deg)
           lon                    ! Longitude                              (deg)
-     real(wp),allocatable,dimension(:,:) :: &
+     real(wp),pointer,dimension(:,:) :: &
           o3,                  & ! Ozone                                  (kg/kg)
           tca,                 & ! Total column cloud fraction            (0-1)
           cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
@@ -124,7 +124,7 @@ MODULE MOD_COSP
           Nrefl                  ! Number of reflectances for PARASOL simulator
      real(wp) :: &
           emsfc_lw               ! 11 micron surface emissivity
-     real(wp),allocatable,dimension(:,:,:) :: &
+     real(wp),pointer,dimension(:,:,:) :: &
           frac_out,            & ! Cloud fraction
           tau_067,             & ! Optical depth
           fracLiq,             & ! Cloud fraction
@@ -142,7 +142,7 @@ MODULE MOD_COSP
           g_vol_cloudsat,      & ! Attenuation coefficient gases (dB/km)
           fracPrecipIce,       & ! Fraction of precipitation which is frozen (1).
           mr_hydro_preclvl       ! Subcolumn precipitation mixing-ratios at 480-960m level.
-     real(wp),allocatable,dimension(:,:) :: &
+     real(wp),pointer,dimension(:,:) :: &
           beta_mol,            & ! Molecular backscatter coefficient
           tau_mol,             & ! Molecular optical depth
           tautot_S_liq,        & ! Liquid water optical thickness, from TOA to SFC
