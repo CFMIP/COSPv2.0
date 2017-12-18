@@ -65,7 +65,7 @@ print "#########################################################################
 print 'Treating relative differences less than {0:.10f}% as insignificant'.format(100*args.zeroThresh)
 
 # Extract variable names from netCDF files.
-dset    = netCDF4.Dataset(fileIN)
+dset    = netCDF4.Dataset(fileRef)
 varlist = dset.variables.keys()   # Variable names
 nvars   = len(varlist)            # Number of variables
 
