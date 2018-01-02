@@ -77,9 +77,10 @@ parasol.o                 : cosp_kinds.o cosp_config.o cosp_constants.o
 
 install:
 	make
+	mkdir $(OBJ_PATH)
 	mv *.mod *.o $(OBJ_PATH)
 clean:	
-	rm -f $(OBJ_PATH)*.mod $(OBJ_PATH)*.o fort.* *.mod *.o
+	rm -rf $(OBJ_PATH) fort.* *.mod *.o
 
 icarus.o : $(ISCCP_PATH)/icarus.F90
 	$(F90) $(F90FLAGS) -c $<
