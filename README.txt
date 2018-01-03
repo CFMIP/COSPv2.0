@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (dustin.swales@noaa.gov) 2016
+Written by Dustin Swales (dustin.swales@noaa.gov) 2018
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 General notes:
@@ -13,15 +13,8 @@ The CFMIP Observation Simulator Package (COSP) takes the models representation o
 atmosphere and simulates the retrievals for several passive (ISCCP, MISR and MODIS) and active
 (CLUDSAT(radar) and CALIPSO(lidar)) sensors.
 
-COSP Version 2.0 (COSPv2.0) is a major reorganization and modernization of the previous
-generation. Some of the major differences between v2.0 and previous versions of COSP (e.g.
-1.4.0) are...
-*) COSPv2.0 now expects subcolumn inputs. In previous versions, the subclumns were drawn
-   internally by COSP and provided as an output. In COSP2, we provide the resources to
-   calculate subcolumn optical-inputs as were done in previous versions of COSP, however we
-   encourage users to provide COSP with as much information about the host-model as possible.
-*) Explicit initialization of static fields
-*) Paramaterized working precision.
+COSP Version 2.0 (COSP2) is a major reorganization and modernization of the previous
+generation of COSP. For a detailed description, see https://doi.org/10.5194/gmd-2017-148
 
 The simulators in COSP (ISCCP, MISR, MODIS, RADAR (cloudsat) and LIDAR (calipso) have been
 developed by many institution and agencies:
@@ -30,16 +23,11 @@ developed by many institution and agencies:
 *) LMD/IPSL (Laboratoire de Meteorologie Dynamique/Institut Pierre Simon Laplace)
 *) CSU (Colorado State University)
 *) UW (University of Washington)
-
-The logical flow of COSP is as follows:
-*) Subcolumn retrievals (all simulators).
-*) Column retrievals (all simulators).
-*) Joint-instrument products.
+*) CU/CIRES (University of Colorado/Cooperative Institute for Research In Environmental Sciences)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 2) CONDITIONS OF USE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 The code is distributed under BSD License (http://www.opensource.org/licenses/bsd-license.php).
 Each source file includes a copy of this license with details on the Owner, Year 
 and Organisation. The license in the file quickbeam/README applies to all the files in 
@@ -132,7 +120,7 @@ b) Running
    i)  Set up COSP input (driver/src/cosp2_input_nl.txt) and output (driver/src/cosp2_output_nl.txt)
        namelists. The input namelist controls the COSP setup (i.e. Numebr of subcolumns to be
        used, etc...) and simulator specific information (i.e. Radar simulator frequency). The
-       output namelist contains a list of logicals, one for each COSP diagnostic output field.
+       output namelist controls the output diagnostics.
 	  
    ii) Run test code
        ./cosp2_test
@@ -151,6 +139,10 @@ c) Compare to reference data.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 5) CHANGES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+v2.0      - Initial version            (11/1/2017)        - OFFICIAL TAGGED RELEASE
+   v2.0.1 - Bug fix in MODIS simulator (11/31/2017)
+   v2.0.2 - New offline driver         (??????)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 6) NOTES
