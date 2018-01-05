@@ -1,22 +1,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (dustin.swales@noaa.gov) 2018
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+1) About COSP
 
-General notes:
-vN.N is version number (e.g. v2.0)
-We will assume that the software will be installed in ~/cosp.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-1) ABOUT THE CODE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The CFMIP Observation Simulator Package (COSP) takes the models representation of the
 atmosphere and simulates the retrievals for several passive (ISCCP, MISR and MODIS) and active
 (CLUDSAT(radar) and CALIPSO(lidar)) sensors.
 
-COSP Version 2.0 (COSP2) is a major reorganization and modernization of the previous
+An overview of COSP is provided in https://doi.org/10.1175/2011BAMS2856.1
+
+COSP Version 2 (COSP2) is a major reorganization and modernization of the previous
 generation of COSP. For a detailed description, see https://doi.org/10.5194/gmd-2017-148
 
-The simulators in COSP (ISCCP, MISR, MODIS, RADAR (cloudsat) and LIDAR (calipso) have been
+The simulators in COSP (ISCCP, MISR, MODIS, radar/CloudSat and lidar/CALIPSO) have been
 developed by many institution and agencies:
 *) Met Office Hadley Centre
 *) LLNL (Lawrence Livermore National Laboratory)
@@ -27,90 +21,48 @@ developed by many institution and agencies:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 2) CONDITIONS OF USE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 The code is distributed under BSD License (http://www.opensource.org/licenses/bsd-license.php).
-Each source file includes a copy of this license with details on the Owner, Year 
-and Organisation. The license in the file quickbeam/README applies to all the files in 
+Each source file includes a copy of this license with details on the Owner, Year
+and Organisation. The license in the file quickbeam/README applies to all the files in
 the directory quickbeam.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-3) DOWNLOADING AND UNPACKING
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The code is hosted by GitHub (https://github.com/CFMIP). To download the code, simply "clone"
-the repository using the following command:
+3) What's in the distribution
 
-   git clone https://github.com/CFMIP/COSPv2.0.git
+The repository include directories
+  src/ containing the COSP layer and the underlying satellite simulators
+  driver/ containing codes that run COSP on sample inputs and write results
+  testing/ containing scripts that compare results from the local installation with reference answers
 
-This will create a local copy, by default COSPv2.0/, of the COSP source code on your machine.
+Users incorporating COSP into a model should include all routines found within src/. The Makefile within this directory
+describes the dependencies.
 
-Legacy versions of COSP (v1.3.1, v1.3.2, v1.4.0 and v1.4.1) are also now archived on GitHub. These
-4 versions are archived as different "commits" in the same repository. To download one of these
-versions you will need to clone the COSPv1 repository and then revert to the correct commit.
+Two offline drivers are provided. Both read the same input files; these come from the Met Office
+Unified Model and contain snapshots of the model's state. One driver records every field output from
+COSP in a single netCDF file; the other uses the CMOR infrastructure to write a subset of fields to individual
+netCDF files following conventions for publication on the Earth System Grid Federation.
 
-For example, to download COSP v1.3.2 you would first clone the COSPv1 repository:
+As described in https://doi.org/10.5194/gmd-2017-148 COSP2 requires inputs in the forms of
+subcolumn-sampled optical properties. The drivers map the model physical state to these inputs using
+the routines in driver/subsample_and_optics/, which are consistent with the fixed choices made in COSP1.
 
-   git clone https://github.com/CFMIP/COSPv1.git
-
-This will create a local copy of the repository, by default COSPv1/. Then to view the different
-"commits" in that repository you can use "git log". For example:
-
-   git log
-     commit bae896c6d09af4f34493422974cfb86722f9ead5
-     Author: Dustin Swales <dustin.swales@noaa.gov>
-     Date:   Fri Nov 6 08:26:35 2015 -0700
-
-          COSP version 1.4.1
-
-     commit 572c53ab941c8019135d147fbdf01a6633487aaa
-     Author: Dustin Swales <dustin.swales@noaa.gov>
-     Date:   Mon Sep 14 11:53:52 2015 -0600
-
-          COSP version 1.4.0
-
-     commit 9e7d84d735249d95521852e0db0c8eed16b4f070
-     Author: Dustin Swales <dustin.swales@noaa.gov>
-     Date:   Mon Sep 14 11:15:51 2015 -0600
-
-         COSP version 1.3.2
-
-     commit ce4130ca7334bc30875e7cfc620d6195bf237c73
-     Author: Robert.Pincus <Robert.Pincus@colorado.edu>
-     Date:   Fri Mar 18 20:52:12 2011 +0000
-
-         Copying v1.3.1 to archive of stable releases.   
-
-This shows the commit IDs, author of the commit, date of the commit and a brief description
-for the three archived releases. By default in git, when you clone a repository, you will be
-at the latest commit. In this case COSPv1.4.1. To revert to an older
-commit you need to "checkout" that commit (i.e. git checkout <commit>). So for example, to
-revert to COSP v1.3.2, you would:
-
-   git checkout 9e7d84d735249d95521852e0db0c8eed16b4f070
+We anticipate that users incorporating COSP into models will develop a model-specific mapping between the
+model's physical state and the inputs required for COSP that is consistent with the host model.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-4) COMPILATION AND TESTING
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+4) Running the offline tests
+
 a) Compilation
-
-   i) Compiling COSP2 for in-line use (e.g. within GCM)
-      The main COSP source code is located in src/. The Makefile will need to be
-      modified to fit your systems architecture.
-        cd src/
-        make clean
-        make install
-      This will create all of the object files and modules and place them in a new directory, obj/.
-      
-   ii) Compiling COSP2 for off-line use.
       For offline testing, a driver is provided with COSP2. This driver can be built with the
       capability of creating CMOR compliant netcdf output, or output to a single netCDF file.
-      These drivers both require the netCDF library (http://www.unidata.ucar.edu/software/netcdf/).
 
-      *) non-CMOR compliant netCDF output
+      *) single netCDF output
         cd driver/src
         make cosp     ! Build COSP source code
         make          ! Build driver for COSP
-	
-      *) CMOR2
+
+      *) output using CMOR
         This driver requires the CMOR2 libraries. (www2-pcmdi.llnl.gov/cmor/download/)
         cd driver/src/cmor
         make cosp     ! Build COSP source code
@@ -121,7 +73,7 @@ b) Running
        namelists. The input namelist controls the COSP setup (i.e. Numebr of subcolumns to be
        used, etc...) and simulator specific information (i.e. Radar simulator frequency). The
        output namelist controls the output diagnostics.
-	  
+
    ii) Run test code
        ./cosp2_test
        This will run COSP and create outputs for the variables selected in the output namelist.
@@ -131,19 +83,7 @@ c) Compare to reference data.
    along with regression tools for comparison with your output.
 
    i) testing/test_cosp2Imp.py:
-       python test_cosp2Imp.py ../driver/data/outputs/UKMO/cosp2_output_um.ref.nc ../driver/data/outputs/UKMO/cosp2_output_um.nc 
+       python test_cosp2Imp.py ../driver/data/outputs/UKMO/cosp2_output_um.ref.nc ../driver/data/outputs/UKMO/cosp2_output_um.nc
 
-   ii) testing/test_cosp2Imp.cmor.py: (SAME as above, but for CMOR compliant output)      
+   ii) testing/test_cosp2Imp.cmor.py: (SAME as above, but for CMOR compliant output)
        python test_cospImp.py ../driver/data/outputs/UKMO/cmor/ref1D/ ../driver/data/outputs/UKMO/cmor/1D/ 1D
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-5) CHANGES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-v2.0      - Initial version            (11/1/2017)        - OFFICIAL TAGGED RELEASE
-   v2.0.1 - Bug fix in MODIS simulator (11/31/2017)
-   v2.0.2 - New offline driver         (??????)
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-6) NOTES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
