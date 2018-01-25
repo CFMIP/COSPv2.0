@@ -17,11 +17,16 @@ VPATH += $(SUBCOLS)/optics:$(SUBCOLS)/optics/quickbeam_optics:$(SUBCOLS)/subcol:
 
 # Standalone driver
 # Replace directory with ../driver/cmor to exercise CMOR-compatible offline driver; then need to link with CMOR
-DRIVER = ../driver
+DRIVER = ../driver/src
 VPATH += $(DRIVER)
 
-include Makefile.conf
 # Makefile.conf needs to define $(F90), $(F90FLAGS)
+include Makefile.conf
+NC_LIB = /Users/robert/Applications/ifort/lib
+NC_INC = /Users/robert/Applications/ifort/include
+
+F90FLAGS += -I$(NC_INC)
+LDFLAGS += -L. -lcosp -lsubcol -L$(NC_LIB) -lnetcdff
 
 # Rules
 %.o: %.F90
@@ -99,3 +104,8 @@ prec_scops.o : cosp_kinds.o cosp_config.o
 cosp_utils.o : cosp_kinds.o cosp_config.o
 cosp_optics.o: cosp_kinds.o cosp_config.o cosp_constants.o modis_simulator.o
 mo_rng.o     : cosp_kinds.o
+
+# Offline driver
+cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
+cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a 
+cosp2_test    : cosp2_test.o cosp2_io.o
