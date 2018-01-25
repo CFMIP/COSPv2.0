@@ -20,13 +20,12 @@ VPATH += $(SUBCOLS)/optics:$(SUBCOLS)/optics/quickbeam_optics:$(SUBCOLS)/subcol:
 DRIVER = ../driver/src
 VPATH += $(DRIVER)
 
-# Makefile.conf needs to define $(F90), $(F90FLAGS)
+# Makefile.conf needs to define $(F90), $(F90FLAGS), $(NC_LIB), $(NC_INC)
 include Makefile.conf
-NC_LIB = -L/Users/robert/Applications/ifort/lib -L/opt/local/lib
-NC_INC = -I/Users/robert/Applications/ifort/include
-
 F90FLAGS += $(NC_INC)
-LDFLAGS += -L. -lcosp -lsubcol $(NC_LIB) -lnetcdff -lnetcdf
+LDFLAGS  += $(NC_LIB) -lnetcdff -lnetcdf
+
+LDFLAGS += -L. -lcosp -lsubcol
 
 # Rules
 %.o: %.F90
@@ -62,7 +61,7 @@ $(LIBRARY): $(COSP_OBJS)
 lib: $(LIBRARY)
 
 clean:
-	rm -f *.optrpt *.mod *.o $(LIBRARY) fort.*
+	rm -f *.optrpt *.mod *.o *.a fort.*
 
 # Dependencies for libary
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
