@@ -22,11 +22,11 @@ VPATH += $(DRIVER)
 
 # Makefile.conf needs to define $(F90), $(F90FLAGS)
 include Makefile.conf
-NC_LIB = /Users/robert/Applications/ifort/lib
-NC_INC = /Users/robert/Applications/ifort/include
+NC_LIB = -L/Users/robert/Applications/ifort/lib -L/opt/local/lib
+NC_INC = -I/Users/robert/Applications/ifort/include
 
-F90FLAGS += -I$(NC_INC)
-LDFLAGS += -L. -lcosp -lsubcol -L$(NC_LIB) -lnetcdff
+F90FLAGS += $(NC_INC)
+LDFLAGS += -L. -lcosp -lsubcol $(NC_LIB) -lnetcdff -lnetcdf
 
 # Rules
 %.o: %.F90
@@ -107,5 +107,5 @@ mo_rng.o     : cosp_kinds.o
 
 # Offline driver
 cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
-cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a 
+cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
