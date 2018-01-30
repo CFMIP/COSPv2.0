@@ -12,18 +12,19 @@ PARASOL_PATH = $(SIM_PATH)/parasol
 VPATH = $(SRC_PATH):$(HOOKS):$(SIM_PATH):$(RT_PATH):$(RS_PATH):$(CS_PATH):$(ISCCP_PATH):$(MISR_PATH):$(MODIS_PATH):$(PARASOL_PATH)
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
-SUBCOLS = ../driver/src/subsample_and_optics
+SUBCOLS = ../subsample_and_optics_example
 VPATH += $(SUBCOLS)/optics:$(SUBCOLS)/optics/quickbeam_optics:$(SUBCOLS)/subcol:$(SUBCOLS)/subcol/rng
 
 # Standalone driver
-# Replace directory with ../driver/cmor to exercise CMOR-compatible offline driver; then need to link with CMOR
+# Replace directory with ../driver/src-cmor to exercise CMOR-compatible offline driver
 DRIVER = ../driver/src
 VPATH += $(DRIVER)
 
 # Makefile.conf needs to define $(F90), $(F90FLAGS), $(NC_LIB), $(NC_INC)
+# Also $(CMOR_INC) and $(CMOR_LIB) to exercise CMOR-compatible offline driver
 include Makefile.conf
-F90FLAGS += $(NC_INC)
-LDFLAGS  += $(NC_LIB) -lnetcdff -lnetcdf
+F90FLAGS += $(CMOR_INC) $(NC_INC)
+LDFLAGS  += $(CMOR_LIB) $(NC_LIB) -lnetcdff -lnetcdf
 
 LDFLAGS += -L. -lcosp -lsubcol
 
@@ -61,7 +62,7 @@ $(LIBRARY): $(COSP_OBJS)
 lib: $(LIBRARY)
 
 clean:
-	rm -f *.optrpt *.mod *.o *.a fort.*
+	rm -f *.optrpt *.mod *.o *.a fort.* cosp2_test
 
 # Dependencies for libary
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
