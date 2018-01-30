@@ -63,7 +63,7 @@ program cosp_test
 
   ! Input/Output driver file control
   character(len=64),parameter :: &
-       cosp_input_namelist  = 'cosp2_input_nl.txt', &
+       cosp_input_namelist  = 'cosp2_input_nl.cmor.txt', &
        cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
