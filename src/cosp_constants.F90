@@ -2,45 +2,45 @@
 ! Copyright (c) 2015, Regents of the University of Colorado
 ! All rights reserved.
 !
-! Redistribution and use in source and binary forms, with or without modification, are 
+! Redistribution and use in source and binary forms, with or without modification, are
 ! permitted provided that the following conditions are met:
 !
-! 1. Redistributions of source code must retain the above copyright notice, this list of 
+! 1. Redistributions of source code must retain the above copyright notice, this list of
 !    conditions and the following disclaimer.
 !
 ! 2. Redistributions in binary form must reproduce the above copyright notice, this list
-!    of conditions and the following disclaimer in the documentation and/or other 
+!    of conditions and the following disclaimer in the documentation and/or other
 !    materials provided with the distribution.
 !
-! 3. Neither the name of the copyright holder nor the names of its contributors may be 
+! 3. Neither the name of the copyright holder nor the names of its contributors may be
 !    used to endorse or promote products derived from this software without specific prior
 !    written permission.
 !
-! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
-! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
-! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
-! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
-! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
 ! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 ! LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !
 ! History:
 ! May 2015- D. Swales - Original version
-! 
+!
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE cosp_math_constants
   USE cosp_kinds, only: wp
   IMPLICIT NONE
-  REAL(wp), PARAMETER :: pi =  3.14159265358979323846264338327950288419717_wp
+  REAL(wp), PARAMETER :: pi =  acos(-1.0_wp)
 
 END MODULE cosp_math_constants
 
 MODULE cosp_phys_constants
   USE cosp_kinds, only: wp
   IMPLICIT NONE
-  
+
   REAL(wp), PARAMETER :: &
        tmelt  = 273.15_wp,      & ! Melting temperature of ice/snow [K]
        rhoice = 917._wp,        & ! Density of ice [kg/m3]
@@ -70,5 +70,3 @@ MODULE cosp_phys_constants
        km  = 1.38e-23_wp          ! Boltzmann constant [J/K]
 
 END MODULE cosp_phys_constants
-
-
