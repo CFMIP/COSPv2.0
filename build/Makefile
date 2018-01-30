@@ -1,11 +1,11 @@
 # Paths to source codes in COSP library
+HOOKS        = ../model-interface
 SRC_PATH     = ../src
-HOOKS        = $(SRC_PATH)/hooks
 SIM_PATH     = $(SRC_PATH)/simulator
 RT_PATH      = $(SIM_PATH)/rttov
 RS_PATH      = $(SIM_PATH)/quickbeam
 CS_PATH      = $(SIM_PATH)/actsim
-ISCCP_PATH   = $(SIM_PATH)/icarus-scops-4.1-bsd
+ISCCP_PATH   = $(SIM_PATH)/icarus
 MISR_PATH    = $(SIM_PATH)/MISR_simulator
 MODIS_PATH   = $(SIM_PATH)/MODIS_simulator
 PARASOL_PATH = $(SIM_PATH)/parasol
