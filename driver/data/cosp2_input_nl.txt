@@ -1,25 +1,25 @@
 ! (c) British Crown Copyright 2008, the Met Office.
 ! All rights reserved.
-! 
-! Redistribution and use in source and binary forms, with or without modification, are permitted 
+!
+! Redistribution and use in source and binary forms, with or without modification, are permitted
 ! provided that the following conditions are met:
-! 
-!     * Redistributions of source code must retain the above copyright notice, this list 
+!
+!     * Redistributions of source code must retain the above copyright notice, this list
 !       of conditions and the following disclaimer.
 !     * Redistributions in binary form must reproduce the above copyright notice, this list
-!       of conditions and the following disclaimer in the documentation and/or other materials 
+!       of conditions and the following disclaimer in the documentation and/or other materials
 !       provided with the distribution.
-!     * Neither the name of the Met Office nor the names of its contributors may be used 
-!       to endorse or promote products derived from this software without specific prior written 
+!     * Neither the name of the Met Office nor the names of its contributors may be used
+!       to endorse or promote products derived from this software without specific prior written
 !       permission.
-! 
-! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
-! IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
-! FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
-! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-! DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
-! IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+!
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+! IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+! FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+! DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+! IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ! OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
@@ -35,7 +35,8 @@
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
-  FINPUT='../../data/inputs/UKMO/cosp_input_um.nc', ! List input NetCDF files
+  FINPUT='./inputs/UKMO/cosp_input_um.nc', ! List input NetCDF files
+  FOUTPUT='./outputs/UKMO/cosp2_output_um.nc',
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
@@ -44,7 +45,7 @@
   cloudsat_use_gas_abs=1,   ! include gaseous absorption? yes=1,no=0
   cloudsat_do_ray=0,        ! calculate/output Rayleigh refl=1, not=0
   cloudsat_k2=-1,           ! |K|^2, -1=use frequency dependent default
-  use_precipitation_fluxes=.true.,  ! True if precipitation fluxes are input to the algorithm 
+  use_precipitation_fluxes=.true.,  ! True if precipitation fluxes are input to the algorithm
   cloudsat_micro_scheme='MMF_v3_single_moment', !'MMF_v3.5_two_moment'
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to lidar simulations
@@ -74,8 +75,8 @@
                                  ! with interpolated temperature equal to the radiance
                                  ! determined cloud-top temperature
                                  ! 2 = find the *highest* altitude (lowest pressure) level
-                                 ! with interpolated temperature equal to the radiance 
-                                 ! determined cloud-top temperature. This is the 
+                                 ! with interpolated temperature equal to the radiance
+                                 ! determined cloud-top temperature. This is the
                                  ! default value since V4.0 of the ISCCP simulator.
                                  ! ONLY APPLICABLE IF top_height EQUALS 1 or 3
   !----------------------------------------------------------------------------------
@@ -93,5 +94,3 @@
   N2O=4.665e-07,
   CO=2.098e-07
 /
-
-
