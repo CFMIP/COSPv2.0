@@ -63,7 +63,11 @@ lib: $(LIBRARY)
 
 clean:
 	rm -f *.optrpt *.mod *.o *.a fort.* cosp2_test
-
+	
+driver:
+	make cosp2_test
+	mv cosp2_test ../driver/run	
+	
 # Dependencies for libary
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
                             cosp_rttov_interfaceSTUB.o cosp_misr_interface.o cosp_isccp_interface.o \
@@ -90,7 +94,7 @@ cosp_rttov_interfaceSTUB.o: cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
 cosp_rttovSTUB.o          : cosp_kinds.o cosp_config.o cosp_constants.o
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
-SUBCOL_OBJS = mo_rng.o scops.o prec_scops.o cosp_utils.o cosp_optics.o quickbeam_optics.o array_lib.o math_lib.o mrgrnk.o optics_lib.o
+SUBCOL_OBJS = mo_rng.o scops.o prec_scops.o cosp_utils.o cosp_optics.o quickbeam_optics.o array_lib.o math_lib.o mrgrnk.o optics_lib.o cosp_errorHandling.o
 libsubcol.a: $(SUBCOL_OBJS) libcosp.a
 	ar -rvs libsubcol.a $(SUBCOL_OBJS)
 
@@ -99,7 +103,7 @@ mrgrnk.o          : cosp_kinds.o
 math_lib.o        : cosp_kinds.o cosp_errorHandling.o
 optics_lib.o      : cosp_kinds.o cosp_errorHandling.o
 quickbeam_optics.o: cosp_kinds.o cosp_errorHandling.o cosp_constants.o cosp_config.o mrgrnk.o array_lib.o optics_lib.o math_lib.o quickbeam.o
-scops.o      : cosp_kinds.o               mo_rng.o
+scops.o      : cosp_kinds.o cosp_errorHandling.o mo_rng.o
 prec_scops.o : cosp_kinds.o cosp_config.o
 cosp_utils.o : cosp_kinds.o cosp_config.o
 cosp_optics.o: cosp_kinds.o cosp_config.o cosp_constants.o modis_simulator.o
