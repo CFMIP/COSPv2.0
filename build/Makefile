@@ -17,14 +17,14 @@ VPATH += $(SUBCOLS)/optics:$(SUBCOLS)/optics/quickbeam_optics:$(SUBCOLS)/subcol:
 
 # Standalone driver
 # Replace directory with ../driver/src-cmor to exercise CMOR-compatible offline driver
-DRIVER = ../driver/src-cmor
+DRIVER = ../driver/src
 VPATH += $(DRIVER)
 
 # Makefile.conf needs to define $(F90), $(F90FLAGS), $(NC_LIB), $(NC_INC)
 # Also $(CMOR_INC) and $(CMOR_LIB) to exercise CMOR-compatible offline driver
 include Makefile.conf
-F90FLAGS += $(CMOR_INC) $(NC_INC) $(UDUNITS_INC) $(UUID_INC)
-LDFLAGS  += $(CMOR_LIB) $(NC_LIB) -lnetcdff -lnetcdf $(UDUNITS_LIB) $(UUID_LIB)
+F90FLAGS += $(CMOR_INC) $(NC_INC)
+LDFLAGS  += $(CMOR_LIB) $(NC_LIB) -lnetcdff -lnetcdf
 
 LDFLAGS += -L. -lcosp -lsubcol
 
