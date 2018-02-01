@@ -42,7 +42,7 @@
 # NAME                  TYPE            DESCRIPTION 
 # dataRef               string          COSP output file (Reference) OR COSP output directory (if using --cmor)
 # data                  string          COSP output file OR COSP output directory (if using --cmor)
-# -zeroThresh           float           error threshold(optional)
+# --zeroThresh           float           error threshold(optional)
 # --cmor                string          using cmor compliant output? (optional)     
 #
 ##########################################################################################
@@ -54,7 +54,7 @@ parser.add_argument('dataRef',metavar='COSP2_reference_data',type=str,nargs=1,
                     help='COSP2 input file (reference)')
 parser.add_argument('data',metavar='COSP2_data',type=str,nargs=1,
                     help='COSP2 input file')
-parser.add_argument('-zeroThresh',nargs='?',type=float,
+parser.add_argument('--zeroThresh',nargs='?',type=float,
                     default=0.00001,help='Error tolerance threshold')
 parser.add_argument('--cmor',type=str,nargs=1,default='None', help='CMOR data format (1D or 2D)')
 args    = parser.parse_args()
@@ -69,8 +69,7 @@ count = 0
 ##########################################################################################
 # A) Standard output.
 ##########################################################################################
-if (args.cmor == None):
-    
+if (args.cmor == 'None'):
     # Input filenames
     fileRef = ''.join(args.dataRef)
     fileIN  = ''.join(args.data)
@@ -126,7 +125,7 @@ if (args.cmor == None):
 ##########################################################################################
 # B) CMOR compliant output
 ##########################################################################################
-if (args.cmor != None):
+if (args.cmor != 'None'):
     dirOUT     = ''.join(args.data)
     dirREF     = ''.join(args.dataRef)
     dataset    = ''.join(args.cmor)

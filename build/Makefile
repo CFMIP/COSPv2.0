@@ -15,6 +15,10 @@ VPATH = $(SRC_PATH):$(HOOKS):$(SIM_PATH):$(RT_PATH):$(RS_PATH):$(CS_PATH):$(ISCC
 SUBCOLS = ../subsample_and_optics_example
 VPATH += $(SUBCOLS)/optics:$(SUBCOLS)/optics/quickbeam_optics:$(SUBCOLS)/subcol:$(SUBCOLS)/subcol/rng
 
+# COSP1.4 wrapper around COSP2
+COSP1WRAPPER = ../cosp-1.4-interface
+VPATH += $(COSP1WRAPPER)
+
 # Standalone driver
 # Replace directory with ../driver/src-cmor to exercise CMOR-compatible offline driver
 DRIVER = ../driver/src
@@ -67,19 +71,22 @@ clean:
 driver:
 	make cosp2_test
 	mv cosp2_test ../driver/run
-	
+driver_COSP1.4:
+	make cosp1_test
+	mv cosp1_test ../driver/run
+
 # Dependencies for libary
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
                             cosp_rttov_interfaceSTUB.o cosp_misr_interface.o cosp_isccp_interface.o \
                             cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_stats.o         \
-  			                    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interfaceSTUB.o    \
+	                    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interfaceSTUB.o    \
                             quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o
 cosp_constants.o          : cosp_kinds.o
 cosp_config.o             : cosp_kinds.o
 cosp_errorHandling.o      : cosp_kinds.o
 cosp_stats.o              : cosp_kinds.o cosp_config.o
 cosp_isccp_interface.o    : cosp_kinds.o icarus.o
-icarus.o	                : cosp_kinds.o cosp_constants.o  cosp_stats.o
+icarus.o	          : cosp_kinds.o cosp_constants.o  cosp_stats.o
 cosp_misr_interface.o     : cosp_kinds.o
 MISR_simulator.o          : cosp_kinds.o cosp_config.o cosp_stats.o
 cosp_modis_interface.o    : cosp_kinds.o cosp_config.o modis_simulator.o
@@ -113,3 +120,8 @@ mo_rng.o     : cosp_kinds.o
 cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
 cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
+
+# Offline driver
+cosp_interface_v1p4.o : cosp_kinds.o libcosp.a libsubcol.a
+cosp1_test.o  : cosp2_io.o cosp_interface_v1p4.o
+cosp1_test    : cosp1_test.o cosp2_io.o cosp_interface_v1p4.o
