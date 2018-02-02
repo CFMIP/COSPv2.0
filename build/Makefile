@@ -121,7 +121,7 @@ cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
 cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
 
-# Offline driver
+# Offline driver using COSP 1.4 interface
 cosp_interface_v1p4.o : cosp_kinds.o libcosp.a libsubcol.a
 cosp1_test.o  : cosp2_io.o cosp_interface_v1p4.o
 cosp1_test    : cosp1_test.o cosp2_io.o cosp_interface_v1p4.o
