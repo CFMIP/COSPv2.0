@@ -44,7 +44,8 @@ program cosp_test_v2
                                  Nlvgrid_local  => Nlvgrid
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,nc_cmor_init
-  USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics
+  USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
+                                 quickbeam_optics_init,gases
   use quickbeam,           only: radar_cfg
   use mod_cosp,            only: cosp_init,cosp_optical_inputs,cosp_column_inputs,        &
                                  cosp_outputs,cosp_cleanUp,cosp_simulator
@@ -344,7 +345,8 @@ program cosp_test_v2
   if (cloudsat_micro_scheme == 'MMF_v3.5_two_moment')  then
      ldouble = .true. 
      lsingle = .false.
-  endif  
+  endif
+  call quickbeam_optics_init()
 
   ! Initialize the distributional parameters for hydrometeors in radar simulator
   call hydro_class_init(lsingle,ldouble,sd)
@@ -589,7 +591,7 @@ contains
          mr_hydro, Reff, Np
     real(wp),dimension(nPoints,nLevels) :: &
          column_frac_out, column_prec_out, fl_lsrain, fl_lssnow, fl_lsgrpl, fl_ccrain, fl_ccsnow
-    logical :: cmpGases=.true.
+!    logical :: cmpGases=.true.
 
     if (Ncolumns .gt. 1) then
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -826,27 +828,26 @@ contains
     ! CLOUDSAT RADAR OPTICS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if (lcloudsat) then
-       ! Loop over all subcolumns
+
+       ! Compute gaseous absorption (assume identical for each subcolun)
        allocate(g_vol(nPoints,nLevels))
+       g_vol(:,:)=0._wp
+       do i=1,nPoints
+          do j=1,nLevels
+             if (rcfg_cloudsat%use_gas_abs == 1 .or. (rcfg_cloudsat%use_gas_abs == 2 .and. j .eq. 1)) then
+                g_vol(i,j) = gases(cospstateIN%pfull(i,j), cospstateIN%at(i,j),cospstateIN%qv(i,j),rcfg_cloudsat%freq)
+             endif
+             cospIN%g_vol_cloudsat(i,j,:)=g_vol(i,j)
+          end do
+       end do
+       
+       ! Loop over all subcolumns
        do k=1,nColumns
-          ! Try to avoid memory copy... Pass mr_hydro, Reff and Np directly into quickbeam_optics
-          if (k .eq. 1) then
-             cmpGases = .true.
-             call quickbeam_optics(sd, rcfg_cloudsat, nPoints, nLevels, R_UNDEF,  &
-                  mr_hydro(:,k,:,1:nHydro)*1000._wp, Reff(:,k,:,1:nHydro)*1.e6_wp,&
-                  Np(:,k,:,1:nHydro), cospstateIN%pfull, cospstateIN%at,          &
-                  cospstateIN%qv, cmpGases, cospIN%z_vol_cloudsat(1:nPoints,k,:), &
-                  cospIN%kr_vol_cloudsat(1:nPoints,k,:),                          &
-                  cospIN%g_vol_cloudsat(1:nPoints,k,:),g_vol_out=g_vol)
-          else
-             cmpGases = .false.
-             call quickbeam_optics(sd, rcfg_cloudsat, nPoints, nLevels, R_UNDEF,  &
-                  mr_hydro(:,k,:,1:nHydro)*1000._wp, Reff(:,k,:,1:nHydro)*1.e6_wp,&
-                  Np(:,k,:,1:nHydro), cospstateIN%pfull, cospstateIN%at,          &
-                  cospstateIN%qv, cmpGases, cospIN%z_vol_cloudsat(1:nPoints,k,:), &
-                  cospIN%kr_vol_cloudsat(1:nPoints,k,:),                          &
-                  cospIN%g_vol_cloudsat(1:nPoints,k,:),g_vol_in=g_vol)
-          endif
+          call quickbeam_optics(sd, rcfg_cloudsat, nPoints, nLevels, R_UNDEF,  &
+               mr_hydro(:,k,:,1:nHydro)*1000._wp, Reff(:,k,:,1:nHydro)*1.e6_wp,&
+               Np(:,k,:,1:nHydro), cospstateIN%pfull, cospstateIN%at,          &
+               cospstateIN%qv, cospIN%z_vol_cloudsat(1:nPoints,k,:),           &
+               cospIN%kr_vol_cloudsat(1:nPoints,k,:))
        enddo
     endif
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
