@@ -761,7 +761,7 @@ contains
              if (rcfg_cloudsat%use_gas_abs == 1 .or. (rcfg_cloudsat%use_gas_abs == 2 .and. j .eq. 1)) then
                 g_vol(i,j) = gases(cospstateIN%pfull(i,j), cospstateIN%at(i,j),cospstateIN%qv(i,j),rcfg_cloudsat%freq)
              endif
-             cospIN%g_vol_cloudsat(i,j,:)=g_vol(i,j)
+             cospIN%g_vol_cloudsat(i,:,j)=g_vol(i,j)
           end do
        end do
        
