@@ -58,7 +58,7 @@ module mod_quickbeam_optics
   real(wp),dimension(cnt_ice) :: mt_tti 
   real(wp),dimension(cnt_liq) :: mt_ttl
   real(wp),dimension(nd)      :: D
-  logical :: lQuickbeamInit
+  !logical :: lQuickbeamInit
   
 contains
   ! ######################################################################################
@@ -73,15 +73,14 @@ contains
     do j=2,nd
        D(j) = D(j-1)*exp((log(dmax)-log(dmin))/(nd-1))
     enddo
-    lQuickbeamInit = .true.
+    !lQuickbeamInit = .true.
   end subroutine quickbeam_optics_init
   
   ! ######################################################################################
   ! SUBROUTINE QUICKBEAM_OPTICS
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
-                              Np_matrix, p_matrix, t_matrix, sh_matrix,cmpGases,         &
-                              z_vol,kr_vol,g_vol,g_vol_in,g_vol_out)
+       Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol)
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -102,24 +101,17 @@ contains
          hm_matrix        ! Table of hydrometeor mixing ratios (g/kg)
     real(wp),intent(inout),dimension(nprof,ngate,rcfg%nhclass) :: &
          Np_matrix        ! Table of hydrometeor number concentration.  0 ==> use defaults. (units = 1/kg)
-    logical,intent(inout) :: &
-         cmpGases         ! Compute gaseous attenuation for all profiles
-    
+
     ! OUTPUTS
     real(wp),intent(out), dimension(nprof, ngate) :: &
          z_vol,         & ! Effective reflectivity factor (mm^6/m^3)
-         kr_vol,        & ! Attenuation coefficient hydro (dB/km)
-         g_vol            ! Attenuation coefficient gases (dB/km)
-       
-    ! OPTIONAL
-    real(wp),dimension(nprof,ngate),optional :: &
-         g_vol_in,g_vol_out
-    
+         kr_vol           ! Attenuation coefficient hydro (dB/km)
+
     ! INTERNAL VARIABLES   
     integer :: &
          phase, ns,tp,j,k,pr,itt,iRe_type,n 
     logical :: &
-         hydro,g_vol_in_present,g_vol_out_present
+         hydro
     real(wp) :: &
          t_kelvin,Re_internal
     real(wp) :: &
@@ -142,28 +134,13 @@ contains
     real(wp), parameter :: &
          one_third   = 1._wp/3._wp    !
 
-    g_vol_in_present  = present(g_vol_in)
-    g_vol_out_present = present(g_vol_out)
-    
     ! Initialization
-    if (.not. lQuickbeamInit) call quickbeam_optics_init()
     z_vol    = 0._wp
     z_ray    = 0._wp
     kr_vol   = 0._wp
 
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
-          if (g_vol_in_present) then
-             g_vol(pr,k) = g_vol_in(pr,k)
-          endif
-          
-          ! Gas attenuation (only need to do this for the first subcolumn (i.e. cmpGases=true)
-          if (cmpGases) then
-             if (rcfg%use_gas_abs == 1 .or. (rcfg%use_gas_abs == 2 .and. pr .eq. 1)) then
-                g_vol(pr,k) = gases(p_matrix(pr,k),t_matrix(pr,k),sh_matrix(pr,k),rcfg%freq)
-             endif
-          endif
-          
           ! Determine if hydrometeor(s) present in volume
           hydro = .false.
           do j=1,rcfg%nhclass
@@ -362,9 +339,6 @@ contains
           endif
        enddo
     enddo
-
-    ! Only need to compute gaseous absorption for the first subcolumn, so turn off after first call.
-    cmpGases=.false.
     
     where(kr_vol(:,:) <= EPSILON(kr_vol)) 
        ! Volume is hydrometeor-free	
