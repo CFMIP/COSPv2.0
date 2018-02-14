@@ -105,6 +105,7 @@ for ij=0,n_elements(files)-1 do begin
       minV(ij) = min(diff2(where(diff2 ne 0)))
       maxV(ij) = max(diff2(where(diff2 ne 0)))
    endif
+   if ij eq 5 then stop
 end
 
 ; Print results
