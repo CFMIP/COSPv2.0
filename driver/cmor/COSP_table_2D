@@ -3366,6 +3366,11 @@ type:              real
 !----------------------------------
 !
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!****************** OPAQ variables beginning *****************!
+!     7 variables = 3 x 2D variables and 4 x 3D variables     !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 !============
 variable_entry:    clopaquecalipso
 !============
@@ -3416,7 +3421,7 @@ modeling_realm:    atmos
 standard_name:     z_opaque
 units:             m
 cell_methods:      time: point
-long_name:         CALIPSO z_opaque Mean Altitude
+long_name:         CALIPSO z_opaque Altitude
 !----------------------------------
 ! Additional variable information:
 !----------------------------------
@@ -3509,6 +3514,354 @@ out_name:          clcalipsoopacity
 type:              real
 !----------------------------------
 !
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!********************** OPAQ variables end *******************!
+!       7 variables = 3 2D variables and 4 3D variables       !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!****************** GLID variables beginning ********************!
+! 7 variables = 4 2D variables, 2 3D variables and 1 4D variable !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!============
+variable_entry:    cltcalipsogr
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     total_cloud_cover
+units:             %
+cell_methods:      time: point
+long_name:         GROUND LIDAR Total Cloud Cover
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          cltcalipsogr
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    cllcalipsogr
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     low_cloud_cover
+units:             %
+cell_methods:      time: point
+long_name:         GROUND LIDAR Low Level Cloud Cover
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1 p840
+out_name:          cllcalipsogr
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clmcalipsogr
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     mid_cloud_cover
+units:             %
+cell_methods:      time: point
+long_name:         GROUND LIDAR Mid Level Cloud Cover
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1 p560
+out_name:          clmcalipsogr
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clhcalipsogr
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     high_cloud_cover
+units:             %
+cell_methods:      time: point
+long_name:         GROUND LIDAR High Level Cloud Cover
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1 p220
+out_name:          clhcalipsogr
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry: lidarBetaMol532gr
+!============
+!
+! Variable attributes:
+!----------------------------------	
+standard_name: volume_attenuated_backwards_scattering_function_in_air_assuming_no_aerosol_or_cloud
+units:         m-1 sr-1
+long_name:     GROUND LIDAR Molecular Backscatter (532 nm)
+!----------------------------------	
+!
+! Additional variable information:
+!----------------------------------	
+dimensions:       longitude latitude alevel time1
+!out_name:         lidarBetaMol532gr
+!type:             real
+!----------------------------------	
+!
+
+!============
+variable_entry:    cfadLidarsr532gr
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     histogram_of_backscattering_ratio_over_height_above_reference_ellipsoid
+units:             1
+cell_methods:      time: point
+long_name:         GROUND LIDAR Scattering Ratio CFAD
+comment:           CFADs (Cloud Frequency Altitude Diagrams) are joint height - radar reflectivity (or lidar scattering ratio) distributions  (40 levelsx15 bins) .
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude alt40 scatratio time1
+out_name:          cfadLidarsr532gr
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clcalipsogr
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     cloud_area_fraction_in_atmosphere_layer
+units:             %
+cell_methods:      time: point
+long_name:         GROUND LIDAR Cloud Area Fraction
+comment:           (40 height levels)
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude alt40 time1
+out_name:          clcalipsogr 
+type:              real
+!----------------------------------
+!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!********************** GLID variables end **********************!
+! 7 variables = 4 2D variables, 2 3D variables and 1 4D variable !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!****************** TIBO variables beginning *****************!
+!                9 variables = 9 x 2D variables               !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!============
+variable_entry:    clopaquetemp
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     opaque_cloud_temperature
+units:             K
+cell_methods:      time: point
+long_name:         CALIPSO Opaque Cloud Temperature
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clopaquetemp
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clthintemp
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     thin_cloud_temperature
+units:             K
+cell_methods:      time: point
+long_name:         CALIPSO Thin Cloud Temperature
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clthintemp
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clzopaquetemp
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     z_opaque_temperature
+units:             K
+cell_methods:      time: point
+long_name:         CALIPSO z_opaque Temperature
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clzopaquetemp
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clopaquemeanz
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     opaque_cloud_altitude
+units:             m
+cell_methods:      time: point
+long_name:         CALIPSO Opaque Cloud Altitude
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clopaquemeanz
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clthinmeanz
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     thin_cloud_altitude
+units:             m
+cell_methods:      time: point
+long_name:         CALIPSO Thin Cloud Altitude
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clthinmeanz
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clthinemis
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     thin_cloud_emissivity
+units:             1
+cell_methods:      time: point
+long_name:         CALIPSO Thin Cloud Emissivity
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clthinemis
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clopaquemeanzse
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     opaque_cloud_altitude_se
+units:             m
+cell_methods:      time: point
+long_name:         CALIPSO Opaque Cloud Altitude with respect to SE
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clopaquemeanzse
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clthinmeanzse
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     thin_cloud_altitude_se
+units:             m
+cell_methods:      time: point
+long_name:         CALIPSO Thin Cloud Altitude with respect to SE
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clthinmeanzse
+type:              real
+!----------------------------------
+!
+
+!============
+variable_entry:    clzopaquecalipsose
+!============
+modeling_realm:    atmos
+!----------------------------------
+! Variable attributes:
+!----------------------------------
+standard_name:     z_opaque_se
+units:             m
+cell_methods:      time: point
+long_name:         CALIPSO z_opaque Altitude with respect to SE
+!----------------------------------
+! Additional variable information:
+!----------------------------------
+dimensions:        longitude latitude time1
+out_name:          clzopaquecalipsose
+type:              real
+!----------------------------------
+!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!********************** TIBO variables end *******************!
+!                 9 variables = 9 2D variables                !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 !
 !============
