@@ -58,14 +58,32 @@
   Lcllcalipsoun=.true.,
   Lclmcalipsoun=.true.,
   Lcltcalipsoun=.true.,
-  ! CALIPSO OPAQ diagnostics
-  Lclopaquecalipso=.true.,
-  Lclthincalipso=.true.,
-  Lclzopaquecalipso=.true.,
-  Lclcalipsoopaque=.true.,
-  Lclcalipsothin=.true.,
-  Lclcalipsozopaque=.true.,
-  Lclcalipsoopacity=.true.,
+  ! CALIPSO OPAQ diagnostics !OPAQ
+  Lclopaquecalipso=.true.,   !OPAQ
+  Lclthincalipso=.true.,     !OPAQ
+  Lclzopaquecalipso=.true.,  !OPAQ
+  Lclcalipsoopaque=.true.,   !OPAQ
+  Lclcalipsothin=.true.,     !OPAQ
+  Lclcalipsozopaque=.true.,  !OPAQ
+  Lclcalipsoopacity=.true.,  !OPAQ
+  ! GROUND LIDAR diagnostics !GLID
+  LlidarBetaMol532gr=.true., !GLID
+  LcfadLidarsr532gr=.true.,  !GLID
+  Lclcalipsogr=.true.,       !GLID
+  Lclhcalipsogr=.true.,      !GLID
+  Lcllcalipsogr=.true.,      !GLID
+  Lclmcalipsogr=.true.,      !GLID
+  Lcltcalipsogr=.true.,      !GLID
+  ! CALIPSO TIBO diagnostics !TIBO
+  Lclopaquetemp=.true.,      !TIBO
+  Lclthintemp=.true.,        !TIBO
+  Lclzopaquetemp=.true.,     !TIBO
+  Lclopaquemeanz=.true.,     !TIBO
+  Lclthinmeanz=.true.,       !TIBO
+  Lclthinemis=.true.,        !TIBO
+  Lclopaquemeanzse=.true.,   !TIBO2
+  Lclthinmeanzse=.true.,     !TIBO2
+  Lclzopaquecalipsose=.true.,!TIBO2
   !- ISCCP
   Lalbisccp=.true.,
   Lboxptopisccp=.true.,

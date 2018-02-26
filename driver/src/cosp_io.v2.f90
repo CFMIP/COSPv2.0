@@ -15,7 +15,7 @@ module mod_cosp_io
   
   ! Types to be used as arrays of pointers
   TYPE var1d
-     character(len=16) :: name
+     character(len=18) :: name !GLID
      character(len=16) :: units
      integer :: dimsid(3)
      integer :: dimssz(2)
@@ -24,7 +24,7 @@ module mod_cosp_io
      real(wp),pointer,dimension(:) :: pntr
   END TYPE var1d
   TYPE var2d
-     character(len=16) :: name
+     character(len=18) :: name !GLID
      character(len=16) :: units
      integer :: dimsid(4)
      integer :: dimssz(3)
@@ -33,7 +33,7 @@ module mod_cosp_io
      real(wp),pointer,dimension(:,:) :: pntr
   END TYPE var2d
   TYPE var3d
-     character(len=16) :: name
+     character(len=18) :: name !GLID
      character(len=16) :: units
      integer :: dimsid(5)
      integer :: dimssz(4)
@@ -52,17 +52,23 @@ contains
                                    Ltauimodis,Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis, &
                                    Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,      &
                                    Liwpmodis,Lclmodis,Latb532,LlidarBetaMol532,          &
-                                   LcfadLidarsr532,Lclcalipso2,Lclcalipso,Lclhcalipso,   &
-                                   Lcllcalipso,Lclmcalipso,Lcltcalipso,Lcltlidarradar,   &
-                                   Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,&
+                                   LlidarBetaMol532gr,LcfadLidarsr532,LcfadLidarsr532gr, & !GLID
+                                   Lclcalipso2,Lclcalipso,Lclcalipsogr,Lclhcalipso,      & !GLID
+                                   Lcllcalipso,Lclmcalipso,Lcltcalipso,Lclhcalipsogr,    & !GLID
+                                   Lcllcalipsogr,Lclmcalipsogr,Lcltcalipsogr,            & !GLID
+                                   Lcltlidarradar,Lclcalipsoliq,                         & !GLID
+                                   Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,             & !GLID
                                    Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,    &
                                    Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun,          &
                                    Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,          &
                                    Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,          &
                                    Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,          & 
-                                   Lclopaquecalipso,Lclthincalipso,Lclzopaquecalipso,    &
-                                   Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,    &
-                                   Lclcalipsoopacity,LcfadDbze94,Ldbze94,Lparasolrefl,   &
+                                   Lclopaquecalipso,Lclthincalipso,Lclzopaquecalipso,    & !OPAQ
+                                   Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,    & !OPAQ
+                                   Lclcalipsoopacity,Lclopaquetemp,Lclthintemp,          & !TIBO
+                                   Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,           & !TIBO
+                                   Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,          & !TIBO !TIBO2
+                                   Lclzopaquecalipsose,LcfadDbze94,Ldbze94,Lparasolrefl, & !TIBO2
                                    Ltbrttov,N_out_list,out_list)
     ! Inputs
     logical,intent(in) :: &
@@ -96,13 +102,20 @@ contains
          Lclmodis,         & ! MODIS cloud area fraction
          Latb532,          & ! CALIPSO attenuated total backscatter (532nm)
          LlidarBetaMol532, & ! CALIPSO molecular backscatter (532nm)         
+         LlidarBetaMol532gr, & ! GROUND LIDAR molecular backscatter (532nm) !GLID 
          LcfadLidarsr532,  & ! CALIPSO scattering ratio CFAD
+         LcfadLidarsr532gr,  & ! GROUND LIDAR scattering ratio CFAD         !GLID
          Lclcalipso2,      & ! CALIPSO cloud fraction undetected by cloudsat
          Lclcalipso,       & ! CALIPSO cloud area fraction
+         Lclcalipsogr,     & ! GROUND LIDAR cloud area fraction              !GLID
          Lclhcalipso,      & ! CALIPSO high-level cloud fraction
          Lcllcalipso,      & ! CALIPSO low-level cloud fraction
          Lclmcalipso,      & ! CALIPSO mid-level cloud fraction
          Lcltcalipso,      & ! CALIPSO total cloud fraction
+         Lclhcalipsogr,    & ! GROUND LIDAR high-level cloud fraction        !GLID
+         Lcllcalipsogr,    & ! GROUND LIDAR low-level cloud fraction         !GLID
+         Lclmcalipsogr,    & ! GROUND LIDAR mid-level cloud fraction         !GLID
+         Lcltcalipsogr,    & ! GROUND LIDAR total cloud fraction             !GLID
          Lcltlidarradar,   & ! CALIPSO-CLOUDSAT total cloud fraction
          Lclcalipsoliq,    & ! CALIPSO liquid cloud area fraction
          Lclcalipsoice,    & ! CALIPSO ice cloud area fraction 
@@ -123,13 +136,22 @@ contains
          Lcllcalipsoliq,   & ! CALIPSO low-level liquid cloud fraction
          Lcllcalipsoice,   & ! CALIPSO low-level ice cloud fraction
          Lcllcalipsoun,    & ! CALIPSO low-level undetected cloud fraction
-         Lclopaquecalipso, & ! CALIPSO opaque cloud cover
-         Lclthincalipso,   & ! CALIPSO thin cloud cover
-         Lclzopaquecalipso,& ! CALIPSO mean z_opaque altitude (opaque clouds only)
-         Lclcalipsoopaque, & ! CALIPSO 3D opaque cloud profile fraction
-         Lclcalipsothin,   & ! CALIPSO 3D thin cloud profile fraction
-         Lclcalipsozopaque,& ! CALIPSO 3D z_opaque fraction
-         Lclcalipsoopacity,& ! CALIPSO 3D opacity fraction
+         Lclopaquecalipso, & ! CALIPSO opaque cloud cover                          !OPAQ
+         Lclthincalipso,   & ! CALIPSO thin cloud cover                            !OPAQ
+         Lclzopaquecalipso,& ! CALIPSO z_opaque altitude (opaque clouds only) !OPAQ
+         Lclcalipsoopaque, & ! CALIPSO 3D opaque cloud profile fraction            !OPAQ
+         Lclcalipsothin,   & ! CALIPSO 3D thin cloud profile fraction              !OPAQ
+         Lclcalipsozopaque,& ! CALIPSO 3D z_opaque fraction                        !OPAQ
+         Lclcalipsoopacity,& ! CALIPSO 3D opacity fraction                         !OPAQ
+         Lclopaquetemp,    & ! CALIPSO opaque cloud temperature      !TIBO
+         Lclthintemp,      & ! CALIPSO thin cloud temperature        !TIBO
+         Lclzopaquetemp,   & ! CALIPSO z_opaque altitude temperature !TIBO
+         Lclopaquemeanz,   & ! CALIPSO opaque cloud altitude         !TIBO
+         Lclthinmeanz,     & ! CALIPSO thin cloud altitude           !TIBO
+         Lclthinemis,      & ! CALIPSO thin cloud emissivity         !TIBO
+         Lclopaquemeanzse, & ! CALIPSO opaque cloud altitude with respect to SE !TIBO2
+         Lclthinmeanzse,   & ! CALIPSO thin cloud altitude with respect to SE   !TIBO2
+         Lclzopaquecalipsose,& ! CALIPSO z_opaque altitude with respect to SE   !TIBO2
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
@@ -200,13 +222,29 @@ contains
     if (Llwpmodis)         out_list(61) = 'lwpmodis'
     if (Liwpmodis)         out_list(62) = 'iwpmodis'
     if (Lclmodis)          out_list(63) = 'clmodis'
-    if (Lclopaquecalipso)  out_list(64) = 'clopaquecalipso'
-    if (Lclthincalipso)    out_list(65) = 'clthincalipso'
-    if (Lclzopaquecalipso) out_list(66) = 'clzopaquecalipso'
-    if (Lclcalipsoopaque)  out_list(67) = 'clcalipsoopaque'
-    if (Lclcalipsothin)    out_list(68) = 'clcalipsothin'
-    if (Lclcalipsozopaque) out_list(69) = 'clcalipsozopaque'
-    if (Lclcalipsoopacity) out_list(70) = 'clcalipsoopacity'
+    if (Lclopaquecalipso)  out_list(64) = 'clopaquecalipso'  !OPAQ
+    if (Lclthincalipso)    out_list(65) = 'clthincalipso'    !OPAQ
+    if (Lclzopaquecalipso) out_list(66) = 'clzopaquecalipso' !OPAQ
+    if (Lclcalipsoopaque)  out_list(67) = 'clcalipsoopaque'  !OPAQ
+    if (Lclcalipsothin)    out_list(68) = 'clcalipsothin'    !OPAQ
+    if (Lclcalipsozopaque) out_list(69) = 'clcalipsozopaque' !OPAQ
+    if (Lclcalipsoopacity) out_list(70) = 'clcalipsoopacity' !OPAQ
+    if (LlidarBetaMol532gr) out_list(71) = 'lidarBetaMol532gr' !GLID
+    if (LcfadLidarsr532gr)  out_list(72) = 'cfadLidarsr532gr'  !GLID
+    if (Lclcalipsogr)       out_list(73) = 'clcalipsogr'       !GLID
+    if (Lclhcalipsogr)      out_list(74) = 'clhcalipsogr'      !GLID
+    if (Lcllcalipsogr)      out_list(75) = 'cllcalipsogr'      !GLID
+    if (Lclmcalipsogr)      out_list(76) = 'clmcalipsogr'      !GLID
+    if (Lcltcalipsogr)      out_list(77) = 'cltcalipsogr'      !GLID
+    if (Lclopaquetemp)     out_list(78) = 'clopaquetemp'  !TIBO
+    if (Lclthintemp)       out_list(79) = 'clthintemp'    !TIBO
+    if (Lclzopaquetemp)    out_list(80) = 'clzopaquetemp' !TIBO
+    if (Lclopaquemeanz)    out_list(81) = 'clopaquemeanz' !TIBO
+    if (Lclthinmeanz)      out_list(82) = 'clthinmeanz'   !TIBO
+    if (Lclthinemis)       out_list(83) = 'clthinemis'    !TIBO
+    if (Lclopaquemeanzse)  out_list(84) = 'clopaquemeanzse'      !TIBO2
+    if (Lclthinmeanzse)    out_list(85) = 'clthinmeanzse'        !TIBO2
+    if (Lclzopaquecalipsose) out_list(86) = 'clzopaquecalipsose' !TIBO2
 
   end subroutine construct_cospOutList
 
@@ -217,7 +255,7 @@ contains
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                                emsfc_lw,mode,Nlon,Nlat)
+                                emsfc_lw,mode,Nlon,Nlat,surfelev,verbosity) !TIBO2
      
     ! Arguments
     character(len=512),intent(in) :: fname ! File name
@@ -227,9 +265,10 @@ contains
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
-    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit
+    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev !TIBO2
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
+    integer,optional :: verbosity
     
     ! Local variables
     integer,parameter :: NMAX_DIM=5
@@ -340,6 +379,7 @@ contains
           call cosp_error(routine_name,errmsg,errcode=errst)
        endif
        ! Read in into temporary array of correct shape
+       !if (present(verbosity).and.(verbosity == 1)) print *, 'Reading '//trim(vname)//' ...'
        if (vrank == 1) then
           Na = dimsize(vdimid(1))
           allocate(x1(Na))
@@ -538,6 +578,12 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=skt)
           endif
+       case ('orography')                                           !TIBO2
+          if (Lpoint) then                                          !TIBO2
+             surfelev(1:Npoints) = x1(1:Npoints)                    !TIBO2
+          else                                                      !TIBO2
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=surfelev)  !TIBO2
+          endif                                                     !TIBO2
        case ('landmask')
           if (Lpoint) then
              landmask(1:Npoints) = x1(1:Npoints)
@@ -953,9 +999,13 @@ contains
     real(wp),dimension(:),allocatable :: profile_ax,column_ax,dbze_ax,channel_ax
     real(wp),dimension(:,:),allocatable :: dbze_bounds,vgrid_bounds,sratio_bounds, &
          lon_bounds,lat_bounds,mgrid_bounds
+    integer :: d2(2),d3(3),d4(4),d5(5)
+    character(len=64) :: pro_name = 'NC_CMOR_INIT'
+
     
     nc_action = CMOR_APPEND_3
-    if (trim(wmode) == 'replace') nc_action = CMOR_REPLACE_3    
+    if (trim(wmode) == 'replace') nc_action = CMOR_REPLACE_3
+    
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Allocate memory and compute axes and bounds
@@ -1002,11 +1052,14 @@ contains
           vgrid_bounds(2,i) = mgrid_zu(i)
        enddo
     end if
-    
     ! Lidar scattering ratio bounds (They are output by cosp_cfad_sr->diag_lidar in lmd_ipsl_stats.f90)
-    sratio_bounds(2,:) = calipso_histBsct(2:SR_BINS+1)
-    sratio_bounds(1,:) = calipso_histBsct(1:SR_BINS)
-
+!    sratio_bounds(2,:)         = cospOUT%calipso_srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
+!    sratio_bounds(1,2:SR_BINS) = cospOUT%calipso_srbval(1:SR_BINS-1)
+    sratio_bounds(2,:)         = calipso_histBsct(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
+    sratio_bounds(1,2:SR_BINS) = calipso_histBsct(1:SR_BINS-1)
+    sratio_bounds(1,1)         = 0.0
+    sratio_bounds(2,SR_BINS)   = 1.e5 ! This matches with Chepfer et al., JGR, 2009. However, it is not consistent 
+    ! with the upper limit in lmd_ipsl_stats.f90, which is LIDAR_UNDEF-1=998.999
     ! Lat lon axes
     if (geomode == 2) then
        lon_ax = longitude(1:Nlon)
@@ -1109,10 +1162,10 @@ contains
     ! Associate table of variables. Needed here to fill in the table with names.
     !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (geomode == 1) then
-       call nc_cmor_associate_1d(grid_id,height_axid,height_mlev_axid,                  &
+       call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,        &
                                  column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
-                                 sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,     &
-                                 nPoints,nColumns,nLevels,nChannels,nLvgrid,            &
+                                 sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,&
+                                 Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,       &
                                  cospOUT,N1,N2,N3,v1d,v2d,v3d)
 
 
@@ -1120,7 +1173,7 @@ contains
        call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,               &
                                  height_mlev_axid,column_axid,sza_axid,temp_axid,       &
                                  channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,      &
-                                 tau_axid,pressure2_axid,Nlon,Nlat,nColumns,            &
+                                 tau_axid,pressure2_axid,Nlon,Nlat,nPoints,nColumns,    &
                                  nLevels,nChannels,nLvgrid,cospOUT,N1,N2,N3,v1d,v2d,v3d)
     endif
     v1d(:)%lout = .false.
@@ -1196,19 +1249,19 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE nc_cmor_associate_1D
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,height_axid,height_mlev_axid,                  &
+  SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,time_axid,height_axid,height_mlev_axid,        &
                                   column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
-                                  sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,     &
-                                  nPoints,nColumns,nLevels,nChannels,nLvgrid,            &
+                                  sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,&
+                                  Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,       &
                                   cospOUT,N1D,N2D,N3D,v1d,v2d,v3d)
      
     ! Inputs
-    integer,intent(in) :: grid_id,height_axid,height_mlev_axid,column_axid,              &
+    integer,intent(in) :: grid_id,time_axid,height_axid,height_mlev_axid,column_axid,    &
                           sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,         &
-                          MISR_CTH_axid,tau_axid,pressure2_axid,N1D,N2D,N3D,nPoints,     &
-                          nColumns,nLevels,nChannels,Nlvgrid
+                          MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,Nlat,N1D,N2D,N3D,   &
+                          nPoints,nColumns,nLevels,nChannels,Nlvgrid
     type(cosp_outputs),intent(in) :: cospOUT
-    type(var1d),intent(inout) :: v1d(N1D+1)
+    type(var1d),intent(inout) :: v1d(N1D) !N1D+1
     type(var2d),intent(inout) :: v2d(N2D)
     type(var3d),intent(inout) :: v3d(N3D)
 
@@ -1249,21 +1302,35 @@ contains
     call construct_var1d('pctmodis',       d3, d2, cospOUT%modis_Cloud_Top_Pressure_Total_Mean,  v1d(26),units='Pa')
     call construct_var1d('lwpmodis',       d3, d2, cospOUT%modis_Liquid_Water_Path_Mean,         v1d(27),units='kg m-2')
     call construct_var1d('iwpmodis',       d3, d2, cospOUT%modis_Ice_Water_Path_Mean,            v1d(28),units='kg m-2')
-    call construct_var1d('cllcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,1,1),         v1d(30),units='%')
-    call construct_var1d('clmcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,1),         v1d(31),units='%')
-    call construct_var1d('clhcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,1),         v1d(32),units='%')
-    call construct_var1d('cltcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,1),         v1d(33),units='%')
-    call construct_var1d('cllcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,1,2),         v1d(34),units='%')
-    call construct_var1d('clmcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,2),         v1d(35),units='%')
-    call construct_var1d('clhcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,2),         v1d(36),units='%')
-    call construct_var1d('cltcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,2),         v1d(37),units='%')
-    call construct_var1d('cllcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,1,3),         v1d(38),units='%')
-    call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(39),units='%')
-    call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(40),units='%')
-    call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(41),units='%')
-    call construct_var1d('clopaquecalipso',d3, d2, cospOUT%calipso_cldtype(:,1),                 v1d(42),units='%')
-    call construct_var1d('clthincalipso',  d3, d2, cospOUT%calipso_cldtype(:,2),                 v1d(43),units='%')
-    call construct_var1d('clzopaquecalipso',d3,d2, cospOUT%calipso_cldtype(:,3),                 v1d(44),units='m')
+    call construct_var1d('cllcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,1,1),         v1d(29),units='%') !N1D+1
+    call construct_var1d('clmcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,1),         v1d(30),units='%') !N1D+1
+    call construct_var1d('clhcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,1),         v1d(31),units='%') !N1D+1
+    call construct_var1d('cltcalipsoice',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,1),         v1d(32),units='%') !N1D+1
+    call construct_var1d('cllcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,1,2),         v1d(33),units='%') !N1D+1
+    call construct_var1d('clmcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,2,2),         v1d(34),units='%') !N1D+1
+    call construct_var1d('clhcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,3,2),         v1d(35),units='%') !N1D+1
+    call construct_var1d('cltcalipsoliq',  d3, d2, cospOUT%calipso_cldlayerphase(:,4,2),         v1d(36),units='%') !N1D+1
+    call construct_var1d('cllcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,1,3),         v1d(37),units='%') !N1D+1
+    call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(38),units='%') !N1D+1
+    call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(39),units='%') !N1D+1
+    call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(40),units='%') !N1D+1
+    call construct_var1d('clopaquecalipso',d3, d2, cospOUT%calipso_cldtype(:,1),                 v1d(41),units='%') !OPAQ !N1D+1
+    call construct_var1d('clthincalipso',  d3, d2, cospOUT%calipso_cldtype(:,2),                 v1d(42),units='%') !OPAQ !N1D+1
+    call construct_var1d('clzopaquecalipso',d3,d2, cospOUT%calipso_cldtype(:,3),                 v1d(43),units='m') !OPAQ !N1D+1
+    call construct_var1d('cllcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,1),            v1d(44), units='%') !GLID
+    call construct_var1d('clmcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,2),            v1d(45), units='%') !GLID
+    call construct_var1d('clhcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,3),            v1d(46), units='%') !GLID
+    call construct_var1d('cltcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,4),            v1d(47), units='%') !GLID
+    call construct_var1d('clopaquetemp',d3, d2, cospOUT%calipso_cldtypetemp(:,1),                 v1d(48),units='K') !TIBO
+    call construct_var1d('clthintemp',  d3, d2, cospOUT%calipso_cldtypetemp(:,2),                 v1d(49),units='K') !TIBO
+    call construct_var1d('clzopaquetemp',d3,d2, cospOUT%calipso_cldtypetemp(:,3),                 v1d(50),units='K') !TIBO
+    call construct_var1d('clopaquemeanz',d3, d2, cospOUT%calipso_cldtypemeanz(:,1),               v1d(51),units='m') !TIBO
+    call construct_var1d('clthinmeanz',  d3, d2, cospOUT%calipso_cldtypemeanz(:,2),               v1d(52),units='m') !TIBO
+    call construct_var1d('clthinemis',d3,d2, cospOUT%calipso_cldthinemis,                         v1d(53),units='1') !TIBO
+    call construct_var1d('clopaquemeanzse',d3, d2, cospOUT%calipso_cldtypemeanzse(:,1),           v1d(54),units='m') !TIBO2
+    call construct_var1d('clthinmeanzse',  d3, d2, cospOUT%calipso_cldtypemeanzse(:,2),           v1d(55),units='m') !TIBO2
+    call construct_var1d('clzopaquecalipsose',d3,d2, cospOUT%calipso_cldtypemeanzse(:,3),         v1d(56),units='m') !TIBO2
+
     ! 2D variables
     d4 = (/grid_id,height_axid,0,0/)
     d3 = (/Npoints,Nlvgrid,0/)
@@ -1293,13 +1360,17 @@ contains
     d4 = (/grid_id,channel_axid,0,0/) 
     d3 = (/Npoints,Nchannels,0/) 
     call construct_var2d('tbrttov',        d4, d3, cospOUT%rttov_tbs,                            v2d(14),units='K') 
-    d4 = (/grid_id,height_axid,0,0/)
-    d3 = (/Npoints,Nlvgrid,0/)
-    call construct_var2d('clcalipsoopaque',d4, d3, cospOUT%calipso_lidarcldtype(:,:,1),          v2d(15),units='%')
-    call construct_var2d('clcalipsothin',  d4, d3, cospOUT%calipso_lidarcldtype(:,:,2),          v2d(16),units='%')
-    call construct_var2d('clcalipsozopaque',d4,d3, cospOUT%calipso_lidarcldtype(:,:,3),          v2d(17),units='%')
-    call construct_var2d('clcalipsoopacity',d4,d3, cospOUT%calipso_lidarcldtype(:,:,4),          v2d(18),units='%')
-    
+    d4 = (/grid_id,height_axid,0,0/)                                                !OPAQ
+    d3 = (/Npoints,Nlvgrid,0/)                                                      !OPAQ
+    call construct_var2d('clcalipsoopaque',d4, d3, cospOUT%calipso_lidarcldtype(:,:,1),          v2d(15),units='%') !OPAQ
+    call construct_var2d('clcalipsothin',  d4, d3, cospOUT%calipso_lidarcldtype(:,:,2),          v2d(16),units='%') !OPAQ
+    call construct_var2d('clcalipsozopaque',d4,d3, cospOUT%calipso_lidarcldtype(:,:,3),          v2d(17),units='%') !OPAQ
+    call construct_var2d('clcalipsoopacity',d4,d3, cospOUT%calipso_lidarcldtype(:,:,4),          v2d(18),units='%') !OPAQ
+    call construct_var2d('clcalipsogr',    d4, d3, cospOUT%calipso_lidarcld_gr,                 v2d(19),units='%') !GLID
+    d4 = (/grid_id,height_mlev_axid,0,0/) !GLID
+    d3 = (/Npoints,Nlevels,0/)            !GLID
+    call construct_var2d('lidarBetaMol532gr',d4, d3, cospOUT%calipso_beta_mol_gr,               v2d(20),units='m-1 sr-1') !GLID
+   
     ! 3D variables
     d5 = (/grid_id,column_axid,height_mlev_axid,0,0/)
     d4 = (/Npoints,Ncolumns,Nlevels,0/)
@@ -1318,6 +1389,9 @@ contains
     d5 = (/grid_id,tau_axid,MISR_CTH_axid,0,0/)
     d4 = (/Npoints,7,numMISRHgtBins,0/)
     call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,v3d(8),units='%')
+    d5 = (/grid_id,sratio_axid,height_axid,0,0/) !GLID
+    d4 = (/Npoints,SR_BINS,Nlvgrid,0/)           !GLID
+    call construct_var3d('cfadLidarsr532gr', d5, d4, cospOUT%calipso_cfad_sr_gr,                 v3d(5),units='1') !GLID
     
   END SUBROUTINE NC_CMOR_ASSOCIATE_1D
 
@@ -1327,13 +1401,13 @@ contains
   SUBROUTINE NC_CMOR_ASSOCIATE_2D(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,&
                                   column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,   &
                                   sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,  &
-                                  Nlat,nColumns,nLevels,nChannels,nLvgrid,cospOUT,         &
+                                  Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,cospOUT, &
                                   N1D,N2D,N3D,v1d,v2d,v3d)
      
     ! Arguments
     integer,intent(in) :: lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,         &
                           column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
-                          MISR_CTH_axid,tau_axid,pressure2_axid,nColumns,nLevels,           &
+                          MISR_CTH_axid,tau_axid,pressure2_axid,nPoints,nColumns,nLevels,   &
                           nChannels,nLvgrid
     integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
     type(cosp_outputs),intent(in)   :: cospOUT
@@ -1390,9 +1464,23 @@ contains
      call construct_var1d('clmcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,2,3),         v1d(38),units='%')
      call construct_var1d('clhcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,3,3),         v1d(39),units='%')
      call construct_var1d('cltcalipsoun',   d3, d2, cospOUT%calipso_cldlayerphase(:,4,3),         v1d(40),units='%')
-     call construct_var1d('clopaquecalipso',d3, d2, cospOUT%calipso_cldtype(:,1),                 v1d(41),units='%')
-     call construct_var1d('clthincalipso',  d3, d2, cospOUT%calipso_cldtype(:,2),                 v1d(42),units='%')
-     call construct_var1d('clzopaquecalipso',d3,d2, cospOUT%calipso_cldtype(:,3),                 v1d(43),units='m')
+     call construct_var1d('clopaquecalipso',d3, d2, cospOUT%calipso_cldtype(:,1),                 v1d(41),units='%') !OPAQ
+     call construct_var1d('clthincalipso',  d3, d2, cospOUT%calipso_cldtype(:,2),                 v1d(42),units='%') !OPAQ
+     call construct_var1d('clzopaquecalipso',d3,d2, cospOUT%calipso_cldtype(:,3),                 v1d(43),units='m') !OPAQ
+     call construct_var1d('cllcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,1),            v1d(44), units='%') !GLID
+     call construct_var1d('clmcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,2),            v1d(45), units='%') !GLID
+     call construct_var1d('clhcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,3),            v1d(46), units='%') !GLID
+     call construct_var1d('cltcalipsogr',   d3, d2, cospOUT%calipso_cldlayer_gr(:,4),            v1d(47), units='%') !GLID
+     call construct_var1d('clopaquetemp',   d3, d2, cospOUT%calipso_cldtypetemp(:,1),            v1d(48),units='K') !TIBO
+     call construct_var1d('clthintemp',     d3, d2, cospOUT%calipso_cldtypetemp(:,2),            v1d(49),units='K') !TIBO
+     call construct_var1d('clzopaquetemp',  d3, d2, cospOUT%calipso_cldtypetemp(:,3),            v1d(50),units='K') !TIBO
+     call construct_var1d('clopaquemeanz',  d3, d2, cospOUT%calipso_cldtypemeanz(:,1),           v1d(51),units='m') !TIBO
+     call construct_var1d('clthinmeanz',    d3, d2, cospOUT%calipso_cldtypemeanz(:,2),           v1d(52),units='m') !TIBO
+     call construct_var1d('clthinemis',     d3, d2, cospOUT%calipso_cldthinemis,                 v1d(53),units='1') !TIBO
+     call construct_var1d('clopaquemeanzse',  d3, d2, cospOUT%calipso_cldtypemeanzse(:,1),         v1d(54),units='m') !TIBO2
+     call construct_var1d('clthinmeanzse',    d3, d2, cospOUT%calipso_cldtypemeanzse(:,2),         v1d(55),units='m') !TIBO2
+     call construct_var1d('clzopaquecalipsose',d3,d2, cospOUT%calipso_cldtypemeanzse(:,3),         v1d(56),units='m') !TIBO2
+
      ! 2D variables
      d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
      d3 = (/Nlon,Nlat,Nlvgrid/)
@@ -1422,12 +1510,16 @@ contains
      d4 = (/lon_axid,lat_axid,channel_axid,time_axid/)
      d3 = (/Nlon,Nlat,Nchannels/)
      call construct_var2d('tbrttov',        d4, d3, cospOUT%rttov_tbs,                            v2d(14),units='K') 
-     d4 = (/lon_axid,lat_axid,height_axid,time_axid/)
-     d3 = (/Nlon,Nlat,Nlvgrid/)
-     call construct_var2d('clcalipsoopaque',d4, d3, cospOUT%calipso_lidarcldtype(:,:,1),          v2d(15),units='%')
-     call construct_var2d('clcalipsothin',  d4, d3, cospOUT%calipso_lidarcldtype(:,:,2),          v2d(16),units='%')
-     call construct_var2d('clcalipsozopaque',d4,d3, cospOUT%calipso_lidarcldtype(:,:,3),          v2d(17),units='%')
-     call construct_var2d('clcalipsoopacity',d4,d3, cospOUT%calipso_lidarcldtype(:,:,4),          v2d(18),units='%')
+     d4 = (/lon_axid,lat_axid,height_axid,time_axid/)                         !OPAQ
+     d3 = (/Nlon,Nlat,Nlvgrid/)                                               !OPAQ
+     call construct_var2d('clcalipsoopaque',d4, d3, cospOUT%calipso_lidarcldtype(:,:,1),          v2d(15),units='%') !OPAQ
+     call construct_var2d('clcalipsothin',  d4, d3, cospOUT%calipso_lidarcldtype(:,:,2),          v2d(16),units='%') !OPAQ
+     call construct_var2d('clcalipsozopaque',d4,d3, cospOUT%calipso_lidarcldtype(:,:,3),          v2d(17),units='%') !OPAQ
+     call construct_var2d('clcalipsoopacity',d4,d3, cospOUT%calipso_lidarcldtype(:,:,4),          v2d(18),units='%') !OPAQ
+     call construct_var2d('clcalipsogr',    d4, d3, cospOUT%calipso_lidarcld_gr,                 v2d(19), units='%') !GLID
+     d4 = (/lon_axid,lat_axid,height_mlev_axid,time_axid/) !GLID
+     d3 = (/Nlon,Nlat,Nlevels/) !GLID
+     call construct_var2d('lidarBetaMol532gr',d4, d3, cospOUT%calipso_beta_mol_gr,               v2d(20), units='m-1 sr-1') !GLID
      
      ! 3D variables
      d5 = (/lon_axid,lat_axid,column_axid,height_mlev_axid,time_axid/)
@@ -1447,6 +1539,10 @@ contains
      d5 = (/lon_axid,lat_axid,tau_axid,MISR_CTH_axid,time_axid/)
      d4 = (/Nlon,Nlat,7,numMISRHgtBins/)
      call construct_var3d('clMISR',         d5, d4, cospOUT%misr_fq,                              v3d(8), units='%')
+     d5 = (/lon_axid,lat_axid,sratio_axid,height_axid,time_axid/) !GLID
+     d4 = (/Nlon,Nlat,SR_BINS,Nlvgrid/)                           !GLID
+     call construct_var3d('cfadLidarsr532gr', d5, d4, cospOUT%calipso_cfad_sr_gr,                v3d(9), units='1') !GLID
+
    END SUBROUTINE NC_CMOR_ASSOCIATE_2D
 
   
@@ -1517,10 +1613,11 @@ contains
      integer,intent(in) :: lonvar_id,latvar_id,N1,N2,N3,nPoints
      real(wp),dimension(nPoints),intent(in) :: longitude,latitude
      type(var1d),intent(inout) :: v1d(N1)
-     type(var2d),intent(inout) :: v2d(N1)
-     type(var3d),intent(inout) :: v3d(N1)
+     type(var2d),intent(inout) :: v2d(N2) !N1D+1
+     type(var3d),intent(inout) :: v3d(N3) !N1D+1
      ! Local variables
      integer :: error_flag,i
+     real(wp),allocatable :: y2(:,:),y3(:,:,:),y4(:,:,:,:)
      character(len=64) :: pro_name = 'NC_WRITE_COSP_1D'
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
