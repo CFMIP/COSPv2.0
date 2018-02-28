@@ -28,6 +28,7 @@
 !
 ! History
 ! March 2016 - D. Swales - Original version
+! July  2017 - R. Guzman - Added OPAQ and Ground LIDar (GLID) diagnostics
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp_test_v2
   use cosp_kinds,          only: wp
@@ -35,7 +36,8 @@ program cosp_test_v2
                                  modis_histTauEdges,modis_histTauCenters,ntau,ntauV1p4,   &
                                  tau_binBounds,tau_binEdges,tau_binCenters,R_UNDEF,       &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4,   &
-                                 Nlvgrid_local  => Nlvgrid
+                                 Nlvgrid_local  => Nlvgrid,                               & !OPAQ
+                                 vgrid_z_local  => vgrid_z                                  !OPAQ
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,nc_cmor_init
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics
@@ -49,7 +51,7 @@ program cosp_test_v2
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
-                                 modis_optics_partition,num_trial_res
+                                 modis_optics_partition,num_trial_res,lidar_optics_gr !GLID
   ! OUTPUT ONLY
   use mod_cosp_io,         only: var1d,var2d,var3d,construct_cospOutList,nc_cmor_init,    &
                                  nc_cmor_associate_1d,nc_cmor_write_1d,nc_cmor_close,     &
@@ -71,6 +73,7 @@ program cosp_test_v2
        lon,       & ! Longitude (deg)
        lat,       & ! Latitude (deg)
        skt,       & ! Skin temperature (K)
+       surfelev,  & ! Surface Elevation (m) !TIBO2
        landmask,  & ! Land/sea mask (0/1)
        u_wind,    & ! U-component of wind (m/s)
        v_wind,    & ! V-component of wind (m/s)
@@ -125,6 +128,8 @@ program cosp_test_v2
        rttov_satellite,           & ! RTTOV: Satellite
        rttov_instrument,          & ! RTTOV: Instrument
        rttov_Nchannels              ! RTTOV: Number of channels to be computed
+  real(wp),dimension(:),allocatable :: &                                      !OPAQ
+       vgrid_z                      ! mid-level altitude of the vertical grid !OPAQ
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
@@ -163,10 +168,15 @@ program cosp_test_v2
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
              Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,Lclcalipsoliq,             &
              Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice, &
-             Lclcalipsotmpun,Lclhcalipsoliq,Lcllcalipsoliq,Lclmcalipsoliq,               &
-             Lcltcalipsoliq,Lclhcalipsoice,Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice, &
-             Lclhcalipsoun,Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,          &
-             Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,          &
+             Lclcalipsotmpun,Lclhcalipsoliq,Lcllcalipsoliq,Lclmcalipsoliq,Lcltcalipsoliq,& !OPAQ
+             Lclhcalipsoice,Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice,Lclhcalipsoun,  & !OPAQ
+             Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lclopaquecalipso,Lclthincalipso,  & !OPAQ
+             Lclzopaquecalipso,Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,        & !OPAQ
+             Lclcalipsoopacity,LlidarBetaMol532gr,LcfadLidarsr532gr,Lclcalipsogr,        & !OPAQ !GLID
+             Lclhcalipsogr,Lcllcalipsogr,Lclmcalipsogr,Lcltcalipsogr,Lclopaquetemp,      & !GLID !TIBO
+             Lclthintemp,Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,Lclthinemis,         & !TIBO
+             Lclopaquemeanzse,Lclthinmeanzse,Lclzopaquecalipsose,                        & !TIBO2
+             Lalbisccp,Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,&
              Lmeantbisccp,Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,   &
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
@@ -178,7 +188,14 @@ program cosp_test_v2
                        Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,Lclhcalipsoliq, &
                        Lcllcalipsoliq,Lclmcalipsoliq,Lcltcalipsoliq,Lclhcalipsoice,      &
                        Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice,Lclhcalipsoun,       &
-                       Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,Lboxptopisccp,&
+                       Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lclopaquecalipso,       & !OPAQ
+                       Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,Lclcalipsothin, & !OPAQ
+                       Lclcalipsozopaque,Lclcalipsoopacity,LlidarBetaMol532gr,           & !OPAQ !GLID
+                       LcfadLidarsr532gr,Lclcalipsogr,Lclhcalipsogr,Lcllcalipsogr,       & !GLID
+                       Lclmcalipsogr,Lcltcalipsogr,Lclopaquetemp,Lclthintemp,            & !GLID !TIBO
+                       Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,Lclthinemis,           & !TIBO
+                       Lclopaquemeanzse,Lclthinmeanzse,Lclzopaquecalipsose,              & !TIBO2
+                       Lalbisccp,Lboxptopisccp,                                          &
                        Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,Lmeantbisccp, &
                        Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,      &
                        LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,         &
@@ -249,15 +266,15 @@ program cosp_test_v2
 
   ! Fields used solely for output
   integer,parameter :: &
-       n_out_list = 63,           & ! Number of possible output variables
-       N3D        = 8,            & ! Number of 3D output variables
-       N2D        = 14,           & ! Number of 2D output variables
-       N1D        = 40              ! Number of 1D output variables  
+       n_out_list = 86,           & ! Number of possible output variables !OPAQ !N1D+1 !GLID !TIBO !TIBO2
+       N3D        = 9,            & ! Number of 3D output variables       !OPAQ !GLID
+       N2D        = 20,           & ! Number of 2D output variables       !OPAQ !GLID
+       N1D        = 56              ! Number of 1D output variables       !OPAQ !GLID !TIBO !TIBO2
   character(len=32),dimension(n_out_list) :: out_list  ! List of output variable names
   integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
              latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
              MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid 
-  type(var1d) :: v1d(N1D+1) ! Structures needed by output routines for 1D variables
+  type(var1d) :: v1d(N1D+1)   ! Structures needed by output routines for 1D variables !N1D+1
   type(var2d) :: v2d(N2D)   ! Structures needed by output routines for 2D variables
   type(var3d) :: v3d(N3D)   ! Structures needed by output routines for 3D variables
   double precision :: time,time_bnds(2),time_step,half_time_step
@@ -292,14 +309,14 @@ program cosp_test_v2
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
-           frac_out(Npoints,Ncolumns,Nlevels))
+           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints)) !TIBO2
 
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat)
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev) !TIBO2
   call cpu_time(driver_time(2))
 
   ! Which simulators need to be run? Look at which outputs are requested.
@@ -317,7 +334,13 @@ program cosp_test_v2
        Lclhcalipsoliq .or. Lclhcalipsoice .or. Lclhcalipsoun .or. Lclmcalipsoliq .or.    &
        Lclmcalipsoice .or. Lclmcalipsoun .or. Lcllcalipsoliq .or. Lcllcalipsoice .or.    &
        Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
-       Lcltlidarradar) lcalipso = .true.
+       Lcltlidarradar .or. Lclopaquecalipso .or. Lclthincalipso .or. Lclzopaquecalipso   & !OPAQ
+       .or. Lclcalipsoopaque .or. Lclcalipsothin .or. Lclcalipsozopaque .or.             & !OPAQ
+       Lclcalipsoopacity .or. LlidarBetaMol532gr .or. LcfadLidarsr532gr .or. Lclcalipsogr & !OPAQ !GLID
+       .or. Lclhcalipsogr .or. Lcllcalipsogr .or. Lclmcalipsogr .or. Lcltcalipsogr .or.  & !GLID
+       Lclopaquetemp .or. Lclthintemp .or. Lclzopaquetemp .or. Lclopaquemeanz .or.       & !TIBO
+       Lclthinmeanz .or. Lclthinemis .or. Lclopaquemeanzse .or. Lclthinmeanzse .or.      & !OPAQ !GLID !TIBO !TIBO2
+       Lclzopaquecalipsose) Lcalipso = .true.                                              !TIBO2
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
   if (Ltbrttov) Lrttov = .true.
@@ -352,7 +375,7 @@ program cosp_test_v2
                  cloudsat_do_ray,isccp_topheight,isccp_topheight_direction,surface_radar,&
                  rcfg_cloudsat,rttov_Nchannels,rttov_Channels,rttov_platform,           &
                  rttov_satellite,rttov_instrument,use_vgrid,csat_vgrid,Nlvgrid,         &
-                 cloudsat_micro_scheme,cospOUT)
+                 vgrid_z_local,cloudsat_micro_scheme,cospOUT)                              !OPAQ
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -364,16 +387,23 @@ program cosp_test_v2
                               Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,  &
                               Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,Lreffclimodis,   &
                               Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Latb532,            &
-                              LlidarBetaMol532,LcfadLidarsr532,Lclcalipso2,Lclcalipso,   &
+                              LlidarBetaMol532,LlidarBetaMol532gr,LcfadLidarsr532,       & !GLID
+                              LcfadLidarsr532gr,Lclcalipso2,Lclcalipso,Lclcalipsogr,     & !GLID
                               Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,           &
+                              Lclhcalipsogr,Lcllcalipsogr,Lclmcalipsogr,Lcltcalipsogr,   & !GLID
                               Lcltlidarradar,Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,   &
                               Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice,           &
                               Lclcalipsotmpun,Lcltcalipsoliq,Lcltcalipsoice,             &
                               Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun, &
                               Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq,&
-                              Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,          &
-                              Lparasolrefl,Ltbrttov,Npoints,Ncolumns,Nlevels,Nlvgrid_local,&
-                              rttov_Nchannels,cospOUT)
+                              Lcllcalipsoice,Lcllcalipsoun,Lclopaquecalipso,             & !OPAQ
+                              Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,         & !OPAQ
+                              Lclcalipsothin,Lclcalipsozopaque,Lclcalipsoopacity,        & !OPAQ
+                              Lclopaquetemp,Lclthintemp,Lclzopaquetemp,Lclopaquemeanz,   & !TIBO
+                              Lclthinmeanz,Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,  & !TIBO !TIBO2
+                              Lclzopaquecalipsose,                                       & !TIBO2
+                              LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,Npoints,Ncolumns,& !OPAQ
+                              Nlevels,Nlvgrid_local,rttov_Nchannels,cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
@@ -420,6 +450,7 @@ program cosp_test_v2
      cospstateIN%hgt_matrix           = zlev(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%sunlit               = sunlit(start_idx:end_idx)
      cospstateIN%skt                  = skt(start_idx:end_idx)
+     cospstateIN%surfelev             = surfelev(start_idx:end_idx) !TIBO2
      cospstateIN%land                 = landmask(start_idx:end_idx)
      cospstateIN%qv                   = sh(start_idx:end_idx,Nlevels:1:-1) 
      cospstateIN%at                   = T(start_idx:end_idx,Nlevels:1:-1) 
@@ -487,15 +518,22 @@ program cosp_test_v2
                              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,   &
                              Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,Lreffclimodis,    &
                              Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Latb532,             &
-                             LlidarBetaMol532,LcfadLidarsr532,Lclcalipso2,Lclcalipso,    &
+                             LlidarBetaMol532,LlidarBetaMol532gr,LcfadLidarsr532,        & !GLID
+                             LcfadLidarsr532gr,Lclcalipso2,Lclcalipso,Lclcalipsogr,      & !GLID
                              Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,            &
+                             Lclhcalipsogr,Lcllcalipsogr,Lclmcalipsogr,Lcltcalipsogr,    & !GLID
                              Lcltlidarradar,Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,    &
                              Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice,            &
                              Lclcalipsotmpun,Lcltcalipsoliq,Lcltcalipsoice,              &
                              Lcltcalipsoun,Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,  &
                              Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,Lcllcalipsoliq, &
-                             Lcllcalipsoice,Lcllcalipsoun,LcfadDbze94,Ldbze94,           &
-                             Lparasolrefl,Ltbrttov,N_OUT_LIST,out_list)  
+                             Lcllcalipsoice,Lcllcalipsoun,Lclopaquecalipso,              & !OPAQ
+                             Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,          & !OPAQ
+                             Lclcalipsothin,Lclcalipsozopaque,Lclcalipsoopacity,         & !OPAQ
+                             Lclopaquetemp,Lclthintemp,Lclzopaquetemp,Lclopaquemeanz,    & !TIBO
+                             Lclthinmeanz,Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,   & !TIBO !TIBO2
+                             Lclzopaquecalipsose,                                        &
+                             LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,N_OUT_LIST,out_list)  
 
   ! Time information for cmor output.
   time           = 8*1._wp/8._wp
@@ -517,18 +555,18 @@ program cosp_test_v2
   if (geomode .eq. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_1D.txt','replace',nPoints,nColumns,nLevels, &
                        rttov_nChannels,nLvgrid_local,lon,lat,mgrid_zl,mgrid_zu,mgrid_z,cospOUT,&
-                       geomode,Nlon,Nlat,N1D+1,N2D,N3D,N_OUT_LIST,out_list,lon_axid,     &
+                       geomode,Nlon,Nlat,N1D+1,N2D,N3D,N_OUT_LIST,out_list,lon_axid,       & !N1D+1
                        lat_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,&
                        latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,  &
-                       sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D+1),   &
+                       sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1D+1),     & !N1D+1
                        v2d,v3d)
      call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,           &
                                column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,    &
                                sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,   &
                                Nlat,nPoints,nColumns,nLevels,rttov_nChannels,nLvgrid_local,    &
-                               cospOUT,N1D+1,N2D,N3D,v1d,v2d,v3d)
-     call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1D+1,N2D,N3D,  &
-                           v1d(1:N1D+1),v2d,v3d)
+                               cospOUT,N1D+1,N2D,N3D,v1d,v2d,v3d)                            !N1D+1
+     call nc_cmor_write_1d(nPoints,lon,lat,time_bnds,lonvar_id,latvar_id,N1D+1,N2D,N3D,    & !N1D+1
+                           v1d(1:N1D+1),v2d,v3d)                                             !N1D+1
   endif
   if (geomode .gt. 1) then
      call nc_cmor_init('../cmor/cosp_cmor_nl_2D.txt','replace',nPoints,nColumns,nLevels, &
@@ -842,6 +880,17 @@ contains
                       cospIN%tautot_S_ice, betatot_ice = cospIN%betatot_ice,               &
                       betatot_liq=cospIN%betatot_liq,tautot_ice=cospIN%tautot_ice,         &
                       tautot_liq = cospIN%tautot_liq)
+
+    call lidar_optics_gr(nPoints,nColumns,nLevels,4,lidar_ice_type,                  & !GLID
+                      mr_hydro(:,:,nLevels:1:-1,I_LSCLIQ),                           & !GLID
+                      mr_hydro(:,:,nLevels:1:-1,I_LSCICE),                           & !GLID
+                      mr_hydro(:,:,nLevels:1:-1,I_CVCLIQ),                           & !GLID
+                      mr_hydro(:,:,nLevels:1:-1,I_CVCICE),                           & !GLID
+                      ReffIN(:,:,I_LSCLIQ),ReffIN(:,:,I_LSCICE),                     & !GLID
+                      ReffIN(:,:,I_CVCLIQ),ReffIN(:,:,I_CVCICE),                     & !GLID
+                      cospstateIN%pfull,cospstateIN%phalf,cospstateIN%at,            & !GLID
+                      cospIN%beta_mol_gr,cospIN%betatot_gr,cospIN%taupart_gr,        & !GLID
+                      cospIN%tau_mol_gr,cospIN%tautot_gr)                              !GLID
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! CLOUDSAT RADAR OPTICS
