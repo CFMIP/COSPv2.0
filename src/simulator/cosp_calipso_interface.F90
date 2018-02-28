@@ -28,6 +28,7 @@
 !
 ! History
 ! May 2015 - D. Swales - Original version
+! Jul 2017 - R. Guzman - Added Ground LIDar variables (GLID)
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_CALIPSO_INTERFACE
   USE COSP_KINDS,              ONLY: wp
@@ -45,16 +46,21 @@ MODULE MOD_COSP_CALIPSO_INTERFACE
 
      real(wp),dimension(:,:),pointer :: &
           beta_mol,     & ! Molecular backscatter coefficient
-          tau_mol         ! Molecular optical depth
+          beta_mol_gr,  & !GLID
+          tau_mol,      & ! Molecular optical depth
+          tau_mol_gr      !GLID
      real(wp),dimension(:,:,:),pointer :: &
           betatot,      & ! 
+          betatot_gr,   & !GLID 
           tautot,       & ! Optical thickess integrated from top
+          tautot_gr,    & !GLID
           betatot_ice,  & ! Backscatter coefficient for ice particles
           betatot_liq,  & ! Backscatter coefficient for liquid particles
           tautot_ice,   & ! Total optical thickness of ice
           tautot_liq      ! Total optical thickness of liq
      real(wp),dimension(:,:,:,:),pointer :: &
-          taupart
+          taupart,      & !GLID
+          taupart_gr      !GLID
   end type calipso_IN
 
 CONTAINS

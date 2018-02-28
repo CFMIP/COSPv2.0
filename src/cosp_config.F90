@@ -36,6 +36,8 @@
 ! June 2015- D. Swales        - Moved hydrometeor class variables to hydro_class_init in
 !                               the module quickbeam_optics.
 ! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
+! Jul 2017 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
+!
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MODULE MOD_COSP_CONFIG
@@ -151,7 +153,7 @@ MODULE MOD_COSP_CONFIG
     integer,parameter :: &
        RTTOV_MAX_CHANNELS = 20
     character(len=256),parameter :: &
-         rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
+         rttovDir = '/homedata/rguzman/CALIPSO/RTTOV/rttov_11.3/'
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator   
     ! ####################################################################################  
@@ -282,7 +284,8 @@ MODULE MOD_COSP_CONFIG
     ! #################################################################################### 
     integer,parameter  ::     &
        LIDAR_NTEMP = 40, & 
-       LIDAR_NCAT  = 4     ! Number of categories for cloudtop heights (high/mid/low/tot)
+       LIDAR_NCAT  = 4,  & ! Number of categories for cloudtop heights (high/mid/low/tot)          !OPAQ
+       LIDAR_NTYPE = 3     ! Number of categories for OPAQ products (opaque/thin cloud + z_opaque) !OPAQ
     real(wp),parameter,dimension(LIDAR_NTEMP) :: &
        LIDAR_PHASE_TEMP=                                                                 &
        (/-91.5,-88.5,-85.5,-82.5,-79.5,-76.5,-73.5,-70.5,-67.5,-64.5,                    &
