@@ -75,7 +75,7 @@ if (args.cmor == 'None'):
     fileIN  = ''.join(args.data)
 
     # Extract variable names from netCDF files.
-    dset    = netCDF4.Dataset(fileIN)
+    dset    = netCDF4.Dataset(fileRef)
     varlist = dset.variables.keys()   # Variable names
     nvars   = len(varlist)            # Number of variables
     

@@ -55,11 +55,7 @@ program cosp2_test
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
-  ! OUTPUT ONLY
-  !use mod_cosp_io,         only: var1d,var2d,var3d,construct_cospOutList,nc_cmor_init,    &
-  !                               nc_cmor_associate_1d,nc_cmor_write_1d,nc_cmor_close,     &
-  !                               nc_cmor_associate_2d,nc_cmor_write_2d
-  
+
   implicit none
 
   ! Input/Output driver file control
@@ -157,13 +153,12 @@ program cosp2_test
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
        fileIN                       ! dinput+finput
-  namelist/COSP_INPUT/overlap,isccp_topheight,isccp_topheight_direction,npoints,         &
-                      npoints_it,ncolumns,nlevels,use_vgrid,Nlvgrid,csat_vgrid,dinput,   &
-                      finput,foutput,cloudsat_radar_freq,surface_radar,cloudsat_use_gas_abs,     &
-                      cloudsat_do_ray,cloudsat_k2,cloudsat_micro_scheme,lidar_ice_type,  &
-                      use_precipitation_fluxes,rttov_platform,rttov_satellite,           &
-                      rttov_Instrument,rttov_Nchannels,rttov_Channels,rttov_Surfem,      &
-                      rttov_ZenAng,co2,ch4,n2o,co
+  namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
+       npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
+       foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
+       cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
+       rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               &
+       rttov_Channels, rttov_Surfem, rttov_ZenAng, co2, ch4, n2o, co
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -261,8 +256,6 @@ program cosp2_test
   integer :: lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
              latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
              MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid 
-  double precision :: time,time_bnds(2),time_step,half_time_step
-  real(wp),dimension(:),allocatable :: mgrid_z,mgrid_zu,mgrid_zl
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -469,7 +462,7 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  call write_cosp2_output(Npoints, Ncolumns, Nlevels, lon,lat,cospOUT,foutput)
+  call write_cosp2_output(Npoints, Ncolumns, Nlevels, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
 
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
