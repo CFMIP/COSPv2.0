@@ -39,6 +39,12 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
     ! ---------------------------------------------------------------------------------------
+    ! Define GLOBAL attributes.
+    ! ---------------------------------------------------------------------------------------
+    status = nf90_put_att(fileID,NF90_GLOBAL,"Conventions","CF-1.6")
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+    ! ---------------------------------------------------------------------------------------
     ! Define dimensions.
     ! ---------------------------------------------------------------------------------------
     status = nf90_def_dim(fileID,"loc",Npoints,dimID(1))
@@ -97,7 +103,7 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_att(fileID,varID(3),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(3),"standard_name", "cloud_optical_depth")
+    status = nf90_put_att(fileID,varID(3),"standard_name", "atmosphere_optical_thickness_due_to_cloud")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! Tau edges
     status = nf90_def_var(fileID,"tau7_bnds",   nf90_float, (/dimID(6),dimID(5)/),varID(4))
@@ -106,7 +112,7 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_att(fileID,varID(4),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(4),"standard_name", "cloud_optical_depth")
+    status = nf90_put_att(fileID,varID(4),"standard_name", "atmosphere_optical_thickness_due_to_cloud")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! Pressure
     status = nf90_def_var(fileID,"pres7",      nf90_float, (/dimID(7)/),varID(5))
@@ -166,8 +172,6 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_att(fileID,varID(88),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(88),"standard_name", "column")
-    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! Bnds
     status = nf90_def_var(fileID,"bnds",  nf90_float, (/dimID(6)/),varID(89))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -211,7 +215,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(11),"units",        "1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(11),"standard_name", "cloud_optical_depth")
+       status = nf90_put_att(fileID,varID(11),"standard_name", "atmosphere_optical_thickness_due_to_cloud")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))       
     endif
     if (associated(cospOUT%calipso_lidarcldphase)) then
@@ -503,7 +507,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(22),"long_name","CloudSat Radar Reflectivity")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(22),"units",        "1")
+       status = nf90_put_att(fileID,varID(22),"units",        "dBZ")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(22),"standard_name", "equivalent_reflectivity_factor")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))       
@@ -563,7 +567,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(27),"long_name","ISCCP Mean Cloud Top Pressure")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(27),"units",        "mb")
+       status = nf90_put_att(fileID,varID(27),"units",        "hPa")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(27),"standard_name", "air_pressure_at_cloud_top")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))         
@@ -637,7 +641,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(34),"units",        "m")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
-       status = nf90_put_att(fileID,varID(34),"standard_name", "cloud_top_height")
+       status = nf90_put_att(fileID,varID(34),"standard_name", "cloud_top_altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
     if (associated(cospOUT%misr_cldarea)) then	    
@@ -779,7 +783,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(48),"units",        "m")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
-       status = nf90_put_att(fileID,varID(48),"standard_name", "effective_radius_of_cloud_liquid_particle")
+       status = nf90_put_att(fileID,varID(48),"standard_name", "effective_radius_of_cloud_liquid_water_particle")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
     if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean)) then
@@ -789,7 +793,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(49),"units",        "m")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-       status = nf90_put_att(fileID,varID(49),"standard_name", "effective_radius_of_cloud_liquid_particle")
+       status = nf90_put_att(fileID,varID(49),"standard_name", "effective_radius_of_cloud_liquid_water_particle")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
     if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean)) then
@@ -797,7 +801,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(50),"long_name","MODIS Cloud Top Pressure")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(50),"units",        "mb")
+       status = nf90_put_att(fileID,varID(50),"units",        "hPa")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
        status = nf90_put_att(fileID,varID(50),"standard_name", "air_pressure_at_cloud_top")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -819,7 +823,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(52),"units",        "kg m-2")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-       status = nf90_put_att(fileID,varID(52),"standard_name", "atmosphere_cloud_ice_water_content")
+       status = nf90_put_att(fileID,varID(52),"standard_name", "atmosphere_mass_content_of_cloud_ice")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then
@@ -839,16 +843,16 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(54),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(54),"standard_name", "histogram_of_cloud_optical_depth_over_particle_size")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+!       status = nf90_put_att(fileID,varID(54),"standard_name", "histogram_of_cloud_optical_depth_over_particle_size")
+!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
        status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(15)/),varID(84))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(84),"long_name","MODIS Joint-PDF ice particle size bin centers")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(84),"units",        "meters")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(84),"standard_name", "effective_radius_of_cloud_ice_particle")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))        
+!       status = nf90_put_att(fileID,varID(84),"standard_name", "effective_radius_of_cloud_ice_particle")
+!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))        
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ)) then
        status = nf90_def_var(fileID,"modis_Optical_Thickness_vs_ReffLIQ",nf90_float, (/dimID(1),dimID(5),dimID(15)/),varID(55))
@@ -857,16 +861,16 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(55),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(55),"standard_name", "histogram_of_cloud_optical_depth_over_particle_size")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+!       status = nf90_put_att(fileID,varID(55),"standard_name", "histogram_of_cloud_optical_depth_over_particle_size")
+!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_def_var(fileID,"RELIQ_MODIS",nf90_float, (/dimID(15)/),varID(85))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(85),"long_name","MODIS Joint-PDF liquid particle size bin centers")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(85),"units",        "meters")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-       status = nf90_put_att(fileID,varID(85),"standard_name", "effective_radius_of_cloud_liquid_particle")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+!       status = nf90_put_att(fileID,varID(85),"standard_name", "effective_radius_of_cloud_liquid_particle")
+!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
 
     ! Joint simulator products.
