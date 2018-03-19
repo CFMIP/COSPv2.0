@@ -1,0 +1,117 @@
+! (c) British Crown Copyright 2008, the Met Office.
+! All rights reserved.
+! 
+! Redistribution and use in source and binary forms, with or without modification, are permitted 
+! provided that the following conditions are met:
+! 
+!     * Redistributions of source code must retain the above copyright notice, this list 
+!       of conditions and the following disclaimer.
+!     * Redistributions in binary form must reproduce the above copyright notice, this list
+!       of conditions and the following disclaimer in the documentation and/or other materials 
+!       provided with the distribution.
+!     * Neither the name of the Met Office nor the names of its contributors may be used 
+!       to endorse or promote products derived from this software without specific prior written 
+!       permission.
+! 
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+! IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+! FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+! DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
+! IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+! OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+!
+!  History:
+!  May 2009 - A. Bodas-Salcedo - Initial version
+!  Dec 2010 - A. Bodas-Salcedo - v1.3.1
+!
+
+
+! Namelist that sets up the main COSP options for CFMIP-2.
+! ISCCP and CALIPSO/PARASOL simulators ON, to be run inline.
+! Gridded outputs on daily/monhtly timescales from model gridded data.
+! Parameters that define the model grid need to be defined appropriately by
+! the modellers (NPOINTS,NLEVELS).
+! NCOLUMNS is recommended to be ~ model resolution (in degrees) x 100,
+! but not less than ~50
+! (e.g 1x1 deg model => NCOLUMN=100)
+&COSP_INPUT
+  CMOR_NL='./cmor/cosp_cmor_cfmip2_long_inline.txt', ! CMOR namelist
+  NPOINTS=153,! Number of gridpoints
+  NPOINTS_IT=10000,! Max number of gridpoints to be processed in one iteration
+  NCOLUMNS=20,  ! Number of subcolumns
+  NLEVELS=38,   ! Number of model levels
+  USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
+  NLR=40,       ! Number of levels in statistical outputs (only used if USE_VGRID=.true.)
+  CSAT_VGRID=.true., ! CloudSat vertical grid? (if .true. then the CloudSat standard grid is used for the outputs.
+                     !  USE_VGRID needs also be .true.)
+  DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
+                ! Leave blank ('') if you are using the full path in FINPUT.
+  FINPUT='cosp_input_um.nc', ! List input NetCDF files
+!  FINPUT='cosp_input_um_2d.nc', ! NetCDF file with 2D inputs
+  !----------------------------------------------------------------------------------
+  !--------------- Inputs related to radar simulations
+  !----------------------------------------------------------------------------------
+  RADAR_FREQ=94.0, ! CloudSat radar frequency (GHz)
+  SURFACE_RADAR=0, ! surface=1, spaceborne=0
+  use_mie_tables=0,! use a precomputed lookup table? yes=1,no=0
+  use_gas_abs=1,   ! include gaseous absorption? yes=1,no=0
+  do_ray=0,        ! calculate/output Rayleigh refl=1, not=0
+  melt_lay=0,      ! melting layer model off=0, on=1
+  k2=-1,           ! |K|^2, -1=use frequency dependent default
+  use_reff=.true., ! True if you want effective radius to be used by radar simulator (always used by lidar)
+  use_precipitation_fluxes=.true.,  ! True if precipitation fluxes are input to the algorithm 
+  !----------------------------------------------------------------------------------
+  !---------------- Inputs related to lidar simulations
+  !----------------------------------------------------------------------------------
+  Nprmts_max_hydro=12, ! Max number of parameters for hydrometeor size distributions
+  Naero=1,             ! Number of aerosol species (Not used)
+  Nprmts_max_aero=1,   ! Max number of parameters for aerosol size distributions (Not used)
+  lidar_ice_type=0,    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
+  OVERLAP=3,   !  overlap type: 1=max, 2=rand, 3=max/rand
+  !----------------------------------------------------------------------------------
+  !---------------- Inputs related to ISCCP simulator
+  !----------------------------------------------------------------------------------
+  ISCCP_TOPHEIGHT=1,  !  1 = adjust top height using both a computed
+                       !  infrared brightness temperature and the visible
+                       !  optical depth to adjust cloud top pressure. Note
+                       !  that this calculation is most appropriate to compare
+                       !  to ISCCP data during sunlit hours.
+                      !  2 = do not adjust top height, that is cloud top
+                       !  pressure is the actual cloud top pressure
+                       !  in the model
+                      !  3 = adjust top height using only the computed
+                       !  infrared brightness temperature. Note that this
+                       !  calculation is most appropriate to compare to ISCCP
+                       !  IR only algortihm (i.e. you can compare to nighttime
+                       !  ISCCP data with this option)
+  ISCCP_TOPHEIGHT_DIRECTION=2,   ! direction for finding atmosphere pressure level
+                                 ! with interpolated temperature equal to the radiance
+                                 ! determined cloud-top temperature
+                                 ! 1 = find the *lowest* altitude (highest pressure) level
+                                 ! with interpolated temperature equal to the radiance
+                                 ! determined cloud-top temperature
+                                 ! 2 = find the *highest* altitude (lowest pressure) level
+                                 ! with interpolated temperature equal to the radiance 
+                                 ! determined cloud-top temperature. This is the 
+                                 ! default value since V4.0 of the ISCCP simulator.
+                                 ! ONLY APPLICABLE IF top_height EQUALS 1 or 3
+  !----------------------------------------------------------------------------------
+  !-------------- RTTOV inputs
+  !----------------------------------------------------------------------------------
+  Platform=1,    ! satellite platform
+  Satellite=15,  ! satellite
+  Instrument=0,  ! instrument
+  Nchannels=8,   ! Number of channels to be computed
+  Channels=1,3,5,6,8,10,11,13,        ! Channel numbers (please be sure that you supply Nchannels)
+  Surfem=0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
+  ZenAng=50.0, ! Satellite Zenith Angle
+  CO2=5.241e-04, ! Mixing ratios of trace gases
+  CH4=9.139e-07,
+  N2O=4.665e-07,
+  CO=2.098e-07
+/
+
+

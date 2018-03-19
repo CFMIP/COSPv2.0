@@ -186,31 +186,31 @@ contains
     
     ! This setup assumes the columns represent a about a 1 to 4 km scale
     ! it will need to be modified significantly, otherwise
-	! DS2015: Add loop over gridpoints and index accordingly.
-    if(ncol.eq.1) then
-       ! Adjust based on neightboring points.
-       do j=2,npoints-1   
-          if(box_MISR_ztop(j-1,1) .gt. 0                             .and. &
-             box_MISR_ztop(j+1,1) .gt. 0                             .and. &
-             abs(box_MISR_ztop(j-1,1)-box_MISR_ztop(j+1,1)) .lt. 500 .and. &
-             box_MISR_ztop(j,1) .lt. box_MISR_ztop(j+1,1)) then
-             box_MISR_ztop(j,1) = box_MISR_ztop(j+1,1)    
-          endif
-       enddo
-    else
-       ! Adjust based on neighboring subcolumns.
-       do j=1,npoints
-          do ibox=2,ncol-1  
-                 if(box_MISR_ztop(j,ibox-1) .gt. 0                                .and. &
-                 box_MISR_ztop(j,ibox+1) .gt. 0                                .and. &
-                 abs(box_MISR_ztop(j,ibox-1)-box_MISR_ztop(j,ibox+1)) .lt. 500 .and. &
-                 box_MISR_ztop(j,ibox) .lt. box_MISR_ztop(j,ibox+1)) then
-                 box_MISR_ztop(j,ibox) = box_MISR_ztop(j,ibox+1)    
-               endif
-          enddo
-       enddo
-    endif
-    ! DS2015 END
+!	! DS2015: Add loop over gridpoints and index accordingly.
+!    if(ncol.eq.1) then
+!       ! Adjust based on neightboring points.
+!       do j=2,npoints-1   
+!          if(box_MISR_ztop(j-1,1) .gt. 0                             .and. &
+!             box_MISR_ztop(j+1,1) .gt. 0                             .and. &
+!             abs(box_MISR_ztop(j-1,1)-box_MISR_ztop(j+1,1)) .lt. 500 .and. &
+!             box_MISR_ztop(j,1) .lt. box_MISR_ztop(j+1,1)) then
+!             box_MISR_ztop(j,1) = box_MISR_ztop(j+1,1)    
+!          endif
+!       enddo
+!    else
+!       ! Adjust based on neighboring subcolumns.
+!       do j=1,npoints
+!          do ibox=2,ncol-1  
+!                 if(box_MISR_ztop(j,ibox-1) .gt. 0                                .and. &
+!                 box_MISR_ztop(j,ibox+1) .gt. 0                                .and. &
+!                 abs(box_MISR_ztop(j,ibox-1)-box_MISR_ztop(j,ibox+1)) .lt. 500 .and. &
+!                 box_MISR_ztop(j,ibox) .lt. box_MISR_ztop(j,ibox+1)) then
+!                 box_MISR_ztop(j,ibox) = box_MISR_ztop(j,ibox+1)    
+!               endif
+!          enddo
+!       enddo
+!    endif
+!    ! DS2015 END
      
     ! Fill dark scenes 
     do j=1,numMISRHgtBins
@@ -222,14 +222,12 @@ contains
   ! ######################################################################################
   ! SUBROUTINE misr_column
   ! ######################################################################################
-  SUBROUTINE MISR_COLUMN(npoints,ncol,nlev,box_MISR_ztop,sunlit,tau,MISR_cldarea,        &
-                          MISR_mean_ztop,fq_MISR_TAU_v_CTH)
+  SUBROUTINE MISR_COLUMN(npoints,ncol,box_MISR_ztop,sunlit,tau,MISR_cldarea,MISR_mean_ztop,fq_MISR_TAU_v_CTH)
 
     ! INPUTS
     INTEGER, intent(in) :: &
          npoints,        & ! Number of horizontal gridpoints
-         ncol,           & ! Number of subcolumns
-         nlev              ! Number of vertical layers
+         ncol              ! Number of subcolumns
     INTEGER, intent(in),dimension(npoints) :: &
          sunlit            ! 1 for day points, 0 for night time
     REAL(WP),intent(in),dimension(npoints,ncol) :: &

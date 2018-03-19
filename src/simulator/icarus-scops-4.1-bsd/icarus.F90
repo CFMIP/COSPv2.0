@@ -110,9 +110,9 @@ contains
 
     ! INTERNAL VARIABLES
     CHARACTER(len=10)                     :: ftn09
-    REAL(WP),dimension(npoints,ncol)      :: ptop,tau,boxttop
+    REAL(WP),dimension(npoints,ncol)      :: boxttop
     REAL(WP),dimension(npoints,ncol,nlev) :: dtau,demIN
-    INTEGER                               :: i,j,ilev,ibox,ilev2
+    INTEGER                               :: j,ilev,ibox
     INTEGER,dimension(nlev,ncol   )       :: acc
 
     ! PARAMETERS
@@ -126,9 +126,8 @@ contains
     call ICARUS_SUBCOLUMN(npoints,ncol,nlev,sunlit,dtau,demIN,skt,emsfc_lw,qv,at,        &
                       pfull,phalf,frac_out,levmatch,boxtau,boxptop,boxttop,meantbclr)
 
-    call ICARUS_COLUMN(npoints,ncol,nlev,boxtau,boxptop/100._wp,sunlit,pfull,phalf,     &
-                        qv,at,skt,emsfc_lw,boxttop,fq_isccp,meanalbedocld,               &
-                        meanptop,meantaucld,totalcldarea,meantb)
+    call ICARUS_COLUMN(npoints,ncol,boxtau,boxptop/100._wp,sunlit,boxttop,&
+                       fq_isccp,meanalbedocld,meanptop,meantaucld,totalcldarea,meantb)
 
     ! ##########################################################################
     ! OPTIONAL PRINTOUT OF DATA TO CHECK PROGRAM
@@ -474,30 +473,18 @@ contains
   ! ######################################################################################
   ! SUBROUTINE icarus_column
   ! ######################################################################################
-  SUBROUTINE ICARUS_column(npoints,ncol,nlev,boxtau,boxptop,sunlit,pfull,phalf,         &
-                            qv,at,skt,emsfc_lw,boxttop,fq_isccp,meanalbedocld,meanptop,  &
-                            meantaucld,totalcldarea,meantb)
+  SUBROUTINE ICARUS_column(npoints,ncol,boxtau,boxptop,sunlit,boxttop,fq_isccp,     &
+                           meanalbedocld,meanptop,meantaucld,totalcldarea,meantb)
     ! Inputs
     INTEGER, intent(in) :: &
          ncol,    & ! Number of subcolumns
-         npoints, & ! Number of horizontal gridpoints
-         nlev       ! Number of vertical levels
+         npoints    ! Number of horizontal gridpoints
     INTEGER, intent(in),dimension(npoints) :: &
          sunlit     ! day=1 night=0 
-    REAL(WP),intent(in)  :: &
-         emsfc_lw   ! 10.5 micron surface emissivity
-    REAL(WP),intent(in),dimension(npoints) :: &
-         skt        ! Skin temperature (K)
-    REAL(WP),intent(in),dimension(npoints,nlev) :: &
-         at,       & ! Temperature (K)
-         pfull,    & ! Pressure
-         qv          ! Specific humidity
     REAL(WP),intent(in),dimension(npoints,ncol) ::  &
          boxttop,  & ! Subcolumn top temperature
          boxptop,  & ! Subcolumn cloud top pressure
          boxtau      ! Subcolumn optical depth
-    REAL(WP),intent(in),dimension(npoints,nlev+1) :: &
-         phalf       ! Pressure at model half-levels
 
     ! Outputs
     REAL(WP),intent(inout),dimension(npoints) :: &
@@ -510,15 +497,9 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: ibox,j,ilev,ilev2
-    REAL(WP) :: boxarea
-    REAL(WP),dimension(npoints,ncol) :: albedocld,fluxtop2
-    INTEGER, dimension(npoints) :: ipres,itau
+    INTEGER :: j,ilev,ilev2
+    REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
-    REAL(WP),dimension(npoints) :: bb,press,dpress,atmden,rvh20,rhoave,rh20s,rfrgn,tmpexp,&
-                                   tauwv,wk,trans_layers_above_clrsky
-    REAL(WP),dimension(npoints,ncol) :: trans_layers_above,dem
-    REAL(WP),dimension(npoints,nlev) :: dem_wv
 
     ! Variables for new joint-histogram implementation
     logical,dimension(ncol) :: box_cloudy2
@@ -593,8 +574,13 @@ contains
           totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin))/ncol
              
           ! Subcolumn cloud albedo
-          albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
-               0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+          !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
+          !     0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+          where(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+             albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
+          elsewhere
+             albedocld(j,1:ncol) = 0._wp
+          endwhere
           
           ! Column cloud albedo
           meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
@@ -605,12 +591,21 @@ contains
     enddo
     
     ! Compute mean cloud properties. Set to mssing value in the event that totalcldarea=0
-    meanptop(1:npoints)      = merge(100._wp*meanptop(1:npoints)/totalcldarea(1:npoints),&
-                                     output_missing_value,totalcldarea(1:npoints) .gt. 0)
-    meanalbedocld(1:npoints) = merge(meanalbedocld(1:npoints)/totalcldarea(1:npoints), &
-                                     output_missing_value,totalcldarea(1:npoints) .gt. 0)
-    meantaucld(1:npoints)    = merge((6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp), &
-                                     output_missing_value,totalcldarea(1:npoints) .gt. 0)
+    where(totalcldarea(1:npoints) .gt. 0)
+       meanptop(1:npoints)      = 100._wp*meanptop(1:npoints)/totalcldarea(1:npoints)
+       meanalbedocld(1:npoints) = meanalbedocld(1:npoints)/totalcldarea(1:npoints)
+       meantaucld(1:npoints)    = (6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp)
+    elsewhere
+       meanptop(1:nPoints)      = output_missing_value
+       meanalbedocld(1:nPoints) = output_missing_value
+       meantaucld(1:nPoints)    = output_missing_value
+    endwhere
+    !meanptop(1:npoints)      = merge(100._wp*meanptop(1:npoints)/totalcldarea(1:npoints),&
+    !                                 output_missing_value,totalcldarea(1:npoints) .gt. 0)
+    !meanalbedocld(1:npoints) = merge(meanalbedocld(1:npoints)/totalcldarea(1:npoints), &
+    !                                 output_missing_value,totalcldarea(1:npoints) .gt. 0)
+    !meantaucld(1:npoints)    = merge((6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp), &
+    !                                 output_missing_value,totalcldarea(1:npoints) .gt. 0)
 
     ! Represent in percent
     where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp

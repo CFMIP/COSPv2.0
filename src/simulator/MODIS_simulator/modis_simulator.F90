@@ -63,8 +63,8 @@ module mod_modis_sim
   ! ##########################################################################
   ! Retrieval parameters
    integer, parameter :: &
-       num_trial_res = 15              ! Increase to make the linear pseudo-retrieval of size more accurate
-
+        num_trial_res = 15              ! Increase to make the linear pseudo-retrieval of size more accurate
+   
    real(wp) :: &
        min_OpticalThickness,          & ! Minimum detectable optical thickness
        CO2Slicing_PressureLimit,      & ! Cloud with higher pressures use thermal methods, units Pa
@@ -112,8 +112,8 @@ contains
   !       alogrithm in this simulator we simply report the values from the ISCCP simulator. 
   ! ########################################################################################
   subroutine modis_subcolumn(nSubCols, nLevels, pressureLevels, optical_thickness,       & 
-                         tauLiquidFraction, g, w0, isccpTau, isccpCloudTopPressure, &
-                         retrievedPhase, retrievedCloudTopPressure,                 &
+                         tauLiquidFraction, g, w0,isccpCloudTopPressure,                 &
+                         retrievedPhase, retrievedCloudTopPressure,                      &
                          retrievedTau,   retrievedSize)
 
     ! INPUTS
@@ -128,7 +128,6 @@ contains
          g,                         & ! Subcolumn assymetry parameter  
          w0                           ! Subcolumn single-scattering albedo 
     real(wp),dimension(nSubCols),intent(in) :: &
-         isccpTau,                  & ! ISCCP Column-integrated optical thickness
          isccpCloudTopPressure        ! ISCCP retrieved cloud top pressure (Pa)
 
     ! OUTPUTS
@@ -284,7 +283,7 @@ contains
     ! LOCAL VARIABLES
     real(wp), parameter :: &
          LWP_conversion = 2._wp/3._wp * 1000._wp ! MKS units  
-    integer :: i, j
+    integer :: j
     logical, dimension(nPoints,nSubCols) :: &
          cloudMask,      &
          waterCloudMask, &
@@ -320,60 +319,45 @@ contains
     ! ########################################################################################
     ! Compute column amounts.
     ! ########################################################################################
-    ! Total
-    where(Cloud_Fraction_Total_Mean .gt. 0)
-       ! Optical thickness
-       Optical_Thickness_Total_Mean      = sum(optical_thickness,mask=cloudMask,dim=2)/&
-                                           Cloud_Fraction_Total_Mean  
-       Optical_Thickness_Total_MeanLog10 = sum(log10(abs(optical_thickness)),mask=cloudMask,dim=2)/&
-                                           Cloud_Fraction_Total_Mean
+    where(Cloud_Fraction_Total_Mean(1:nPoints) > 0)
+       Optical_Thickness_Total_Mean(1:nPoints) = sum(optical_thickness, mask = cloudMask,      dim = 2) / &
+            Cloud_Fraction_Total_Mean(1:nPoints)
+       Optical_Thickness_Total_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = cloudMask, &
+            dim = 2) / Cloud_Fraction_Total_Mean(1:nPoints)
     elsewhere
-       Optical_Thickness_Total_Mean      = R_UNDEF
-       Optical_Thickness_Total_MeanLog10 = R_UNDEF
-       Cloud_Top_Pressure_Total_Mean     = R_UNDEF
-    end where
-
-    ! Liquid
-    where(Cloud_Fraction_Water_Mean .gt. 0)
-       ! Optical thickness
-       Optical_Thickness_Water_Mean      = sum(optical_thickness,mask=waterCloudMask,dim=2)/&
-                                           Cloud_Fraction_Water_Mean 
-       Optical_Thickness_Water_MeanLog10 = sum(log10(abs(optical_thickness)),mask=waterCloudMask,dim=2)/&
-                                           Cloud_Fraction_Water_Mean 
-       ! Particle size
-       Cloud_Particle_Size_Water_Mean    = sum(particle_size,mask=waterCloudMask,dim=2)/&
-                                           Cloud_Fraction_Water_Mean 
-       ! LWP
-       Liquid_Water_Path_Mean            = LWP_conversion*sum(particle_size*optical_thickness,mask=waterCloudMask,dim=2)/&
-                                           Cloud_Fraction_Water_Mean
+       Optical_Thickness_Total_Mean      = 0._wp
+       Optical_Thickness_Total_MeanLog10 = 0._wp
+    endwhere
+    where(Cloud_Fraction_Water_Mean(1:nPoints) > 0)
+       Optical_Thickness_Water_Mean(1:nPoints) = sum(optical_thickness, mask = waterCloudMask, dim = 2) / &
+            Cloud_Fraction_Water_Mean(1:nPoints)
+       Liquid_Water_Path_Mean(1:nPoints) = LWP_conversion*sum(particle_size*optical_thickness, &
+            mask=waterCloudMask,dim=2)/Cloud_Fraction_Water_Mean(1:nPoints)
+       Optical_Thickness_Water_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = waterCloudMask,&
+            dim = 2) / Cloud_Fraction_Water_Mean(1:nPoints)
+       Cloud_Particle_Size_Water_Mean(1:nPoints) = sum(particle_size, mask = waterCloudMask, dim = 2) / &
+            Cloud_Fraction_Water_Mean(1:nPoints)
     elsewhere
-       Optical_Thickness_Water_Mean      = R_UNDEF
-       Optical_Thickness_Water_MeanLog10 = R_UNDEF
-       Cloud_Particle_Size_Water_Mean    = R_UNDEF
-       Liquid_Water_Path_Mean            = R_UNDEF
-    end where
-
-    ! Ice
-    where(Cloud_Fraction_Ice_Mean  .gt. 0)
-       ! Optical thickness
-       Optical_Thickness_Ice_Mean      = sum(optical_thickness,mask=iceCloudMask,dim=2)/&
-                                         Cloud_Fraction_Ice_Mean 
-       Optical_Thickness_Ice_MeanLog10 = sum(log10(abs(optical_thickness)),mask=iceCloudMask,dim=2)/&
-                                         Cloud_Fraction_Ice_Mean 
-       ! Particle size
-       Cloud_Particle_Size_Ice_Mean    = sum(particle_size, mask=iceCloudMask,dim=2)/&
-                                         Cloud_Fraction_Ice_Mean 
-       ! IWP
-       Ice_Water_Path_Mean             = LWP_conversion*ice_density*sum(particle_size*optical_thickness,mask=iceCloudMask,dim=2)/&
-                                         Cloud_Fraction_Ice_Mean 
+       Optical_Thickness_Water_Mean      = 0._wp
+       Optical_Thickness_Water_MeanLog10 = 0._wp
+       Cloud_Particle_Size_Water_Mean    = 0._wp
+       Liquid_Water_Path_Mean            = 0._wp
+    endwhere
+    where(Cloud_Fraction_Ice_Mean(1:nPoints) > 0)
+       Optical_Thickness_Ice_Mean(1:nPoints)   = sum(optical_thickness, mask = iceCloudMask,   dim = 2) / &
+            Cloud_Fraction_Ice_Mean(1:nPoints)
+       Ice_Water_Path_Mean(1:nPoints) = LWP_conversion * ice_density*sum(particle_size*optical_thickness,&
+            mask=iceCloudMask,dim = 2) /Cloud_Fraction_Ice_Mean(1:nPoints) 
+       Optical_Thickness_Ice_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = iceCloudMask,&
+            dim = 2) / Cloud_Fraction_Ice_Mean(1:nPoints)
+       Cloud_Particle_Size_Ice_Mean(1:nPoints) = sum(particle_size, mask = iceCloudMask,   dim = 2) / &
+            Cloud_Fraction_Ice_Mean(1:nPoints)    
     elsewhere
-       Optical_Thickness_Ice_Mean        = R_UNDEF
-       Optical_Thickness_Ice_MeanLog10   = R_UNDEF
-       Cloud_Particle_Size_Ice_Mean      = R_UNDEF
-       Ice_Water_Path_Mean               = R_UNDEF
-    end where
-    
-    ! Cloud-top pressure
+       Optical_Thickness_Ice_Mean        = 0._wp
+       Optical_Thickness_Ice_MeanLog10   = 0._wp
+       Cloud_Particle_Size_Ice_Mean      = 0._wp
+       Ice_Water_Path_Mean               = 0._wp
+    endwhere
     Cloud_Top_Pressure_Total_Mean  = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
                                      max(1, count(cloudMask, dim = 2))
 
@@ -564,7 +548,7 @@ contains
   ! ########################################################################################
   ! Optical properties
   ! ########################################################################################
-  elemental function get_g_nir (phase, re)
+  elemental function get_g_nir_old (phase, re)
     ! Polynomial fit for asummetry parameter g in MODIS band 7 (near IR) as a function 
     !   of size for ice and water
     ! Fits from Steve Platnick
@@ -573,7 +557,7 @@ contains
     integer, intent(in) :: phase
     real(wp),intent(in) :: re
     ! OUTPUTS
-    real(wp)            :: get_g_nir 
+    real(wp)            :: get_g_nir_old 
     ! LOCAL VARIABLES(parameters)
     real(wp), dimension(3), parameter :: &
          ice_coefficients         = (/ 0.7432,  4.5563e-3, -2.8697e-5 /), & 
@@ -583,22 +567,22 @@ contains
     ! approx. fits from MODIS Collection 5 LUT scattering calculations
     if(phase == phaseIsLiquid) then
       if(re < 8.) then 
-        get_g_nir = fit_to_quadratic(re, small_water_coefficients)
-        if(re < re_water_min) get_g_nir = fit_to_quadratic(re_water_min, small_water_coefficients)
+        get_g_nir_old = fit_to_quadratic(re, small_water_coefficients)
+        if(re < re_water_min) get_g_nir_old = fit_to_quadratic(re_water_min, small_water_coefficients)
       else
-        get_g_nir = fit_to_quadratic(re,   big_water_coefficients)
-        if(re > re_water_max) get_g_nir = fit_to_quadratic(re_water_max, big_water_coefficients)
+        get_g_nir_old = fit_to_quadratic(re,   big_water_coefficients)
+        if(re > re_water_max) get_g_nir_old = fit_to_quadratic(re_water_max, big_water_coefficients)
       end if 
     else
-      get_g_nir = fit_to_quadratic(re, ice_coefficients)
-      if(re < re_ice_min) get_g_nir = fit_to_quadratic(re_ice_min, ice_coefficients)
-      if(re > re_ice_max) get_g_nir = fit_to_quadratic(re_ice_max, ice_coefficients)
+      get_g_nir_old = fit_to_quadratic(re, ice_coefficients)
+      if(re < re_ice_min) get_g_nir_old = fit_to_quadratic(re_ice_min, ice_coefficients)
+      if(re > re_ice_max) get_g_nir_old = fit_to_quadratic(re_ice_max, ice_coefficients)
     end if 
     
-  end function get_g_nir
+  end function get_g_nir_old
 
   ! ########################################################################################
-  elemental function get_ssa_nir (phase, re)
+  elemental function get_ssa_nir_old (phase, re)
     ! Polynomial fit for single scattering albedo in MODIS band 7 (near IR) as a function 
     !   of size for ice and water
     ! Fits from Steve Platnick
@@ -607,23 +591,83 @@ contains
     integer, intent(in) :: phase
     real(wp),intent(in) :: re
     ! OUTPUTS
-    real(wp)            :: get_ssa_nir
+    real(wp)            :: get_ssa_nir_old
     ! LOCAL VARIABLES (parameters)
     real(wp), dimension(4), parameter :: ice_coefficients   = (/ 0.9994, -4.5199e-3, 3.9370e-5, -1.5235e-7 /)
     real(wp), dimension(3), parameter :: water_coefficients = (/ 1.0008, -2.5626e-3, 1.6024e-5 /) 
     
     ! approx. fits from MODIS Collection 5 LUT scattering calculations
     if(phase == phaseIsLiquid) then
-       get_ssa_nir = fit_to_quadratic(re, water_coefficients)
-       if(re < re_water_min) get_ssa_nir = fit_to_quadratic(re_water_min, water_coefficients)
-       if(re > re_water_max) get_ssa_nir = fit_to_quadratic(re_water_max, water_coefficients)
+       get_ssa_nir_old = fit_to_quadratic(re, water_coefficients)
+       if(re < re_water_min) get_ssa_nir_old = fit_to_quadratic(re_water_min, water_coefficients)
+       if(re > re_water_max) get_ssa_nir_old = fit_to_quadratic(re_water_max, water_coefficients)
     else
-       get_ssa_nir = fit_to_cubic(re, ice_coefficients)
-       if(re < re_ice_min) get_ssa_nir = fit_to_cubic(re_ice_min, ice_coefficients)
-       if(re > re_ice_max) get_ssa_nir = fit_to_cubic(re_ice_max, ice_coefficients)
+       get_ssa_nir_old = fit_to_cubic(re, ice_coefficients)
+       if(re < re_ice_min) get_ssa_nir_old = fit_to_cubic(re_ice_min, ice_coefficients)
+       if(re > re_ice_max) get_ssa_nir_old = fit_to_cubic(re_ice_max, ice_coefficients)
     end if
     
-  end function get_ssa_nir
+  end function get_ssa_nir_old
+  
+  elemental function get_g_nir (phase, re)
+    !
+    ! Polynomial fit for asummetry parameter g in MODIS band 7 (near IR) as a function 
+    !   of size for ice and water
+    ! Fits from Steve Platnick
+    !
+
+    integer, intent(in) :: phase
+    real(wp),    intent(in) :: re
+    real(wp) :: get_g_nir 
+
+    real(wp), dimension(3), parameter :: ice_coefficients         = (/ 0.7490, 6.5153e-3, -5.4136e-5 /), &
+                                         small_water_coefficients = (/ 1.0364, -8.8800e-2, 7.0000e-3 /)
+    real(wp), dimension(4), parameter :: big_water_coefficients   = (/ 0.6035, 2.8993e-2, -1.1051e-3, 1.5134e-5 /)
+
+    ! approx. fits from MODIS Collection 6 LUT scattering calculations for 3.7 µm channel size retrievals
+    if(phase == phaseIsLiquid) then 
+       if(re < 7.) then
+          get_g_nir = fit_to_quadratic(re, small_water_coefficients)
+          if(re < re_water_min) get_g_nir = fit_to_quadratic(re_water_min, small_water_coefficients)
+       else
+          get_g_nir = fit_to_cubic(re, big_water_coefficients)
+          if(re > re_water_max) get_g_nir = fit_to_cubic(re_water_max, big_water_coefficients)
+       end if
+    else
+       get_g_nir = fit_to_quadratic(re, ice_coefficients)
+      if(re < re_ice_min) get_g_nir = fit_to_quadratic(re_ice_min, ice_coefficients)
+      if(re > re_ice_max) get_g_nir = fit_to_quadratic(re_ice_max, ice_coefficients)
+    end if 
+    
+  end function get_g_nir
+
+  ! --------------------------------------------
+    elemental function get_ssa_nir (phase, re)
+        integer, intent(in) :: phase
+        real(wp),    intent(in) :: re
+        real(wp)                :: get_ssa_nir
+        !
+        ! Polynomial fit for single scattering albedo in MODIS band 7 (near IR) as a function 
+        !   of size for ice and water
+        ! Fits from Steve Platnick
+        !
+        real(wp), dimension(4), parameter :: ice_coefficients   = (/ 0.9625, -1.8069e-2, 3.3281e-4,-2.2865e-6/)
+        real(wp), dimension(3), parameter :: water_coefficients = (/ 1.0044, -1.1397e-2, 1.3300e-4 /)
+        
+        ! approx. fits from MODIS Collection 6 LUT scattering calculations
+        if(phase == phaseIsLiquid) then
+          get_ssa_nir = fit_to_quadratic(re, water_coefficients)
+          if(re < re_water_min) get_ssa_nir = fit_to_quadratic(re_water_min, water_coefficients)
+          if(re > re_water_max) get_ssa_nir = fit_to_quadratic(re_water_max, water_coefficients)
+        else
+          get_ssa_nir = fit_to_cubic(re, ice_coefficients)
+          if(re < re_ice_min) get_ssa_nir = fit_to_cubic(re_ice_min, ice_coefficients)
+          if(re > re_ice_max) get_ssa_nir = fit_to_cubic(re_ice_max, ice_coefficients)
+        end if 
+
+    end function get_ssa_nir
+
+  
 
   ! ########################################################################################
   pure function fit_to_cubic(x, coefficients) 
@@ -711,6 +755,7 @@ contains
       ! Conservative scattering
       if (beam == 1) then
           rh = (gamma1*tau+(gamma3-gamma1*xmu)*(1-exp(-tau/xmu)))
+  
           ref = rh / (1._wp + gamma1 * tau)
           tra = 1._wp - ref       
       else if(beam == 2) then
@@ -737,7 +782,7 @@ contains
       t5 = r5
 
       beta = -r5 / r4         
-      
+  
       e1 = min(rk * tau, 500._wp) 
       e2 = min(tau / xmu, 500._wp) 
       
