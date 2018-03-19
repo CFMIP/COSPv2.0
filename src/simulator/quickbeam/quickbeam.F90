@@ -181,7 +181,7 @@ contains
           endif
           
           ! Attenuation due to gaseous absorption between radar and volume
-          if (rcfg%use_gas_abs == 1 .or. rcfg%use_gas_abs == 2 .and. pr .eq. 1) then
+          if ((rcfg%use_gas_abs == 1) .or. (rcfg%use_gas_abs == 2 .and. pr .eq. 1)) then
              if (d_gate==1) then
                 if (k>1) then
                    ! Add to previous value to half of above layer + half of current layer
@@ -210,7 +210,12 @@ contains
     
     ! Compute Rayleigh reflectivity, and full, attenuated reflectivity
     if(rcfg%do_ray == 1) then
-       Ze_ray(1:nprof,1:ngate) = merge(10._wp*log10(z_ray(1:nprof,1:ngate)), 1._wp*R_UNDEF, z_ray(1:nprof,1:ngate) > 0._wp)
+       where(z_ray(1:nprof,1:ngate) > 0._wp)
+          Ze_ray(1:nprof,1:ngate) = 10._wp*log10(z_ray(1:nprof,1:ngate))
+       elsewhere
+          Ze_Ray(1:nprof,1:ngate) = 0._wp
+       endwhere
+!djs       Ze_ray(1:nprof,1:ngate) = merge(10._wp*log10(z_ray(1:nprof,1:ngate)), 1._wp*R_UNDEF, z_ray(1:nprof,1:ngate) > 0._wp)
     else 
       Ze_ray(1:nprof,1:ngate) = R_UNDEF
     end if

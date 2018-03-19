@@ -67,7 +67,7 @@
 !
 ! May 2015 - D. Swales - Modified for COSPv2.0
 !
-! Feb 2018 - R. Guzman - Added OPAQ and Ground LIDar (GLID) subroutines
+! Mar 2018 - R. Guzman - Added OPAQ and Ground LIDar (GLID) subroutines
 ! References
 ! OPAQ: Guzman et al. (2017): Direct atmosphere opacity observations from CALIPSO provide 
 ! new constraints on cloud-radiation interactions. JGR-Atmospheres, DOI: 10.1002/2016JD025946
@@ -135,10 +135,7 @@ contains
     ! LOCAL VARIABLES
     INTEGER :: k,icol
     REAL(WP),dimension(npoints) :: &
-         tautot_lay,     & !
-         tautot_lay_ice, & ! Total optical thickness of ice in the layer k
-         tautot_lay_liq, & ! Total optical thickness of liq in the layer k
-         tau_mol_lay       !
+         tautot_lay        !
     REAL(WP),dimension(npoints,ncolumns,nlev) :: &
          pnorm_liq,      & ! Lidar backscattered signal power for liquid
          pnorm_ice,      & ! Lidar backscattered signal power for ice
@@ -234,14 +231,16 @@ contains
           WHERE (pnorm(1:npoints,icol,k) .eq. 0)
              pnorm_perp_tot(1:npoints,icol,k)=0._wp
           ELSEWHERE
-             pnorm_perp_tot(1:npoints,icol,k) = merge((beta_perp_ice(1:npoints,icol,k)+  &
-                  beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/   &
-                  0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))/                   &
-                  (2._wp*tautot_lay(1:npoints))*                                         &
-                  (1._wp-EXP(-2._wp*tautot_lay(1:npoints))),                             &
-                  (beta_perp_ice(1:npoints,icol,k)+beta_perp_liq(1:npoints,icol,k)-      &
-                  (beta_mol(1:npoints,k)/(1._wp+1._wp/0.0284_wp)))*                      &
-                  EXP(-2._wp*tautot(1:npoints,icol,k-1)),tautot_lay(1:npoints) .gt. 0.)
+             where(tautot_lay(1:npoints) .gt. 0.)
+                pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
+                   beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
+                   0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))/                  &
+                   (2._wp*tautot_lay(1:npoints))* (1._wp-EXP(-2._wp*tautot_lay(1:npoints)))
+             elsewhere
+                pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
+                   beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
+                   0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))
+             endwhere 
           ENDWHERE
        END DO
     enddo
@@ -250,10 +249,10 @@ contains
   ! ######################################################################################
   ! SUBROUTINE lidar_column
   ! ######################################################################################
-  subroutine lidar_column(npoints,ncol,nlevels,llm,max_bin,tmp, pnorm, pnorm_perp, pmol, & !OPAQ
-                           land, surfelev, pplay, ok_lidar_cfad, ncat, ntype, cfad2,     & !OPAQ !TIBO2
-                           lidarcld, lidarcldphase, lidarcldtype, cldlayer, cldtype,     & !TIBO
-                           cldtypetemp, cldtypemeanz, cldtypemeanzse, cldthinemis, zlev, & !TIBO2
+  subroutine lidar_column(npoints,ncol,nlevels,llm,max_bin,tmp, pnorm, pnorm_perp,       &
+                           pmol, surfelev, pplay, ok_lidar_cfad, ncat, ntype, cfad2,     & !OPAQ
+                           lidarcld, lidarcldphase, lidarcldtype, cldlayer, cldtype,     & !OPAQ
+                           cldtypetemp, cldtypemeanz, cldtypemeanzse, cldthinemis, zlev, & !TIBO
                            zlev_half, cldlayerphase, lidarcldtmp, vgrid_z)                 !OPAQ
     integer,parameter :: &
          nphase = 6 ! Number of cloud layer phase types
@@ -275,7 +274,6 @@ contains
          pplay,   & ! Pressure on model levels (Pa)
          tmp        ! Temperature at each levels
     real(wp),intent(in),dimension(npoints) :: &
-         land,    & ! Landmask [0 - Ocean, 1 - Land]
          surfelev   ! Surface Elevation (m)                           !TIBO2
     logical,intent(in) :: &
          ok_lidar_cfad ! True if lidar CFAD diagnostics need to be computed
@@ -312,7 +310,7 @@ contains
          cfad2         ! CFADs of SR
 
     ! Local Variables
-    integer :: ic,k,i,j
+    integer :: ic,i,j
     real(wp),dimension(npoints,ncol,llm) :: &
          x3d
     real(wp),dimension(npoints,llm) :: &
@@ -1035,16 +1033,15 @@ contains
           enddo
        enddo
     enddo
-
     
     ! Check temperature cloud fraction
     do i=1,Npoints
        do itemp=1,Ntemp
           checktemp=lidarcldtemp(i,itemp,2)+lidarcldtemp(i,itemp,3)+lidarcldtemp(i,itemp,4)
-          if(checktemp .NE. lidarcldtemp(i,itemp,1))then
-             print *, i,itemp
-             print *, lidarcldtemp(i,itemp,1:4)
-          endif
+          !if(checktemp .NE. lidarcldtemp(i,itemp,1))then
+          !   print *, i,itemp
+          !   print *, lidarcldtemp(i,itemp,1:4)
+          !endif
           
        enddo
     enddo
@@ -1079,7 +1076,7 @@ contains
 
     ! Local parameter
     real(wp),parameter  :: &
-       S_att_opaq = 0.06_wp, & ! Fully Attenuated threshold, from Guzman et al. 2017, JGR-Atmospheres
+       S_att_opaq = 0.06_wp, & ! Fully Attenuated threshold (Guzman et al. 2017, JGR-Atmospheres)
        eta = 0.6_wp            ! Multiple-scattering factor (Vaillant de Guelis et al. 2017a, AMT)
 
 	! Inputs
@@ -1301,18 +1298,19 @@ contains
        lidarcldtype(:,:,3) = lidarcldtype(:,:,3)/nsubopaq(:,:)
     elsewhere
        lidarcldtype(:,:,3) = undef
+       lidarcldtype(:,:,4) = undef !declaring undef for opacity as well
     endwhere
     ! 3D opacity fraction (=4) !Summing z_opaque fraction from TOA(k=1) to SFC(k=Nlevels)
-       lidarcldtype(:,1,4) = lidarcldtype(:,1,3)
+       lidarcldtype(:,1,4) = lidarcldtype(:,1,3) !top layer equal to 3D z_opaque fraction
     do ip = 1, Npoints
      	do k = 2, Nlevels
-	   lidarcldtype(ip,k,4) = lidarcldtype(ip,k-1,4) + lidarcldtype(ip,k,3)
+            if ( (lidarcldtype(ip,k,3) .ne. undef) .and. (lidarcldtype(ip,k-1,4) .ne. undef) ) then
+	        lidarcldtype(ip,k,4) = lidarcldtype(ip,k,3) + lidarcldtype(ip,k-1,4)
+	    else
+	        lidarcldtype(ip,k,4) = undef
+	    endif
 	enddo
     enddo
-    where ( nsubopaq(:,:) .eq. 0. )
-!    where ( lidarcldtype(:,:,4) .gt. 1. .or. lidarcldtype(:,:,4) .lt. 0. )
-       lidarcldtype(:,:,4) = undef
-    endwhere
 
     ! Layered cloud types (opaque, thin and z_opaque 2D variables)
 
@@ -1393,9 +1391,6 @@ contains
 
     ! LOCAL VARIABLES
     INTEGER :: k,icol
-    REAL(WP),dimension(npoints) :: &
-         tautot_lay_gr,     & !
-         tau_mol_lay_gr       !
 
 ! we flip the profiles in calling the subroutines so the computation usually made from
 ! TOA to SFC is done the other way around for the ground lidar, from SFC to TOA
@@ -1420,7 +1415,7 @@ contains
   ! SUBROUTINE lidar_column_gr  FROM THE GROUND
   ! ######################################################################################
   subroutine lidar_column_gr(npoints,ncol,nlevels,llm,max_bin, pnorm_gr,              &
-                             pmol_gr, land, pplay, ok_lidar_cfad_gr, ncat, cfad2_gr,  &
+                             pmol_gr, pplay, ok_lidar_cfad_gr, ncat, cfad2_gr,  &
                              lidarcld_gr, cldlayer_gr, zlev, zlev_half)
 
     ! Inputs
@@ -1436,8 +1431,6 @@ contains
     real(wp),intent(in),dimension(npoints,Nlevels) :: &
          pmol_gr, & ! Molecular ATB
          pplay      ! Pressure on model levels (Pa)
-    real(wp),intent(in),dimension(npoints) :: &
-         land       ! Landmask [0 - Ocean, 1 - Land]
     logical,intent(in) :: &
          ok_lidar_cfad_gr ! True if GROUND lidar CFAD diagnostics need to be computed
     real(wp),intent(in),dimension(npoints,nlevels) :: &
@@ -1454,7 +1447,7 @@ contains
          cfad2_gr      ! CFADs of GROUND lidar SR
 
     ! Local Variables
-    integer :: ic,k,i,j
+    integer :: ic,i,j
     real(wp),dimension(npoints,ncol,llm) :: &
          x3d_gr
     real(wp),dimension(npoints,llm) :: &

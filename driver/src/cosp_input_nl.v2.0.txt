@@ -36,7 +36,7 @@
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
-  FINPUT='../data/inputs/v1.4.0/cosp_input_um.nc', ! List input NetCDF files
+  FINPUT='../data/inputs/v1.4.0/cosp_input_um_2d.nc', ! List input NetCDF files
 !  FINPUT='../data/inputs/cosp_input_2d.aearc.2006.10.15.03.30.nc', ! List input NetCDF files  
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations

@@ -115,8 +115,7 @@ PROGRAM COSPTEST_trunk
   ! Output stuff
   integer :: N1,lon_axid,time_axid,height_axid,height_mlev_axid,grid_id,lonvar_id,       &
              latvar_id,column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
-             MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid,i,count_rate,count_max,t0,t1,&
-             t2,t3,Nfiles
+             MISR_CTH_axid,lat_axid,tau_axid,pressure2_axid,i,Nfiles
   real(wp) :: toffset_step
   type(var1d) :: v1d(N1D+1) ! Structures needed by output routines for 1D variables
   type(var2d) :: v2d(N2D)   ! Structures needed by output routines for 2D variables
@@ -352,17 +351,16 @@ PROGRAM COSPTEST_trunk
         if (i .eq. 1) then
            call nc_cmor_init(cmor_nl,'replace',cfg,vgrid,gbx,sgx,sglidar,isccp,misr,     &
                              modis,rttov,sgradar,stradar,stlidar,geomode,Nlon,Nlat,N1,   &
-                             N2D,N3D,N_OUT_LIST,mgrid_zl,mgrid_zu,mgrid_z,lon_axid,      &
-                             lat_axid,time_axid,height_axid, &
+                             N2D,N3D,N_OUT_LIST,lon_axid,lat_axid,time_axid,height_axid, &
                              height_mlev_axid,grid_id,lonvar_id,latvar_id,column_axid,   &
                              sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,      &
                              MISR_CTH_axid,tau_axid,pressure2_axid,v1d(1:N1),v2d,v3d)
         endif
         if (geomode == 1) then
-           call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,     &
+           call nc_cmor_associate_1d(grid_id,height_axid,height_mlev_axid,               &
                                      column_axid,sza_axid,temp_axid,channel_axid,        &
                                      dbze_axid,sratio_axid,MISR_CTH_axid,tau_axid,       &
-                                     pressure2_axid,Nlon,Nlat,vgrid,gbx,sgx,sglidar,     &
+                                     pressure2_axid,gbx,sgx,sglidar,                     &
                                      isccp,misr,modis,rttov,sgradar,stradar,stlidar,     &
                                      N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
            call nc_cmor_write_1d(gbx,time_bnds,lonvar_id,latvar_id,N1,N2D,N3D,v1d(1:N1),v2d, &
@@ -371,7 +369,7 @@ PROGRAM COSPTEST_trunk
            call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,            &
                                      height_mlev_axid,column_axid,sza_axid,temp_axid,    &
                                      channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,   &
-                                     tau_axid,pressure2_axid,Nlon,Nlat,vgrid,gbx,sgx,    &
+                                     tau_axid,pressure2_axid,Nlon,Nlat,gbx,sgx,    &
                                      sglidar,isccp,misr,modis,rttov,sgradar,stradar,     &
                                      stlidar,N1D,N2D,N3D,v1d(1:N1),v2d,v3d)
            call nc_cmor_write_2d(time,time_bnds,geomode,Nlon,Nlat,N1,N2D,N3D,v1d(1:N1),  &

@@ -255,7 +255,7 @@ contains
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                                emsfc_lw,mode,Nlon,Nlat,surfelev,verbosity) !TIBO2
+                                emsfc_lw,mode,Nlon,Nlat,surfelev) !TIBO2
      
     ! Arguments
     character(len=512),intent(in) :: fname ! File name
@@ -268,7 +268,6 @@ contains
     real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev !TIBO2
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
-    integer,optional :: verbosity
     
     ! Local variables
     integer,parameter :: NMAX_DIM=5
@@ -379,7 +378,6 @@ contains
           call cosp_error(routine_name,errmsg,errcode=errst)
        endif
        ! Read in into temporary array of correct shape
-       !if (present(verbosity).and.(verbosity == 1)) print *, 'Reading '//trim(vname)//' ...'
        if (vrank == 1) then
           Na = dimsize(vdimid(1))
           allocate(x1(Na))
@@ -999,13 +997,9 @@ contains
     real(wp),dimension(:),allocatable :: profile_ax,column_ax,dbze_ax,channel_ax
     real(wp),dimension(:,:),allocatable :: dbze_bounds,vgrid_bounds,sratio_bounds, &
          lon_bounds,lat_bounds,mgrid_bounds
-    integer :: d2(2),d3(3),d4(4),d5(5)
-    character(len=64) :: pro_name = 'NC_CMOR_INIT'
-
     
     nc_action = CMOR_APPEND_3
-    if (trim(wmode) == 'replace') nc_action = CMOR_REPLACE_3
-    
+    if (trim(wmode) == 'replace') nc_action = CMOR_REPLACE_3    
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Allocate memory and compute axes and bounds
@@ -1052,14 +1046,11 @@ contains
           vgrid_bounds(2,i) = mgrid_zu(i)
        enddo
     end if
+    
     ! Lidar scattering ratio bounds (They are output by cosp_cfad_sr->diag_lidar in lmd_ipsl_stats.f90)
-!    sratio_bounds(2,:)         = cospOUT%calipso_srbval(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
-!    sratio_bounds(1,2:SR_BINS) = cospOUT%calipso_srbval(1:SR_BINS-1)
-    sratio_bounds(2,:)         = calipso_histBsct(:) ! srbval contains the upper limits from lmd_ipsl_stats.f90
-    sratio_bounds(1,2:SR_BINS) = calipso_histBsct(1:SR_BINS-1)
-    sratio_bounds(1,1)         = 0.0
-    sratio_bounds(2,SR_BINS)   = 1.e5 ! This matches with Chepfer et al., JGR, 2009. However, it is not consistent 
-    ! with the upper limit in lmd_ipsl_stats.f90, which is LIDAR_UNDEF-1=998.999
+    sratio_bounds(2,:) = calipso_histBsct(2:SR_BINS+1)
+    sratio_bounds(1,:) = calipso_histBsct(1:SR_BINS)
+
     ! Lat lon axes
     if (geomode == 2) then
        lon_ax = longitude(1:Nlon)
@@ -1162,10 +1153,10 @@ contains
     ! Associate table of variables. Needed here to fill in the table with names.
     !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     if (geomode == 1) then
-       call nc_cmor_associate_1d(grid_id,time_axid,height_axid,height_mlev_axid,        &
+       call nc_cmor_associate_1d(grid_id,height_axid,height_mlev_axid,                  &
                                  column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
-                                 sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,&
-                                 Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,       &
+                                 sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,     &
+                                 nPoints,nColumns,nLevels,nChannels,nLvgrid,            &
                                  cospOUT,N1,N2,N3,v1d,v2d,v3d)
 
 
@@ -1173,7 +1164,7 @@ contains
        call nc_cmor_associate_2d(lon_axid,lat_axid,time_axid,height_axid,               &
                                  height_mlev_axid,column_axid,sza_axid,temp_axid,       &
                                  channel_axid,dbze_axid,sratio_axid,MISR_CTH_axid,      &
-                                 tau_axid,pressure2_axid,Nlon,Nlat,nPoints,nColumns,    &
+                                 tau_axid,pressure2_axid,Nlon,Nlat,nColumns,            &
                                  nLevels,nChannels,nLvgrid,cospOUT,N1,N2,N3,v1d,v2d,v3d)
     endif
     v1d(:)%lout = .false.
@@ -1249,17 +1240,17 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE nc_cmor_associate_1D
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,time_axid,height_axid,height_mlev_axid,        &
+  SUBROUTINE NC_CMOR_ASSOCIATE_1D(grid_id,height_axid,height_mlev_axid,                  &
                                   column_axid,sza_axid,temp_axid,channel_axid,dbze_axid, &
-                                  sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,&
-                                  Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,       &
+                                  sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,     &
+                                  nPoints,nColumns,nLevels,nChannels,nLvgrid,            &
                                   cospOUT,N1D,N2D,N3D,v1d,v2d,v3d)
      
     ! Inputs
-    integer,intent(in) :: grid_id,time_axid,height_axid,height_mlev_axid,column_axid,    &
+    integer,intent(in) :: grid_id,height_axid,height_mlev_axid,column_axid,              &
                           sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,         &
-                          MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,Nlat,N1D,N2D,N3D,   &
-                          nPoints,nColumns,nLevels,nChannels,Nlvgrid
+                          MISR_CTH_axid,tau_axid,pressure2_axid,N1D,N2D,N3D,nPoints,     &
+                          nColumns,nLevels,nChannels,Nlvgrid
     type(cosp_outputs),intent(in) :: cospOUT
     type(var1d),intent(inout) :: v1d(N1D) !N1D+1
     type(var2d),intent(inout) :: v2d(N2D)
@@ -1401,13 +1392,13 @@ contains
   SUBROUTINE NC_CMOR_ASSOCIATE_2D(lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,&
                                   column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,   &
                                   sratio_axid,MISR_CTH_axid,tau_axid,pressure2_axid,Nlon,  &
-                                  Nlat,nPoints,nColumns,nLevels,nChannels,nLvgrid,cospOUT, &
+                                  Nlat,nColumns,nLevels,nChannels,nLvgrid,cospOUT,         &
                                   N1D,N2D,N3D,v1d,v2d,v3d)
      
     ! Arguments
     integer,intent(in) :: lon_axid,lat_axid,time_axid,height_axid,height_mlev_axid,         &
                           column_axid,sza_axid,temp_axid,channel_axid,dbze_axid,sratio_axid,&
-                          MISR_CTH_axid,tau_axid,pressure2_axid,nPoints,nColumns,nLevels,   &
+                          MISR_CTH_axid,tau_axid,pressure2_axid,nColumns,nLevels,           &
                           nChannels,nLvgrid
     integer,intent(in) :: Nlon,Nlat,N1D,N2D,N3D
     type(cosp_outputs),intent(in)   :: cospOUT
@@ -1617,7 +1608,6 @@ contains
      type(var3d),intent(inout) :: v3d(N3) !N1D+1
      ! Local variables
      integer :: error_flag,i
-     real(wp),allocatable :: y2(:,:),y3(:,:,:),y4(:,:,:,:)
      character(len=64) :: pro_name = 'NC_WRITE_COSP_1D'
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
