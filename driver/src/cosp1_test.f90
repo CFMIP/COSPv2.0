@@ -42,7 +42,7 @@ program cosp1_test
                                  modis_histTauCenters,tau_binCenters,ntauV1p4,            &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
                                  Nlvgrid_local  => Nlvgrid
-  use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
+  use mod_cosp1_io,         only: nc_read_input_file, write_cosp1_output, read_cosp_output_nl
 
   USE MOD_COSP_INTERFACE_v1p4, ONLY: cosp                   => cosp_interface_v1p4,      &
                                      cosp_gridbox,construct_cosp_vgrid,                  &
@@ -72,8 +72,8 @@ program cosp1_test
 
   ! Input/Output driver file control
   character(len=64),parameter :: &
-       cosp_input_namelist  = 'cosp2_input_nl.txt', &
-       cosp_output_namelist = 'cosp2_output_nl.txt'
+       cosp_input_namelist  = 'cosp1_input_nl.txt', &
+       cosp_output_namelist = 'cosp1_output_nl.txt'
 
   ! Test data
   integer :: &
@@ -265,9 +265,7 @@ program cosp1_test
   close(10)
 
   ! Output namelist (logical flags to turn on/off outputs)
-  open(10,file=cosp_output_namelist,status='unknown')
-  read(10,nml=cosp_output)
-  close(10)
+  call read_cosp_output_nl(cosp_output_namelist,63,cfg)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
@@ -391,10 +389,10 @@ program cosp1_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!  call write_cosp2_output(Npoints, Ncolumns, Nlevels, lon,lat,cospOUT,foutput)
-
-!  call cpu_time(driver_time(8))
-!  print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
+  call write_cosp1_output(Npoints, Ncolumns, Nlevels, gbx%zlev(1,Nlevels:1:-1),lon, lat,  cfg, vgrid, gbx, sgx,    &
+       sgradar, sglidar, isccp, misr, modis, rttov, stradar, stlidar, foutput)
+  call cpu_time(driver_time(8))
+  print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory

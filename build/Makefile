@@ -20,15 +20,13 @@ COSP1WRAPPER = ../cosp-1.4-interface
 VPATH += $(COSP1WRAPPER)
 
 # Standalone driver
-# Replace directory with ../driver/src-cmor to exercise CMOR-compatible offline driver
 DRIVER = ../driver/src
 VPATH += $(DRIVER)
 
 # Makefile.conf needs to define $(F90), $(F90FLAGS), $(NC_LIB), $(NC_INC)
-# Also $(CMOR_INC) and $(CMOR_LIB) to exercise CMOR-compatible offline driver
 include Makefile.conf
-F90FLAGS += $(CMOR_INC) $(NC_INC)
-LDFLAGS  += $(CMOR_LIB) $(NC_LIB) -lnetcdff -lnetcdf
+F90FLAGS += $(NC_INC)
+LDFLAGS  += $(NC_LIB) -lnetcdff -lnetcdf
 
 LDFLAGS += -L. -lcosp -lsubcol
 
@@ -123,5 +121,6 @@ cosp2_test    : cosp2_test.o cosp2_io.o
 
 # Offline driver using COSP 1.4 interface
 cosp_interface_v1p4.o : cosp_kinds.o libcosp.a libsubcol.a
-cosp1_test.o  : cosp2_io.o cosp_interface_v1p4.o
-cosp1_test    : cosp1_test.o cosp2_io.o cosp_interface_v1p4.o
+cosp1_io.o    : cosp_kinds.o cosp_config.o cosp.o cosp_interface_v1p4.o
+cosp1_test.o  : cosp1_io.o
+cosp1_test    : cosp1_test.o cosp1_io.o cosp_interface_v1p4.o
