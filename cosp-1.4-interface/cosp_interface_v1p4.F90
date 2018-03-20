@@ -44,7 +44,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
                                  numMODISReffLiqBins,vgrid_zl,vgrid_zu,vgrid_z,           &
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins
   use mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics_init,&
-                                 quickbeam_optics
+                                 quickbeam_optics,gases
   use cosp_optics,         only: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
   use quickbeam,           only: maxhclass,nRe_types,nd,mt_ntt,radar_cfg
@@ -637,7 +637,8 @@ contains
           ldouble = .true. 
           lsingle = .false.
        endif
-       
+       call quickbeam_optics_init()
+
        ! Initialize the distributional parameters for hydrometeors in radar simulator
        call hydro_class_init(lsingle,ldouble,sd)
        
@@ -816,16 +817,15 @@ contains
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.
 
        if (cfg%LlidarBetaMol532) then
-          sglidar%beta_mol         = cospOUT%calipso_beta_mol!(:,sglidar%Nlevels:1:-1)
+          sglidar%beta_mol         = cospOUT%calipso_beta_mol
        endif
        if (cfg%Latb532) then
-          !cospOUT%calipso_beta_tot = cospOUT%calipso_beta_tot(:,:,sglidar%Nlevels:1:-1)
           sglidar%beta_tot         = cospOUT%calipso_beta_tot
        endif
        if (cfg%LcfadLidarsr532)  then
           stlidar%srbval       = cospOUT%calipso_srbval
           stlidar%cfad_sr      = cospOUT%calipso_cfad_sr(:,:,vgrid%Nlvgrid:1:-1)
-          sglidar%betaperp_tot = cospOUT%calipso_betaperp_tot(:,:,sglidar%Nlevels:1:-1)
+          sglidar%betaperp_tot = cospOUT%calipso_betaperp_tot
        endif
 
        if (cfg%Lclcalipso) then
@@ -862,7 +862,7 @@ contains
        ! *NOTE* In COSP2 all outputs are ordered from TOA-2-SFC, but in COSPv1.4 this is
        !        not true. To maintain the outputs of v1.4, the affected fields are flipped.    
        if (cfg%Ldbze94) then
-          sgradar%Ze_tot = cospOUT%cloudsat_Ze_tot!(:,:,sgradar%Nlevels:1:-1)  
+          sgradar%Ze_tot = cospOUT%cloudsat_Ze_tot
        endif
        if (cfg%LcfadDbze94) then 
           stradar%cfad_ze = cospOUT%cloudsat_cfad_ze(:,:,stradar%Nlevels:1:-1)              
@@ -878,10 +878,6 @@ contains
     ! Subcolumns
     sgx%frac_out = sgx%frac_out(:,:,sgx%Nlevels:1:-1)
     
-    ! Clean-up memory
-    !call destroy_cosp_outputs(cospOUT)
-    deallocate(vgrid_zl,vgrid_zu,vgrid_z)
-
   end subroutine cosp_interface_v1p4
    
    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1238,34 +1234,28 @@ contains
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if (cfg%Lradar_sim) then
        allocate(g_vol(nPoints,gbx%Nlevels))
-       do ij=1,gbx%Ncolumns
-          if (ij .eq. 1) then
-             cmpGases = .true.
-             call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF,       &
-                  mr_hydro(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1000._wp,                    &
-                  Reff(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1.e6_wp,                         &
-                  Np(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO),                                   &
-                  gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                             & 
-                  gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                             &
-                  gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,                   &
-                  cospIN%z_vol_cloudsat(1:npoints,ij,:),                                 &
-                  cospIN%kr_vol_cloudsat(1:npoints,ij,:),                                &
-                  cospIN%g_vol_cloudsat(1:npoints,ij,:),g_vol_out=g_vol)
-          else
-             cmpGases = .false.
-             call quickbeam_optics(sd, rcfg_cloudsat,npoints,gbx%Nlevels, R_UNDEF,       &
-                  mr_hydro(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1000._wp,                    &
-                  Reff(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO)*1.e6_wp,                         &
-                  Np(:,ij,gbx%Nlevels:1:-1,1:N_HYDRO),                                   &
-                  gbx%p(start_idx:end_idx,gbx%Nlevels:1:-1),                             & 
-                  gbx%T(start_idx:end_idx,gbx%Nlevels:1:-1),                             &
-                  gbx%sh(start_idx:end_idx,gbx%Nlevels:1:-1),cmpGases,                   &
-                  cospIN%z_vol_cloudsat(1:npoints,ij,:),                                 &
-                  cospIN%kr_vol_cloudsat(1:npoints,ij,:),                                &
-                  cospIN%g_vol_cloudsat(1:npoints,ij,:),g_vol_in=g_vol)
-          end if
+       ! Compute gaseous absorption (assume identical for each subcolun)
+       g_vol(:,:)=0._wp
+       do i=1,nPoints
+          do j=1,cospIN%nLevels
+             if (rcfg_cloudsat%use_gas_abs == 1 .or. (rcfg_cloudsat%use_gas_abs == 2 .and. j .eq. cospIN%Nlevels)) then
+                g_vol(i,j) = gases(cospgridIN%pfull(i,j), cospgridIN%at(i,j),cospgridIN%qv(i,j),rcfg_cloudsat%freq)
+             endif
+             cospIN%g_vol_cloudsat(i,:,j)=g_vol(i,j)
+          end do
+       end do
+       
+       ! Loop over all subcolumns
+       do ij=1,gbx%nColumns
+          call quickbeam_optics(sd, rcfg_cloudsat, nPoints, cospIN%nLevels, R_UNDEF,      &
+               mr_hydro(:,ij,cospIN%Nlevels:1:-1,1:N_HYDRO)*1000._wp,                     &
+               Reff(:,ij,cospIN%Nlevels:1:-1,1:N_HYDRO)*1.e6_wp,                          &
+               Np(:,ij,cospIN%Nlevels:1:-1,1:N_HYDRO),cospgridIN%pfull, cospgridIN%at,    &
+               cospgridIN%qv, cospIN%z_vol_cloudsat(1:nPoints,ij,:),                      &
+               cospIN%kr_vol_cloudsat(1:nPoints,ij,:))
        enddo
     end if
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! MODIS optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
