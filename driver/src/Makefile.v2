@@ -5,8 +5,8 @@
 # Intel (ifort)
 F90      = ifort
 F90FLAGS = -O3 -traceback
-F90_LIB  = /usr/local/ifort
-F90_LIB   = /scratch/bmcinnes/usr/local/ifort
+#F90_LIB  = /usr/local/ifort
+F90_LIB   = /homedata/gcesana/local
 # Portland Group (pgf90)
 #F90      = pgf90
 #F90FLAGS = -Mpreprocess -O0 -g
@@ -19,27 +19,29 @@ F90_LIB   = /scratch/bmcinnes/usr/local/ifort
 INC = /usr/local/include
 LIB = /usr/local/lib
 
-NCDF_INC    = $(F90_LIB)/include
-NCDF_LIB    = $(F90_LIB)/lib
-CMOR_INC    = $(F90_LIB)/include
-CMOR_LIB    = $(F90_LIB)/lib
-UDUNITS_LIB = $(F90_LIB)/lib
-UDUNITS_INC = $(F90_LIB)/include
-UUID_LIB    = $(F90_LIB)/lib
-UUID_INC    = $(F90_LIB)/include
+NCDF_INC    = /opt/netcdf43/ifort/include
+NCDF_LIB    = /opt/netcdf43/ifort/lib
+CMOR_INC    = $(F90_LIB)/ifort/CMOR2.5.8/include
+CMOR_LIB    = $(F90_LIB)/ifort/CMOR2.5.8/lib
+UDUNITS_LIB = $(F90_LIB)/udunits/lib
+UDUNITS_INC = $(F90_LIB)/udunits/include
+UUID_LIB    = $(F90_LIB)/uuid/lib
+UUID_INC    = $(F90_LIB)/uuid/include
 
 # COSP source directory
-HOME_PATH = /home/dswales/Projects/COSP/COSPv2.0
+HOME_PATH = /bdd/CFMIP/workspace/rguzman/COSPv2.0
 SRC_F90   = ${HOME_PATH}/src
 OBJ_PATH  = ${HOME_PATH}/obj
 PROG      = cosp_test_v2.0
 
 # RTTOV setup
-RTTOV_PATH       =
-RTTOV_LIB_PATH   =
-RTTOV_INC_PATH   =
-RTTOV_MOD_PATH   = 
-RTTOV_LIBS       =
+RTTOV_PATH       = /homedata/rguzman/CALIPSO/RTTOV/rttov_11.3
+RTTOV_LIB_PATH   = $(RTTOV_PATH)/lib
+RTTOV_INC_PATH   = $(RTTOV_PATH)/include
+RTTOV_MOD_PATH   = $(RTTOV_PATH)/mod
+RTTOV_LIBS       = -lrttov11_mw_scatt -lrttov11_brdf_atlas -lrttov11_emis_atlas \
+                   -lrttov11_other -lrttov11_parallel -lrttov11_coef_io        \
+                   -lrttov11_main
 
 # Object files
 OBJS =  $(OBJ_PATH)/cosp_kinds.o  $(OBJ_PATH)/cosp_constants.o                  \
@@ -112,7 +114,7 @@ cosp_utils.o :  $(HOME_PATH)/subsample_and_optics/optics/cosp_utils.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
 
 cosp_io.v2.o: cosp_io.v2.f90
-	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(OBJ_PATH) $<
+	$(F90) $(F90FLAGS) -c -I$(CMOR_INC) -I$(NCDF_INC) -I$(OBJ_PATH) $<
 
 cosp_errorHandling.o : $(SRC_F90)/hooks/cosp_errorHandling.F90
 	$(F90) $(F90FLAGS) -c -I $(OBJ_PATH) $<
