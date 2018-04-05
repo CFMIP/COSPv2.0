@@ -28,7 +28,7 @@
 !
 ! History:
 ! 05/01/15  Dustin Swales - Original version
-! 14/03/18  Rodrigo Guzman- Added CALIOP-like Ground LIDar routines (GLID)
+! 04/04/18  Rodrigo Guzman- Added CALIOP-like Ground LIDar routines (GLID)
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module cosp_optics
@@ -443,9 +443,9 @@ contains
   
 !beginning of GLID changes
   ! ######################################################################################
-  ! SUBROUTINE lidar_optics_gr  FOR  GROUND LIDAR
+  ! SUBROUTINE groundlidar_optics  FOR  GROUND LIDAR
   ! ######################################################################################
-  subroutine lidar_optics_gr(npoints,ncolumns,nlev,npart,ice_type,q_lsliq, q_lsice,     &
+  subroutine groundlidar_optics(npoints,ncolumns,nlev,npart,ice_type,q_lsliq, q_lsice,   &
                               q_cvliq, q_cvice,ls_radliq,ls_radice,cv_radliq,cv_radice,  &
                               pres,presf,temp,beta_mol,betatot,tau_mol,tautot)
 
@@ -628,7 +628,7 @@ contains
        ENDDO
     enddo ! Loop over all subcolumns
        
-  end subroutine lidar_optics_gr
+  end subroutine groundlidar_optics
 !end of GLID changes
 
 end module cosp_optics

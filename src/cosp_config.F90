@@ -328,6 +328,29 @@ MODULE MOD_COSP_CONFIG
               12.,    15.,  15.,  18.,  18.,  21.,  21.,  24.,  24., 100. /),            &
               shape=(/2,40/))        
 
+!GLID beginning
+    ! ####################################################################################
+    ! Parameters used by the GROUND LIDAR simulator
+    ! #################################################################################### 
+    ! GROUND LIDAR backscatter histogram bins 
+!    real(wp),parameter ::     &
+!       S_cld       = 5.0,     & ! Threshold for cloud detection
+!       S_att       = 0.01,    & !
+!       S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
+    real(wp),parameter,dimension(SR_BINS+1) :: &
+         groundlidar_histBsct = (/-1.,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0,  &
+                                 60.0,80.0,999./)         ! Backscatter histogram bins
+    real(wp),parameter,dimension(2,SR_BINS) :: &
+         groundlidar_binEdges = reshape(source=(/groundlidar_histBsct(1),((groundlidar_histBsct(k),  &
+                                    l=1,2),k=2,SR_BINS),groundlidar_histBsct(SR_BINS+1)/),   &
+                                    shape = (/2,SR_BINS/))     
+    real(wp),parameter,dimension(SR_BINS) :: &
+         groundlidar_binCenters = (groundlidar_binEdges(1,:)+groundlidar_binEdges(2,:))/2._wp  
+
+!    integer,parameter  ::     &
+!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot) !OPAQ
+!GLID end
+
     ! ####################################################################################
     ! New vertical grid used by CALIPSO and CLOUDSAT L3 (set up during initialization)
     ! ####################################################################################

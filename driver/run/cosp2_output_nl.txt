@@ -66,15 +66,6 @@
   Lclcalipsothin=.true.,     !OPAQ
   Lclcalipsozopaque=.true.,  !OPAQ
   Lclcalipsoopacity=.true.,  !OPAQ
-  ! GROUND LIDAR diagnostics !GLID
-  LlidarBetaMol532gr=.true., !GLID
-  LcfadLidarsr532gr=.true.,  !GLID
-  Lclcalipsogr=.true.,       !GLID
-  Lclhcalipsogr=.true.,      !GLID
-  Lcllcalipsogr=.true.,      !GLID
-  Lclmcalipsogr=.true.,      !GLID
-  Lcltcalipsogr=.true.,      !GLID
-  ! CALIPSO TIBO diagnostics !TIBO
   Lclopaquetemp=.true.,      !TIBO
   Lclthintemp=.true.,        !TIBO
   Lclzopaquetemp=.true.,     !TIBO
@@ -84,6 +75,15 @@
   Lclopaquemeanzse=.true.,   !TIBO2
   Lclthinmeanzse=.true.,     !TIBO2
   Lclzopaquecalipsose=.true.,!TIBO2
+  ! GROUND LIDAR diagnostics   !GLID
+  LlidarBetaMol532gr=.true.,   !GLID
+  LcfadLidarsr532gr=.true.,    !GLID
+  Latb532gr=.true.,            !GLID
+  Lclgroundlidar=.true.,       !GLID
+  Lclhgroundlidar=.true.,      !GLID
+  Lcllgroundlidar=.true.,      !GLID
+  Lclmgroundlidar=.true.,      !GLID
+  Lcltgroundlidar=.true.,      !GLID
   !- ISCCP
   Lalbisccp=.true.,
   Lboxptopisccp=.true.,
