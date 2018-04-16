@@ -7,7 +7,7 @@ module mod_cosp_io
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
        reffICE_binCenters, reffLIQ_binCenters, cloudsat_binCenters, PARASOL_SZA,      &
-       calipso_binCenters, groundlidar_binCenters                                       !GLID
+       calipso_binCenters, groundlidar_binCenters, atlid_binCenters                     !GLID !ATLID
   implicit none
 
 contains
@@ -732,6 +732,109 @@ contains
     endif
 !end GROUND LIDAR 
 
+    !ATLID simulator output
+    if (associated(cospOUT%atlid_cldlayer)) then
+       ! Low-level cloud cover
+       status = nf90_def_var(fileID,"cllatlid",nf90_float, (/dimID(1)/),varID(117))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(117),"long_name","ATLID Low Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(117),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(117),"standard_name", "atlid_low_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Mid-level cloud cover
+       status = nf90_def_var(fileID,"clmatlid",nf90_float, (/dimID(1)/),varID(118))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(118),"long_name","ATLID Mid Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(118),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(118),"standard_name", "atlid_mid_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! High-level cloud cover
+       status = nf90_def_var(fileID,"clhatlid",nf90_float, (/dimID(1)/),varID(119))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(119),"long_name","ATLID High Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(119),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(119),"standard_name", "atlid_high_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! Total cloud cover
+       status = nf90_def_var(fileID,"cltatlid",nf90_float, (/dimID(1)/),varID(120))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(120),"long_name","ATLID Total Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(120),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(120),"standard_name", "atlid_total_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+    endif
+    !3D cloud fraction
+    if (associated(cospOUT%atlid_lidarcld)) then
+       status = nf90_def_var(fileID,"clatlid",nf90_float, (/dimID(1),dimID(4)/),varID(121))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(121),"long_name","ATLID Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(121),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(121),"standard_name", "atlid_cloud_area_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    !Molecular backscatter
+    if (associated(cospOUT%atlid_beta_mol)) then
+       status = nf90_def_var(fileID,"lidarBetaMol355",nf90_float, (/dimID(1),dimID(3)/),varID(122))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(122),"long_name","ATLID Molecular Backscatter Coefficient (355nm)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(122),"units",        "m-1 sr-1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(122),"standard_name", "atlid_volume_attenuated_backwards_scattering_function_in_air_assuming_no_aerosol_or_cloud")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+    endif
+    !Height-Intensity histogram (SR)
+    if (associated(cospOUT%atlid_cfad_sr)) then
+       status = nf90_def_var(fileID,"cfadLidarsr355",nf90_float, (/dimID(1),dimID(12),dimID(4)/),varID(123))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(123),"long_name","ATLID Scattering Ratio CFAD")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(123),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(123),"standard_name", "atlid_histogram_of_backscattering_ratio_over_height_above_reference_ellipsoid")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))     
+    endif
+    if (associated(cospOUT%atlid_beta_tot)) then
+       status = nf90_def_var(fileID,"atb355",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(124))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(124),"long_name","ATLID Attenuated Total Backscatter (355nm)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(124),"units",        "m-1 sr-1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(124),"standard_name", "volume_attenuated_backwards_scattering_function_in_air")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    if (associated(cospOUT%atlid_srbval) .or. associated(cospOUT%atlid_cfad_sr)) then 
+       status = nf90_def_var(fileID,"SR_BINS_ATLID",nf90_float, (/dimID(12)/),varID(125))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(125),"long_name","ATLID Backscattering Ratio (SR) Bin Centers")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(125),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(125),"standard_name", "backscattering_ratio")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       status = nf90_def_var(fileID,"SR_EDGES_ATLID",nf90_float, (/dimID(6),dimID(12)/),varID(126))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(126),"long_name","ATLID Backscattering Ratio (SR) Bin Bounds")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(126),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(126),"standard_name", "backscattering_ratio")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+!end ATLID
+
     ! PARASOL simulator output
     if (associated(cospOUT%parasolPix_refl)) then
        status = nf90_def_var(fileID,"parasolPix_refl",nf90_float, (/dimID(1),dimID(2),dimID(13)/),varID(20))
@@ -1370,8 +1473,45 @@ contains
        status = nf90_put_var(fileID,varID(115),groundlidar_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-
 !end GROUND LIDAR
+
+    ! ATLID simulator output
+    if (associated(cospOUT%atlid_cldlayer)) then
+       status = nf90_put_var(fileID,varID(117),cospOUT%atlid_cldlayer(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(118),cospOUT%atlid_cldlayer(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(119),cospOUT%atlid_cldlayer(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(120),cospOUT%atlid_cldlayer(:,4))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_lidarcld)) then
+       status = nf90_put_var(fileID,varID(121),cospOUT%atlid_lidarcld)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_beta_mol)) then
+       status = nf90_put_var(fileID,varID(122),cospOUT%atlid_beta_mol)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(123),cospOUT%atlid_cfad_sr)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_beta_tot)) then
+       status = nf90_put_var(fileID,varID(124),cospOUT%atlid_beta_tot)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    if (associated(cospOUT%atlid_srbval)) then
+       status = nf90_put_var(fileID,varID(126),reshape([cospOUT%atlid_srbval(1:SR_BINS),cospOUT%atlid_srbval(2:SR_BINS+1)],(/2,SR_BINS/)))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_srbval) .or. associated(cospOUT%atlid_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(125),atlid_binCenters)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+!end ATLID
 
     ! PARASOL simulator output
     if (associated(cospOUT%parasolPix_refl)) then

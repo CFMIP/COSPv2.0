@@ -28,7 +28,8 @@
 !
 ! History
 ! March 2016 - D. Swales - Original version
-! April 2018 - R. Guzman - Added OPAQ and Ground LIDar (GLID) diagnostics
+! April 2018 - R. Guzman - Added OPAQ diagnostics and Ground LIDar (GLID) simulator
+! April 2018 - R. Guzman - Added ATLID simulator
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp2_test
   use cosp_kinds,          only: wp                         
@@ -42,7 +43,7 @@ program cosp2_test
                                  modis_histTauEdges,tau_binEdges,                         &
                                  modis_histTauCenters,tau_binCenters,ntauV1p4,            &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
-                                 groundlidar_histBsct,                                    & !GLID
+                                 groundlidar_histBsct,atlid_histBsct,                     & !GLID !ATLID
                                  Nlvgrid_local  => Nlvgrid,                               & !OPAQ
                                  vgrid_z_local  => vgrid_z                                  !OPAQ
 
@@ -58,7 +59,7 @@ program cosp2_test
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
-                                 modis_optics_partition,groundlidar_optics                  !GLID
+                                 modis_optics_partition,groundlidar_optics,atlid_optics     !GLID !ATLID
 
   implicit none
 
@@ -179,6 +180,8 @@ program cosp2_test
              Lclthinmeanz,Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,Lclzopaquecalipsose,& !TIBO2
              LlidarBetaMol532gr,LcfadLidarsr532gr,Latb532gr,Lclgroundlidar,              & !GLID
              Lclhgroundlidar,Lcllgroundlidar,Lclmgroundlidar,Lcltgroundlidar,            & !GLID
+             LlidarBetaMol355,LcfadLidarsr355,Latb355,Lclatlid,                          & !ATLID
+             Lclhatlid,Lcllatlid,Lclmatlid,Lcltatlid,                                    & !ATLID
              Lalbisccp,Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,&
              Lmeantbisccp,Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,   &
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
@@ -198,6 +201,8 @@ program cosp2_test
                        Lclopaquemeanzse,Lclthinmeanzse,Lclzopaquecalipsose,              & !TIBO2
                        LlidarBetaMol532gr,LcfadLidarsr532gr,Latb532gr,Lclgroundlidar,    & !GLID
                        Lclhgroundlidar,Lcllgroundlidar,Lclmgroundlidar,Lcltgroundlidar,  & !GLID
+                       LlidarBetaMol355,LcfadLidarsr355,Latb355,Lclatlid,                & !ATLID
+                       Lclhatlid,Lcllatlid,Lclmatlid,Lcltatlid,                          & !ATLID
                        Lalbisccp,Lboxptopisccp,                                          &
                        Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,Lmeantbisccp, &
                        Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,      &
@@ -215,6 +220,7 @@ program cosp2_test
        lmisr     = .false., & !
        lcalipso  = .false., & !
        lgroundlidar = .false., & !GLID
+       latlid    = .false., & !ATLID
        lcloudsat = .false., & !
        lrttov    = .false., & !
        lparasol  = .false.    !
@@ -343,6 +349,10 @@ program cosp2_test
        Lclhgroundlidar .or. Lcllgroundlidar .or. Lclmgroundlidar .or. Lcltgroundlidar)   & !GLID
        Lgroundlidar = .true.                                                               !GLID
 
+  if (LlidarBetaMol355 .or. LcfadLidarsr355 .or. Latb355 .or. Lclatlid .or.              & !ATLID
+       Lclhatlid .or. Lcllatlid .or. Lclmatlid .or. Lcltatlid)                           & !ATLID
+       Latlid = .true.                                                                     !ATLID
+
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
   if (Ltbrttov) Lrttov = .true.
@@ -373,8 +383,8 @@ program cosp2_test
   call hydro_class_init(lsingle,ldouble,sd)
 
   ! Initialize COSP simulator
-  call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, Lgroundlidar, Lparasol, Lrttov, &
-       Npoints, Nlevels, cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,         &
+  call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, Lgroundlidar, Latlid, Lparasol, & !GLID !ATLID
+       Lrttov, Npoints, Nlevels, cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, rttov_Nchannels, rttov_Channels, rttov_platform,                   &
        rttov_satellite, rttov_instrument, use_vgrid, csat_vgrid, Nlvgrid,                &
@@ -391,10 +401,11 @@ program cosp2_test
        Lcltmodis, Lclwmodis, Lclimodis, Lclhmodis, Lclmmodis, Lcllmodis, Ltautmodis,     &
        Ltauwmodis, Ltauimodis, Ltautlogmodis, Ltauwlogmodis, Ltauilogmodis,              &
        Lreffclwmodis, Lreffclimodis, Lpctmodis, Llwpmodis, Liwpmodis, Lclmodis, Latb532, &
-       Latb532gr, LlidarBetaMol532, LlidarBetaMol532gr, LcfadLidarsr532, LcfadLidarsr532gr, & !GLID
-       Lclcalipso2, Lclcalipso, Lclgroundlidar, Lclhcalipso, Lcllcalipso, Lclmcalipso,   & !GLID
+       Latb532gr, Latb355, LlidarBetaMol532, LlidarBetaMol532gr, LlidarBetaMol355,       & !ATLID
+       LcfadLidarsr532, LcfadLidarsr532gr, LcfadLidarsr355, Lclcalipso2,                 & !GLID !ATLID
+       Lclcalipso, Lclgroundlidar, Lclatlid, Lclhcalipso, Lcllcalipso, Lclmcalipso,      & !GLID !ATLID
        Lcltcalipso, Lclhgroundlidar, Lcllgroundlidar, Lclmgroundlidar, Lcltgroundlidar,  & !GLID
-       Lcltlidarradar, Lclcalipsoliq,                                                    &
+       Lclhatlid, Lcllatlid, Lclmatlid, Lcltatlid, Lcltlidarradar, Lclcalipsoliq,        & !ATLID
        Lclcalipsoice, Lclcalipsoun, Lclcalipsotmp, Lclcalipsotmpliq, Lclcalipsotmpice,   &
        Lclcalipsotmpun, Lcltcalipsoliq, Lcltcalipsoice, Lcltcalipsoun, Lclhcalipsoliq,   &
        Lclhcalipsoice, Lclhcalipsoun, Lclmcalipsoliq, Lclmcalipsoice, Lclmcalipsoun,     &
@@ -790,6 +801,19 @@ contains
                       cospIN%tau_mol_gr,cospIN%tautot_gr)                              !GLID
     endif
     
+    if (Latlid) then                                                        !ATLID
+       call atlid_optics(nPoints,nColumns,nLevels,4,lidar_ice_type,       & !ATLID
+                      mr_hydro(:,:,:,I_LSCLIQ),                           & !ATLID
+                      mr_hydro(:,:,:,I_LSCICE),                           & !ATLID
+                      mr_hydro(:,:,:,I_CVCLIQ),                           & !ATLID
+                      mr_hydro(:,:,:,I_CVCICE),                           & !ATLID
+                      ReffIN(:,:,I_LSCLIQ),ReffIN(:,:,I_LSCICE),                     & !ATLID
+                      ReffIN(:,:,I_CVCLIQ),ReffIN(:,:,I_CVCICE),                     & !ATLID
+                      cospstateIN%pfull,cospstateIN%phalf,cospstateIN%at,            & !ATLID
+                      cospIN%beta_mol_atlid,cospIN%betatot_atlid,                    & !ATLID
+                      cospIN%tau_mol_atlid,cospIN%tautot_atlid)                        !ATLID
+    endif
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! CLOUDSAT RADAR OPTICS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -899,6 +923,14 @@ contains
                 y%tau_mol_gr(npoints,              nlevels),& !GLID
                 y%tautot_gr(npoints,      ncolumns,nlevels))  !GLID
     endif                                                     !GLID
+
+    if (Latlid) then                                             !ATLID
+       allocate(y%beta_mol_atlid(npoints,             nlevels),& !ATLID
+                y%betatot_atlid(npoints,     ncolumns,nlevels),& !ATLID
+                y%tau_mol_atlid(npoints,              nlevels),& !ATLID
+                y%tautot_atlid(npoints,      ncolumns,nlevels))  !ATLID
+    endif                                                        !ATLID
+
     if (Lcloudsat) then
        allocate(y%z_vol_cloudsat(npoints, ncolumns,nlevels),&
                 y%kr_vol_cloudsat(npoints,ncolumns,nlevels),&
@@ -947,13 +979,14 @@ contains
                                     Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,          &
                                     Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,           &
                                     Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,     &
-                                    Liwpmodis,Lclmodis,Latb532,Latb532gr,                & !GLID
-                                    LlidarBetaMol532,LlidarBetaMol532gr,LcfadLidarsr532, & !GLID
-                                    LcfadLidarsr532gr,Lclcalipso2,                       & !GLID
-                                    Lclcalipso,Lclgroundlidar,Lclhcalipso,Lcllcalipso,   & !GLID
-                                    Lclmcalipso,Lcltcalipso,Lclhgroundlidar,             & !GLID
-                                    Lcllgroundlidar,Lclmgroundlidar,Lcltgroundlidar,     & !GLID
-                                    Lcltlidarradar,Lclcalipsoliq,                        & !GLID
+                                    Liwpmodis,Lclmodis,Latb532,Latb532gr,Latb355,        & !GLID !ATLID
+                                    LlidarBetaMol532,LlidarBetaMol532gr,LlidarBetaMol355,& !GLID !ATLID
+                                    LcfadLidarsr532,LcfadLidarsr532gr,LcfadLidarsr355,   & !GLID !ATLID
+                                    Lclcalipso2,Lclcalipso,Lclgroundlidar,Lclatlid,      & !GLID !ATLID
+                                    Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,     &
+                                    Lclhgroundlidar,Lcllgroundlidar,Lclmgroundlidar,     & !GLID
+                                    Lcltgroundlidar,Lclhatlid,Lcllatlid,Lclmatlid,       & !GLID !ATLID
+                                    Lcltatlid,Lcltlidarradar,Lclcalipsoliq,              & !GLID !ATLID
                                     Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,            &
                                     Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,   &
                                     Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun,         &
@@ -999,13 +1032,17 @@ contains
          Lclmodis,         & ! MODIS cloud area fraction
          Latb532,          & ! CALIPSO attenuated total backscatter (532nm)
          Latb532gr,        & ! GROUND LIDAR attenuated total backscatter (532nm) !GLID 
+         Latb355,          & ! ATLID attenuated total backscatter (355nm) !ATLID 
          LlidarBetaMol532, & ! CALIPSO molecular backscatter (532nm)         
          LlidarBetaMol532gr,&! GROUND LIDAR molecular backscatter (532nm)      !GLID    
+         LlidarBetaMol355, & ! ATLID molecular backscatter (355nm)        !ATLID    
          LcfadLidarsr532,  & ! CALIPSO scattering ratio CFAD
          LcfadLidarsr532gr,& ! GROUND LIDAR scattering ratio CFAD              !GLID
+         LcfadLidarsr355,  & ! ATLID scattering ratio CFAD                !ATLID
          Lclcalipso2,      & ! CALIPSO cloud fraction undetected by cloudsat
          Lclcalipso,       & ! CALIPSO cloud area fraction
          Lclgroundlidar,   & ! GROUND LIDAR cloud area fraction                !GLID
+         Lclatlid,         & ! ATLID cloud area fraction                  !ATLID
          Lclhcalipso,      & ! CALIPSO high-level cloud fraction
          Lcllcalipso,      & ! CALIPSO low-level cloud fraction
          Lclmcalipso,      & ! CALIPSO mid-level cloud fraction
@@ -1014,6 +1051,10 @@ contains
          Lcllgroundlidar,  & ! GROUND LIDAR low-level cloud fraction           !GLID
          Lclmgroundlidar,  & ! GROUND LIDAR mid-level cloud fraction           !GLID
          Lcltgroundlidar,  & ! GROUND LIDAR total cloud fraction               !GLID
+         Lclhatlid,        & ! ATLID high-level cloud fraction !ATLID
+         Lcllatlid,        & ! ATLID low-level cloud fraction  !ATLID
+         Lclmatlid,        & ! ATLID mid-level cloud fraction  !ATLID
+         Lcltatlid,        & ! ATLID total cloud fraction      !ATLID
          Lcltlidarradar,   & ! CALIPSO-CLOUDSAT total cloud fraction
          Lclcalipsoliq,    & ! CALIPSO liquid cloud area fraction
          Lclcalipsoice,    & ! CALIPSO ice cloud area fraction 
@@ -1180,6 +1221,18 @@ contains
         allocate(x%groundlidar_cldlayer(Npoints,LIDAR_NCAT))                           !GLID
     endif                                                                              !GLID
       
+    ! ATLID simulator
+    if (LlidarBetaMol355) allocate(x%atlid_beta_mol(Npoints,Nlevels))          !ATLID
+    if (Latb355)          allocate(x%atlid_beta_tot(Npoints,Ncolumns,Nlevels)) !ATLID
+    if (LcfadLidarsr355) then                                                  !ATLID
+        allocate(x%atlid_srbval(SR_BINS+1))                                    !ATLID
+        allocate(x%atlid_cfad_sr(Npoints,SR_BINS,Nlvgrid))                     !ATLID
+    endif                                                                      !ATLID
+    if (Lclatlid)     allocate(x%atlid_lidarcld(Npoints,Nlvgrid))              !ATLID
+    if (Lclhatlid .or. Lclmatlid .or. Lcllatlid .or. Lcltatlid) then           !ATLID
+        allocate(x%atlid_cldlayer(Npoints,LIDAR_NCAT))                         !ATLID
+    endif                                                                      !ATLID
+      
     ! PARASOL
     if (Lparasolrefl) then
         allocate(x%parasolPix_refl(Npoints,Ncolumns,PARASOL_NREFL))
@@ -1228,6 +1281,10 @@ contains
     if (allocated(y%betatot_gr))      deallocate(y%betatot_gr)  !GLID
     if (allocated(y%tau_mol_gr))      deallocate(y%tau_mol_gr)  !GLID
     if (allocated(y%tautot_gr))       deallocate(y%tautot_gr)   !GLID
+    if (allocated(y%beta_mol_atlid))     deallocate(y%beta_mol_atlid) !ATLID
+    if (allocated(y%betatot_atlid))      deallocate(y%betatot_atlid)  !ATLID
+    if (allocated(y%tau_mol_atlid))      deallocate(y%tau_mol_atlid)  !ATLID
+    if (allocated(y%tautot_atlid))       deallocate(y%tautot_atlid)   !ATLID
 
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1364,6 +1421,30 @@ contains
         deallocate(y%groundlidar_srbval)              !GLID
         nullify(y%groundlidar_srbval)                 !GLID
      endif                                            !GLID
+     if (associated(y%atlid_beta_mol))           then !ATLID
+        deallocate(y%atlid_beta_mol)                  !ATLID
+        nullify(y%atlid_beta_mol)                     !ATLID
+     endif                                            !ATLID
+     if (associated(y%atlid_beta_tot))           then !ATLID
+        deallocate(y%atlid_beta_tot)                  !ATLID
+        nullify(y%atlid_beta_tot)                     !ATLID
+     endif                                            !ATLID
+     if (associated(y%atlid_cldlayer))           then !ATLID
+        deallocate(y%atlid_cldlayer)                  !ATLID
+        nullify(y%atlid_cldlayer)                     !ATLID
+     endif                                            !ATLID
+     if (associated(y%atlid_lidarcld))           then !ATLID
+        deallocate(y%atlid_lidarcld)                  !ATLID
+        nullify(y%atlid_lidarcld)                     !ATLID
+     endif                                            !ATLID
+     if (associated(y%atlid_cfad_sr))            then !ATLID
+        deallocate(y%atlid_cfad_sr)                   !ATLID
+        nullify(y%atlid_cfad_sr)                      !ATLID
+     endif                                            !ATLID
+     if (associated(y%atlid_srbval))             then !ATLID
+        deallocate(y%atlid_srbval)                    !ATLID
+        nullify(y%atlid_srbval)                       !ATLID
+     endif                                            !ATLID
      if (associated(y%parasolPix_refl))           then
         deallocate(y%parasolPix_refl)
         nullify(y%parasolPix_refl)     
