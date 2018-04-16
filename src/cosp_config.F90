@@ -37,6 +37,7 @@
 !                               the module quickbeam_optics.
 ! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
 ! Mar 2018 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
+! Apr 2018 - R. Guzman        - Added parameters for GROUND LIDAR and ATLID simulators !GLID !ATLID
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -350,6 +351,29 @@ MODULE MOD_COSP_CONFIG
 !    integer,parameter  ::     &
 !       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot) !OPAQ
 !GLID end
+
+!ATLID beginning
+    ! ####################################################################################
+    ! Parameters used by the ATLID LIDAR simulator
+    ! #################################################################################### 
+    ! ATLID LIDAR backscatter histogram bins 
+    real(wp),parameter ::     &
+       S_cld_atlid       = 1.74,    & ! Threshold for cloud detection
+       S_att_atlid       = 0.01,    & !
+       S_cld_att_atlid   = 6.67        ! Threshold for undefined cloud phase detection
+    real(wp),parameter,dimension(SR_BINS+1) :: &
+         atlid_histBsct = (/-1.,0.01,1.03,1.38,1.74,2.07,2.62,3.65,4.63,5.63,6.67,8.8,11.25,  &
+                                 13.2,17.2,999./)         ! Backscatter histogram bins
+    real(wp),parameter,dimension(2,SR_BINS) :: &
+         atlid_binEdges = reshape(source=(/atlid_histBsct(1),((atlid_histBsct(k),  &
+                                    l=1,2),k=2,SR_BINS),atlid_histBsct(SR_BINS+1)/),   &
+                                    shape = (/2,SR_BINS/))     
+    real(wp),parameter,dimension(SR_BINS) :: &
+         atlid_binCenters = (atlid_binEdges(1,:)+atlid_binEdges(2,:))/2._wp  
+
+!    integer,parameter  ::     &
+!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot) !OPAQ
+!ATLID end
 
     ! ####################################################################################
     ! New vertical grid used by CALIPSO and CLOUDSAT L3 (set up during initialization)

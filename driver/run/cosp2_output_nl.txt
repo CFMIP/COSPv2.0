@@ -84,6 +84,15 @@
   Lcllgroundlidar=.true.,      !GLID
   Lclmgroundlidar=.true.,      !GLID
   Lcltgroundlidar=.true.,      !GLID
+  ! ATLID diagnostics       !ATLID
+  LlidarBetaMol355=.true.,  !ATLID
+  LcfadLidarsr355=.true.,   !ATLID
+  Latb355=.true.,           !ATLID
+  Lclatlid=.true.,          !ATLID
+  Lclhatlid=.true.,         !ATLID
+  Lcllatlid=.true.,         !ATLID
+  Lclmatlid=.true.,         !ATLID
+  Lcltatlid=.true.,         !ATLID
   !- ISCCP
   Lalbisccp=.true.,
   Lboxptopisccp=.true.,
