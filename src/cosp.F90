@@ -1300,12 +1300,10 @@ CONTAINS
   ! ######################################################################################
   ! SUBROUTINE cosp_init
   ! ######################################################################################
-  SUBROUTINE COSP_INIT(Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov,           &
-                       Npoints,Nlevels,cloudsat_radar_freq,cloudsat_k2,                  &
-                       cloudsat_use_gas_abs,cloudsat_do_ray,isccp_top_height,            &
-                       isccp_top_height_direction,surface_radar,rcfg,rttov_Nchannels,    &
-                       rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,   &
-                       lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
+  SUBROUTINE COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, Lparasol, Lrttov,     &
+       cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
+       isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
+       luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov
@@ -1314,16 +1312,9 @@ CONTAINS
          cloudsat_do_ray,            & !
          isccp_top_height,           & !
          isccp_top_height_direction, & !
-         Npoints,                    & !
          Nlevels,                    & !
          Nvgrid,                     & ! Number of levels for new L3 grid
-         surface_radar,              & !
-         rttov_Nchannels,            & ! Number of RTTOV channels
-         rttov_platform,             & ! RTTOV platform
-         rttov_satellite,            & ! RTTOV satellite
-         rttov_instrument              ! RTTOV instrument
-    integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
-         rttov_channels                ! RTTOV channels
+         surface_radar                 !
     real(wp),intent(in) :: &
          cloudsat_radar_freq,        & !
          cloudsat_k2                   !
@@ -1374,8 +1365,6 @@ CONTAINS
     if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
-    !if (Lrttov) call cosp_rttov_init(rttov_Nchannels,rttov_platform,rttov_satellite,     &
-    !     rttov_instrument,rttov_channels)
     if (Lrttov) call cosp_rttov_init()
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
@@ -1859,6 +1848,7 @@ CONTAINS
             cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
 
     endif
+
     if (any(cospIN%emiss_11 .lt. 0. .OR. cospIN%emiss_11 .gt. 1)) then
        nError=nError+1
        errorMessage(nError) = 'ERROR: COSP input variable: cospIN%emiss_11 contains values out of range'
