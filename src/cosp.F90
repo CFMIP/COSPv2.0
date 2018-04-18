@@ -1305,7 +1305,7 @@ CONTAINS
                        cloudsat_use_gas_abs,cloudsat_do_ray,isccp_top_height,            &
                        isccp_top_height_direction,surface_radar,rcfg,rttov_Nchannels,    &
                        rttov_Channels,rttov_platform,rttov_satellite,rttov_instrument,   &
-                       lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme,cospOUT)
+                       lusevgrid,luseCSATvgrid,Nvgrid,cloudsat_micro_scheme)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov
@@ -1333,7 +1333,6 @@ CONTAINS
                                        ! vertical grid
     character(len=64),intent(in) :: &
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
-    type(cosp_outputs),intent(inout) :: cospOUT
 
     ! OUTPUTS
     type(radar_cfg) :: rcfg
@@ -1716,67 +1715,67 @@ CONTAINS
        if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF
     endif
 
-	! RTTOV Inputs
-    if (cospgridIN%zenang .lt. -90. .OR. cospgridIN%zenang .gt. 90) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%zenang contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (cospgridIN%co2 .lt. 0) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (cospgridIN%ch4 .lt. 0) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%ch4 contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (cospgridIN%n2o .lt. 0) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%n2o contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (cospgridIN%co.lt. 0) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (any(cospgridIN%o3 .lt. 0)) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%o3 contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (any(cospgridIN%emis_sfc .lt. 0. .OR. cospgridIN%emis_sfc .gt. 1)) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (any(cospgridIN%u_sfc .lt. -100. .OR. cospgridIN%u_sfc .gt. 100.)) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%u_sfc contains values out of range'
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-       Lrttov_subcolumn = .false.
-    endif
-    if (any(cospgridIN%v_sfc .lt. -100. .OR. cospgridIN%v_sfc .gt. 100.)) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%v_sfc contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
-    if (any(cospgridIN%lat .lt. -90 .OR. cospgridIN%lat .gt. 90)) then
-       nError=nError+1
-       errorMessage(nError) = 'ERROR: COSP input variable: cospIN%lat contains values out of range'
-       Lrttov_subcolumn = .false.
-       if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
-    endif
+    !! RTTOV Inputs
+    !if (cospgridIN%zenang .lt. -90. .OR. cospgridIN%zenang .gt. 90) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%zenang contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (cospgridIN%co2 .lt. 0) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (cospgridIN%ch4 .lt. 0) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%ch4 contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (cospgridIN%n2o .lt. 0) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%n2o contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (cospgridIN%co.lt. 0) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (any(cospgridIN%o3 .lt. 0)) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%o3 contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (any(cospgridIN%emis_sfc .lt. 0. .OR. cospgridIN%emis_sfc .gt. 1)) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (any(cospgridIN%u_sfc .lt. -100. .OR. cospgridIN%u_sfc .gt. 100.)) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospIN%u_sfc contains values out of range'
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !   Lrttov_subcolumn = .false.
+    !endif
+    !if (any(cospgridIN%v_sfc .lt. -100. .OR. cospgridIN%v_sfc .gt. 100.)) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospIN%v_sfc contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
+    !if (any(cospgridIN%lat .lt. -90 .OR. cospgridIN%lat .gt. 90)) then
+    !   nError=nError+1
+    !   errorMessage(nError) = 'ERROR: COSP input variable: cospIN%lat contains values out of range'
+    !   Lrttov_subcolumn = .false.
+    !   if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+    !endif
 
     ! COSP_INPUTS
     if (cospIN%emsfc_lw .lt. 0. .OR. cospIN%emsfc_lw .gt. 1.) then
@@ -2307,34 +2306,34 @@ CONTAINS
       errorMessage(nError) = 'ERROR(parasol_simulator): The number of levels in the input fields are inconsistent'
   endif
 
-  ! RTTOV
-  if (size(cospgridIN%pfull,1)           .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%at,1)              .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%qv,1)              .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%hgt_matrix_half,1) .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%u_sfc)             .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%v_sfc)             .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%skt)               .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%phalf,1)           .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%qv,1)              .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%land)              .ne. cospIN%Npoints .OR. &
-      size(cospgridIN%lat)               .ne. cospIN%Npoints) then
-      Lrttov_subcolumn = .false.
-      Lrttov_column    = .false.
-      nError=nError+1
-      errorMessage(nError) = 'ERROR(rttov_simulator): The number of points in the input fields are inconsistent'
-  endif
-  if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
-      size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
-      size(cospgridIN%qv,2)              .ne. cospIN%Nlevels   .OR. &
-      size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels+1 .OR. &
-      size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1 .OR. &
-      size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
-      Lrttov_subcolumn = .false.
-      Lrttov_column    = .false.
-      nError=nError+1
-      errorMessage(nError) = 'ERROR(rttov_simulator): The number of levels in the input fields are inconsistent'
-  endif
+  !! RTTOV
+  !if (size(cospgridIN%pfull,1)           .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%at,1)              .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%qv,1)              .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%hgt_matrix_half,1) .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%u_sfc)             .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%v_sfc)             .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%skt)               .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%phalf,1)           .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%qv,1)              .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%land)              .ne. cospIN%Npoints .OR. &
+  !    size(cospgridIN%lat)               .ne. cospIN%Npoints) then
+  !    Lrttov_subcolumn = .false.
+  !    Lrttov_column    = .false.
+  !    nError=nError+1
+  !    errorMessage(nError) = 'ERROR(rttov_simulator): The number of points in the input fields are inconsistent'
+  !endif
+  !if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
+  !    size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
+  !    size(cospgridIN%qv,2)              .ne. cospIN%Nlevels   .OR. &
+  !    size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels+1 .OR. &
+  !    size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1 .OR. &
+  !    size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
+  !    Lrttov_subcolumn = .false.
+  !    Lrttov_column    = .false.
+  !    nError=nError+1
+  !    errorMessage(nError) = 'ERROR(rttov_simulator): The number of levels in the input fields are inconsistent'
+  !endif
 
   end subroutine cosp_errorCheck
 
