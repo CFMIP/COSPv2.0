@@ -443,12 +443,11 @@ program cosp2_test
           cospstateIN,cospIN)
 
      call cpu_time(driver_time(6))
-     
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,.false.)
-     print*,cosp_status(1:5)
      call cpu_time(driver_time(7))
   enddo
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
