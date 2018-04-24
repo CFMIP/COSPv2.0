@@ -67,32 +67,24 @@
 !
 ! May 2015 - D. Swales - Modified for COSPv2.0
 !
-! Apr 2018 - R. Guzman - Added Ground LIDar (GLID) subroutines
-! Reference
+! Apr 2018 - R. Guzman - Added Ground LIDar (GLID) + ATLID subroutines
+! References
 !
 ! GLID: Chiriaco et al. (2018): ReOBS: a new approach to synthetize long-term 
 ! multi-variable dataset and application to the SIRTA supersite. ESSD (in press)
 !
+! ATLID:  Reverdy et al. (2015): An EarthCARE/ATLID simulator to evaluate cloud description
+! in climate models. Journal of Geophysical Research: Atmospheres, 120(21).
+!
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-module mod_groundlidar_simulator
+module mod_lidar_simulator_nophase
   USE COSP_KINDS,         ONLY: wp
   USE MOD_COSP_CONFIG,    ONLY: SR_BINS,S_CLD,S_ATT,S_CLD_ATT,R_UNDEF,groundlidar_histBsct,  &
+                                S_CLD_ATLID,S_ATT_ATLID,S_CLD_ATT_ATLID,atlid_histBsct, &
                                 use_vgrid,vgrid_zl,vgrid_zu,vgrid_z
   USE MOD_COSP_STATS,     ONLY: COSP_CHANGE_VERTICAL_GRID,hist1d
   implicit none
   
-  ! Polynomial coefficients (Alpha, Beta, Gamma) which allow to compute the 
-  ! ATBperpendicular as a function of the ATB for ice or liquid cloud particles 
-  ! derived from CALIPSO-GOCCP observations at 120m vertical grid 
-  ! (Cesana and Chepfer, JGR, 2013).
-  !
-  ! Relationship between ATBice and ATBperp,ice for ice particles:
-  !                ATBperp,ice = Alpha*ATBice 
-  ! Relationship between ATBice and ATBperp,ice for liquid particles:
-  !          ATBperp,ice = Beta*ATBice^2 + Gamma*ATBice
-!  real(wp) :: &
-!       alpha,beta,gamma    
-
 contains
   ! ######################################################################################
   ! The subroutines below compute the attenuated backscatter signal and the lidar 
@@ -130,62 +122,87 @@ contains
     END DO
   end subroutine cmp_backsignal
 
-! BEGINNING OF GLID CHANGES
+! BEGINNING OF GLID + ATLID CHANGES
   ! ######################################################################################
-  ! SUBROUTINE groundlidar_subcolumn  FROM THE GROUND
+  ! SUBROUTINE lidar_subcolumn_nophase
   ! ######################################################################################
-  subroutine groundlidar_subcolumn(npoints,ncolumns,nlev,beta_mol_gr,tau_mol_gr,betatot_gr, &
-                                   tautot_gr, pmol_gr, pnorm_gr)
+  subroutine lidar_subcolumn_nophase(groundlidar_on, atlid_on, npoints,ncolumns,nlev, &
+                                     beta_mol,tau_mol,betatot,tautot, pmol, pnorm)
 
     ! INPUTS
+    LOGICAL,intent(in) :: &
+         groundlidar_on,  & ! GROUND LIDAR flag
+         atlid_on           ! ATLID flag
     INTEGER,intent(in) :: & 
          npoints,      & ! Number of gridpoints
          ncolumns,     & ! Number of subcolumns
          nlev            ! Number of levels
     REAL(WP),intent(in),dimension(npoints,nlev) :: &
-         beta_mol_gr,  & ! Molecular backscatter coefficient
-         tau_mol_gr      ! Molecular optical depth
+         beta_mol,     & ! Molecular backscatter coefficient
+         tau_mol         ! Molecular optical depth
 
     REAL(WP),intent(in),dimension(npoints,ncolumns,nlev)       :: &
-         betatot_gr,   & ! 
-         tautot_gr       ! Optical thickess integrated from top
+         betatot,      & ! 
+         tautot          ! Optical thickess integrated from top
 
     ! OUTPUTS
     REAL(WP),intent(out),dimension(npoints,nlev) :: &
-         pmol_gr         ! Molecular attenuated backscatter lidar signal power(m^-1.sr^-1)
+         pmol            ! Molecular attenuated backscatter lidar signal power(m^-1.sr^-1)
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev) :: &
-         pnorm_gr        ! Molecular backscatter signal power (m^-1.sr^-1)
+         pnorm           ! Molecular backscatter signal power (m^-1.sr^-1)
 
     ! LOCAL VARIABLES
     INTEGER :: k,icol
 
+!GROUND LIDAR
+if (groundlidar_on) then
 ! we flip the profiles in calling the subroutines so the computation usually made from
 ! TOA to SFC is done the other way around for the ground lidar, from SFC to TOA
     ! ####################################################################################
     ! *) Molecular signal
     ! ####################################################################################
-    call cmp_backsignal(nlev,npoints,beta_mol_gr(1:npoints,nlev:1:-1),&
-                        tau_mol_gr(1:npoints,nlev:1:-1),pmol_gr(1:npoints,nlev:1:-1))
+    call cmp_backsignal(nlev,npoints,beta_mol(1:npoints,nlev:1:-1),&
+                        tau_mol(1:npoints,nlev:1:-1),pmol(1:npoints,nlev:1:-1))
 
     do icol=1,ncolumns
        ! #################################################################################
        ! *) Total Backscatter signal
        ! #################################################################################
-       call cmp_backsignal(nlev,npoints,betatot_gr(1:npoints,icol,nlev:1:-1),&
-            tautot_gr(1:npoints,icol,nlev:1:-1),pnorm_gr(1:npoints,icol,nlev:1:-1))
-
+       call cmp_backsignal(nlev,npoints,betatot(1:npoints,icol,nlev:1:-1),&
+            tautot(1:npoints,icol,nlev:1:-1),pnorm(1:npoints,icol,nlev:1:-1))
     enddo
+endif
 
-  end subroutine groundlidar_subcolumn
+!ATLID
+if (atlid_on) then
+    ! ####################################################################################
+    ! *) Molecular signal
+    ! ####################################################################################
+    call cmp_backsignal(nlev,npoints,beta_mol(1:npoints,1:nlev),&
+                        tau_mol(1:npoints,1:nlev),pmol(1:npoints,1:nlev))
+                        
+    do icol=1,ncolumns
+       ! #################################################################################
+       ! *) Total Backscatter signal
+       ! #################################################################################
+       call cmp_backsignal(nlev,npoints,betatot(1:npoints,icol,1:nlev),&
+            tautot(1:npoints,icol,1:nlev),pnorm(1:npoints,icol,1:nlev))
+    enddo
+endif
+
+  end subroutine lidar_subcolumn_nophase
 
   ! ######################################################################################
-  ! SUBROUTINE groundlidar_column  FROM THE GROUND
+  ! SUBROUTINE lidar_column_nophase
   ! ######################################################################################
-  subroutine groundlidar_column(npoints,ncol,nlevels,llm,max_bin, pnorm_gr,              &
-                                pmol_gr, pplay, ok_lidar_cfad_gr, ncat, cfad2_gr,  &
-                                lidarcld_gr, cldlayer_gr, zlev, zlev_half)
+  subroutine lidar_column_nophase(groundlidar_on, atlid_on, npoints,ncol,nlevels,llm,   &
+                                max_bin, pnorm,pmol, pplay, ok_lidar_cfad, ncat, cfad2, &
+                                lidarcld, cldlayer, zlev, zlev_half)
 
     ! Inputs
+    logical,intent(in) :: &
+         groundlidar_on,  & ! GROUND LIDAR flag
+         atlid_on           ! ATLID flag
     integer,intent(in) :: &
          npoints, & ! Number of horizontal grid points
          ncol,    & ! Number of subcolumns
@@ -194,12 +211,12 @@ contains
          max_bin, & ! Number of bins for SR CFADs
          ncat       ! Number of cloud layer types (low,mid,high,total)
     real(wp),intent(in),dimension(npoints,ncol,Nlevels) :: &
-         pnorm_gr   ! Lidar ATB
+         pnorm      ! Lidar ATB
     real(wp),intent(in),dimension(npoints,Nlevels) :: &
-         pmol_gr, & ! Molecular ATB
+         pmol,    & ! Molecular ATB
          pplay      ! Pressure on model levels (Pa)
     logical,intent(in) :: &
-         ok_lidar_cfad_gr ! True if GROUND lidar CFAD diagnostics need to be computed
+         ok_lidar_cfad ! True if GROUND lidar CFAD diagnostics need to be computed
     real(wp),intent(in),dimension(npoints,nlevels) :: &
          zlev        ! Model full levels
     real(wp),intent(in),dimension(npoints,nlevels+1) :: &
@@ -207,22 +224,22 @@ contains
 
     ! Outputs
     real(wp),intent(inout),dimension(npoints,llm) :: &
-         lidarcld_gr   ! 3D "lidar" cloud fraction
+         lidarcld      ! 3D "lidar" cloud fraction
     real(wp),intent(inout),dimension(npoints,ncat) :: &
-         cldlayer_gr   ! "lidar" cloud layer fraction (low, mid, high, total)
+         cldlayer      ! "lidar" cloud layer fraction (low, mid, high, total)
     real(wp),intent(inout),dimension(npoints,max_bin,llm) :: &
-         cfad2_gr      ! CFADs of GROUND lidar SR
+         cfad2         ! CFADs of GROUND lidar SR
 
     ! Local Variables
     integer :: ic,i,j
     real(wp),dimension(npoints,ncol,llm) :: &
-         x3d_gr
+         x3d
     real(wp),dimension(npoints,llm) :: &
-         x3d_c_gr, pnorm_c_gr
+         x3d_c, pnorm_c
     real(wp)  :: &
          xmax
     real(wp),dimension(npoints,1,Nlevels) :: ph_in,betamol_in
-    real(wp),dimension(npoints,ncol,llm)  :: pnormFlip_gr
+    real(wp),dimension(npoints,ncol,llm)  :: pnormFlip
     real(wp),dimension(npoints,1,llm)     :: pplayFlip, betamolFlip
 
     ! Vertically regrid input data
@@ -230,70 +247,108 @@ contains
        ph_in(:,1,:) = pplay(:,nlevels:1:-1)
        call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
             ph_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pplayFlip(:,1,llm:1:-1))
-       betamol_in(:,1,:) = pmol_gr(:,nlevels:1:-1)
+       betamol_in(:,1,:) = pmol(:,nlevels:1:-1)
        call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
             betamol_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),betamolFlip(:,1,llm:1:-1))
        call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-            pnorm_gr(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnormFlip_gr(:,:,llm:1:-1))
+            pnorm(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnormFlip(:,:,llm:1:-1))
     endif
 
     ! Initialization (The histogram bins, are set up during initialization and the
     ! maximum value is used as the upper bounds.)
+!GROUND LIDAR
+if (groundlidar_on) then
     xmax = maxval(groundlidar_histBsct)
+endif
+!ATLID
+if (atlid_on) then
+    xmax = maxval(atlid_histBsct)
+endif
 
-    ! Compute GROUND LIDAR scattering ratio
+    ! Compute LIDAR scattering ratio
     if (use_vgrid) then
        do ic = 1, ncol
-          pnorm_c_gr = pnormFlip_gr(:,ic,:)
-          where ((pnorm_c_gr .lt. xmax) .and. (betamolFlip(:,1,:) .lt. xmax) .and.       &
+          pnorm_c = pnormFlip(:,ic,:)
+          where ((pnorm_c .lt. xmax) .and. (betamolFlip(:,1,:) .lt. xmax) .and.       &
                 (betamolFlip(:,1,:) .gt. 0.0 ))
-             x3d_c_gr = pnorm_c_gr/betamolFlip(:,1,:)
+             x3d_c = pnorm_c/betamolFlip(:,1,:)
           elsewhere
-             x3d_c_gr = R_UNDEF
+             x3d_c = R_UNDEF
           end where
-          x3d_gr(:,ic,:) = x3d_c_gr
+          x3d(:,ic,:) = x3d_c
        enddo
-       ! Diagnose cloud fractions for subcolumn GROUND lidar scattering ratios
-       CALL COSP_CLDFRAC_GR(npoints,ncol,llm,ncat,x3d_gr,pnormFlip_gr,pplayFlip,       &
-                            S_att,S_cld,S_cld_att,R_UNDEF,lidarcld_gr,cldlayer_gr)
+       ! Diagnose cloud fractions for subcolumn lidar scattering ratios
+!GROUND LIDAR
+       if (groundlidar_on) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,llm,ncat,x3d,pnormFlip,pplayFlip,  &
+                                 S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer)
+       endif
+!ATLID
+       if (atlid_on) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,llm,ncat,x3d,pnormFlip,pplayFlip,  &
+                                 S_att_atlid,S_cld_atlid,S_cld_att_atlid,        &
+                                 R_UNDEF,lidarcld,cldlayer)          
+       endif
+
     else
        do ic = 1, ncol
-          pnorm_c_gr = pnorm_gr(:,ic,:)
-          where ((pnorm_c_gr.lt.xmax) .and. (pmol_gr.lt.xmax) .and. (pmol_gr.gt. 0.0 ))
-             x3d_c_gr = pnorm_c_gr/pmol_gr
+          pnorm_c = pnorm(:,ic,:)
+          where ((pnorm_c.lt.xmax) .and. (pmol.lt.xmax) .and. (pmol.gt. 0.0 ))
+             x3d_c = pnorm_c/pmol
           elsewhere
-             x3d_c_gr = R_UNDEF
+             x3d_c = R_UNDEF
           end where
-          x3d_gr(:,ic,:) = x3d_c_gr
+          x3d(:,ic,:) = x3d_c
        enddo
-       ! Diagnose cloud fractions for subcolumn GROUND lidar scattering ratios
-       CALL COSP_CLDFRAC_GR(npoints,ncol,nlevels,ncat,x3d_gr,pnorm_gr,pplay,      &
-                            S_att,S_cld,S_cld_att,R_UNDEF,lidarcld_gr,cldlayer_gr)
+       ! Diagnose cloud fractions for subcolumn lidar scattering ratios
+!GROUND LIDAR
+       if (groundlidar_on) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,nlevels,ncat,x3d,pnorm,pplay,      &
+                                 S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer)
+       endif
+!ATLID
+       if (atlid_on) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,nlevels,ncat,x3d,pnorm,pplay,  &
+                                 S_att_atlid,S_cld_atlid,S_cld_att_atlid,    &
+                                 R_UNDEF,lidarcld,cldlayer)
+       endif
+
     endif
 
-    ! GROUND CFADs
-    if (ok_lidar_cfad_gr) then
-       ! CFADs of subgrid-scale GROUND lidar scattering ratios
-       do i=1,Npoints
-          do j=1,llm
-             cfad2_gr(i,:,j) = hist1D(ncol,x3d_gr(i,:,j),SR_BINS,groundlidar_histBsct)
+    ! CFADs
+    if (ok_lidar_cfad) then
+       ! CFADs of subgrid-scale lidar scattering ratios
+!GROUND LIDAR
+       if (groundlidar_on) then
+          do i=1,Npoints
+             do j=1,llm
+                cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,groundlidar_histBsct)
+             enddo
           enddo
-       enddo
-       where(cfad2_gr .ne. R_UNDEF) cfad2_gr=cfad2_gr/ncol
+       endif
+!ATLID
+       if (atlid_on) then
+          do i=1,Npoints
+             do j=1,llm
+                cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,atlid_histBsct)
+             enddo
+          enddo
+       endif
+       where(cfad2 .ne. R_UNDEF) cfad2=cfad2/ncol
     endif 
 
     ! Unit conversions
-    where(lidarcld_gr /= R_UNDEF)      lidarcld_gr      = lidarcld_gr*100._wp
-    where(cldlayer_gr /= R_UNDEF)      cldlayer_gr      = cldlayer_gr*100._wp
+    where(lidarcld /= R_UNDEF)      lidarcld      = lidarcld*100._wp
+    where(cldlayer /= R_UNDEF)      cldlayer      = cldlayer*100._wp
 
-  end subroutine groundlidar_column
+  end subroutine lidar_column_nophase
 
     ! ####################################################################################
-    ! SUBROUTINE cosp_cldfrac_gr
+    ! SUBROUTINE cosp_cldfrac_nophase
     ! Conventions: Ncat must be equal to 4
     ! ####################################################################################
-    SUBROUTINE COSP_CLDFRAC_GR(Npoints,Ncolumns,Nlevels,Ncat,x_gr,ATB_gr,pplay,        &
-                               S_att,S_cld,S_cld_att,undef,lidarcld_gr,cldlayer_gr)
+    SUBROUTINE COSP_CLDFRAC_NOPHASE(Npoints,Ncolumns,Nlevels,Ncat,x,ATB,pplay,      &
+                                    S_att,S_cld,S_cld_att,undef,lidarcld,cldlayer)
 
 	! Inputs
     integer,intent(in) :: &
@@ -307,16 +362,16 @@ contains
        S_cld_att,& ! New threshold for undefine cloud phase detection
        undef       ! Undefined value
     real(wp),intent(in),dimension(Npoints,Ncolumns,Nlevels) :: &
-       x_gr,        & ! 
-       ATB_gr         ! 3D attenuated backscatter
+       x,        & ! 
+       ATB         ! 3D attenuated backscatter
     real(wp),intent(in),dimension(Npoints,Nlevels) :: &
        pplay       ! Pressure
 
 	! Outputs
     real(wp),intent(out),dimension(Npoints,Nlevels) :: &
-       lidarcld_gr      ! 3D cloud fraction from GROUND
+       lidarcld      ! 3D cloud fraction
     real(wp),intent(out),dimension(Npoints,Ncat) :: &
-       cldlayer_gr      ! Low, middle, high, total cloud fractions
+       cldlayer      ! Low, middle, high, total cloud fractions
     
     ! Local variables
     integer  :: &
@@ -336,24 +391,24 @@ contains
     ! ####################################################################################
 	! 1) Initialize    
     ! ####################################################################################
-    lidarcld_gr           = 0._wp
-    nsub                  = 0._wp
-    cldlay                = 0._wp
-    nsublay               = 0._wp
+    lidarcld           = 0._wp
+    nsub               = 0._wp
+    cldlay             = 0._wp
+    nsublay            = 0._wp
 
     ! ####################################################################################
     ! 2) Cloud detection
     ! ####################################################################################
     do k=1,Nlevels
        ! Cloud detection at subgrid-scale:
-       where ((x_gr(:,:,k) .gt. S_cld) .and. (x_gr(:,:,k) .ne. undef) )
+       where ((x(:,:,k) .gt. S_cld) .and. (x(:,:,k) .ne. undef) )
           cldy(:,:,k)=1._wp
        elsewhere
           cldy(:,:,k)=0._wp
        endwhere
        
        ! Number of usefull sub-columns:
-       where ((x_gr(:,:,k) .gt. S_att) .and. (x_gr(:,:,k) .ne. undef) )
+       where ((x(:,:,k) .gt. S_att) .and. (x(:,:,k) .ne. undef) )
           srok(:,:,k)=1._wp
        elsewhere
           srok(:,:,k)=0._wp
@@ -377,7 +432,7 @@ contains
              
              cldlay(ip,ic,iz) = MAX(cldlay(ip,ic,iz),cldy(ip,ic,k))
              cldlay(ip,ic,4)  = MAX(cldlay(ip,ic,4),cldy(ip,ic,k))
-             lidarcld_gr(ip,k)   = lidarcld_gr(ip,k) + cldy(ip,ic,k)
+             lidarcld(ip,k)   = lidarcld(ip,k) + cldy(ip,ic,k)
              
              nsublay(ip,ic,iz) = MAX(nsublay(ip,ic,iz),srok(ip,ic,k))
              nsublay(ip,ic,4)  = MAX(nsublay(ip,ic,4),srok(ip,ic,k))
@@ -389,28 +444,28 @@ contains
     
     ! Grid-box 3D cloud fraction
     where ( nsub(:,:).gt.0.0 )
-       lidarcld_gr(:,:) = lidarcld_gr(:,:)/nsub(:,:)
+       lidarcld(:,:) = lidarcld(:,:)/nsub(:,:)
     elsewhere
-       lidarcld_gr(:,:) = undef
+       lidarcld(:,:) = undef
     endwhere
     
     ! Layered cloud fractions
-    cldlayer_gr  = 0._wp
+    cldlayer  = 0._wp
     nsublayer = 0._wp
     do iz = 1, Ncat
        do ic = 1, Ncolumns
-          cldlayer_gr(:,iz)  = cldlayer_gr(:,iz)  + cldlay(:,ic,iz)
+          cldlayer(:,iz)  = cldlayer(:,iz)  + cldlay(:,ic,iz)
           nsublayer(:,iz) = nsublayer(:,iz) + nsublay(:,ic,iz)
        enddo
     enddo
     where (nsublayer(:,:) .gt. 0.0)
-       cldlayer_gr(:,:) = cldlayer_gr(:,:)/nsublayer(:,:)
+       cldlayer(:,:) = cldlayer(:,:)/nsublayer(:,:)
     elsewhere
-       cldlayer_gr(:,:) = undef
+       cldlayer(:,:) = undef
     endwhere
 
     RETURN
-  END SUBROUTINE COSP_CLDFRAC_GR
-! END OF GLID CHANGES
+  END SUBROUTINE COSP_CLDFRAC_NOPHASE
+! END OF GLID + ATLID CHANGES
 
-end module mod_groundlidar_simulator
+end module mod_lidar_simulator_nophase
