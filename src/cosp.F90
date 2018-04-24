@@ -52,16 +52,15 @@ MODULE MOD_COSP
   USE MOD_COSP_MISR_INTERFACE,     ONLY: cosp_misr_init,      misr_IN
   USE MOD_COSP_ISCCP_INTERFACE,    ONLY: cosp_isccp_init,     isccp_IN
   USE MOD_COSP_CALIPSO_INTERFACE,  ONLY: cosp_calipso_init,   calipso_IN
-  USE MOD_COSP_GROUNDLIDAR_INTERFACE, ONLY: cosp_groundlidar_init, groundlidar_IN   !GLID
-  USE MOD_COSP_ATLID_INTERFACE,    ONLY: cosp_atlid_init,     atlid_IN   !ATLID
+  USE MOD_COSP_LIDAR_INTERFACE,    ONLY: cosp_groundlidar_init, groundlidar_IN, & !GLID
+                                         cosp_atlid_init,       atlid_IN          !ATLID
   USE MOD_COSP_PARASOL_INTERFACE,  ONLY: cosp_parasol_init,   parasol_in
   USE MOD_COSP_CLOUDSAT_INTERFACE, ONLY: cosp_cloudsat_init,  cloudsat_IN
   USE quickbeam,                   ONLY: quickbeam_subcolumn, quickbeam_column, radar_cfg
   USE MOD_ICARUS,                  ONLY: icarus_subcolumn,    icarus_column
   USE MOD_MISR_SIMULATOR,          ONLY: misr_subcolumn,      misr_column
   USE MOD_LIDAR_SIMULATOR,         ONLY: lidar_subcolumn,     lidar_column
-  USE MOD_GROUNDLIDAR_SIMULATOR,   ONLY: groundlidar_subcolumn, groundlidar_column  !GLID
-  USE MOD_ATLID_SIMULATOR,         ONLY: atlid_subcolumn,     atlid_column          !ATLID
+  USE MOD_LIDAR_SIMULATOR_NOPHASE, ONLY: lidar_subcolumn_nophase, lidar_column_nophase !GLID !ATLID
   USE MOD_MODIS_SIM,               ONLY: modis_subcolumn,     modis_column
   USE MOD_PARASOL,                 ONLY: parasol_subcolumn,   parasol_column
   use mod_cosp_rttov,              ONLY: rttov_column
@@ -300,7 +299,7 @@ CONTAINS
     type(misr_IN)     :: misrIN     ! Input to the LIDAR simulator
     type(calipso_IN)  :: calipsoIN  ! Input to the LIDAR simulator
     type(groundlidar_IN) :: groundlidarIN ! Input to the GROUND LIDAR simulator !GLID
-    type(atlid_IN)    :: atlidIN    ! Input to the ATLID simulator !ATLID
+    type(atlid_IN)    :: atlidIN    ! Input to the ATLID simulator              !ATLID
     type(parasol_IN)  :: parasolIN  ! Input to the PARASOL simulator
     type(cloudsat_IN) :: cloudsatIN ! Input to the CLOUDSAT radar simulator
     type(modis_IN)    :: modisIN    ! Input to the MODIS simulator
@@ -322,7 +321,7 @@ CONTAINS
          Lmisr_subcolumn,     & ! On/Off switch for subcolumn MISR simulator
          Lcalipso_subcolumn,  & ! On/Off switch for subcolumn CALIPSO simulator
          Lgroundlidar_subcolumn,&! On/Off switch for subcolumn GROUND LIDAR simulator !GLID
-         Latlid_subcolumn,    & ! On/Off switch for subcolumn ATLID simulator !ATLID
+         Latlid_subcolumn,    & ! On/Off switch for subcolumn ATLID simulator         !ATLID
          Lparasol_subcolumn,  & ! On/Off switch for subcolumn PARASOL simulator
          Lcloudsat_subcolumn, & ! On/Off switch for subcolumn CLOUDSAT simulator
          Lmodis_subcolumn,    & ! On/Off switch for subcolumn MODIS simulator
@@ -331,7 +330,7 @@ CONTAINS
          Lmisr_column,        & ! On/Off switch for column MISR simulator
          Lcalipso_column,     & ! On/Off switch for column CALIPSO simulator
          Lgroundlidar_column, & ! On/Off switch for column GROUND LIDAR simulator !GLID
-         Latlid_column,       & ! On/Off switch for column ATLID simulator !ATLID
+         Latlid_column,       & ! On/Off switch for column ATLID simulator        !ATLID
          Lparasol_column,     & ! On/Off switch for column PARASOL simulator
          Lcloudsat_column,    & ! On/Off switch for column CLOUDSAT simulator
          Lmodis_column,       & ! On/Off switch for column MODIS simulator
@@ -340,7 +339,7 @@ CONTAINS
          Llidar_only_freq_cloud  ! On/Off switch from joint Calipso/Cloudsat product
     logical :: &
          ok_lidar_cfad    = .false., &
-         ok_lidar_cfad_gr = .false., & !GLID
+         ok_lidar_cfad_gr = .false., &    !GLID
          ok_lidar_cfad_atlid = .false., & !ATLID
          lrttov_cleanUp   = .false.
     
@@ -357,11 +356,11 @@ CONTAINS
          modisRetrievedCloudTopPressure,modisRetrievedTau,modisRetrievedSize,   &
          misr_boxtau,misr_boxztop,misr_dist_model_layertops,isccp_boxtau,       &
          isccp_boxttop,isccp_boxptop,calipso_beta_mol,lidar_only_freq_cloud,    &
-         groundlidar_beta_mol,atlid_beta_mol !GLID !ATLID
+         groundlidar_beta_mol,atlid_beta_mol                                      !GLID !ATLID
     REAL(WP), dimension(:,:,:),allocatable :: &
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq,     &
          calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl,   &
-         groundlidar_beta_tot,atlid_beta_tot !GLID !ATLID
+         groundlidar_beta_tot,atlid_beta_tot                                      !GLID !ATLID
     real(wp),dimension(:),allocatable,target :: &
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6,out1D_7,out1D_8,       & !OPAQ
          out1D_9,out1D_10,out1D_11,out1D_12                                       !TIBO !TIBO2
@@ -394,7 +393,7 @@ CONTAINS
     Lmisr_subcolumn     = .false.
     Lcalipso_subcolumn  = .false.
     Lgroundlidar_subcolumn = .false. !GLID
-    Latlid_subcolumn    = .false. !ATLID
+    Latlid_subcolumn    = .false.    !ATLID
     Lparasol_subcolumn  = .false.
     Lcloudsat_subcolumn = .false.
     Lmodis_subcolumn    = .false.
@@ -796,7 +795,8 @@ CONTAINS
        allocate(groundlidar_beta_mol(groundlidarIN%Npoints,groundlidarIN%Nlevels),       &   !GLID
                 groundlidar_beta_tot(groundlidarIN%Npoints,groundlidarIN%Ncolumns,groundlidarIN%Nlevels)) !GLID
        ! Call simulator                                                                      !GLID
-       call groundlidar_subcolumn(groundlidarIN%npoints,groundlidarIN%ncolumns,groundlidarIN%nlevels, &   !GLID
+       call lidar_subcolumn_nophase( .true., .false.,                                    & !GLID
+                               groundlidarIN%npoints,groundlidarIN%ncolumns,groundlidarIN%nlevels, &   !GLID
                                groundlidarIN%beta_mol_gr,groundlidarIN%tau_mol_gr,               &   !GLID
                                groundlidarIN%betatot_gr,groundlidarIN%tautot_gr,                 &   !GLID
                                groundlidar_beta_mol(:,:),groundlidar_beta_tot(:,:,:))        !GLID
@@ -816,7 +816,8 @@ CONTAINS
        allocate(atlid_beta_mol(atlidIN%Npoints,atlidIN%Nlevels),                      & !ATLID
                 atlid_beta_tot(atlidIN%Npoints,atlidIN%Ncolumns,atlidIN%Nlevels))       !ATLID
        ! Call simulator                                                                 !ATLID
-       call atlid_subcolumn(atlidIN%npoints,atlidIN%ncolumns,atlidIN%nlevels,         & !ATLID
+       call lidar_subcolumn_nophase( .false., .true.,                                 & !ATLID
+                               atlidIN%npoints,atlidIN%ncolumns,atlidIN%nlevels,      & !ATLID
                                atlidIN%beta_mol_atlid,atlidIN%tau_mol_atlid,          & !ATLID
                                atlidIN%betatot_atlid,atlidIN%tautot_atlid,            & !ATLID
                                atlid_beta_mol(:,:),atlid_beta_tot(:,:,:))               !ATLID
@@ -1130,51 +1131,54 @@ CONTAINS
 
     endif
 
-    ! GROUND LIDAR Simulator     !GLID
-    if (Lgroundlidar_column) then !GLID
-       ! Check to see which outputs are requested. If not requested, use a local dummy array !GLID
-       if (.not. associated(cospOUT%groundlidar_cfad_sr)) then             !GLID  
-          allocate(out1D_1(Npoints*SR_BINS*Nlvgrid))                       !GLID
-          cospOUT%groundlidar_cfad_sr(ij:ik,1:SR_BINS,1:Nlvgrid) => out1D_1 !GLID
-       endif                                                               !GLID
-       if (.not. associated(cospOUT%groundlidar_lidarcld)) then      !GLID
-          allocate(out1D_2(Npoints*Nlvgrid))                         !GLID
-          cospOUT%groundlidar_lidarcld(ij:ik,1:Nlvgrid) => out1D_2   !GLID
-       endif                                                         !GLID
-       if (.not. associated(cospOUT%groundlidar_cldlayer)) then      !GLID
-          allocate(out1D_3(Npoints*LIDAR_NCAT))                      !GLID
-          cospOUT%groundlidar_cldlayer(ij:ik,1:LIDAR_NCAT) => out1D_3 !GLID
-       endif                                                         !GLID
+! beginning of !GLID changes
+    ! GROUND LIDAR Simulator
+    if (Lgroundlidar_column) then
+       ! Check to see which outputs are requested. If not requested, use a local dummy array
+       if (.not. associated(cospOUT%groundlidar_cfad_sr)) then
+          allocate(out1D_1(Npoints*SR_BINS*Nlvgrid)) 
+          cospOUT%groundlidar_cfad_sr(ij:ik,1:SR_BINS,1:Nlvgrid) => out1D_1
+       endif 
+       if (.not. associated(cospOUT%groundlidar_lidarcld)) then
+          allocate(out1D_2(Npoints*Nlvgrid)) 
+          cospOUT%groundlidar_lidarcld(ij:ik,1:Nlvgrid) => out1D_2
+       endif
+       if (.not. associated(cospOUT%groundlidar_cldlayer)) then
+          allocate(out1D_3(Npoints*LIDAR_NCAT))
+          cospOUT%groundlidar_cldlayer(ij:ik,1:LIDAR_NCAT) => out1D_3
+       endif
        
-       ! Call simulator                                                                   !GLID
-       ok_lidar_cfad_gr=.true.                                                            !GLID
-       call groundlidar_column(groundlidarIN%Npoints,groundlidarIN%Ncolumns,groundlidarIN%Nlevels,     & !GLID
-                            Nlvgrid,SR_BINS,groundlidar_beta_tot(:,:,:),                & !GLID
-                            groundlidar_beta_mol(:,:),                                  & !GLID
-                            cospgridIN%phalf(:,2:groundlidarIN%Nlevels),             & !GLID
-                            ok_lidar_cfad_gr,LIDAR_NCAT,                                & !GLID
-                            cospOUT%groundlidar_cfad_sr(ij:ik,:,:),                     & !GLID
-                            cospOUT%groundlidar_lidarcld(ij:ik,:),                      & !GLID
-                            cospOUT%groundlidar_cldlayer(ij:ik,:),                      & !GLID
-                            cospgridIN%hgt_matrix,cospgridIN%hgt_matrix_half)             !GLID
+       ! Call simulator 
+       ok_lidar_cfad_gr=.true.
+       call lidar_column_nophase( .true., .false.,                                      &
+                            groundlidarIN%Npoints,groundlidarIN%Ncolumns,groundlidarIN%Nlevels, &
+                            Nlvgrid,SR_BINS,groundlidar_beta_tot(:,:,:),                &
+                            groundlidar_beta_mol(:,:),                                  &
+                            cospgridIN%phalf(:,2:groundlidarIN%Nlevels),                &
+                            ok_lidar_cfad_gr,LIDAR_NCAT,                                &
+                            cospOUT%groundlidar_cfad_sr(ij:ik,:,:),                     &
+                            cospOUT%groundlidar_lidarcld(ij:ik,:),                      &
+                            cospOUT%groundlidar_cldlayer(ij:ik,:),                      & 
+                            cospgridIN%hgt_matrix,cospgridIN%hgt_matrix_half)
 
-       if (associated(cospOUT%groundlidar_srbval)) cospOUT%groundlidar_srbval = groundlidar_histBsct !GLID
+       if (associated(cospOUT%groundlidar_srbval)) cospOUT%groundlidar_srbval = groundlidar_histBsct
 
-       ! Free up memory (if necessary)         !GLID
-       if (allocated(out1D_1)) then            !GLID
-          deallocate(out1D_1)                  !GLID
-          nullify(cospOUT%groundlidar_cfad_sr) !GLID
-       endif                                   !GLID
-       if (allocated(out1D_2)) then            !GLID
-          deallocate(out1D_2)                  !GLID
-          nullify(cospOUT%groundlidar_lidarcld) !GLID
-       endif                                   !GLID
-       if (allocated(out1D_3)) then            !GLID
-          deallocate(out1D_3)                  !GLID
-          nullify(cospOUT%groundlidar_cldlayer) !GLID
-       endif                                   !GLID
+       ! Free up memory (if necessary) 
+       if (allocated(out1D_1)) then
+          deallocate(out1D_1)
+          nullify(cospOUT%groundlidar_cfad_sr)
+       endif 
+       if (allocated(out1D_2)) then
+          deallocate(out1D_2)
+          nullify(cospOUT%groundlidar_lidarcld)
+       endif 
+       if (allocated(out1D_3)) then
+          deallocate(out1D_3)
+          nullify(cospOUT%groundlidar_cldlayer)
+       endif
 
-    endif !GLID
+    endif
+!end of !GLID changes
 
 !beginning of !ATLID changes
     ! ATLID Simulator
@@ -1195,7 +1199,8 @@ CONTAINS
        
        ! Call simulator                                                             
        ok_lidar_cfad_atlid=.true.                                                        
-       call atlid_column(atlidIN%Npoints,atlidIN%Ncolumns,atlidIN%Nlevels,     &
+       call lidar_column_nophase( .false., .true.,                                &
+                            atlidIN%Npoints,atlidIN%Ncolumns,atlidIN%Nlevels,     &
                             Nlvgrid,SR_BINS,atlid_beta_tot(:,:,:),                &
                             atlid_beta_mol(:,:),                                  &
                             cospgridIN%phalf(:,2:atlidIN%Nlevels),             &
@@ -1217,7 +1222,7 @@ CONTAINS
           nullify(cospOUT%atlid_lidarcld)
        endif                                  
        if (allocated(out1D_3)) then          
-          deallocate(out1D_3)               
+          deallocate(out1D_3)
           nullify(cospOUT%atlid_cldlayer)
        endif          
 
@@ -1603,10 +1608,10 @@ CONTAINS
 
     if (allocated(calipso_beta_tot))      deallocate(calipso_beta_tot)
     if (allocated(groundlidar_beta_tot))  deallocate(groundlidar_beta_tot) !GLID
-    if (allocated(atlid_beta_tot))        deallocate(atlid_beta_tot) !ATLID
+    if (allocated(atlid_beta_tot))        deallocate(atlid_beta_tot)       !ATLID
     if (allocated(calipso_beta_mol))      deallocate(calipso_beta_mol)
     if (allocated(groundlidar_beta_mol))  deallocate(groundlidar_beta_mol) !GLID
-    if (allocated(atlid_beta_mol))        deallocate(atlid_beta_mol) !ATLID
+    if (allocated(atlid_beta_mol))        deallocate(atlid_beta_mol)       !ATLID
     if (allocated(calipso_betaperp_tot))  deallocate(calipso_betaperp_tot)
     if (allocated(cloudsatDBZe))          deallocate(cloudsatDBZe)
     if (allocated(lidar_only_freq_cloud)) deallocate(lidar_only_freq_cloud)
@@ -1701,7 +1706,7 @@ CONTAINS
          rcfg,cloudsat_micro_scheme)
     if (Lcalipso) call cosp_calipso_init()
     if (Lgroundlidar) call cosp_groundlidar_init() !GLID
-    if (Latlid) call cosp_atlid_init() !ATLID
+    if (Latlid) call cosp_atlid_init()             !ATLID
     if (Lparasol) call cosp_parasol_init()
 
     linitialization = .FALSE.
@@ -1742,10 +1747,10 @@ CONTAINS
       Lcloudsat_column,    & ! CLOUDSAT column simulator on/off switch
       Lcalipso_subcolumn,  & ! CALIPSO subcolumn simulator on/off switch
       Lgroundlidar_subcolumn, & ! GROUND LIDAR subcolumn simulator on/off switch !GLID
-      Latlid_subcolumn,    & ! ATLID subcolumn simulator on/off switch !ATLID
+      Latlid_subcolumn,    & ! ATLID subcolumn simulator on/off switch           !ATLID
       Lcalipso_column,     & ! CALIPSO column simulator on/off switch
       Lgroundlidar_column, & ! GROUND LIDAR column simulator on/off switch       !GLID
-      Latlid_column,       & ! ATLID column simulator on/off switch    !ATLID
+      Latlid_column,       & ! ATLID column simulator on/off switch              !ATLID
       Lparasol_subcolumn,  & ! PARASOL subcolumn simulator on/off switch
       Lparasol_column,     & ! PARASOL column simulator on/off switch
       Lrttov_subcolumn,    & ! RTTOV subcolumn simulator on/off switch
@@ -1840,7 +1845,7 @@ CONTAINS
        Lrttov_subcolumn = .false.
        Lcalipso_column  = .false.
        Lgroundlidar_column  = .false. !GLID
-       Latlid_column  = .false. !ATLID
+       Latlid_column  = .false.       !ATLID
        Lcloudsat_column = .false.
        Lradar_lidar_tcc = .false.
        Llidar_only_freq_cloud = .false.

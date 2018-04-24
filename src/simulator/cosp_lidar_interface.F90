@@ -28,13 +28,31 @@
 !
 ! History
 ! May 2015 - D. Swales - Original version
-! Apr 2018 - R. Guzman - Added ATLID (EarthCare) lidar simulator
+! Apr 2018 - R. Guzman - Added GROUND LIDAR (GLID) and ATLID types
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MODULE MOD_COSP_ATLID_INTERFACE
+MODULE MOD_COSP_LIDAR_INTERFACE
   USE COSP_KINDS,              ONLY: wp
-!  USE MOD_LIDAR_SIMULATOR,     ONLY: alpha,beta,gamma
   IMPLICIT NONE
   
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! TYPE groundlidar_in
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+  type groundlidar_IN
+     integer,pointer ::       &
+          Npoints,      & ! Number of gridpoints.
+          Ncolumns,     & ! Number of columns.
+          Nlevels         ! Number of levels.
+
+     real(wp),dimension(:,:),pointer :: &
+          beta_mol_gr,  &
+          tau_mol_gr 
+     real(wp),dimension(:,:,:),pointer :: &
+          betatot_gr,   & 
+          tautot_gr  
+     real(wp),dimension(:,:,:,:),pointer :: &
+          taupart_gr
+  end type groundlidar_IN
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE atlid_in
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -46,36 +64,30 @@ MODULE MOD_COSP_ATLID_INTERFACE
 
      real(wp),dimension(:,:),pointer :: &
           beta_mol_atlid,     & ! Molecular backscatter coefficient
-          tau_mol_atlid       ! Molecular optical depth                     !ATLID
+          tau_mol_atlid         ! Molecular optical depth
      real(wp),dimension(:,:,:),pointer :: &
           betatot_atlid,      & ! 
-          tautot_atlid         ! Optical thickess integrated from top       !ATLID
+          tautot_atlid          ! Optical thickess integrated from top
      real(wp),dimension(:,:,:,:),pointer :: &
-          taupart_atlid                                                     !ATLID
+          taupart_atlid
   end type atlid_IN
 
 CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_groundlidar_init
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_groundlidar_init() 
+        
+  end subroutine cosp_groundlidar_init
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_atlid_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine cosp_atlid_init() 
-    
-    ! Polynomial coefficients (Alpha, Beta, Gamma) which allow to compute the 
-    ! ATBperpendicular as a function of the ATB for ice or liquid cloud particles 
-    ! derived from CALIPSO-GOCCP observations at 120m vertical grid 
-    ! (Cesana and Chepfer, JGR, 2013).
-    !
-    ! Relationship between ATBice and ATBperp,ice for ice particles:
-    !                ATBperp,ice = Alpha*ATBice 
-    ! Relationship between ATBice and ATBperp,ice for liquid particles:
-    !          ATBperp,ice = Beta*ATBice^2 + Gamma*ATBice
-!    Alpha = 0.2904_wp
-!    Beta  = 0.4099_wp
-!    Gamma = 0.009_wp    
-    
+
   end subroutine cosp_atlid_init
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !	END MODULE
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-END MODULE MOD_COSP_ATLID_INTERFACE
+END MODULE MOD_COSP_LIDAR_INTERFACE

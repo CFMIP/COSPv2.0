@@ -59,7 +59,7 @@ program cosp2_test
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
-                                 modis_optics_partition,groundlidar_optics,atlid_optics     !GLID !ATLID
+                                 modis_optics_partition,lidar_optics_nophase     !GLID !ATLID
 
   implicit none
 
@@ -789,7 +789,8 @@ contains
     endif
 
     if (Lgroundlidar) then
-       call groundlidar_optics(nPoints,nColumns,nLevels,4,lidar_ice_type,            & !GLID
+       call lidar_optics_nophase(.true., .false., nPoints,                & !GLID
+                      nColumns,nLevels,4,lidar_ice_type,                  & !GLID
                       mr_hydro(:,:,:,I_LSCLIQ),                           & !GLID
                       mr_hydro(:,:,:,I_LSCICE),                           & !GLID
                       mr_hydro(:,:,:,I_CVCLIQ),                           & !GLID
@@ -802,7 +803,8 @@ contains
     endif
     
     if (Latlid) then                                                        !ATLID
-       call atlid_optics(nPoints,nColumns,nLevels,4,lidar_ice_type,       & !ATLID
+       call lidar_optics_nophase(.false., .true., nPoints,                & !ATLID
+                      nColumns,nLevels,4,lidar_ice_type,                  & !ATLID
                       mr_hydro(:,:,:,I_LSCLIQ),                           & !ATLID
                       mr_hydro(:,:,:,I_LSCICE),                           & !ATLID
                       mr_hydro(:,:,:,I_CVCLIQ),                           & !ATLID

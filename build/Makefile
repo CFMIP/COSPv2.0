@@ -50,8 +50,7 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o \
 			 cosp_modis_interface.o    modis_simulator.o \
 			 cosp_parasol_interface.o  parasol.o \
 			 cosp_calipso_interface.o  lidar_simulator.o \
-			 cosp_groundlidar_interface.o groundlidar_simulator.o \
-			 cosp_atlid_interface.o atlid_simulator.o \
+			 cosp_lidar_interface.o lidar_simulator_nophase.o \
 			 cosp_cloudsat_interface.o quickbeam.o \
 			 cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o
 
@@ -78,11 +77,11 @@ driver_COSP1.4:
 # Dependencies for libary
 cosp.o                    : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
                             cosp_rttov_interfaceSTUB.o cosp_misr_interface.o cosp_isccp_interface.o \
-                            cosp_calipso_interface.o cosp_cloudsat_interface.o cosp_stats.o         \
-                            cosp_groundlidar_interface.o  groundlidar_simulator.o                   \
-                            cosp_atlid_interface.o  atlid_simulator.o                   \
+                            cosp_calipso_interface.o cosp_cloudsat_interface.o \
+                            cosp_lidar_interface.o cosp_stats.o         \
 	                    cosp_parasol_interface.o cosp_rttovSTUB.o cosp_rttov_interfaceSTUB.o    \
-                            quickbeam.o MISR_simulator.o lidar_simulator.o parasol.o icarus.o
+                            quickbeam.o MISR_simulator.o lidar_simulator.o lidar_simulator_nophase.o \
+                            parasol.o icarus.o
 cosp_constants.o          : cosp_kinds.o
 cosp_config.o             : cosp_kinds.o
 cosp_errorHandling.o      : cosp_kinds.o
@@ -97,10 +96,8 @@ cosp_parasol_interface.o  : cosp_kinds.o
 parasol.o                 : cosp_kinds.o cosp_config.o cosp_constants.o
 cosp_calipso_interface.o  : cosp_kinds.o lidar_simulator.o
 lidar_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
-cosp_groundlidar_interface.o  : cosp_kinds.o groundlidar_simulator.o
-groundlidar_simulator.o   : cosp_kinds.o cosp_config.o cosp_stats.o
-cosp_atlid_interface.o    : cosp_kinds.o atlid_simulator.o
-atlid_simulator.o         : cosp_kinds.o cosp_config.o cosp_stats.o
+cosp_lidar_interface.o    : cosp_kinds.o lidar_simulator_nophase.o
+lidar_simulator_nophase.o : cosp_kinds.o cosp_config.o cosp_stats.o
 cosp_cloudsat_interface.o : cosp_kinds.o cosp_config.o quickbeam.o
 quickbeam.o               : cosp_kinds.o cosp_stats.o
 cosp_rttov_interfaceSTUB.o: cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
