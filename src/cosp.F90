@@ -1539,12 +1539,14 @@ CONTAINS
        endif
        if (.not. allocated(cospIN%betatot_liq)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%betatot_liq has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospgridIN%betatot_liq has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospIN%betatot_ice)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%betatot_ice has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospgridIN%betatot_ice has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospIN%tau_mol)) then
@@ -1559,12 +1561,14 @@ CONTAINS
        endif
        if (.not. allocated(cospIN%tautot_liq)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%tautot_liq has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospgridIN%tautot_liq has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospIN%tautot_ice)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%tautot_ice has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospgridIN%tautot_ice has not been allocated'
           alloc_status = .false.
        endif
        if (.not. alloc_status) then
@@ -1594,12 +1598,14 @@ CONTAINS
        alloc_status = .true.
        if (.not. allocated(cospgridIN%hgt_matrix)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%hgt_matrix has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospgridIN%hgt_matrix has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%hgt_matrix_half)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%hgt_matrix_half has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospgridIN%hgt_matrix_half has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%at)) then
@@ -1670,22 +1676,26 @@ CONTAINS
        alloc_status = .true.
        if (.not. allocated(cospIN%z_vol_cloudsat)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator): cospIN%z_vol_cloudsat has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
+               ' cospIN%z_vol_cloudsat has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospIN%kr_vol_cloudsat)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator): cospIN%kr_vol_cloudsat has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
+               ' cospIN%kr_vol_cloudsat has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospIN%g_vol_cloudsat)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator): cospIN%g_vol_cloudsat has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
+               ' cospIN%g_vol_cloudsat has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%hgt_matrix)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator): cospgridIN%hgt_matrix has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
+               ' cospgridIN%hgt_matrix has not been allocated'
           alloc_status = .false.
        endif
        if (.not. alloc_status) then
@@ -1708,7 +1718,8 @@ CONTAINS
        alloc_status = .true.
        if (.not. allocated(cospgridIN%hgt_matrix_half)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator): cospgridIN%hgt_matrix_half has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
+               ' cospgridIN%hgt_matrix_half has not been allocated'
           alloc_status = .false.
        endif
        if (.not. alloc_status) then
