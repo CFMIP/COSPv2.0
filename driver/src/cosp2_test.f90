@@ -208,9 +208,8 @@ program cosp2_test
        cospIN            ! COSP optical (or derived?) fields needed by simulators
   type(cosp_column_inputs) :: &
        cospstateIN       ! COSP model fields needed by simulators
-  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt
+  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij
   real(wp),dimension(10) :: driver_time
-
   character(len=256),dimension(100) :: cosp_status
 
   ! Indices to address arrays of LS and CONV hydrometeors
@@ -443,11 +442,15 @@ program cosp2_test
           cospstateIN,cospIN)
 
      call cpu_time(driver_time(6))
-
+    
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,.false.)
+     do ij=1,size(cosp_status,1)
+        if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
+     end do
+     
      call cpu_time(driver_time(7))
   enddo
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
