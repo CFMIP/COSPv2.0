@@ -248,10 +248,10 @@ contains
   ! SUBROUTINE lidar_column
   ! ######################################################################################
   subroutine lidar_column(npoints,ncol,nlevels,llm,max_bin,tmp, pnorm, pnorm_perp,       &
-                           pmol, surfelev, pplay, ok_lidar_cfad, ncat, ntype, cfad2,     & !OPAQ
-                           lidarcld, lidarcldphase, lidarcldtype, cldlayer, cldtype,     & !OPAQ
-                           cldtypetemp, cldtypemeanz, cldtypemeanzse, cldthinemis, zlev, & !TIBO
-                           zlev_half, cldlayerphase, lidarcldtmp, vgrid_z)                 !OPAQ
+                           pmol, surfelev, pplay, ok_lidar_cfad, ncat, ntype, cfad2,     &
+                           lidarcld, lidarcldphase, lidarcldtype, cldlayer, cldtype,     &
+                           cldtypetemp, cldtypemeanz, cldtypemeanzse, cldthinemis, zlev, & 
+                           zlev_half, cldlayerphase, lidarcldtmp, vgrid_z)
     integer,parameter :: &
          nphase = 6 ! Number of cloud layer phase types
 
@@ -262,8 +262,8 @@ contains
          nlevels, & ! Number of vertical layers (OLD grid)
          llm,     & ! Number of vertical layers (NEW grid)
          max_bin, & ! Number of bins for SR CFADs
-         ncat,    & ! Number of cloud layer types (low,mid,high,total)         !OPAQ
-         ntype      ! Number of OPAQ products (opaque/thin cloud + z_opaque)   !OPAQ
+         ncat,    & ! Number of cloud layer types (low,mid,high,total) 
+         ntype      ! Number of OPAQ products (opaque/thin cloud + z_opaque)
     real(wp),intent(in),dimension(npoints,ncol,Nlevels) :: &
          pnorm,   & ! Lidar ATB
          pnorm_perp ! Lidar perpendicular ATB
@@ -272,34 +272,34 @@ contains
          pplay,   & ! Pressure on model levels (Pa)
          tmp        ! Temperature at each levels
     real(wp),intent(in),dimension(npoints) :: &
-         surfelev   ! Surface Elevation (m)                           !TIBO2
+         surfelev   ! Surface Elevation (m) 
     logical,intent(in) :: &
          ok_lidar_cfad ! True if lidar CFAD diagnostics need to be computed
     real(wp),intent(in),dimension(npoints,nlevels) :: &
          zlev        ! Model full levels
     real(wp),intent(in),dimension(npoints,nlevels+1) :: &
          zlev_half   ! Model half levels
-    real(wp),intent(in),dimension(llm) :: &                           !OPAQ
-         vgrid_z     ! mid-level altitude of the output vertical grid !OPAQ
+    real(wp),intent(in),dimension(llm) :: & 
+         vgrid_z     ! mid-level altitude of the output vertical grid
          
     ! Outputs
     real(wp),intent(inout),dimension(npoints,llm) :: &
          lidarcld      ! 3D "lidar" cloud fraction
     real(wp),intent(inout),dimension(npoints,ncat) :: &
          cldlayer      ! "lidar" cloud layer fraction (low, mid, high, total)
-    real(wp),intent(inout),dimension(npoints,ntype) :: &                         !OPAQ
-         cldtype,    & ! "lidar" OPAQ type covers (opaque/thin cloud + z_opaque) !OPAQ
-         cldtypetemp   ! Opaque and thin clouds + z_opaque temperature           !TIBO
-    real(wp),intent(inout),dimension(npoints,2) :: &                             !TIBO
-         cldtypemeanz  ! Opaque and thin clouds altitude                         !TIBO
-    real(wp),intent(inout),dimension(npoints,3) :: &                                   !TIBO2
-         cldtypemeanzse ! Opaque, thin clouds and z_opaque altitude with respect to SE !TIBO2
-    real(wp),intent(inout),dimension(npoints) :: &                               !TIBO
-         cldthinemis   ! Thin clouds emissivity computed from SR                 !TIBO
+    real(wp),intent(inout),dimension(npoints,ntype) :: & 
+         cldtype,    & ! "lidar" OPAQ type covers (opaque/thin cloud + z_opaque)
+         cldtypetemp   ! Opaque and thin clouds + z_opaque temperature
+    real(wp),intent(inout),dimension(npoints,2) :: &  
+         cldtypemeanz  ! Opaque and thin clouds altitude 
+    real(wp),intent(inout),dimension(npoints,3) :: &  
+         cldtypemeanzse ! Opaque, thin clouds and z_opaque altitude with respect to SE
+    real(wp),intent(inout),dimension(npoints) :: &   
+         cldthinemis   ! Thin clouds emissivity computed from SR
     real(wp),intent(inout),dimension(npoints,llm,nphase) :: &
          lidarcldphase ! 3D "lidar" phase cloud fraction
-    real(wp),intent(inout),dimension(npoints,llm,ntype+1) :: &                   !OPAQ
-         lidarcldtype ! 3D "lidar" OPAQ type fraction                            !OPAQ
+    real(wp),intent(inout),dimension(npoints,llm,ntype+1) :: & 
+         lidarcldtype ! 3D "lidar" OPAQ type fraction 
     real(wp),intent(inout),dimension(npoints,40,5) :: &
          lidarcldtmp   ! 3D "lidar" phase cloud fraction as a function of temp
     real(wp),intent(inout),dimension(npoints,ncat,nphase) :: &
@@ -357,9 +357,9 @@ contains
                          pnorm_perpFlip,pplayFlip,S_att,S_cld,S_cld_att,R_UNDEF,         &
                          lidarcld,cldlayer,lidarcldphase,cldlayerphase,lidarcldtmp)                         
 
-       CALL COSP_OPAQ(npoints,ncol,llm,ntype,tmpFlip,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, & !TIBO
-                      cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z, & !TIBO2
-                      surfelev)                                                              !TIBO2
+       CALL COSP_OPAQ(npoints,ncol,llm,ntype,tmpFlip,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
+                      cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z, &
+                      surfelev) 
 
     else
        do ic = 1, ncol
@@ -376,9 +376,9 @@ contains
                          S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,  &
                          cldlayerphase,lidarcldtmp)
 
-       CALL COSP_OPAQ(npoints,ncol,nlevels,ntype,tmp,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, & !TIBO
-                      cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z, & !TIBO2
-                      surfelev)                                                              !TIBO2
+       CALL COSP_OPAQ(npoints,ncol,nlevels,ntype,tmp,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
+                      cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z, &
+                      surfelev) 
 
     endif
 
@@ -397,11 +397,11 @@ contains
     ! Unit conversions
     where(lidarcld /= R_UNDEF)      lidarcld      = lidarcld*100._wp
     where(cldlayer /= R_UNDEF)      cldlayer      = cldlayer*100._wp
-    where(cldtype(:,1) /= R_UNDEF)  cldtype(:,1)  = cldtype(:,1)*100._wp !OPAQ
-    where(cldtype(:,2) /= R_UNDEF)  cldtype(:,2)  = cldtype(:,2)*100._wp !OPAQ
+    where(cldtype(:,1) /= R_UNDEF)  cldtype(:,1)  = cldtype(:,1)*100._wp
+    where(cldtype(:,2) /= R_UNDEF)  cldtype(:,2)  = cldtype(:,2)*100._wp
     where(cldlayerphase /= R_UNDEF) cldlayerphase = cldlayerphase*100._wp
     where(lidarcldphase /= R_UNDEF) lidarcldphase = lidarcldphase*100._wp
-    where(lidarcldtype /= R_UNDEF)  lidarcldtype  = lidarcldtype*100._wp !OPAQ
+    where(lidarcldtype /= R_UNDEF)  lidarcldtype  = lidarcldtype*100._wp
     where(lidarcldtmp /= R_UNDEF)   lidarcldtmp   = lidarcldtmp*100._wp
 
   end subroutine lidar_column
@@ -1063,14 +1063,13 @@ contains
     RETURN
   END SUBROUTINE COSP_CLDFRAC
 
-! BEGINNING OF !OPAQ CHANGES
     ! ####################################################################################
     ! SUBROUTINE cosp_opaq
     ! Conventions: Ntype must be equal to 3
     ! ####################################################################################
     SUBROUTINE COSP_OPAQ(Npoints,Ncolumns,Nlevels,Ntype,tmp,x,S_att,S_cld,undef,lidarcldtype,   &
-                         cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z,   & !TIBO2
-                         surfelev)                                                                !TIBO2
+                         cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z,   &
+                         surfelev)
 
     ! Local parameter
     real(wp),parameter  :: &
@@ -1093,8 +1092,8 @@ contains
        x           ! SR profiles (subcolumns)
     real(wp),intent(in),dimension(Npoints,Nlevels) :: &
        tmp         ! Temperature profiles
-    real(wp),intent(in),dimension(Npoints) :: & !TIBO2
-       surfelev    ! Surface Elevation (SE)     !TIBO2
+    real(wp),intent(in),dimension(Npoints) :: &
+       surfelev    ! Surface Elevation (SE)
 
 	! Outputs
     real(wp),intent(out),dimension(Npoints,Nlevels,Ntype+1) :: &
@@ -1104,8 +1103,8 @@ contains
        cldtypetemp    ! Opaque and thin clouds + z_opaque temperature
     real(wp),intent(out),dimension(Npoints,2) :: &
        cldtypemeanz   ! Opaque and thin clouds altitude
-    real(wp),intent(out),dimension(Npoints,3) :: &                                   !TIBO2
-       cldtypemeanzse ! Opaque, thin clouds and z_opaque altitude with respect to SE !TIBO2
+    real(wp),intent(out),dimension(Npoints,3) :: & 
+       cldtypemeanzse ! Opaque, thin clouds and z_opaque altitude with respect to SE
     real(wp),intent(out),dimension(Npoints) :: &
        cldthinemis    ! Thin clouds emissivity
    
@@ -1210,7 +1209,7 @@ contains
      ! Opaque cloud profiles
 	   if ( cldlay(ip,ic,1) .eq. 1. ) then
 	      zopac = 0._wp
-	      z_top = 0.
+	      z_top = 0._wp
 	      do k=1,Nlevels-1
      ! Declaring z_opaque altitude and opaque cloud fraction for 3D and 2D variables
      ! From SFC-2-TOA ( actually from vgrid_z(SFC+1) = vgrid_z(Nlevels-1) )
@@ -1230,15 +1229,15 @@ contains
               cldtypetemp(ip,1) = cldtypetemp(ip,1) + ( tmp(ip,zopac) + tmp(ip,z_top) )/2.
               cldtypetemp(ip,3) = cldtypetemp(ip,3) + tmp(ip,zopac)                 ! z_opaque
               cldtypemeanz(ip,1) = cldtypemeanz(ip,1) + ( vgrid_z(zopac) + vgrid_z(z_top) )/2.
-              cldtypemeanzse(ip,1) = cldtypemeanzse(ip,1) + (( vgrid_z(zopac) + vgrid_z(z_top) )/2.) - surfelev(ip) !TIBO2
-              cldtypemeanzse(ip,3) = cldtypemeanzse(ip,3) + ( vgrid_z(zopac) - surfelev(ip) ) !TIBO2
+              cldtypemeanzse(ip,1) = cldtypemeanzse(ip,1) + (( vgrid_z(zopac) + vgrid_z(z_top) )/2.) - surfelev(ip)
+              cldtypemeanzse(ip,3) = cldtypemeanzse(ip,3) + ( vgrid_z(zopac) - surfelev(ip) )
 	   endif
 
      ! Thin cloud profiles
 	   if ( cldlay(ip,ic,2) .eq. 1. ) then
-	      topcloud = 0.
-	      z_top = 0.
-	      z_base = 0.
+	      topcloud = 0._wp
+	      z_top = 0._wp
+	      z_base = 0._wp
 	      do k=1,Nlevels
      ! Declaring thin cloud fraction for 3D variable
      ! From TOA-2-SFC
@@ -1250,13 +1249,13 @@ contains
                     lidarcldtype(ip,k,2) = lidarcldtype(ip,k,2) + 1._wp
 		    z_top = k  ! top cloud layer
 		    z_base = k ! bottom cloud layer
-                    topcloud = 1.
+                    topcloud = 1._wp
 		 endif
 	      enddo
      ! Computing mean emissivity using layers below the bottom cloud layer to the surface
-     	      srmean = 0.
-	      srcount = 0.
-	      cloudemis = 0.
+     	      srmean = 0._wp
+	      srcount = 0._wp
+	      cloudemis = 0._wp
      	      do k=z_base+1,Nlevels
 	         if (  (x(ip,ic,k) .gt. S_att_opaq) .and. (x(ip,ic,k) .lt. 1.0) .and. (x(ip,ic,k) .ne. undef)  ) then
 		    srmean = srmean + x(ip,ic,k)
@@ -1276,7 +1275,7 @@ contains
      ! as defined in Vaillant de Guelis et al. 2017a, AMT
               cldtypetemp(ip,2) = cldtypetemp(ip,2) + ( tmp(ip,z_base) + tmp(ip,z_top) )/2.
               cldtypemeanz(ip,2) = cldtypemeanz(ip,2) + ( vgrid_z(z_base) + vgrid_z(z_top) )/2.
-              cldtypemeanzse(ip,2) = cldtypemeanzse(ip,2) + (( vgrid_z(z_base) + vgrid_z(z_top) )/2.) - surfelev(ip) !TIBO2
+              cldtypemeanzse(ip,2) = cldtypemeanzse(ip,2) + (( vgrid_z(z_base) + vgrid_z(z_top) )/2.) - surfelev(ip)
               cldthinemis(ip) = cldthinemis(ip) + cloudemis
            endif
 
@@ -1324,24 +1323,24 @@ contains
        cldtypetemp(:,1) = cldtypetemp(:,1)/cldtype(:,1) ! opaque cloud temp
        cldtypetemp(:,3) = cldtypetemp(:,3)/cldtype(:,1) ! z_opaque
        cldtypemeanz(:,1) = cldtypemeanz(:,1)/cldtype(:,1) ! opaque cloud alt
-       cldtypemeanzse(:,1) = cldtypemeanzse(:,1)/cldtype(:,1) ! opaque cloud alt - SE !TIBO2
-       cldtypemeanzse(:,3) = cldtypemeanzse(:,3)/cldtype(:,1) ! z_opaque - SE         !TIBO2
+       cldtypemeanzse(:,1) = cldtypemeanzse(:,1)/cldtype(:,1) ! opaque cloud alt - SE 
+       cldtypemeanzse(:,3) = cldtypemeanzse(:,3)/cldtype(:,1) ! z_opaque - SE 
     elsewhere
        cldtypetemp(:,1) = undef
        cldtypetemp(:,3) = undef
        cldtypemeanz(:,1) = undef
-       cldtypemeanzse(:,1) = undef !TIBO2
-       cldtypemeanzse(:,3) = undef !TIBO2
+       cldtypemeanzse(:,1) = undef
+       cldtypemeanzse(:,3) = undef
     endwhere
 
     where (cldtype(:,2) .gt. 0.) ! thin cloud
        cldtypetemp(:,2) = cldtypetemp(:,2)/cldtype(:,2)
        cldtypemeanz(:,2) = cldtypemeanz(:,2)/cldtype(:,2)
-       cldtypemeanzse(:,2) = cldtypemeanzse(:,2)/cldtype(:,2) !TIBO2
+       cldtypemeanzse(:,2) = cldtypemeanzse(:,2)/cldtype(:,2)
     elsewhere
        cldtypetemp(:,2) = undef
        cldtypemeanz(:,2) = undef
-       cldtypemeanzse(:,2) = undef !TIBO2
+       cldtypemeanzse(:,2) = undef
     endwhere
 
     ! Mean thin cloud emissivity
@@ -1358,6 +1357,5 @@ contains
     endwhere
 
   END SUBROUTINE COSP_OPAQ
-! END OF OPAQ CHANGES
 
 end module mod_lidar_simulator

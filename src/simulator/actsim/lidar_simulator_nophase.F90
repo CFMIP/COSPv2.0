@@ -122,7 +122,6 @@ contains
     END DO
   end subroutine cmp_backsignal
 
-! BEGINNING OF GLID + ATLID CHANGES
   ! ######################################################################################
   ! SUBROUTINE lidar_subcolumn_nophase
   ! ######################################################################################
@@ -466,6 +465,5 @@ endif
 
     RETURN
   END SUBROUTINE COSP_CLDFRAC_NOPHASE
-! END OF GLID + ATLID CHANGES
 
 end module mod_lidar_simulator_nophase

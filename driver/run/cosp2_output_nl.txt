@@ -58,41 +58,41 @@
   Lcllcalipsoun=.true.,
   Lclmcalipsoun=.true.,
   Lcltcalipsoun=.true.,
-  ! CALIPSO OPAQ diagnostics !OPAQ
-  Lclopaquecalipso=.true.,   !OPAQ
-  Lclthincalipso=.true.,     !OPAQ
-  Lclzopaquecalipso=.true.,  !OPAQ
-  Lclcalipsoopaque=.true.,   !OPAQ
-  Lclcalipsothin=.true.,     !OPAQ
-  Lclcalipsozopaque=.true.,  !OPAQ
-  Lclcalipsoopacity=.true.,  !OPAQ
-  Lclopaquetemp=.true.,      !TIBO
-  Lclthintemp=.true.,        !TIBO
-  Lclzopaquetemp=.true.,     !TIBO
-  Lclopaquemeanz=.true.,     !TIBO
-  Lclthinmeanz=.true.,       !TIBO
-  Lclthinemis=.true.,        !TIBO
-  Lclopaquemeanzse=.true.,   !TIBO2
-  Lclthinmeanzse=.true.,     !TIBO2
-  Lclzopaquecalipsose=.true.,!TIBO2
-  ! GROUND LIDAR diagnostics   !GLID
-  LlidarBetaMol532gr=.true.,   !GLID
-  LcfadLidarsr532gr=.true.,    !GLID
-  Latb532gr=.true.,            !GLID
-  Lclgroundlidar=.true.,       !GLID
-  Lclhgroundlidar=.true.,      !GLID
-  Lcllgroundlidar=.true.,      !GLID
-  Lclmgroundlidar=.true.,      !GLID
-  Lcltgroundlidar=.true.,      !GLID
-  ! ATLID diagnostics       !ATLID
-  LlidarBetaMol355=.true.,  !ATLID
-  LcfadLidarsr355=.true.,   !ATLID
-  Latb355=.true.,           !ATLID
-  Lclatlid=.true.,          !ATLID
-  Lclhatlid=.true.,         !ATLID
-  Lcllatlid=.true.,         !ATLID
-  Lclmatlid=.true.,         !ATLID
-  Lcltatlid=.true.,         !ATLID
+  ! CALIPSO OPAQ diagnostics
+  Lclopaquecalipso=.true.,
+  Lclthincalipso=.true., 
+  Lclzopaquecalipso=.true.,
+  Lclcalipsoopaque=.true., 
+  Lclcalipsothin=.true.,  
+  Lclcalipsozopaque=.true.,
+  Lclcalipsoopacity=.true., 
+  Lclopaquetemp=.true., 
+  Lclthintemp=.true., 
+  Lclzopaquetemp=.true., 
+  Lclopaquemeanz=.true., 
+  Lclthinmeanz=.true., 
+  Lclthinemis=.true., 
+  Lclopaquemeanzse=.true.,
+  Lclthinmeanzse=.true., 
+  Lclzopaquecalipsose=.true.,
+  ! GROUND LIDAR diagnostics  
+  LlidarBetaMol532gr=.true.,  
+  LcfadLidarsr532gr=.true.,  
+  Latb532gr=.true.,  
+  Lclgroundlidar=.true.,
+  Lclhgroundlidar=.true.,  
+  Lcllgroundlidar=.true., 
+  Lclmgroundlidar=.true.,
+  Lcltgroundlidar=.true.,
+  ! ATLID diagnostics
+  LlidarBetaMol355=.true.,
+  LcfadLidarsr355=.true., 
+  Latb355=.true., 
+  Lclatlid=.true., 
+  Lclhatlid=.true., 
+  Lcllatlid=.true.,
+  Lclmatlid=.true.,
+  Lcltatlid=.true.,
   !- ISCCP
   Lalbisccp=.true.,
   Lboxptopisccp=.true.,
