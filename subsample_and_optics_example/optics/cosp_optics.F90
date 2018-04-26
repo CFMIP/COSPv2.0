@@ -442,9 +442,8 @@ contains
     
   end subroutine lidar_optics
   
-!beginning of GLID + ATLID changes
   ! ######################################################################################
-  ! SUBROUTINE lidar_optics_nophase  FOR  GROUND LIDAR
+  ! SUBROUTINE lidar_optics_nophase
   ! ######################################################################################
   subroutine lidar_optics_nophase(groundlidar_on,atlid_on,npoints,ncolumns,nlev,npart,ice_type, &
                               q_lsliq, q_lsice,q_cvliq, q_cvice,ls_radliq,ls_radice,cv_radliq, &
@@ -478,7 +477,7 @@ contains
     ! OUTPUTS
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot,        & ! 
-         tautot            ! Optical thickness integrated from GROUND !GLID
+         tautot            ! Optical thickness integrated from GROUND
     REAL(WP),intent(out),dimension(npoints,nlev) :: &
          beta_mol,       & ! Molecular backscatter coefficient
          tau_mol           ! Molecular optical depth
@@ -682,6 +681,5 @@ endif
     enddo ! Loop over all subcolumns
        
   end subroutine lidar_optics_nophase
-!end of GLID + ATLID changes
 
 end module cosp_optics

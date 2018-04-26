@@ -7,7 +7,7 @@ module mod_cosp_io
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
        reffICE_binCenters, reffLIQ_binCenters, cloudsat_binCenters, PARASOL_SZA,      &
-       calipso_binCenters, groundlidar_binCenters, atlid_binCenters                     !GLID !ATLID
+       calipso_binCenters, groundlidar_binCenters, atlid_binCenters 
   implicit none
 
 contains
@@ -627,7 +627,6 @@ contains
        status = nf90_put_att(fileID,varID(106),"standard_name", "z_opaque_se")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     endif
-!end OPAQ
 
     !GROUND LIDAR simulator output
     if (associated(cospOUT%groundlidar_cldlayer)) then
@@ -730,7 +729,6 @@ contains
        status = nf90_put_att(fileID,varID(116),"standard_name", "backscattering_ratio")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     endif
-!end GROUND LIDAR 
 
     !ATLID simulator output
     if (associated(cospOUT%atlid_cldlayer)) then
@@ -833,7 +831,6 @@ contains
        status = nf90_put_att(fileID,varID(126),"standard_name", "backscattering_ratio")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     endif
-!end ATLID
 
     ! PARASOL simulator output
     if (associated(cospOUT%parasolPix_refl)) then
@@ -1435,7 +1432,6 @@ contains
        status = nf90_put_var(fileID,varID(106),cospOUT%calipso_cldtypemeanzse(:,3))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-!end OPAQ
 
     ! GROUND LIDAR simulator output
     if (associated(cospOUT%groundlidar_cldlayer)) then
@@ -1473,7 +1469,6 @@ contains
        status = nf90_put_var(fileID,varID(115),groundlidar_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-!end GROUND LIDAR
 
     ! ATLID simulator output
     if (associated(cospOUT%atlid_cldlayer)) then
@@ -1511,7 +1506,6 @@ contains
        status = nf90_put_var(fileID,varID(125),atlid_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-!end ATLID
 
     ! PARASOL simulator output
     if (associated(cospOUT%parasolPix_refl)) then
@@ -1731,7 +1725,7 @@ contains
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                                emsfc_lw,mode,Nlon,Nlat,surfelev) !TIBO2
+                                emsfc_lw,mode,Nlon,Nlat,surfelev)
      
     ! Arguments
     character(len=512),intent(in) :: fname ! File name
@@ -1741,7 +1735,7 @@ contains
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
-    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev !TIBO2
+    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
     
@@ -2052,12 +2046,12 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=skt)
           endif
-       case ('orography')                                           !TIBO2
-          if (Lpoint) then                                          !TIBO2
-             surfelev(1:Npoints) = x1(1:Npoints)                    !TIBO2
-          else                                                      !TIBO2
-             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=surfelev)  !TIBO2
-          endif                                                     !TIBO2
+       case ('orography') 
+          if (Lpoint) then
+             surfelev(1:Npoints) = x1(1:Npoints) 
+          else     
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=surfelev)
+          endif
        case ('landmask')
           if (Lpoint) then
              landmask(1:Npoints) = x1(1:Npoints)

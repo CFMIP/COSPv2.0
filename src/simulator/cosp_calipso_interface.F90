@@ -46,21 +46,16 @@ MODULE MOD_COSP_CALIPSO_INTERFACE
 
      real(wp),dimension(:,:),pointer :: &
           beta_mol,     & ! Molecular backscatter coefficient
-          beta_mol_gr,  & !GLID
-          tau_mol,      & ! Molecular optical depth
-          tau_mol_gr      !GLID
+          tau_mol         ! Molecular optical depth
      real(wp),dimension(:,:,:),pointer :: &
           betatot,      & ! 
-          betatot_gr,   & !GLID 
           tautot,       & ! Optical thickess integrated from top
-          tautot_gr,    & !GLID
           betatot_ice,  & ! Backscatter coefficient for ice particles
           betatot_liq,  & ! Backscatter coefficient for liquid particles
           tautot_ice,   & ! Total optical thickness of ice
           tautot_liq      ! Total optical thickness of liq
      real(wp),dimension(:,:,:,:),pointer :: &
-          taupart,      & !GLID
-          taupart_gr      !GLID
+          taupart
   end type calipso_IN
 
 CONTAINS
