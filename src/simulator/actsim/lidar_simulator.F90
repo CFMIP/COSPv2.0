@@ -1153,7 +1153,7 @@ contains
           cldy(:,:,k)=0._wp
        endwhere
        ! Fully attenuated layer detection at subgrid-scale:
-       where ( (x(:,:,k) .lt. S_att_opaq) .and. (x(:,:,k) .ne. undef) )
+       where ( (x(:,:,k) .lt. S_att_opaq) .and. (x(:,:,k) .gt. 0.) .and. (x(:,:,k) .ne. undef) ) !DEBUG
           cldyopaq(:,:,k)=1._wp
        elsewhere
           cldyopaq(:,:,k)=0._wp
@@ -1167,7 +1167,7 @@ contains
           srok(:,:,k)=0._wp
        endwhere
        ! Number of usefull sub-columns layers for z_opaque 3D fraction:
-       where ( (x(:,:,k) .ne. undef) )
+       where ( (x(:,:,k) .gt. 0.) .and. (x(:,:,k) .ne. undef) ) !DEBUG
           srokopaq(:,:,k)=1._wp
        elsewhere
           srokopaq(:,:,k)=0._wp
