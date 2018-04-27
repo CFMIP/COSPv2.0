@@ -648,7 +648,7 @@ contains
             gbx%radar_freq,gbx%k2,gbx%use_gas_abs,gbx%do_ray,gbx%isccp_top_height,       &
             gbx%isccp_top_height_direction,gbx%surface_radar,rcfg_cloudsat,gbx%Nchan,    &
             gbx%Ichan,gbx%plat,gbx%sat,gbx%inst,vgrid%use_vgrid,vgrid%csat_vgrid,        &
-            vgrid%Nlvgrid,cloudsat_micro_scheme,cospOUT)
+            vgrid%Nlvgrid,cloudsat_micro_scheme)
     endif
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

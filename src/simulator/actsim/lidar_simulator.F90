@@ -428,17 +428,14 @@ contains
     ! Other layers
     do k=2,nlev
        tautot_lay(:) = tau(:,k)-tau(:,k-1) 
-       WHERE ( EXP(-2._wp*tau(:,k-1)) .gt. 0. )
-          WHERE (tautot_lay(:) .gt. 0.)
-             pnorm(:,k) = beta(:,k)*EXP(-2._wp*tau(:,k-1)) /&
-                  (2._wp*tautot_lay(:))*(1._wp-EXP(-2._wp*tautot_lay(:)))
-          ELSEWHERE
-             ! This must never happen, but just in case, to avoid div. by 0
-             pnorm(:,k) = beta(:,k) * EXP(-2._wp*tau(:,k-1))
-          END WHERE
+       WHERE (tautot_lay(:) .gt. 0.)
+          pnorm(:,k) = beta(:,k)*EXP(-2._wp*tau(:,k-1)) /&
+               (2._wp*tautot_lay(:))*(1._wp-EXP(-2._wp*tautot_lay(:)))
        ELSEWHERE
-          pnorm(:,k) = 0._wp!beta(:,k)
+          ! This must never happen, but just in case, to avoid div. by 0
+          pnorm(:,k) = beta(:,k) * EXP(-2._wp*tau(:,k-1))
        END WHERE
+
     END DO
   end subroutine cmp_backsignal
 
@@ -453,11 +450,13 @@ contains
     ! Internal Variables
     real(wp), dimension(npoints) :: tautot_lay
     integer :: k
+    real(wp) :: epsrealwp
 
+    epsrealwp = epsilon(1._wp)
     beta(:,1) = pnorm(:,1) * (2._wp*tau(:,1))/(1._wp-exp(-2._wp*tau(:,1)))
     do k=2,nlev
        tautot_lay(:) = tau(:,k)-tau(:,k-1)       
-       WHERE ( EXP(-2._wp*tau(:,k-1)) .gt. 0. )
+       WHERE ( EXP(-2._wp*tau(:,k-1)) .gt. epsrealwp )
           WHERE (tautot_lay(:) .gt. 0.)
              beta(:,k) = pnorm(:,k)/ EXP(-2._wp*tau(:,k-1))* &
                   (2._wp*tautot_lay(:))/(1._wp-exp(-2._wp*tautot_lay(:)))
@@ -465,7 +464,7 @@ contains
              beta(:,k)=pnorm(:,k)/EXP(-2._wp*tau(:,k-1))
           END WHERE
        ELSEWHERE
-          beta(:,k)=pnorm(:,k)
+          beta(:,k)=pnorm(:,k)/epsrealwp
        END WHERE
     ENDDO
 

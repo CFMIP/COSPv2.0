@@ -2436,6 +2436,7 @@ CONTAINS
                cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
        endif
     endif
+
     if (any([Lisccp_subcolumn, Lisccp_column, Lmisr_subcolumn, Lmisr_column, Lrttov_column,&
          Lcalipso_column, Lcloudsat_column, Lradar_lidar_tcc,Llidar_only_freq_cloud])) then
        if (any(cospgridIN%at .lt. 0)) then
@@ -2656,6 +2657,7 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Latlid_column       = .false.
           Lgroundlidar_column = .false.
+
           if (associated(cospOUT%rttov_tbs))             cospOUT%rttov_tbs(:,:)               = R_UNDEF
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
           if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
@@ -3074,7 +3076,7 @@ CONTAINS
           if (associated(cospOUT%groundlidar_beta_mol))      cospOUT%groundlidar_beta_mol(:,:)   = R_UNDEF
        endif
     endif
-    
+
     if (any([Lcalipso_subcolumn,Lcalipso_column])) then
        if (any(cospIN%betatot .lt. 0)) then
           nError=nError+1
@@ -3476,7 +3478,7 @@ CONTAINS
        nError=nError+1 
        errorMessage(nError) = 'ERROR(atlid_simulator): The number of levels in the input fields are inconsistent'
     endif
-    
+
     ! CALIPSO
     if (Lcalipso_subcolumn .or. Lcalipso_column) then
        if (size(cospIN%beta_mol,1)    .ne. cospIN%Npoints .OR. &
