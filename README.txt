@@ -1,238 +1,107 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Written by Dustin Swales (dustin.swales@noaa.gov) 2016
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+1) About COSP
 
-General notes:
-vN.N is version number (e.g. v2.0)
-We will assume that the software will be installed in ~/cosp.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-1) ABOUT THE CODE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The CFMIP Observation Simulator Package (COSP) takes the models representation of the
-atmosphere and simulates the retrievals for several passive (ISCCP, MISR and MODIS) and active
-(CLUDSAT(radar) and CALIPSO(lidar)) sensors.
+atmosphere and simulates the retrievals for several passive (ISCCP, MISR and MODIS)
+and active (CloudSat (radar) and CALIPSO (lidar)) sensors.
 
-COSP Version 2.0 (COSPv2.0) is a major reorganization and modernization of the previous
-generation. Some of the major differences between v2.0 and previous versions of COSP (e.g.
-1.4.0) are...
-*) COSPv2.0 now expects subcolumn inputs. In previous versions, the subclumns were drawn
-   internally by COSP and provided as an output. In COSP2, we provide the resources to
-   calculate subcolumn optical-inputs as were done in previous versions of COSP, however we
-   encourage users to provide COSP with as much information about the host-model as possible.
-*) Explicit initialization of static fields
-*) Paramaterized working precision.
+An overview of COSP is provided in https://doi.org/10.1175/2011BAMS2856.1
 
-The simulators in COSP (ISCCP, MISR, MODIS, RADAR (cloudsat) and LIDAR (calipso) have been
+COSP Version 2 (COSP2) is a major reorganization and modernization of the previous
+generation of COSP. For a detailed description, see https://doi.org/10.5194/gmd-2017-148
+
+The simulators in COSP (ISCCP, MISR, MODIS, radar/CloudSat and lidar/CALIPSO) have been
 developed by many institution and agencies:
 *) Met Office Hadley Centre
 *) LLNL (Lawrence Livermore National Laboratory)
 *) LMD/IPSL (Laboratoire de Meteorologie Dynamique/Institut Pierre Simon Laplace)
 *) CSU (Colorado State University)
 *) UW (University of Washington)
-
-The logical flow of COSP is as follows:
-*) Subcolumn retrievals (all simulators).
-*) Column retrievals (all simulators).
-*) Joint-instrument products.
+*) CU/CIRES (University of Colorado/Cooperative Institute for Research In Environmental Sciences)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 2) CONDITIONS OF USE
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The code is distributed under BSD License (http://www.opensource.org/licenses/bsd-license.php).
-Each source file includes a copy of this license with details on the Owner, Year 
-and Organisation. The license in the file quickbeam/README applies to all the files in 
+Each source file includes a copy of this license with details on the Owner, Year
+and Organisation. The license in the file quickbeam/README applies to all the files in
 the directory quickbeam.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-3) DOWNLOADING AND UNPACKING
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The code is hosted by GitHub (https://github.com/CFMIP). To download the code, simply "clone"
-the repository using the following command:
+3) What's in the distribution
 
-   git clone https://github.com/CFMIP/COSPv2.0.git
+The repository include directories
+  src/ contains the COSP layer and the underlying satellite simulators
+  model-interface/ contains routines used by COSP to couple to the host model.
+    Edit these before building.
+  subsample_and_optics_example/ contains an example implementation, following
+    COSP 1, of the routines to map model-derived grid-scale physical properties
+    to the subgrid-scale optical properties needed by COSP
+  cosp-1.4-interface/ contains a wrapper mapping the calling structure and arguments
+    from COSP 1 to COSP 2, making it possible to call COSP 2 using COSP 1 arguments.
+  driver/ contains codes that run COSP on example inputs and scripts that compare
+    the current implementation to a reference.
+  build/ contains a Makefile describing build dependencies. Users may build a COSP
+    library and other targets from this Makefile.
+  unit_testing/ contains small programs meant to exercise some of the simulators
 
-This will create a local copy, by default COSPv2.0/, of the COSP source code on your machine.
+Users incorporating COSP into a model will need all routines found within src/,
+appropriately-edited versions of the routines in model-interface/, and routines
+that provide the functionality of those in subsample_and_optics_example/.
 
-Legacy versions of COSP (v1.3.1, v1.3.2, v1.4.0 and v1.4.1) are also now archived on GitHub. These
-4 versions are archived as different "commits" in the same repository. To download one of these
-versions you will need to clone the COSPv1 repository and then revert to the correct commit.
+As described in https://doi.org/10.5194/gmd-2017-148 COSP2 requires inputs in the
+forms of subcolumn-sampled optical properties. The drivers map the model physical
+state to these inputs using the routines in driver/subsample_and_optics/, which
+are consistent with the fixed choices made in COSP1. We anticipate that users
+incorporating COSP into models will develop a model-specific mapping between the
+model's physical state and the inputs required for COSP that is consistent with
+the host model.
 
-For example, to download COSP v1.3.2 you would first clone the COSPv1 repository:
-
-   git clone https://github.com/CFMIP/COSPv1.git
-
-This will create a local copy of the repository, by default COSPv1/. Then to view the different
-"commits" in that repository you can use "git log". For example:
-
-   git log
-     commit bae896c6d09af4f34493422974cfb86722f9ead5
-     Author: Dustin Swales <dustin.swales@noaa.gov>
-     Date:   Fri Nov 6 08:26:35 2015 -0700
-
-          COSP version 1.4.1
-
-     commit 572c53ab941c8019135d147fbdf01a6633487aaa
-     Author: Dustin Swales <dustin.swales@noaa.gov>
-     Date:   Mon Sep 14 11:53:52 2015 -0600
-
-          COSP version 1.4.0
-
-     commit 9e7d84d735249d95521852e0db0c8eed16b4f070
-     Author: Dustin Swales <dustin.swales@noaa.gov>
-     Date:   Mon Sep 14 11:15:51 2015 -0600
-
-         COSP version 1.3.2
-
-     commit ce4130ca7334bc30875e7cfc620d6195bf237c73
-     Author: Robert.Pincus <Robert.Pincus@colorado.edu>
-     Date:   Fri Mar 18 20:52:12 2011 +0000
-
-         Copying v1.3.1 to archive of stable releases.   
-
-This shows the commit IDs, author of the commit, date of the commit and a brief description
-for the three archived releases. By default in git, when you clone a repository, you will be
-at the latest commit. In this case COSPv1.4.1. To revert to an older
-commit you need to "checkout" that commit (i.e. git checkout <commit>). So for example, to
-revert to COSP v1.3.2, you would:
-
-   git checkout 9e7d84d735249d95521852e0db0c8eed16b4f070
+The offline drivers read sample snapshots from the Met Office Unified Model, use
+the routines in subsample_and_optics_example/ to compute COSP inputs, and record
+the results from COSP in netCDF files. The default driver calls COSP 2 directly
+and produces netCDF output. The layer mimicking the COSP 1.4 interface is tested
+with a separate driver. A third driver uses the CMOR1 infrastructure to write a
+subset of fields to individual netCDF files following conventions for publication
+on the Earth System Grid Federation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-4) COMPILATION AND TESTING
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-a) Compilation
-   The compilation of the source code can be broken up as follows, depending on your needs:
-   *) Driver AND source code.
-      Provided with COSP are two examples, or drivers, for calling COSP. These drivers require
-      the following libraries to be installed:
-      *) NetCDF4 (http://www.unidata.ucar.edu/software/netcdf/)
-      *) CMOR2 (www2-pcmdi.llnl.gov/cmor/download/)
+4) Running the offline tests
 
-      The drivers are located at driver/src/
-      You need to build the main COSP code prior to building the drivers.
-        cd driver/src
-        make -f Makefile.v1.4 cosp     ! Build COSP source code
-        make -f Makefile.v1.4          ! Build driver for COSP (v1.4.0)
-      This will make the executable cosp_test_v1.4	
-               OR
-        make -f Makefile.v2.0 cosp     ! Build COSP source code (same for both v1.4 and v2.0)
-        make -f Makefile.v2.0          ! Build driver for COSP (v2.0)
-      This will make the executable cosp_test_v2.0
-      For a detailed description of the two drivers, see the user documentation.
-      
-   *) COSP source code ONLY.
-      The main COSP source code is located in src/. The Makefile will need to be
-      modified to fit your systems architecture.
-        cd src/
-        make clean
-        make install
-      This will create all of the object files and modules needed to call COSP.
-      
-b) Running
-   i)  Set up COSP input (driver/src/cosp_input_nl.vXX.txt) and output (driver/src/cosp_output_nl_vXX.txt)
-       namelists, where XX is either 1.4 or 2.0. The input namelist controls the COSP setup
-       (i.e. Numebr of subcolumns to be used, etc...) and simulator specific information
-       (i.e. Radar simulator frequency). The output namelist contains a list of logicals, one
-       for each COSP diagnostic output field.
-	  
-   ii) Run test code
-       ./cosp_test_vXX
-       This will run COSP and create outputs for the variables selected in the output namelist.
-       *NOTE* By default, the driver output will be stored in driver/data/output/1D/
+  a) Build the drivers.
+    *) Edit the files in model-interface/ if necessary. By default COSP is built
+    using double-precision real variables and printing any error messages to the
+    standard output.
+    *) In build/ edit Makefile.conf to reflect the choice of compiler, compiler flags,
+    and library names and locations. If you intend to build the CMOR driver this
+    includes all libraries necessary for CMOR. Building the CMOR driver also
+    requires a change to the definition of the DRIVER variable in Makefile.
+    *) In build 'make driver' will build a COSP library, a separate library with
+    the example mapping from model state to COSP inputs, and the cosp2_test
+    executable, which is then copied to driver/run. 'make driver_COSP1.4' is
+    analogous but builds a cosp1_test executable that uses the COSP 1.4 calling
+    conventions.
 
-c) Compare to reference data.
-   Provided with COSP is reference data (driver/data/output/ref1D/) and regression tools (IDL
-   and PYTHON) to compare your results to.
-   i) dev_tools/test_cospImp.py: This code compares the reference data to the output from the
-      driver. For example, to compare the v2.0 driver outputs to the reference data:
-      
-        python test_cospImp.py ../driver/data/output/ref1D ../driver/data/output/1D 1D
+  b) Running the test program
+    *) Directory test/run contains namelists and other files needed by the test
+    programs. If the executables have been built they should run in this
+    directory using these files as supplied.
+    *) The behavior of COSP can be changed via the input (driver/src/cosp2_input_nl.txt)
+    and output (driver/src/cosp2_output_nl.txt) namelists. The input namelist
+    controls the COSP setup (i.e. Number of subcolumns to be used, etc...) and
+    simulator specific information (i.e. Radar simulator frequency). The output
+    namelist controls the output diagnostics.
 
-        ############################################################################################
-        Treating relative differences less than 0.0010000000% as insignificant
-        Comparing variables
-        cltlidarradar
-        clcalipsoice
-        tauisccp
-        reffclwmodis
-        parasolRefl
-        clcalipsoliq
-        clcalipsotmpliq
-        clhcalipsoice
-        tauwlogmodis
-        clhcalipso
-        climodis
-        cllcalipsoun
-        tauimodis
-        clhcalipsoun
-        albisccp
-        atb532
-        clcalipso
-        tauilogmodis
-        cltcalipsoliq
-        clmcalipsoliq
-        clcalipsotmp
-        reffclimodis
-        boxtauisccp
-        lidarBetaMol532
-        clmcalipsoun
-        iwpmodis
-        dbze94
-        clmodis
-        tautmodis
-        cltcalipsoice
-        cltcalipsoun
-        pctisccp
-        tbrttov
-        meantbclrisccp
-        pctmodis
-        cllcalipsoliq
-        boxptopisccp
-        cltmodis
-        cllcalipso
-        clwmodis
-        meantbisccp
-        tauwmodis
-        cltisccp
-        cltcalipso
-        clmmodis
-        clcalipsotmpice
-        clMISR
-        cfadLidarsr532
-        cllcalipsoice
-        tautlogmodis
-        lwpmodis
-        clmcalipso
-        clhmodis
-        clmcalipsoice
-        cllmodis
-        clcalipsoun
-        clcalipso2
-        clisccp
-        cfadDbze94
-        clhcalipsoliq
-        clcalipsotmpun
-        All Files Match
-        ############################################################################################
-
-Above are the results for a correct implementation. If differences arise, they are
-reported at the end of the list. For example:
-	...
-        ...
-	clhcalipsoliq
-        clcalipsotmpun
-	Differences exist in reference and test files for:
-        tbrttov:            100.00 % of values differ, relative range:   1.00e+00 to  1.00e+00
-	cltisccp:            2.34  % of values differ, relative range:   4.35e-04 to  2.34e-02
-        ############################################################################################
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-5) CHANGES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-6) NOTES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  c) Regression testing (comparing to reference data)
+    *) Reference data for a small test case is provided with COSP2. The data can be
+    found at driver/data/outputs/UKMO/. CMOR compliant reference data is also provided,
+    driver/data/outputs/UKMO/cmor/ref1D/.
+    *) To compare driver output to reference data. In driver/, invoke Python script
+    test_cosp2imp.py. This script requires the following Python modules: os, numpy, netCDF4,
+    argparse, warnings, fnmatch, sys. Examples are below.
+       -) For standard netCDF output:
+       python test_cosp2Imp.py data/outputs/UKMO/cosp2_output_um.ref.nc data/outputs/UKMO/cosp2_output_um.nc
+       -) For CMOR compliant output:
+       python test_cosp2Imp.py data/outputs/UKMO/cmor/ref1D/ data/outputs/UKMO/cmor/1D --cmor 1D
+    By default the script will only report relative differences which are greater than 1e-5. This
+    can be changed by the user through the optional argument "--zeroThresh".

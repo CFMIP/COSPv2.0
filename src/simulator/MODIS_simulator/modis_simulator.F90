@@ -325,8 +325,8 @@ contains
        Optical_Thickness_Total_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = cloudMask, &
             dim = 2) / Cloud_Fraction_Total_Mean(1:nPoints)
     elsewhere
-       Optical_Thickness_Total_Mean      = 0._wp
-       Optical_Thickness_Total_MeanLog10 = 0._wp
+       Optical_Thickness_Total_Mean      = R_UNDEF
+       Optical_Thickness_Total_MeanLog10 = R_UNDEF
     endwhere
     where(Cloud_Fraction_Water_Mean(1:nPoints) > 0)
        Optical_Thickness_Water_Mean(1:nPoints) = sum(optical_thickness, mask = waterCloudMask, dim = 2) / &
@@ -338,10 +338,10 @@ contains
        Cloud_Particle_Size_Water_Mean(1:nPoints) = sum(particle_size, mask = waterCloudMask, dim = 2) / &
             Cloud_Fraction_Water_Mean(1:nPoints)
     elsewhere
-       Optical_Thickness_Water_Mean      = 0._wp
-       Optical_Thickness_Water_MeanLog10 = 0._wp
-       Cloud_Particle_Size_Water_Mean    = 0._wp
-       Liquid_Water_Path_Mean            = 0._wp
+       Optical_Thickness_Water_Mean      = R_UNDEF
+       Optical_Thickness_Water_MeanLog10 = R_UNDEF
+       Cloud_Particle_Size_Water_Mean    = R_UNDEF
+       Liquid_Water_Path_Mean            = R_UNDEF
     endwhere
     where(Cloud_Fraction_Ice_Mean(1:nPoints) > 0)
        Optical_Thickness_Ice_Mean(1:nPoints)   = sum(optical_thickness, mask = iceCloudMask,   dim = 2) / &
@@ -353,10 +353,10 @@ contains
        Cloud_Particle_Size_Ice_Mean(1:nPoints) = sum(particle_size, mask = iceCloudMask,   dim = 2) / &
             Cloud_Fraction_Ice_Mean(1:nPoints)    
     elsewhere
-       Optical_Thickness_Ice_Mean        = 0._wp
-       Optical_Thickness_Ice_MeanLog10   = 0._wp
-       Cloud_Particle_Size_Ice_Mean      = 0._wp
-       Ice_Water_Path_Mean               = 0._wp
+       Optical_Thickness_Ice_Mean        = R_UNDEF
+       Optical_Thickness_Ice_MeanLog10   = R_UNDEF
+       Cloud_Particle_Size_Ice_Mean      = R_UNDEF
+       Ice_Water_Path_Mean               = R_UNDEF
     endwhere
     Cloud_Top_Pressure_Total_Mean  = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
                                      max(1, count(cloudMask, dim = 2))
