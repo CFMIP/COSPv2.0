@@ -1,0 +1,14 @@
+Overview:
+This directory contains code coupling COSP to the host model or environment.
+COSP depends on this code, which must be edited before building COSP.
+Editing could include referencing modules from the host model.
+
+cosp_kinds.f90 specifies the numerical precision of all floating point variables.
+The version provided here offers the choice of Fortran 90 intrinsics for
+single (4 byte) and double (8 byte) precision, but the wp variable might also
+point to a host model's definition imported from another module.
+
+cosp_errorHandling.f90 contains a single routine, errorMessage, that accepts
+a text string. The default implementation simply prints this string to
+standard output. Users may want to replace this with the host model's error
+reporting system. 
