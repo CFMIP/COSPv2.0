@@ -1,0 +1,9 @@
+This directory contains a layer mapping COSP 1 inputs and outputs to
+COSP 2. Users should, in principle, be able to compile cosp_interface_v1p4.F90
+after building the rest of COSP 2, then call the routines in this module with
+existing implementations of 1.4.
+
+As the calling structure of COSP 2 differs substantially from previous versions
+the translation of inputs and outputs requires copying substantial amounts of
+data, and so isn't very efficient. Users are encouraged to move to direct
+implementations of COSP 2 as time allows. 
