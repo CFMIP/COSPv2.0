@@ -1256,7 +1256,9 @@ CONTAINS
     endif
 
     ! Cloudsat rain/snow occurence products.
-    if (lcloudsat_subcolumn .and. lcloudsat_column) then
+    if (associated(cospOUT%cloudsat_precip_rate) .or. associated(cospOUT%cloudsat_pia) .or. &
+         associated(cospOUT%cloudsat_precip_cover)) then
+!    if (lcloudsat_subcolumn .and. lcloudsat_column) then
        if (use_vgrid) then
           ! Regrid in vertical
           allocate(fracPrecipIceFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
