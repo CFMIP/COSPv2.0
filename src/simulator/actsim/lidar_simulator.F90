@@ -80,7 +80,8 @@
 module mod_lidar_simulator
   USE COSP_KINDS,         ONLY: wp
   USE MOD_COSP_CONFIG,    ONLY: SR_BINS,S_CLD,S_ATT,S_CLD_ATT,R_UNDEF,calipso_histBsct,  &
-                                use_vgrid,vgrid_zl,vgrid_zu,vgrid_z
+                                use_vgrid,vgrid_zl,vgrid_zu,vgrid_z,atlid_histBsct,      &
+                                grLidar532_histBsct,S_CLD_ATLID,S_ATT_ATLID,S_CLD_ATT_ATLID
   USE MOD_COSP_STATS,     ONLY: COSP_CHANGE_VERTICAL_GRID,hist1d
   implicit none
   
@@ -102,22 +103,25 @@ contains
   ! Inputs with a vertical dimensions (nlev) should ordered in along the vertical 
   ! dimension from TOA-2-SFC, for example: varIN(nlev) is varIN @ SFC. 
   ! ######################################################################################
-  subroutine lidar_subcolumn(npoints,ncolumns,nlev,beta_mol,tau_mol,betatot,tautot,    &
-                         betatot_ice,tautot_ice,betatot_liq,tautot_liq,                  &
-                         pmol,pnorm,pnorm_perp_tot)
+  subroutine lidar_subcolumn(npoints, ncolumns, nlev, lground, beta_mol, tau_mol,        &
+       betatot, tautot, pmol, pnorm, betatot_ice, tautot_ice, betatot_liq, tautot_liq,   &
+       pnorm_perp_tot)
 
     ! INPUTS
     INTEGER,intent(in) :: & 
          npoints,      & ! Number of gridpoints
          ncolumns,     & ! Number of subcolumns
          nlev            ! Number of levels
+    logical,intent(in) :: &
+         lground         ! True for ground-based lidar simulator
     REAL(WP),intent(in),dimension(npoints,nlev) :: &
          beta_mol,     & ! Molecular backscatter coefficient
          tau_mol         ! Molecular optical depth
-
     REAL(WP),intent(in),dimension(npoints,ncolumns,nlev)       :: &
          betatot,      & ! 
-         tautot,       & ! Optical thickess integrated from top
+         tautot          ! Optical thickess integrated from top
+    ! Optional Inputs
+    REAL(WP),intent(in),dimension(npoints,ncolumns,nlev),optional       :: &         
          betatot_ice,  & ! Backscatter coefficient for ice particles
          betatot_liq,  & ! Backscatter coefficient for liquid particles
          tautot_ice,   & ! Total optical thickness of ice
@@ -127,11 +131,14 @@ contains
     REAL(WP),intent(out),dimension(npoints,nlev) :: &
          pmol            ! Molecular attenuated backscatter lidar signal power(m^-1.sr^-1)
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev) :: &
-         pnorm,        & ! Molecular backscatter signal power (m^-1.sr^-1)
+         pnorm           ! Molecular backscatter signal power (m^-1.sr^-1)
+    ! Optional outputs
+    REAL(WP),intent(out),dimension(npoints,ncolumns,nlev),optional :: &
          pnorm_perp_tot  ! Perpendicular lidar backscattered signal power
 
     ! LOCAL VARIABLES
-    INTEGER :: k,icol
+    INTEGER :: k,icol,zi,zf,zinc
+    logical :: lphaseoptics
     REAL(WP),dimension(npoints) :: &
          tautot_lay        !
     REAL(WP),dimension(npoints,ncolumns,nlev) :: &
@@ -140,13 +147,29 @@ contains
          pnorm_perp_ice, & ! Perpendicular lidar backscattered signal power for ice
          pnorm_perp_liq, & ! Perpendicular lidar backscattered signal power for liq
          beta_perp_ice,  & ! Perpendicular backscatter coefficient for ice
-         beta_perp_liq     ! Perpendicular backscatter coefficient for liquid    
+         beta_perp_liq     ! Perpendicular backscatter coefficient for liquid
+
+    ! Phase optics?
+    lphaseoptics=.false.
+    if (present(betatot_ice) .and. present(betatot_liq) .and. present(tautot_liq) .and. &
+         present(tautot_ice)) lphaseoptics=.true.
+    
+    ! Is this lidar spaceborne (default) or ground-based?
+    if (lground) then
+       zi   = nlev
+       zf   = 1
+       zinc = -1
+    else
+       zi   = 1
+       zf   = nlev
+       zinc = 1
+    endif    
 
     ! ####################################################################################
     ! *) Molecular signal
     ! ####################################################################################
-    call cmp_backsignal(nlev,npoints,beta_mol(1:npoints,1:nlev),&
-                        tau_mol(1:npoints,1:nlev),pmol(1:npoints,1:nlev))
+    call cmp_backsignal(nlev,npoints,beta_mol(1:npoints,zi:zf:zinc),&
+                        tau_mol(1:npoints,zi:zf:zinc),pmol(1:npoints,zi:zf:zinc))
                         
     ! ####################################################################################
     ! PLANE PARRALLEL FIELDS
@@ -155,103 +178,106 @@ contains
        ! #################################################################################
        ! *) Total Backscatter signal
        ! #################################################################################
-       call cmp_backsignal(nlev,npoints,betatot(1:npoints,icol,1:nlev),&
-            tautot(1:npoints,icol,1:nlev),pnorm(1:npoints,icol,1:nlev))
+       call cmp_backsignal(nlev,npoints,betatot(1:npoints,icol,zi:zf:zinc),&
+            tautot(1:npoints,icol,zi:zf:zinc),pnorm(1:npoints,icol,zi:zf:zinc))
+       
        ! #################################################################################
        ! *) Ice/Liq Backscatter signal
        ! #################################################################################
-       ! Computation of the ice and liquid lidar backscattered signal (ATBice and ATBliq)
-       ! Ice only
-       call cmp_backsignal(nlev,npoints,betatot_ice(1:npoints,icol,1:nlev),&
-                      tautot_ice(1:npoints,icol,1:nlev),&
-                      pnorm_ice(1:npoints,icol,1:nlev))
-       ! Liquid only
-       call cmp_backsignal(nlev,npoints,betatot_liq(1:npoints,icol,1:nlev),&
-                      tautot_liq(1:npoints,icol,1:nlev),&
-                      pnorm_liq(1:npoints,icol,1:nlev))
+       if (lphaseoptics) then
+          ! Computation of the ice and liquid lidar backscattered signal (ATBice and ATBliq)
+          ! Ice only
+          call cmp_backsignal(nlev,npoints,betatot_ice(1:npoints,icol,zi:zf:zinc),&
+               tautot_ice(1:npoints,icol,zi:zf:zinc), pnorm_ice(1:npoints,icol,zi:zf:zinc))
+          ! Liquid only
+          call cmp_backsignal(nlev,npoints,betatot_liq(1:npoints,icol,zi:zf:zinc),&
+               tautot_liq(1:npoints,icol,zi:zf:zinc), pnorm_liq(1:npoints,icol,zi:zf:zinc))
+       endif
     enddo
 
     ! ####################################################################################
-    ! PERDENDICULAR FIELDS
+    ! PERDENDICULAR FIELDS (Only needed if distinguishing by phase (ice/liquid))
     ! ####################################################################################
-    do icol=1,ncolumns
-
-       ! #################################################################################
-       ! *) Ice/Liq Perpendicular Backscatter signal
-       ! #################################################################################
-       ! Computation of ATBperp,ice/liq from ATBice/liq including the multiple scattering 
-       ! contribution (Cesana and Chepfer 2013, JGR)
-       do k=1,nlev
-          ! Ice particles
-          pnorm_perp_ice(1:npoints,icol,k) = Alpha * pnorm_ice(1:npoints,icol,k)
-
-          ! Liquid particles
-          pnorm_perp_liq(1:npoints,icol,k) = 1000._wp*Beta*pnorm_liq(1:npoints,icol,k)**2+&
-               Gamma*pnorm_liq(1:npoints,icol,k) 
-       enddo
-  
-       ! #################################################################################
-       ! *) Computation of beta_perp_ice/liq using the lidar equation
-       ! #################################################################################
-       ! Ice only
-       call cmp_beta(nlev,npoints,pnorm_perp_ice(1:npoints,icol,1:nlev),&
-              tautot_ice(1:npoints,icol,1:nlev),beta_perp_ice(1:npoints,icol,1:nlev))        
- 
-       ! Liquid only
-       call cmp_beta(nlev,npoints,pnorm_perp_liq(1:npoints,icol,1:nlev),&
-            tautot_liq(1:npoints,icol,1:nlev),beta_perp_liq(1:npoints,icol,1:nlev))
-          
-       ! #################################################################################
-       ! *) Perpendicular Backscatter signal
-       ! #################################################################################
-       ! Computation of the total perpendicular lidar signal (ATBperp for liq+ice)
-       ! Upper layer
-       WHERE(tautot(1:npoints,icol,1) .gt. 0)
-          pnorm_perp_tot(1:npoints,icol,1) = (beta_perp_ice(1:npoints,icol,1)+           &
-               beta_perp_liq(1:npoints,icol,1)-                                          &
-               (beta_mol(1:npoints,1)/(1._wp+1._wp/0.0284_wp))) /                        &
-               (2._wp*tautot(1:npoints,icol,1))*                                         &
-               (1._wp-exp(-2._wp*tautot(1:npoints,icol,1)))
-       ELSEWHERE
-          pnorm_perp_tot(1:npoints,icol,1) = 0._wp
-       ENDWHERE                                                  
+    if (lphaseoptics) then
+       do icol=1,ncolumns
+          ! #################################################################################
+          ! *) Ice/Liq Perpendicular Backscatter signal
+          ! #################################################################################
+          ! Computation of ATBperp,ice/liq from ATBice/liq including the multiple scattering 
+          ! contribution (Cesana and Chepfer 2013, JGR)
+          do k=1,nlev
+             ! Ice particles
+             pnorm_perp_ice(1:npoints,icol,k) = Alpha * pnorm_ice(1:npoints,icol,k)
              
-       ! Other layers
-       do k=2,nlev
-          ! Optical thickness of layer k
-          tautot_lay(1:npoints) = tautot(1:npoints,icol,k)-tautot(1:npoints,icol,k-1) 
-
-          ! The perpendicular component of the molecular backscattered signal (Betaperp) 
-          ! has been taken into account two times (once for liquid and once for ice). 
-          ! We remove one contribution using 
-          ! Betaperp=beta_mol(:,k)/(1+1/0.0284)) [bodhaine et al. 1999] in the following 
-          ! equations:
-          WHERE (pnorm(1:npoints,icol,k) .eq. 0)
-             pnorm_perp_tot(1:npoints,icol,k)=0._wp
+             ! Liquid particles
+             pnorm_perp_liq(1:npoints,icol,k) = 1000._wp*Beta*pnorm_liq(1:npoints,icol,k)**2+&
+                  Gamma*pnorm_liq(1:npoints,icol,k) 
+          enddo
+          
+          ! #################################################################################
+          ! *) Computation of beta_perp_ice/liq using the lidar equation
+          ! #################################################################################
+          ! Ice only
+          call cmp_beta(nlev,npoints,pnorm_perp_ice(1:npoints,icol,zi:zf:zinc),&
+               tautot_ice(1:npoints,icol,zi:zf:zinc),beta_perp_ice(1:npoints,icol,zi:zf:zinc))        
+          
+          ! Liquid only
+          call cmp_beta(nlev,npoints,pnorm_perp_liq(1:npoints,icol,zi:zf:zinc),&
+               tautot_liq(1:npoints,icol,zi:zf:zinc),beta_perp_liq(1:npoints,icol,zi:zf:zinc))
+          
+          ! #################################################################################
+          ! *) Perpendicular Backscatter signal
+          ! #################################################################################
+          ! Computation of the total perpendicular lidar signal (ATBperp for liq+ice)
+          ! Upper layer
+          WHERE(tautot(1:npoints,icol,1) .gt. 0)
+             pnorm_perp_tot(1:npoints,icol,1) = (beta_perp_ice(1:npoints,icol,1)+           &
+                  beta_perp_liq(1:npoints,icol,1)-                                          &
+                  (beta_mol(1:npoints,1)/(1._wp+1._wp/0.0284_wp))) /                        &
+                  (2._wp*tautot(1:npoints,icol,1))*                                         &
+                  (1._wp-exp(-2._wp*tautot(1:npoints,icol,1)))
           ELSEWHERE
-             where(tautot_lay(1:npoints) .gt. 0.)
-                pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
-                   beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
-                   0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))/                  &
-                   (2._wp*tautot_lay(1:npoints))* (1._wp-EXP(-2._wp*tautot_lay(1:npoints)))
-             elsewhere
-                pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
-                   beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
-                   0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))
-             endwhere 
+             pnorm_perp_tot(1:npoints,icol,1) = 0._wp
           ENDWHERE
-       END DO
-    enddo
+          
+          ! Other layers
+          do k=2,nlev
+             ! Optical thickness of layer k
+             tautot_lay(1:npoints) = tautot(1:npoints,icol,k)-tautot(1:npoints,icol,k-1) 
+             
+             ! The perpendicular component of the molecular backscattered signal (Betaperp) 
+             ! has been taken into account two times (once for liquid and once for ice). 
+             ! We remove one contribution using 
+             ! Betaperp=beta_mol(:,k)/(1+1/0.0284)) [bodhaine et al. 1999] in the following 
+             ! equations:
+             WHERE (pnorm(1:npoints,icol,k) .eq. 0)
+                pnorm_perp_tot(1:npoints,icol,k)=0._wp
+             ELSEWHERE
+                where(tautot_lay(1:npoints) .gt. 0.)
+                   pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
+                        beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
+                        0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))/                  &
+                        (2._wp*tautot_lay(1:npoints))* (1._wp-EXP(-2._wp*tautot_lay(1:npoints)))
+                elsewhere
+                   pnorm_perp_tot(1:npoints,icol,k) = (beta_perp_ice(1:npoints,icol,k)+     &
+                        beta_perp_liq(1:npoints,icol,k)-(beta_mol(1:npoints,k)/(1._wp+1._wp/  &
+                        0.0284_wp)))*EXP(-2._wp*tautot(1:npoints,icol,k-1))
+                endwhere
+             ENDWHERE
+          END DO
+       enddo
+    end if
   end subroutine lidar_subcolumn
 
   ! ######################################################################################
   ! SUBROUTINE lidar_column
   ! ######################################################################################
-  subroutine lidar_column(npoints,ncol,nlevels,llm,max_bin,tmp, pnorm, pnorm_perp,       &
-                           pmol, surfelev, pplay, ok_lidar_cfad, ncat, ntype, cfad2,     &
-                           lidarcld, lidarcldphase, lidarcldtype, cldlayer, cldtype,     &
-                           cldtypetemp, cldtypemeanz, cldtypemeanzse, cldthinemis, zlev, & 
-                           zlev_half, cldlayerphase, lidarcldtmp, vgrid_z)
+  subroutine lidar_column(npoints, ncol, nlevels, llm, max_bin, ntype, platform, pnorm, pmol,             &
+       pplay, zlev, zlev_half, vgrid_z, ok_lidar_cfad, ncat, cfad2, lidarcld, cldlayer,  &
+       ! Optional stuff below
+       tmp, pnorm_perp, surfelev,  lidarcldphase, lidarcldtype, cldtype, cldtypetemp, &
+       cldtypemeanz, cldtypemeanzse, cldthinemis, cldlayerphase, lidarcldtmp)
+
     integer,parameter :: &
          nphase = 6 ! Number of cloud layer phase types
 
@@ -264,15 +290,13 @@ contains
          max_bin, & ! Number of bins for SR CFADs
          ncat,    & ! Number of cloud layer types (low,mid,high,total) 
          ntype      ! Number of OPAQ products (opaque/thin cloud + z_opaque)
+    character(len=*),intent(in) :: &
+         platform   ! Name of platform (e.g. calipso,atlid,grLidar532)
     real(wp),intent(in),dimension(npoints,ncol,Nlevels) :: &
-         pnorm,   & ! Lidar ATB
-         pnorm_perp ! Lidar perpendicular ATB
+         pnorm      ! Lidar ATB
     real(wp),intent(in),dimension(npoints,Nlevels) :: &
          pmol,    & ! Molecular ATB
-         pplay,   & ! Pressure on model levels (Pa)
-         tmp        ! Temperature at each levels
-    real(wp),intent(in),dimension(npoints) :: &
-         surfelev   ! Surface Elevation (m) 
+         pplay      ! Pressure on model levels (Pa)
     logical,intent(in) :: &
          ok_lidar_cfad ! True if lidar CFAD diagnostics need to be computed
     real(wp),intent(in),dimension(npoints,nlevels) :: &
@@ -281,34 +305,43 @@ contains
          zlev_half   ! Model half levels
     real(wp),intent(in),dimension(llm) :: & 
          vgrid_z     ! mid-level altitude of the output vertical grid
-         
+    ! Optional Inputs
+    real(wp),intent(in),dimension(npoints,ncol,Nlevels),optional :: &
+         pnorm_perp ! Lidar perpendicular ATB
+    real(wp),intent(in),dimension(npoints),optional :: &
+         surfelev   ! Surface Elevation (m)
+    real(wp),intent(in),dimension(npoints,Nlevels),optional :: &
+         tmp        ! Temperature at each levels
+    
     ! Outputs
     real(wp),intent(inout),dimension(npoints,llm) :: &
          lidarcld      ! 3D "lidar" cloud fraction
     real(wp),intent(inout),dimension(npoints,ncat) :: &
          cldlayer      ! "lidar" cloud layer fraction (low, mid, high, total)
-    real(wp),intent(inout),dimension(npoints,ntype) :: & 
-         cldtype,    & ! "lidar" OPAQ type covers (opaque/thin cloud + z_opaque)
-         cldtypetemp   ! Opaque and thin clouds + z_opaque temperature
-    real(wp),intent(inout),dimension(npoints,2) :: &  
-         cldtypemeanz  ! Opaque and thin clouds altitude 
-    real(wp),intent(inout),dimension(npoints,3) :: &  
-         cldtypemeanzse ! Opaque, thin clouds and z_opaque altitude with respect to SE
-    real(wp),intent(inout),dimension(npoints) :: &   
-         cldthinemis   ! Thin clouds emissivity computed from SR
-    real(wp),intent(inout),dimension(npoints,llm,nphase) :: &
-         lidarcldphase ! 3D "lidar" phase cloud fraction
-    real(wp),intent(inout),dimension(npoints,llm,ntype+1) :: & 
-         lidarcldtype ! 3D "lidar" OPAQ type fraction 
-    real(wp),intent(inout),dimension(npoints,40,5) :: &
-         lidarcldtmp   ! 3D "lidar" phase cloud fraction as a function of temp
-    real(wp),intent(inout),dimension(npoints,ncat,nphase) :: &
-         cldlayerphase ! "lidar" phase low mid high cloud fraction
     real(wp),intent(inout),dimension(npoints,max_bin,llm) :: &
          cfad2         ! CFADs of SR
+    ! Optional Outputs
+    real(wp),intent(out),dimension(npoints,ntype),optional :: & 
+         cldtype,    & ! "lidar" OPAQ type covers (opaque/thin cloud + z_opaque)
+         cldtypetemp   ! Opaque and thin clouds + z_opaque temperature
+    real(wp),intent(out),dimension(npoints,2),optional :: &  
+         cldtypemeanz  ! Opaque and thin clouds altitude 
+    real(wp),intent(out),dimension(npoints,3),optional :: &  
+         cldtypemeanzse ! Opaque, thin clouds and z_opaque altitude with respect to SE
+    real(wp),intent(out),dimension(npoints),optional :: &   
+         cldthinemis   ! Thin clouds emissivity computed from SR
+    real(wp),intent(out),dimension(npoints,llm,nphase),optional :: &
+         lidarcldphase ! 3D "lidar" phase cloud fraction
+    real(wp),intent(out),dimension(npoints,llm,ntype+1),optional :: & 
+         lidarcldtype ! 3D "lidar" OPAQ type fraction 
+    real(wp),intent(out),dimension(npoints,40,5),optional :: &
+         lidarcldtmp   ! 3D "lidar" phase cloud fraction as a function of temp
+    real(wp),intent(out),dimension(npoints,ncat,nphase),optional :: &
+         cldlayerphase ! "lidar" phase low mid high cloud fraction
 
     ! Local Variables
     integer :: ic,i,j
+    logical :: lcalipso,latlid,lgrlidar532
     real(wp),dimension(npoints,ncol,llm) :: &
          x3d
     real(wp),dimension(npoints,llm) :: &
@@ -318,12 +351,18 @@ contains
     real(wp),dimension(npoints,1,Nlevels) :: t_in,ph_in,betamol_in
     real(wp),dimension(npoints,ncol,llm)  :: pnormFlip,pnorm_perpFlip
     real(wp),dimension(npoints,1,llm)     :: tmpFlip,pplayFlip,betamolFlip
-
+    real(wp),dimension(SR_BINS+1)         :: histBsct
+    
+    ! Which lidar platform?
+    lcalipso = .false.
+    latlid = .false.
+    lgrlidar532 = .false.
+    if (platform .eq. 'calipso') lcalipso=.true.
+    if (platform .eq. 'atlid') latlid=.true.
+    if (platform .eq. 'grlidar532') lgrlidar532=.true.
+        
     ! Vertically regrid input data
     if (use_vgrid) then 
-       t_in(:,1,:)=tmp(:,nlevels:1:-1)
-       call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-            t_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),tmpFlip(:,1,llm:1:-1))
        ph_in(:,1,:) = pplay(:,nlevels:1:-1)
        call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
             ph_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pplayFlip(:,1,llm:1:-1))
@@ -332,14 +371,30 @@ contains
             betamol_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),betamolFlip(:,1,llm:1:-1))
        call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
             pnorm(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnormFlip(:,:,llm:1:-1))
-       call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
-            pnorm_perp(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnorm_perpFlip(:,:,llm:1:-1))
+       if (lcalipso) then
+          t_in(:,1,:)=tmp(:,nlevels:1:-1)
+          call cosp_change_vertical_grid(Npoints,1,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+               t_in,llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),tmpFlip(:,1,llm:1:-1))
+          call cosp_change_vertical_grid(Npoints,Ncol,Nlevels,zlev(:,nlevels:1:-1),zlev_half(:,nlevels:1:-1),&
+               pnorm_perp(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),vgrid_zu(llm:1:-1),pnorm_perpFlip(:,:,llm:1:-1))
+       endif
     endif
 
     ! Initialization (The histogram bins, are set up during initialization and the
     ! maximum value is used as the upper bounds.)
-    xmax = maxval(calipso_histBsct)
-
+    if (lcalipso)    then
+       xmax = maxval(calipso_histBsct)
+       histBsct = calipso_histBsct
+    endif
+    if (latlid)      then
+       xmax = maxval(atlid_histBsct)
+       histBsct = atlid_histBsct
+    endif
+    if (lgrlidar532) then
+       xmax = maxval(grLidar532_histBsct)
+       histBsct = grLidar532_histBsct
+    endif
+       
     ! Compute LIDAR scattering ratio
     if (use_vgrid) then
        do ic = 1, ncol
@@ -352,15 +407,24 @@ contains
           end where
           x3d(:,ic,:) = x3d_c
        enddo
-       ! Diagnose cloud fractions for subcolumn lidar scattering ratios
-       CALL COSP_CLDFRAC(npoints,ncol,llm,ncat,nphase,tmpFlip,x3d,pnormFlip,             &
-                         pnorm_perpFlip,pplayFlip,S_att,S_cld,S_cld_att,R_UNDEF,         &
-                         lidarcld,cldlayer,lidarcldphase,cldlayerphase,lidarcldtmp)                         
+       if (lcalipso) then
+          ! Diagnose cloud fractions for subcolumn lidar scattering ratios
+          CALL COSP_CLDFRAC(npoints,ncol,llm,ncat,nphase,tmpFlip,x3d,pnormFlip,pnorm_perpFlip,&
+               pplayFlip,S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,&
+               cldlayerphase,lidarcldtmp)                         
 
-       CALL COSP_OPAQ(npoints,ncol,llm,ntype,tmpFlip,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
-                      cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z, &
-                      surfelev) 
-
+          ! Calipso opaque cloud diagnostics
+          CALL COSP_OPAQ(npoints,ncol,llm,ntype,tmpFlip,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
+               cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z,surfelev)
+       endif
+       if (latlid) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,llm,ncat,x3d,pnormFlip,pplayFlip,  &
+               S_att_atlid,S_cld_atlid,S_cld_att_atlid,R_UNDEF,lidarcld,cldlayer)   
+       endif
+       if (lgrLidar532) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,llm,ncat,x3d,pnormFlip,pplayFlip,  &
+               S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer)
+       endif
     else
        do ic = 1, ncol
           pnorm_c = pnorm(:,ic,:)
@@ -371,15 +435,23 @@ contains
           end where
           x3d(:,ic,:) = x3d_c
        enddo
-       ! Diagnose cloud fractions for subcolumn lidar scattering ratios
-       CALL COSP_CLDFRAC(npoints,ncol,nlevels,ncat,nphase,tmp,x3d,pnorm,pnorm_perp,pplay,&
-                         S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,  &
-                         cldlayerphase,lidarcldtmp)
-
-       CALL COSP_OPAQ(npoints,ncol,nlevels,ntype,tmp,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
-                      cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z, &
-                      surfelev) 
-
+       if (lcalipso) then
+          ! Diagnose cloud fractions for subcolumn lidar scattering ratios
+          CALL COSP_CLDFRAC(npoints,ncol,nlevels,ncat,nphase,tmp,x3d,pnorm,pnorm_perp,pplay,&
+               S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,  &
+               cldlayerphase,lidarcldtmp)
+          ! Calipso opaque cloud diagnostics
+          CALL COSP_OPAQ(npoints,ncol,nlevels,ntype,tmp,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
+               cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z,surfelev)
+       endif
+       if (latlid) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,nlevels,ncat,x3d,pnorm,pplay,  &
+               S_att_atlid,S_cld_atlid,S_cld_att_atlid, R_UNDEF,lidarcld,cldlayer)
+       endif
+       if (lgrlidar532) then
+          CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,nlevels,ncat,x3d,pnorm,pplay,      &
+               S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer)
+       endif
     endif
 
     ! CFADs
@@ -387,23 +459,23 @@ contains
        ! CFADs of subgrid-scale lidar scattering ratios
        do i=1,Npoints
           do j=1,llm
-             cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,calipso_histBsct)
+             cfad2(i,:,j) = hist1D(ncol,x3d(i,:,j),SR_BINS,histBsct)
           enddo
        enddo
        where(cfad2 .ne. R_UNDEF) cfad2=cfad2/ncol
-
     endif 
     
     ! Unit conversions
     where(lidarcld /= R_UNDEF)      lidarcld      = lidarcld*100._wp
     where(cldlayer /= R_UNDEF)      cldlayer      = cldlayer*100._wp
-    where(cldtype(:,1) /= R_UNDEF)  cldtype(:,1)  = cldtype(:,1)*100._wp
-    where(cldtype(:,2) /= R_UNDEF)  cldtype(:,2)  = cldtype(:,2)*100._wp
-    where(cldlayerphase /= R_UNDEF) cldlayerphase = cldlayerphase*100._wp
-    where(lidarcldphase /= R_UNDEF) lidarcldphase = lidarcldphase*100._wp
-    where(lidarcldtype /= R_UNDEF)  lidarcldtype  = lidarcldtype*100._wp
-    where(lidarcldtmp /= R_UNDEF)   lidarcldtmp   = lidarcldtmp*100._wp
-
+    if (lcalipso) then
+       where(cldtype(:,1) /= R_UNDEF)  cldtype(:,1)  = cldtype(:,1)*100._wp
+       where(cldtype(:,2) /= R_UNDEF)  cldtype(:,2)  = cldtype(:,2)*100._wp
+       where(cldlayerphase /= R_UNDEF) cldlayerphase = cldlayerphase*100._wp
+       where(lidarcldphase /= R_UNDEF) lidarcldphase = lidarcldphase*100._wp
+       where(lidarcldtype /= R_UNDEF)  lidarcldtype  = lidarcldtype*100._wp
+       where(lidarcldtmp /= R_UNDEF)   lidarcldtmp   = lidarcldtmp*100._wp
+    endif
   end subroutine lidar_column
 
   ! ######################################################################################
@@ -1061,6 +1133,130 @@ contains
     
     RETURN
   END SUBROUTINE COSP_CLDFRAC
+  
+  ! ####################################################################################
+  ! SUBROUTINE cosp_cldfrac_nophase
+  ! Conventions: Ncat must be equal to 4
+  ! ####################################################################################
+  SUBROUTINE COSP_CLDFRAC_NOPHASE(Npoints,Ncolumns,Nlevels,Ncat,x,ATB,pplay,      &
+       S_att,S_cld,S_cld_att,undef,lidarcld,cldlayer)
+    
+    ! Inputs
+    integer,intent(in) :: &
+         Npoints,  & ! Number of gridpoints
+         Ncolumns, & ! Number of subcolumns
+         Nlevels,  & ! Number of vertical levels
+         Ncat        ! Number of cloud layer types
+    real(wp),intent(in) :: &
+         S_att,    & !
+         S_cld,    & !
+         S_cld_att,& ! New threshold for undefine cloud phase detection
+         undef       ! Undefined value
+    real(wp),intent(in),dimension(Npoints,Ncolumns,Nlevels) :: &
+         x,        & ! 
+         ATB         ! 3D attenuated backscatter
+    real(wp),intent(in),dimension(Npoints,Nlevels) :: &
+         pplay       ! Pressure
+    
+    ! Outputs
+    real(wp),intent(out),dimension(Npoints,Nlevels) :: &
+         lidarcld      ! 3D cloud fraction
+    real(wp),intent(out),dimension(Npoints,Ncat) :: &
+         cldlayer      ! Low, middle, high, total cloud fractions
+    
+    ! Local variables
+    integer  :: &
+         ip, k, iz, ic, ncol, nlev, i
+    real(wp) :: &
+         p1
+    real(wp),dimension(Npoints,Nlevels) :: &
+         nsub
+    real(wp),dimension(Npoints,Ncolumns,Ncat) :: &
+         cldlay,nsublay   
+    real(wp),dimension(Npoints,Ncat) :: &
+         nsublayer
+    real(wp),dimension(Npoints,Ncolumns,Nlevels) :: &   
+         cldy, & ! 
+         srok    !
+    
+    ! ####################################################################################
+    ! 1) Initialize    
+    ! ####################################################################################
+    lidarcld           = 0._wp
+    nsub               = 0._wp
+    cldlay             = 0._wp
+    nsublay            = 0._wp
+    
+    ! ####################################################################################
+    ! 2) Cloud detection
+    ! ####################################################################################
+    do k=1,Nlevels
+       ! Cloud detection at subgrid-scale:
+       where ((x(:,:,k) .gt. S_cld) .and. (x(:,:,k) .ne. undef) )
+          cldy(:,:,k)=1._wp
+       elsewhere
+          cldy(:,:,k)=0._wp
+       endwhere
+       
+       ! Number of usefull sub-columns:
+       where ((x(:,:,k) .gt. S_att) .and. (x(:,:,k) .ne. undef) )
+          srok(:,:,k)=1._wp
+       elsewhere
+          srok(:,:,k)=0._wp
+       endwhere
+    enddo    
+
+    ! ####################################################################################
+    ! 3) Grid-box 3D cloud fraction and layered cloud fractions(ISCCP pressure categories)
+    ! ####################################################################################
+    do k=1,Nlevels
+       do ic = 1, Ncolumns
+          do ip = 1, Npoints
+
+             iz=1
+             p1 = pplay(ip,k)
+             if ( p1.gt.0. .and. p1.lt.(440._wp*100._wp)) then ! high clouds
+                iz=3
+             else if(p1.ge.(440._wp*100._wp) .and. p1.lt.(680._wp*100._wp)) then ! mid clouds
+                iz=2
+             endif
+             
+             cldlay(ip,ic,iz) = MAX(cldlay(ip,ic,iz),cldy(ip,ic,k))
+             cldlay(ip,ic,4)  = MAX(cldlay(ip,ic,4),cldy(ip,ic,k))
+             lidarcld(ip,k)   = lidarcld(ip,k) + cldy(ip,ic,k)
+             
+             nsublay(ip,ic,iz) = MAX(nsublay(ip,ic,iz),srok(ip,ic,k))
+             nsublay(ip,ic,4)  = MAX(nsublay(ip,ic,4),srok(ip,ic,k))
+             nsub(ip,k)        = nsub(ip,k) + srok(ip,ic,k)
+             
+          enddo
+       enddo
+    enddo   
+    
+    ! Grid-box 3D cloud fraction
+    where ( nsub(:,:).gt.0.0 )
+       lidarcld(:,:) = lidarcld(:,:)/nsub(:,:)
+    elsewhere
+       lidarcld(:,:) = undef
+    endwhere
+    
+    ! Layered cloud fractions
+    cldlayer  = 0._wp
+    nsublayer = 0._wp
+    do iz = 1, Ncat
+       do ic = 1, Ncolumns
+          cldlayer(:,iz)  = cldlayer(:,iz)  + cldlay(:,ic,iz)
+          nsublayer(:,iz) = nsublayer(:,iz) + nsublay(:,ic,iz)
+       enddo
+    enddo
+    where (nsublayer(:,:) .gt. 0.0)
+       cldlayer(:,:) = cldlayer(:,:)/nsublayer(:,:)
+    elsewhere
+       cldlayer(:,:) = undef
+    endwhere
+
+    RETURN
+  END SUBROUTINE COSP_CLDFRAC_NOPHASE
 
     ! ####################################################################################
     ! SUBROUTINE cosp_opaq
