@@ -7,7 +7,7 @@ module mod_cosp_io
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
        reffICE_binCenters, reffLIQ_binCenters, cloudsat_binCenters, PARASOL_SZA,      &
-       calipso_binCenters, groundlidar_binCenters, atlid_binCenters 
+       calipso_binCenters, grLidar532_binCenters, atlid_binCenters 
   implicit none
 
 contains
@@ -629,78 +629,78 @@ contains
     endif
 
     !GROUND LIDAR simulator output
-    if (associated(cospOUT%groundlidar_cldlayer)) then
+    if (associated(cospOUT%grLidar532_cldlayer)) then
        ! Low-level cloud cover
-       status = nf90_def_var(fileID,"cllgroundlidar",nf90_float, (/dimID(1)/),varID(107))
+       status = nf90_def_var(fileID,"cllgrLidar532",nf90_float, (/dimID(1)/),varID(107))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(107),"long_name","GROUND LIDAR Low Level Cloud Cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(107),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(107),"standard_name", "groundlidar_low_cloud_cover")
+       status = nf90_put_att(fileID,varID(107),"standard_name", "grLidar532_low_cloud_cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
        ! Mid-level cloud cover
-       status = nf90_def_var(fileID,"clmgroundlidar",nf90_float, (/dimID(1)/),varID(108))
+       status = nf90_def_var(fileID,"clmgrLidar532",nf90_float, (/dimID(1)/),varID(108))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(108),"long_name","GROUND LIDAR Mid Level Cloud Cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(108),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(108),"standard_name", "groundlidar_mid_cloud_cover")
+       status = nf90_put_att(fileID,varID(108),"standard_name", "grLidar532_mid_cloud_cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
        ! High-level cloud cover
-       status = nf90_def_var(fileID,"clhgroundlidar",nf90_float, (/dimID(1)/),varID(109))
+       status = nf90_def_var(fileID,"clhgrLidar532",nf90_float, (/dimID(1)/),varID(109))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(109),"long_name","GROUND LIDAR High Level Cloud Cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(109),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(109),"standard_name", "groundlidar_high_cloud_cover")
+       status = nf90_put_att(fileID,varID(109),"standard_name", "grLidar532_high_cloud_cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
        ! Total cloud cover
-       status = nf90_def_var(fileID,"cltgroundlidar",nf90_float, (/dimID(1)/),varID(110))
+       status = nf90_def_var(fileID,"cltgrLidar532",nf90_float, (/dimID(1)/),varID(110))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(110),"long_name","GROUND LIDAR Total Cloud Cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(110),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(110),"standard_name", "groundlidar_total_cloud_cover")
+       status = nf90_put_att(fileID,varID(110),"standard_name", "grLidar532_total_cloud_cover")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
     endif
     !3D cloud fraction
-    if (associated(cospOUT%groundlidar_lidarcld)) then
-       status = nf90_def_var(fileID,"clgroundlidar",nf90_float, (/dimID(1),dimID(4)/),varID(111))
+    if (associated(cospOUT%grLidar532_lidarcld)) then
+       status = nf90_def_var(fileID,"clgrLidar532",nf90_float, (/dimID(1),dimID(4)/),varID(111))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(111),"long_name","GROUND LIDAR Cloud Fraction")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(111),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
-       status = nf90_put_att(fileID,varID(111),"standard_name", "groundlidar_cloud_area_fraction_in_atmosphere_layer")
+       status = nf90_put_att(fileID,varID(111),"standard_name", "grLidar532_cloud_area_fraction_in_atmosphere_layer")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
     !Molecular backscatter
-    if (associated(cospOUT%groundlidar_beta_mol)) then
+    if (associated(cospOUT%grLidar532_beta_mol)) then
        status = nf90_def_var(fileID,"lidarBetaMol532gr",nf90_float, (/dimID(1),dimID(3)/),varID(112))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(112),"long_name","GROUND LIDAR  Molecular Backscatter Coefficient (532nm)")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(112),"units",        "m-1 sr-1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(112),"standard_name", "groundlidar_volume_attenuated_backwards_scattering_function_in_air_assuming_no_aerosol_or_cloud")
+       status = nf90_put_att(fileID,varID(112),"standard_name", "grLidar532_volume_attenuated_backwards_scattering_function_in_air_assuming_no_aerosol_or_cloud")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
     endif
     !Height-Intensity histogram (SR)
-    if (associated(cospOUT%groundlidar_cfad_sr)) then
+    if (associated(cospOUT%grLidar532_cfad_sr)) then
        status = nf90_def_var(fileID,"cfadLidarsr532gr",nf90_float, (/dimID(1),dimID(12),dimID(4)/),varID(113))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(113),"long_name","GROUND LIDAR Scattering Ratio CFAD")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(113),"units",        "1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
-       status = nf90_put_att(fileID,varID(113),"standard_name", "groundlidar_histogram_of_backscattering_ratio_over_height_above_reference_ellipsoid")
+       status = nf90_put_att(fileID,varID(113),"standard_name", "grLidar532_histogram_of_backscattering_ratio_over_height_above_reference_ellipsoid")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))     
     endif
-    if (associated(cospOUT%groundlidar_beta_tot)) then
+    if (associated(cospOUT%grLidar532_beta_tot)) then
        status = nf90_def_var(fileID,"atb532gr",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(114))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(114),"long_name","GROUND LIDAR Attenuated Total Backscatter (532nm)")
@@ -711,7 +711,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
-    if (associated(cospOUT%groundlidar_srbval) .or. associated(cospOUT%groundlidar_cfad_sr)) then 
+    if (associated(cospOUT%grLidar532_srbval) .or. associated(cospOUT%grLidar532_cfad_sr)) then 
        status = nf90_def_var(fileID,"SR_BINS_GR",nf90_float, (/dimID(12)/),varID(115))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(115),"long_name","GROUND LIDAR Backscattering Ratio (SR) Bin Centers")
@@ -1434,39 +1434,39 @@ contains
     endif
 
     ! GROUND LIDAR simulator output
-    if (associated(cospOUT%groundlidar_cldlayer)) then
-       status = nf90_put_var(fileID,varID(107),cospOUT%groundlidar_cldlayer(:,1))
+    if (associated(cospOUT%grLidar532_cldlayer)) then
+       status = nf90_put_var(fileID,varID(107),cospOUT%grLidar532_cldlayer(:,1))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(108),cospOUT%groundlidar_cldlayer(:,2))
+       status = nf90_put_var(fileID,varID(108),cospOUT%grLidar532_cldlayer(:,2))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(109),cospOUT%groundlidar_cldlayer(:,3))
+       status = nf90_put_var(fileID,varID(109),cospOUT%grLidar532_cldlayer(:,3))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(110),cospOUT%groundlidar_cldlayer(:,4))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    endif
-    if (associated(cospOUT%groundlidar_lidarcld)) then
-       status = nf90_put_var(fileID,varID(111),cospOUT%groundlidar_lidarcld)
+       status = nf90_put_var(fileID,varID(110),cospOUT%grLidar532_cldlayer(:,4))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    if (associated(cospOUT%groundlidar_beta_mol)) then
-       status = nf90_put_var(fileID,varID(112),cospOUT%groundlidar_beta_mol)
+    if (associated(cospOUT%grLidar532_lidarcld)) then
+       status = nf90_put_var(fileID,varID(111),cospOUT%grLidar532_lidarcld)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    if (associated(cospOUT%groundlidar_cfad_sr)) then
-       status = nf90_put_var(fileID,varID(113),cospOUT%groundlidar_cfad_sr)
+    if (associated(cospOUT%grLidar532_beta_mol)) then
+       status = nf90_put_var(fileID,varID(112),cospOUT%grLidar532_beta_mol)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    if (associated(cospOUT%groundlidar_beta_tot)) then
-       status = nf90_put_var(fileID,varID(114),cospOUT%groundlidar_beta_tot)
+    if (associated(cospOUT%grLidar532_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(113),cospOUT%grLidar532_cfad_sr)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%grLidar532_beta_tot)) then
+       status = nf90_put_var(fileID,varID(114),cospOUT%grLidar532_beta_tot)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
-    if (associated(cospOUT%groundlidar_srbval)) then
-       status = nf90_put_var(fileID,varID(116),reshape([cospOUT%groundlidar_srbval(1:SR_BINS),cospOUT%groundlidar_srbval(2:SR_BINS+1)],(/2,SR_BINS/)))
+    if (associated(cospOUT%grLidar532_srbval)) then
+       status = nf90_put_var(fileID,varID(116),reshape([cospOUT%grLidar532_srbval(1:SR_BINS),cospOUT%grLidar532_srbval(2:SR_BINS+1)],(/2,SR_BINS/)))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    if (associated(cospOUT%groundlidar_srbval) .or. associated(cospOUT%groundlidar_cfad_sr)) then
-       status = nf90_put_var(fileID,varID(115),groundlidar_binCenters)
+    if (associated(cospOUT%grLidar532_srbval) .or. associated(cospOUT%grLidar532_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(115),grLidar532_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
