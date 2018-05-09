@@ -338,14 +338,14 @@ MODULE MOD_COSP_CONFIG
 !       S_att       = 0.01,    & !
 !       S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
     real(wp),parameter,dimension(SR_BINS+1) :: &
-         groundlidar_histBsct = (/-1.,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0,  &
+         grLidar532_histBsct = (/-1.,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0,  &
                                  60.0,80.0,999./)         ! Backscatter histogram bins
     real(wp),parameter,dimension(2,SR_BINS) :: &
-         groundlidar_binEdges = reshape(source=(/groundlidar_histBsct(1),((groundlidar_histBsct(k),  &
-                                    l=1,2),k=2,SR_BINS),groundlidar_histBsct(SR_BINS+1)/),   &
+         grLidar532_binEdges = reshape(source=(/grLidar532_histBsct(1),((grLidar532_histBsct(k),  &
+                                    l=1,2),k=2,SR_BINS),grLidar532_histBsct(SR_BINS+1)/),   &
                                     shape = (/2,SR_BINS/))     
     real(wp),parameter,dimension(SR_BINS) :: &
-         groundlidar_binCenters = (groundlidar_binEdges(1,:)+groundlidar_binEdges(2,:))/2._wp  
+         grLidar532_binCenters = (grLidar532_binEdges(1,:)+grLidar532_binEdges(2,:))/2._wp  
 
 !    integer,parameter  ::     &
 !       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot)

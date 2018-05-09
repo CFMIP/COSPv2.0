@@ -27,67 +27,36 @@
 ! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !
 ! History
-! May 2015 - D. Swales - Original version
-! Apr 2018 - R. Guzman - Added GROUND LIDAR (GLID) and ATLID types
+! Apr 2018 - R. Guzman - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MODULE MOD_COSP_LIDAR_INTERFACE
+MODULE MOD_COSP_GRLIDAR532_INTERFACE
   USE COSP_KINDS,              ONLY: wp
   IMPLICIT NONE
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE groundlidar_in
+  ! TYPE grLidar532_in
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-  type groundlidar_IN
+  type grLidar532_IN
      integer,pointer ::       &
           Npoints,      & ! Number of gridpoints.
           Ncolumns,     & ! Number of columns.
           Nlevels         ! Number of levels.
-
      real(wp),dimension(:,:),pointer :: &
-          beta_mol_gr,  &
-          tau_mol_gr 
+          beta_mol,  &
+          tau_mol 
      real(wp),dimension(:,:,:),pointer :: &
-          betatot_gr,   & 
-          tautot_gr  
-     real(wp),dimension(:,:,:,:),pointer :: &
-          taupart_gr
-  end type groundlidar_IN
-
+          betatot,   & 
+          tautot  
+  end type grLidar532_IN
+contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE atlid_in
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-  type atlid_IN
-     integer,pointer ::       &
-          Npoints,      & ! Number of gridpoints.
-          Ncolumns,     & ! Number of columns.
-          Nlevels         ! Number of levels.
-
-     real(wp),dimension(:,:),pointer :: &
-          beta_mol_atlid,     & ! Molecular backscatter coefficient
-          tau_mol_atlid         ! Molecular optical depth
-     real(wp),dimension(:,:,:),pointer :: &
-          betatot_atlid,      & ! 
-          tautot_atlid          ! Optical thickess integrated from top
-     real(wp),dimension(:,:,:,:),pointer :: &
-          taupart_atlid
-  end type atlid_IN
-
-CONTAINS
+  ! SUBROUTINE cosp_grLidar532_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_groundlidar_init
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_groundlidar_init() 
+  subroutine cosp_grLidar532_init() 
         
-  end subroutine cosp_groundlidar_init
-
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_atlid_init
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_atlid_init() 
-
-  end subroutine cosp_atlid_init
-
+  end subroutine cosp_grLidar532_init
+  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !	END MODULE
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-END MODULE MOD_COSP_LIDAR_INTERFACE
+END MODULE MOD_COSP_GRLIDAR532_INTERFACE
