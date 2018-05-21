@@ -1328,6 +1328,7 @@ contains
     cldtype(:,:)          = 0._wp
     cldtypetemp(:,:)      = 0._wp
     cldtypemeanz(:,:)     = 0._wp
+    cldtypemeanzse(:,:)   = 0._wp
     cldthinemis(:)        = 0._wp
     count_emis(:)         = 0._wp
     lidarcldtype(:,:,:)   = 0._wp
