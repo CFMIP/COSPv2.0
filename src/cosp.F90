@@ -187,6 +187,8 @@ MODULE MOD_COSP
           cloudsat_precip_cover => null(),   & ! Radar total cloud amount by CloudSat precip flag (Npoints,dBZe_bins)
           cloudsat_precip_rate => null()       ! Model precip rate in by CloudSat precip flag (Npoints,NHYDRO)          
      real(wp),dimension(:),pointer :: &
+          cloudsat_tcc => null(),             &
+          cloudsat_tcc2 => null(),            &          
           radar_lidar_tcc => null(),         & ! Radar&lidar total cloud amount, grid-box scale (Npoints)
           cloudsat_pia => null()               ! Radar path integrated attenuation (Npoints)
           
