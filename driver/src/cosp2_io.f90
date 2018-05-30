@@ -996,6 +996,27 @@ contains
        status = nf90_put_att(fileID,varID(57),"standard_name", "cloud_area_fraction")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
+    if (associated(cospOUT%cloudsat_tcc)) then
+       status = nf90_def_var(fileID,"cloudsat_tcc",nf90_float, (/dimID(1)/),varID(97))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(97),"long_name","CloudSat Total Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(97),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+       status = nf90_put_att(fileID,varID(97),"standard_name", "cloud_area_fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+    endif
+    if (associated(cospOUT%cloudsat_tcc2)) then
+       status = nf90_def_var(fileID,"cloudsat_tcc2",nf90_float, (/dimID(1)/),varID(98))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(98),"long_name","CloudSat Total Cloud Fraction (no 1km)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(98),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+       status = nf90_put_att(fileID,varID(98),"standard_name", "cloud_area_fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+    endif    
+    
     
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
@@ -1189,7 +1210,14 @@ contains
        status = nf90_put_var(fileID,varID(96),cospOUT%cloudsat_precip_rate(:,5))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    
+    if (associated(cospOUT%cloudsat_tcc)) then
+       status = nf90_put_var(fileID,varID(97),cospOUT%cloudsat_tcc)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%cloudsat_tcc2)) then
+       status = nf90_put_var(fileID,varID(98),cospOUT%cloudsat_tcc2)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif    
     if (associated(cospOUT%isccp_totalcldarea)) then
        status = nf90_put_var(fileID,varID(24),cospOUT%isccp_totalcldarea)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))

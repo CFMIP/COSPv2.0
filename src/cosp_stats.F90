@@ -170,8 +170,8 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   ! (c) 2008, Lawrence Livermore National Security Limited Liability Corporation.
   ! All rights reserved.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_LIDAR_ONLY_CLOUD(Npoints,Ncolumns,Nlevels,beta_tot, &
-                                   beta_mol,Ze_tot,lidar_only_freq_cloud,tcc)
+  SUBROUTINE COSP_LIDAR_ONLY_CLOUD(Npoints, Ncolumns, Nlevels, beta_tot, beta_mol,       &
+     Ze_tot, lidar_only_freq_cloud, tcc, radar_tcc, radar_tcc2)
     ! Inputs
     integer,intent(in) :: &
          Npoints,       & ! Number of horizontal gridpoints
@@ -186,21 +186,34 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     real(wp),dimension(Npoints,Nlevels),intent(out) :: &
          lidar_only_freq_cloud
     real(wp),dimension(Npoints),intent(out) ::&
-         tcc
+         tcc,       & !
+         radar_tcc, & !
+         radar_tcc2   !
     
     ! local variables
     real(wp) :: sc_ratio
     real(wp),parameter :: &
          s_cld=5.0, &
          s_att=0.01
-    integer :: flag_sat,flag_cld,pr,i,j
+    integer :: flag_sat,flag_cld,pr,i,j,flag_radarcld,flag_radarcld_no1km,j_1km
     
     lidar_only_freq_cloud = 0._wp
     tcc = 0._wp
+    radar_tcc = 0._wp
+    radar_tcc2 = 0._wp
     do pr=1,Npoints
        do i=1,Ncolumns
           flag_sat = 0
           flag_cld = 0
+          flag_radarcld = 0 !+JEK
+          flag_radarcld_no1km=0 !+JEK
+          ! look for j_1km from bottom to top
+          j = 1
+          do while (Ze_tot(pr,i,j) .eq. R_GROUND)
+             j = j+1
+          enddo
+          j_1km = j+1  !this is the vertical index of 1km above surface  
+          
           do j=1,Nlevels
              sc_ratio = beta_tot(pr,i,j)/beta_mol(pr,j)
              if ((sc_ratio .le. s_att) .and. (flag_sat .eq. 0)) flag_sat = j
@@ -211,18 +224,26 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
                 endif
              else  !radar sense cloud (z%Ze_tot(pr,i,j) .ge. -30.)
                 flag_cld=1
+                flag_radarcld=1
+                if (j .gt. j_1km) flag_radarcld_no1km=1              
              endif
           enddo !levels
           if (flag_cld .eq. 1) tcc(pr)=tcc(pr)+1._wp
+          if (flag_radarcld .eq. 1) radar_tcc(pr)=radar_tcc(pr)+1.
+          if (flag_radarcld_no1km .eq. 1) radar_tcc2(pr)=radar_tcc2(pr)+1.        
        enddo !columns
     enddo !points
     lidar_only_freq_cloud=lidar_only_freq_cloud/Ncolumns
     tcc=tcc/Ncolumns
+    radar_tcc=radar_tcc/Ncolumns
+    radar_tcc2=radar_tcc2/Ncolumns
     
     ! Unit conversion
     where(lidar_only_freq_cloud /= R_UNDEF) &
             lidar_only_freq_cloud = lidar_only_freq_cloud*100._wp
     where(tcc /= R_UNDEF) tcc = tcc*100._wp
+    where(radar_tcc /= R_UNDEF) radar_tcc = radar_tcc*100._wp
+    where(radar_tcc2 /= R_UNDEF) radar_tcc2 = radar_tcc2*100._wp
     
   END SUBROUTINE COSP_LIDAR_ONLY_CLOUD
   
