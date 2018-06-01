@@ -43,7 +43,8 @@ MODULE MOD_COSP
                                          numISCCPTauBins,numISCCPPresBins,numMISRTauBins,&
                                          ntau,modis_histTau,tau_binBounds,               &
                                          modis_histTauEdges,tau_binEdges,                &
-                                         modis_histTauCenters,tau_binCenters
+                                         modis_histTauCenters,tau_binCenters,            &
+                                         cloudsat_preclvl
   USE MOD_COSP_MODIS_INTERFACE,    ONLY: cosp_modis_init,     modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,    ONLY: cosp_rttov_init,     rttov_IN
   USE MOD_COSP_MISR_INTERFACE,     ONLY: cosp_misr_init,      misr_IN
@@ -138,14 +139,13 @@ MODULE MOD_COSP
           tautot_liq,          & ! Optical thickess integrated from top (liquid)
           z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
-          g_vol_cloudsat,      & ! Attenuation coefficient gases (dB/km)
-          fracPrecipIce,       & ! Fraction of precipitation which is frozen (1).
-          mr_hydro_preclvl       ! Subcolumn precipitation mixing-ratios at 480-960m level.
+          g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
      real(wp),allocatable,dimension(:,:) :: &
           beta_mol,            & ! Molecular backscatter coefficient
           tau_mol,             & ! Molecular optical depth
           tautot_S_liq,        & ! Liquid water optical thickness, from TOA to SFC
-          tautot_S_ice           ! Ice water optical thickness, from TOA to SFC
+          tautot_S_ice,        & ! Ice water optical thickness, from TOA to SFC
+          fracPrecipIce          ! Fraction of precipitation which is frozen (1).
      type(radar_cfg) :: &
           rcfg_cloudsat         ! Radar comfiguration information (CLOUDSAT)
   end type cosp_optical_inputs
@@ -184,8 +184,7 @@ MODULE MOD_COSP
           cloudsat_cfad_ze => null()           ! Ze CFAD(Npoints,dBZe_bins,Nlevels)
      real(wp), dimension(:,:),pointer :: &
           lidar_only_freq_cloud => null(),   & ! (Npoints,Nlevels)
-          cloudsat_precip_cover => null(),   & ! Radar total cloud amount by CloudSat precip flag (Npoints,dBZe_bins)
-          cloudsat_precip_rate => null()       ! Model precip rate in by CloudSat precip flag (Npoints,NHYDRO)          
+          cloudsat_precip_cover => null()      ! Radar total cloud amount by CloudSat precip flag (Npoints,dBZe_bins)
      real(wp),dimension(:),pointer :: &
           cloudsat_tcc => null(),             &
           cloudsat_tcc2 => null(),            &          
@@ -316,7 +315,7 @@ CONTAINS
     real(wp),dimension(:),allocatable,target :: &
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
     real(wp),dimension(:,:,:),allocatable :: &
-       betamol_in,betamolFlip,pnormFlip,ze_totFlip,fracPrecipIceFlip,ze_nonFlip
+       betamol_in,betamolFlip,pnormFlip,ze_totFlip,ze_nonFlip
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
@@ -1258,17 +1257,10 @@ CONTAINS
     endif
 
     ! Cloudsat rain/snow occurence products.
-    if (associated(cospOUT%cloudsat_precip_rate) .or. associated(cospOUT%cloudsat_pia) .or. &
-         associated(cospOUT%cloudsat_precip_cover)) then
-!    if (lcloudsat_subcolumn .and. lcloudsat_column) then
+    if (associated(cospOUT%cloudsat_pia) .or. associated(cospOUT%cloudsat_precip_cover)) then
        if (use_vgrid) then
+          
           ! Regrid in vertical
-          allocate(fracPrecipIceFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
-          call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,            &
-               cloudsatIN%Nlevels, cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),        &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                       &
-               cospIN%fracPrecipIce(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                   &
-               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1), fracPrecipIceFlip)
           allocate(Ze_nonFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,            &
                cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),         &
@@ -1283,11 +1275,9 @@ CONTAINS
                   cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
                   vgrid_zu(Nlvgrid:1:-1),Ze_totFlip,log_units=.true.)   
           endif
-          
-          call cloudsat_precipOccurence(cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,   &
-               N_HYDRO, Ze_totFlip, Ze_nonFlip, fracPrecipIceFlip,    &
-               cospIN%mr_hydro_preclvl, cospOUT%cloudsat_precip_cover, cospOUT%cloudsat_pia,&
-               cospOUT%cloudsat_precip_rate)
+          call cloudsat_precipOccurence(cloudsatIN%Npoints, cloudsatIN%Ncolumns, N_HYDRO, &
+               Ze_totFlip(:,:,cloudsat_preclvl), Ze_nonFlip(:,:,cloudsat_preclvl),        &
+               cospIN%fracPrecipIce, cospOUT%cloudsat_precip_cover, cospOUT%cloudsat_pia)
        endif
     endif
     

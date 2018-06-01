@@ -176,8 +176,7 @@ program cosp2_test
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
              Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
-             Lptradarflag9,Lradarpia,Lptradarcvrain,Lptradarcvsnow,Lptradarlsrain,       &
-             Lptradarlssnow,Lptradarlsgrpl
+             Lptradarflag9,Lradarpia
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -193,8 +192,7 @@ program cosp2_test
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov,    &
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
-                       Lptradarflag8,Lptradarflag9,Lradarpia,Lptradarcvrain,             &
-                       Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,Lptradarlsgrpl
+                       Lptradarflag8,Lptradarflag9,Lradarpia
 
   ! Local variables
   logical :: &
@@ -252,7 +250,7 @@ program cosp2_test
        gamma_1 = (/-1., -1., 17.83725, 8.284701, -1., -1., 17.83725, 8.284701, 11.63230/),&
        gamma_2 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/),&
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
-       gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)       
+       gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -315,8 +313,7 @@ program cosp2_test
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar .or. Lptradarflag0 .or. Lptradarflag1 &
        .or. Lptradarflag2 .or. Lptradarflag3 .or. Lptradarflag4 .or. Lptradarflag5 .or.  &
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
-       Lradarpia .or. Lptradarcvrain .or. Lptradarcvsnow .or. Lptradarlsrain .or.        &
-       Lptradarlssnow .or. Lptradarlsgrpl) Lcloudsat = .true.
+       Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
   if (Ltbrttov) Lrttov = .true.
   
@@ -371,7 +368,6 @@ program cosp2_test
        Lcllcalipsoliq, Lcllcalipsoice, Lcllcalipsoun, LcfadDbze94, Ldbze94, Lparasolrefl,&
        Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
-       Lptradarcvrain,Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,Lptradarlsgrpl,       &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -509,7 +505,7 @@ contains
     real(wp),dimension(:,:), allocatable :: &
          ls_p_rate, cv_p_rate, frac_ls, frac_cv, prec_ls, prec_cv,g_vol
     real(wp),dimension(:,:,:),  allocatable :: &
-         frac_prec, MODIS_cloudWater, MODIS_cloudIce,       &
+         frac_prec, MODIS_cloudWater, MODIS_cloudIce, fracPrecipIce, fracPrecipIce_statGrid,&
          MODIS_watersize,MODIS_iceSize, MODIS_opticalThicknessLiq,MODIS_opticalThicknessIce
     real(wp),dimension(:,:,:,:),allocatable :: &
          mr_hydro, Reff, Np
@@ -769,6 +765,8 @@ contains
        end do
        
        ! Loop over all subcolumns
+       allocate(fracPrecipIce(nPoints,nColumns,nLevels))
+       fracPrecipIce(:,:,:) = 0._wp
        do k=1,nColumns
           call quickbeam_optics(sd, rcfg_cloudsat, nPoints, nLevels, R_UNDEF,  &
                mr_hydro(:,k,:,1:nHydro)*1000._wp, Reff(:,k,:,1:nHydro)*1.e6_wp,&
@@ -776,35 +774,29 @@ contains
                cospstateIN%qv, cospIN%z_vol_cloudsat(1:nPoints,k,:),           &
                cospIN%kr_vol_cloudsat(1:nPoints,k,:))
           
-          ! What fraction of the precipitation is frozen?
+          ! At each model level, what fraction of the precipitation is frozen?
           where(mr_hydro(:,k,:,I_LSRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_LSSNOW) .gt. 0 .or. &
                 mr_hydro(:,k,:,I_CVRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_CVSNOW) .gt. 0 .or. &
                 mr_hydro(:,k,:,I_LSGRPL) .gt. 0)
-             cospIN%fracPrecipIce(:,k,:) = (mr_hydro(:,k,:,I_LSSNOW) + mr_hydro(:,k,:,I_CVSNOW) + &
-                                            mr_hydro(:,k,:,I_LSGRPL)) / &
-                                           (mr_hydro(:,k,:,I_LSSNOW) + mr_hydro(:,k,:,I_CVSNOW) + &
-                                            mr_hydro(:,k,:,I_LSGRPL) + mr_hydro(:,k,:,I_LSRAIN) + &
-                                            mr_hydro(:,k,:,I_CVRAIN))
+             fracPrecipIce(:,k,:) = (mr_hydro(:,k,:,I_LSSNOW) + mr_hydro(:,k,:,I_CVSNOW) + &
+                  mr_hydro(:,k,:,I_LSGRPL)) / &
+                  (mr_hydro(:,k,:,I_LSSNOW) + mr_hydro(:,k,:,I_CVSNOW) + mr_hydro(:,k,:,I_LSGRPL) + &
+                  mr_hydro(:,k,:,I_LSRAIN)  + mr_hydro(:,k,:,I_CVRAIN))
           elsewhere
-             cospIN%fracPrecipIce(:,k,:) = 0._wp
+             fracPrecipIce(:,k,:) = 0._wp
           endwhere
        enddo
+         
+       ! Regrid frozen fraction to Cloudsat/Calipso statistical grid
+       allocate(fracPrecipIce_statGrid(nPoints,nColumns,Nlvgrid_local))
+       fracPrecipIce_statGrid(:,:,:) = 0._wp
+       call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
+            cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
+            vgrid_zl(Nlvgrid_local:1:-1),  vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid)
 
-       ! For each precipitation hydrometeor type, pull out precipitation mixing ratios at
-       ! critical level (480-960m). This index is defined in cosp_config.F90.
-       do k=1,nhydro
-          if (k .eq. I_LSRAIN .or. k .eq. I_LSSNOW .or. k .eq. I_LSGRPL .or.              &
-               k .eq. I_CVRAIN .or. k .eq. I_CVSNOW) then
-             call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels,                   &
-                  cospstateIN%hgt_matrix(:,Nlevels:1:-1),                                 &
-                  cospstateIN%hgt_matrix_half(:,Nlevels:1:-1),                            &
-                  mr_hydro(:,:,Nlevels:1:-1,k), Nlvgrid_local, vgrid_zl(Nlvgrid_local:1:-1),         &
-                  vgrid_zu(Nlvgrid_local:1:-1), tempOut)
-             cospIN%mr_hydro_preclvl(:,:,k) = tempOut(:,:,cloudsat_preclvl)
-          else
-             cospIN%mr_hydro_preclvl(:,:,k) = 0._wp             
-          endif
-       end do
+       ! For near-surface diagnostics, we only need the frozen fraction at one layer.
+       cospIN%fracPrecipIce(:,:) = fracPrecipIce_statGrid(:,:,cloudsat_preclvl)
+       
     endif
    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -888,8 +880,7 @@ contains
        allocate(y%z_vol_cloudsat(npoints,  ncolumns,nlevels),&
                 y%kr_vol_cloudsat(npoints, ncolumns,nlevels),&
                 y%g_vol_cloudsat(npoints,  ncolumns,nlevels),&
-                y%fracPrecipIce(npoints,   ncolumns,nlevels),&
-                y%mr_hydro_preclvl(npoints,ncolumns,N_HYDRO))
+                y%fracPrecipIce(npoints,   ncolumns))
     endif
     if (Lmodis) then
        allocate(y%fracLiq(npoints,        ncolumns,nlevels),&
@@ -948,9 +939,8 @@ contains
                                     Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
-                                    Lptradarflag9,Lradarpia,Lptradarcvrain,              &
-                                    Lptradarcvsnow,Lptradarlsrain,Lptradarlssnow,        &
-                                    Lptradarlsgrpl,Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
+                                    Lptradarflag9,Lradarpia,Npoints,Ncolumns,Nlevels,    &
+                                    Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1024,12 +1014,7 @@ contains
          Lptradarflag7,    & ! CLOUDSAT 
          Lptradarflag8,    & ! CLOUDSAT 
          Lptradarflag9,    & ! CLOUDSAT 
-         Lradarpia,        & ! CLOUDSAT 
-         Lptradarcvrain,   & ! CLOUDSAT 
-         Lptradarcvsnow,   & ! CLOUDSAT 
-         Lptradarlsrain,   & ! CLOUDSAT 
-         Lptradarlssnow,   & ! CLOUDSAT 
-         Lptradarlsgrpl      ! CLOUDSAT 
+         Lradarpia           ! CLOUDSAT 
          
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
@@ -1140,10 +1125,6 @@ contains
         Lptradarflag8 .or. Lptradarflag9) then
        allocate(x%cloudsat_precip_cover(Npoints,DBZE_BINS))
     endif
-    if (Lptradarcvrain .or. Lptradarcvsnow .or. Lptradarlsrain .or. Lptradarlssnow .or. &
-         Lptradarlsgrpl) then
-       allocate(x%cloudsat_precip_rate(Npoints,N_HYDRO))
-    endif
     if (Lradarpia) allocate(x%cloudsat_pia(Npoints))
 
     ! Combined CALIPSO/CLOUDSAT fields
@@ -1181,7 +1162,6 @@ contains
     if (allocated(y%ss_alb))          deallocate(y%ss_alb)
     if (allocated(y%fracLiq))         deallocate(y%fracLiq)
     if (allocated(y%fracPrecipIce))   deallocate(y%fracPrecipIce)
-    if (allocated(y%mr_hydro_preclvl)) deallocate(y%mr_hydro_preclvl)
     
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1289,13 +1269,17 @@ contains
         deallocate(y%cloudsat_precip_cover)
         nullify(y%cloudsat_precip_cover)
      endif
-     if (associated(y%cloudsat_precip_rate))      then
-        deallocate(y%cloudsat_precip_rate)
-        nullify(y%cloudsat_precip_rate)
-     endif
      if (associated(y%cloudsat_pia))              then
         deallocate(y%cloudsat_pia)
         nullify(y%cloudsat_pia)
+     endif
+     if (associated(y%cloudsat_tcc))           then
+        deallocate(y%cloudsat_tcc) 
+        nullify(y%cloudsat_tcc)  
+     endif
+     if (associated(y%cloudsat_tcc2))           then
+        deallocate(y%cloudsat_tcc2) 
+        nullify(y%cloudsat_tcc2)  
      endif
      if (associated(y%radar_lidar_tcc))           then
         deallocate(y%radar_lidar_tcc) 

@@ -108,10 +108,5 @@
   Lptradarflag7=.true.,
   Lptradarflag8=.true.,
   Lptradarflag9=.true.,
-  Lradarpia=.true.,
-  Lptradarcvrain=.true.,
-  Lptradarcvsnow=.true.,
-  Lptradarlsrain=.true.,
-  Lptradarlssnow=.true.,
-  Lptradarlsgrpl=.true.
+  Lradarpia=.true.
 /
