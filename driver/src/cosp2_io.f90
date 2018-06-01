@@ -600,38 +600,6 @@ contains
        status = nf90_put_att(fileID,varID(91),"units",        "1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
     endif
-    if (associated(cospOUT%cloudsat_precip_rate)) then
-       status = nf90_def_var(fileID,"ptcloudsatcvrain",nf90_float, (/dimID(1)/),varID(92))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(92),"long_name","Cloudsat precipitation rate for CVRAIN")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(92),"units",        "1")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"ptcloudsatcvsnow",nf90_float, (/dimID(1)/),varID(93))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(93),"long_name","Cloudsat precipitation rate for CVSNOW")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(93),"units",        "1")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"ptcloudsatlsrain",nf90_float, (/dimID(1)/),varID(94))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(94),"long_name","Cloudsat precipitation rate for LSRAIN")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(94),"units",        "1")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"ptcloudsatlssnow",nf90_float, (/dimID(1)/),varID(95))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(95),"long_name","Cloudsat precipitation rate for LSSNOW")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(95),"units",        "1")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
-       status = nf90_def_var(fileID,"ptcloudsatlsgrpl",nf90_float, (/dimID(1)/),varID(96))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(96),"long_name","Cloudsat precipitation rate for LSGRPL")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(96),"units",        "1")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-    endif
 
     ! ISCCP simulator outputs
     if (associated(cospOUT%isccp_totalcldarea)) then
@@ -1177,19 +1145,7 @@ contains
        status = nf90_put_var(fileID,varID(91),cospOUT%cloudsat_pia)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    if (associated(cospOUT%cloudsat_precip_rate)) then
-       status = nf90_put_var(fileID,varID(92),cospOUT%cloudsat_precip_rate(:,1))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(93),cospOUT%cloudsat_precip_rate(:,2))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(94),cospOUT%cloudsat_precip_rate(:,3))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(95),cospOUT%cloudsat_precip_rate(:,4))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(96),cospOUT%cloudsat_precip_rate(:,5))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    endif
-    
+
     if (associated(cospOUT%isccp_totalcldarea)) then
        status = nf90_put_var(fileID,varID(24),cospOUT%isccp_totalcldarea)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
