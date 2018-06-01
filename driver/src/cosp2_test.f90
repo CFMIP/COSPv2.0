@@ -170,7 +170,8 @@ program cosp2_test
              Lcltcalipsoliq,Lclhcalipsoice,Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice, &
              Lclhcalipsoun,Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,          &
              Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,          &
-             Lmeantbisccp,Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,   &
+             Lmeantbisccp,Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,            &
+             Lcloudsat_tcc, Lcloudsat_tcc2, Lfracout,                                    &
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
@@ -185,7 +186,8 @@ program cosp2_test
                        Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice,Lclhcalipsoun,       &
                        Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,Lboxptopisccp,&
                        Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,Lmeantbisccp, &
-                       Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,Lfracout,      &
+                       Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,               &
+                       Lcloudsat_tcc, Lcloudsat_tcc2, Lfracout,                          &
                        LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,         &
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
@@ -309,7 +311,7 @@ program cosp2_test
        Lclhcalipsoliq .or. Lclhcalipsoice .or. Lclhcalipsoun .or. Lclmcalipsoliq .or.    &
        Lclmcalipsoice .or. Lclmcalipsoun .or. Lcllcalipsoliq .or. Lcllcalipsoice .or.    &
        Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
-       Lcltlidarradar) lcalipso = .true.
+       Lcltlidarradar .or. Lcloudsat_tcc .or. Lcloudsat_tcc2) lcalipso = .true.
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar .or. Lptradarflag0 .or. Lptradarflag1 &
        .or. Lptradarflag2 .or. Lptradarflag3 .or. Lptradarflag4 .or. Lptradarflag5 .or.  &
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
@@ -361,7 +363,8 @@ program cosp2_test
        Ltauwmodis, Ltauimodis, Ltautlogmodis, Ltauwlogmodis, Ltauilogmodis,              &
        Lreffclwmodis, Lreffclimodis, Lpctmodis, Llwpmodis, Liwpmodis, Lclmodis, Latb532, &
        LlidarBetaMol532, LcfadLidarsr532, Lclcalipso2, Lclcalipso, Lclhcalipso,          &
-       Lcllcalipso, Lclmcalipso, Lcltcalipso, Lcltlidarradar, Lclcalipsoliq,             &
+       Lcllcalipso, Lclmcalipso, Lcltcalipso, Lcltlidarradar, Lcloudsat_tcc,             &
+       Lcloudsat_tcc2, Lclcalipsoliq,                                                    &
        Lclcalipsoice, Lclcalipsoun, Lclcalipsotmp, Lclcalipsotmpliq, Lclcalipsotmpice,   &
        Lclcalipsotmpun, Lcltcalipsoliq, Lcltcalipsoice, Lcltcalipsoun, Lclhcalipsoliq,   &
        Lclhcalipsoice, Lclhcalipsoun, Lclmcalipsoliq, Lclmcalipsoice, Lclmcalipsoun,     &
@@ -928,7 +931,8 @@ contains
                                     Liwpmodis,Lclmodis,Latb532,LlidarBetaMol532,         &
                                     LcfadLidarsr532,Lclcalipso2,                         &
                                     Lclcalipso,Lclhcalipso,Lcllcalipso,Lclmcalipso,      &
-                                    Lcltcalipso,Lcltlidarradar,Lclcalipsoliq,            &
+                                    Lcltcalipso,Lcltlidarradar,Lcloudsat_tcc,            &
+                                    Lcloudsat_tcc2,Lclcalipsoliq,                        &
                                     Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,            &
                                     Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,   &
                                     Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun,         &
@@ -981,6 +985,8 @@ contains
          Lclmcalipso,      & ! CALIPSO mid-level cloud fraction
          Lcltcalipso,      & ! CALIPSO total cloud fraction
          Lcltlidarradar,   & ! CALIPSO-CLOUDSAT total cloud fraction
+         Lcloudsat_tcc,    & !
+         Lcloudsat_tcc2,   & !
          Lclcalipsoliq,    & ! CALIPSO liquid cloud area fraction
          Lclcalipsoice,    & ! CALIPSO ice cloud area fraction 
          Lclcalipsoun,     & ! CALIPSO undetected cloud area fraction
@@ -1130,7 +1136,9 @@ contains
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
     if (Lcltlidarradar) allocate(x%radar_lidar_tcc(Npoints))
-        
+    if (Lcloudsat_tcc) allocate(x%cloudsat_tcc(Npoints))
+    if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
+            
     ! RTTOV
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
  
@@ -1284,6 +1292,14 @@ contains
      if (associated(y%radar_lidar_tcc))           then
         deallocate(y%radar_lidar_tcc) 
         nullify(y%radar_lidar_tcc)  
+     endif
+     if (associated(y%cloudsat_tcc))           then
+        deallocate(y%cloudsat_tcc) 
+        nullify(y%cloudsat_tcc)  
+     endif
+     if (associated(y%cloudsat_tcc2))           then
+        deallocate(y%cloudsat_tcc2) 
+        nullify(y%cloudsat_tcc2)  
      endif
      if (associated(y%lidar_only_freq_cloud))     then
         deallocate(y%lidar_only_freq_cloud)

@@ -73,6 +73,8 @@
   !- Use lidar and radar
   Lclcalipso2=.true.,
   Lcltlidarradar=.true.,
+  Lcloudsat_tcc=.true.,
+  Lcloudsat_tcc2=.true.,
   !- These are provided for debugging or special purposes
   Lfracout=.true.,
   LlidarBetaMol532=.true.,  
