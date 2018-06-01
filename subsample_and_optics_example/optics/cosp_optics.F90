@@ -28,6 +28,8 @@
 !
 ! History:
 ! 05/01/15  Dustin Swales - Original version
+! 04/04/18  Rodrigo Guzman- Added CALIOP-like Ground LIDar routines (GLID)
+! 10/04/18  Rodrigo Guzman- Added ATLID-like (EarthCare) lidar routines (ATLID)
 ! 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module cosp_optics
@@ -200,11 +202,11 @@ contains
   ! ######################################################################################
   ! SUBROUTINE lidar_optics
   ! ######################################################################################
-  subroutine lidar_optics(npoints,ncolumns,nlev,npart,ice_type,q_lsliq, q_lsice,     &
-                              q_cvliq, q_cvice,ls_radliq,ls_radice,cv_radliq,cv_radice,  &
-                              pres,presf,temp,beta_mol,betatot,tau_mol,tautot,  &
-                              tautot_S_liq,tautot_S_ice,betatot_ice,betatot_liq,         &
-                              tautot_ice,tautot_liq)
+  subroutine lidar_optics(npoints, ncolumns, nlev, npart, ice_type, lidar_freq, lground, &
+       q_lsliq, q_lsice, q_cvliq, q_cvice, ls_radliq, ls_radice, cv_radliq, cv_radice,   &
+       pres, presf, temp, beta_mol, betatot, tau_mol, tautot, tautot_S_liq, tautot_S_ice,&
+       betatot_ice, betatot_liq, tautot_ice, tautot_liq)
+
     ! ####################################################################################
     ! NOTE: Using "grav" from cosp_constants.f90, instead of grav=9.81, introduces
     ! changes of up to 2% in atb532 adn 0.003% in parasolRefl and lidarBetaMol532. 
@@ -217,7 +219,10 @@ contains
          ncolumns,     & ! Number of subcolumns
          nlev,         & ! Number of levels
          npart,        & ! Number of cloud meteors (stratiform_liq, stratiform_ice, conv_liq, conv_ice). 
-         ice_type        ! Ice particle shape hypothesis (0 for spheres, 1 for non-spherical)
+         ice_type,     & ! Ice particle shape hypothesis (0 for spheres, 1 for non-spherical)
+         lidar_freq      ! Lidar frequency (nm). Use to change between lidar platforms
+    logical,intent(in) :: &
+         lground         ! True for ground-based lidar
     REAL(WP),intent(in),dimension(npoints,nlev) :: &
          temp,         & ! Temperature of layer k
          pres,         & ! Pressure at full levels
@@ -237,37 +242,41 @@ contains
     REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot,        & ! 
          tautot            ! Optical thickess integrated from top
-    REAL(WP),intent(out),dimension(npoints,ncolumns,nlev)       :: &
+    REAL(WP),intent(out),dimension(npoints,nlev) :: &
+         beta_mol,       & ! Molecular backscatter coefficient
+         tau_mol           ! Molecular optical depth
+    ! OUTPUTS (optional)
+    REAL(WP),optional,intent(out),dimension(npoints,ncolumns) :: &
+         tautot_S_liq,   & ! TOA optical depth for liquid
+         tautot_S_ice      ! TOA optical depth for ice
+    REAL(WP),optional,intent(out),dimension(npoints,ncolumns,nlev)       :: &
          betatot_ice,    & ! Backscatter coefficient for ice particles
          betatot_liq,    & ! Backscatter coefficient for liquid particles
          tautot_ice,     & ! Total optical thickness of ice
          tautot_liq        ! Total optical thickness of liq
-    REAL(WP),intent(out),dimension(npoints,nlev) :: &
-         beta_mol,       & ! Molecular backscatter coefficient
-         tau_mol           ! Molecular optical depth
-    REAL(WP),intent(out),dimension(npoints,ncolumns) :: &
-         tautot_S_liq,   & ! TOA optical depth for liquid
-         tautot_S_ice      ! TOA optical depth for ice
     
     ! LOCAL VARIABLES
-    REAL(WP),dimension(npart)                       :: rhopart
-    REAL(WP),dimension(npart,5)                     :: polpart 
-    REAL(WP),dimension(npoints,nlev)                :: rhoair,alpha_mol
-    REAL(WP),dimension(npoints,nlev+1)              :: zheight          
-    REAL(WP),dimension(npoints,nlev,npart)          :: rad_part,kp_part,qpart
-    REAL(WP),dimension(npoints,ncolumns,nlev,npart) :: alpha_part,tau_part
-    INTEGER                                         :: i,k,icol
+    REAL(WP),dimension(npart)              :: rhopart
+    REAL(WP),dimension(npart,5)            :: polpart 
+    REAL(WP),dimension(npoints,nlev)       :: rhoair,alpha_mol
+    REAL(WP),dimension(npoints,nlev+1)     :: zheight          
+    REAL(WP),dimension(npoints,nlev,npart) :: rad_part,kp_part,qpart,alpha_part,tau_part
+    real(wp)                               :: Cmol,rdiffm
+    logical                                :: lparasol,lphaseoptics
+    INTEGER                                :: i,k,icol,zi,zf,zinc,zoffset
     
     ! Local data
     REAL(WP),PARAMETER :: rhoice     = 0.5e+03    ! Density of ice (kg/m3) 
-    REAL(WP),PARAMETER :: Cmol       = 6.2446e-32 ! Wavelength dependent
-    REAL(WP),PARAMETER :: rdiffm     = 0.7_wp     ! Multiple scattering correction parameter
+    REAL(WP),PARAMETER :: Cmol_532nm = 6.2446e-32 ! Wavelength dependent
+    REAL(WP),PARAMETER :: Cmol_355nm = 3.2662e-31! Wavelength dependent
+    REAL(WP),PARAMETER :: rdiffm_532nm = 0.7_wp     ! Multiple scattering correction parameter
+    REAL(WP),PARAMETER :: rdiffm_355nm = 0.6_wp     ! Multiple scattering correction parameter
     REAL(WP),PARAMETER :: Qscat      = 2.0_wp     ! Particle scattering efficiency at 532 nm
     ! Local indicies for large-scale and convective ice and liquid 
-    INTEGER,PARAMETER  :: INDX_LSLIQ = 1
-    INTEGER,PARAMETER  :: INDX_LSICE = 2
-    INTEGER,PARAMETER  :: INDX_CVLIQ = 3
-    INTEGER,PARAMETER  :: INDX_CVICE = 4
+    INTEGER,PARAMETER  :: INDX_LSLIQ  = 1
+    INTEGER,PARAMETER  :: INDX_LSICE  = 2
+    INTEGER,PARAMETER  :: INDX_CVLIQ  = 3
+    INTEGER,PARAMETER  :: INDX_CVICE  = 4
     
     ! Polarized optics parameterization
     ! Polynomial coefficients for spherical liq/ice particles derived from Mie theory.
@@ -283,16 +292,48 @@ contains
          polpartCVICE1 = (/ 1.3615e-8_wp, -2.04206e-6_wp, 7.51799e-5_wp, 0.00078213_wp, 0.0182131_wp/), &
          polpartLSICE1 = (/ 1.3615e-8_wp, -2.04206e-6_wp, 7.51799e-5_wp, 0.00078213_wp, 0.0182131_wp/)
     ! ##############################################################################
+
+    ! Which LIDAR frequency are we using?
+    if (lidar_freq .eq. 355) then
+       Cmol   = Cmol_355nm
+       rdiffm = rdiffm_355nm
+    endif
+    if (lidar_freq .eq. 532) then
+       Cmol   = Cmol_532nm
+       rdiffm = rdiffm_532nm
+    endif
+    
+    ! Do we need to generate optical inputs for Parasol simulator?
+    lparasol = .false.
+    if (present(tautot_S_liq) .and. present(tautot_S_ice)) lparasol = .true.
+    
+    ! Are optical-depths and backscatter coefficients for ice and liquid requested?
+    lphaseoptics=.false.
+    if (present(betatot_ice) .and. present(betatot_liq) .and. present(tautot_liq) .and. &
+         present(tautot_ice)) lphaseoptics=.true.
+
+    ! Is this lidar spaceborne (default) or ground-based (lground=.true.)?
+    zi   = 2
+    zf   = nlev
+    zinc = 1
+    zoffset = -1
+    if (lground) then
+       zi   = nlev-1
+       zf   = 1
+       zinc = -1
+       zoffset = 1
+    endif
     
     ! Liquid/ice particles
-    rhopart(INDX_LSLIQ) = rholiq
-    rhopart(INDX_LSICE) = rhoice
-    rhopart(INDX_CVLIQ) = rholiq
-    rhopart(INDX_CVICE) = rhoice
+    rhopart(INDX_LSLIQ)  = rholiq
+    rhopart(INDX_LSICE)  = rhoice
+    rhopart(INDX_CVLIQ)  = rholiq
+    rhopart(INDX_CVICE)  = rhoice
     
     ! LS and CONV Liquid water coefficients
-    polpart(INDX_LSLIQ,1:5) = polpartLSLIQ
-    polpart(INDX_CVLIQ,1:5) = polpartCVLIQ
+    polpart(INDX_LSLIQ,1:5)  = polpartLSLIQ
+    polpart(INDX_CVLIQ,1:5)  = polpartCVLIQ
+    
     ! LS and CONV Ice water coefficients
     if (ice_type .eq. 0) then
        polpart(INDX_LSICE,1:5) = polpartLSICE0
@@ -304,12 +345,12 @@ contains
     endif
     
     ! Effective radius particles:
-    rad_part(1:npoints,1:nlev,INDX_LSLIQ) = ls_radliq(1:npoints,1:nlev)
-    rad_part(1:npoints,1:nlev,INDX_LSICE) = ls_radice(1:npoints,1:nlev)
-    rad_part(1:npoints,1:nlev,INDX_CVLIQ) = cv_radliq(1:npoints,1:nlev)
-    rad_part(1:npoints,1:nlev,INDX_CVICE) = cv_radice(1:npoints,1:nlev)    
-    rad_part(1:npoints,1:nlev,1:npart)    = MAX(rad_part(1:npoints,1:nlev,1:npart),0._wp)
-    rad_part(1:npoints,1:nlev,1:npart)    = MIN(rad_part(1:npoints,1:nlev,1:npart),70.0e-6_wp)
+    rad_part(1:npoints,1:nlev,INDX_LSLIQ)  = ls_radliq(1:npoints,1:nlev)
+    rad_part(1:npoints,1:nlev,INDX_LSICE)  = ls_radice(1:npoints,1:nlev)
+    rad_part(1:npoints,1:nlev,INDX_CVLIQ)  = cv_radliq(1:npoints,1:nlev)
+    rad_part(1:npoints,1:nlev,INDX_CVICE)  = cv_radice(1:npoints,1:nlev)    
+    rad_part(1:npoints,1:nlev,1:npart)     = MAX(rad_part(1:npoints,1:nlev,1:npart),0._wp)
+    rad_part(1:npoints,1:nlev,1:npart)     = MIN(rad_part(1:npoints,1:nlev,1:npart),70.0e-6_wp)
     
     ! Density (clear-sky air)
     rhoair(1:npoints,1:nlev) = pres(1:npoints,1:nlev)/(rd*temp(1:npoints,1:nlev))
@@ -331,19 +372,21 @@ contains
     ! Optical thickness of each layer (molecular)  
     tau_mol(1:npoints,1:nlev) = alpha_mol(1:npoints,1:nlev)*(zheight(1:npoints,1:nlev)-&
          zheight(1:npoints,2:nlev+1))
-    
+             
     ! Optical thickness from TOA to layer k (molecular)
-    DO k = 2,nlev
-       tau_mol(1:npoints,k) = tau_mol(1:npoints,k) + tau_mol(1:npoints,k-1)
-    ENDDO
-    
+    DO k = zi,zf,zinc
+       tau_mol(1:npoints,k) = tau_mol(1:npoints,k) + tau_mol(1:npoints,k+zoffset)
+    ENDDO    
+
     betatot    (1:npoints,1:ncolumns,1:nlev) = spread(beta_mol(1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
     tautot     (1:npoints,1:ncolumns,1:nlev) = spread(tau_mol (1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
-    betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
-    betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
-    tautot_liq (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
-    tautot_ice (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
-    
+    if (lphaseoptics) then
+       betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
+       betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
+       tautot_liq (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)
+       tautot_ice (1:npoints,1:ncolumns,1:nlev) = tautot(1:npoints,1:ncolumns,1:nlev)      
+    endif
+
     ! ##############################################################################
     ! *) Particles alpha, beta and optical thickness
     ! ##############################################################################
@@ -359,84 +402,91 @@ contains
        elsewhere
           kp_part(1:npoints,1:nlev,i) = 0._wp
        endwhere
-    enddo
-    
+    enddo    
+
+    ! Initialize (if necessary)
+    if (lparasol) then
+       tautot_S_liq(1:npoints,1:ncolumns) = 0._wp
+       tautot_S_ice(1:npoints,1:ncolumns) = 0._wp
+    endif
+
     ! Loop over all subcolumns
     do icol=1,ncolumns
        ! ##############################################################################
        ! Mixing ratio particles in each subcolum
        ! ##############################################################################
-       qpart(1:npoints,1:nlev,INDX_LSLIQ) = q_lsliq(1:npoints,icol,1:nlev)
-       qpart(1:npoints,1:nlev,INDX_LSICE) = q_lsice(1:npoints,icol,1:nlev)
-       qpart(1:npoints,1:nlev,INDX_CVLIQ) = q_cvliq(1:npoints,icol,1:nlev)
-       qpart(1:npoints,1:nlev,INDX_CVICE) = q_cvice(1:npoints,icol,1:nlev)
-       
+       qpart(1:npoints,1:nlev,INDX_LSLIQ) =  q_lsliq(1:npoints,icol,1:nlev)
+       qpart(1:npoints,1:nlev,INDX_LSICE)  = q_lsice(1:npoints,icol,1:nlev)
+       qpart(1:npoints,1:nlev,INDX_CVLIQ)  = q_cvliq(1:npoints,icol,1:nlev)
+       qpart(1:npoints,1:nlev,INDX_CVICE)  = q_cvice(1:npoints,icol,1:nlev)
+
        ! ##############################################################################
        ! Alpha and optical thickness (particles)
        ! ##############################################################################
        ! Alpha of particles in each subcolumn:
        do i = 1, npart
           where (rad_part(1:npoints,1:nlev,i) .gt. 0.0)
-             alpha_part(1:npoints,icol,1:nlev,i) = 3._wp/4._wp * Qscat &
+             alpha_part(1:npoints,1:nlev,i) = 3._wp/4._wp * Qscat &
                   * rhoair(1:npoints,1:nlev) * qpart(1:npoints,1:nlev,i) &
                   / (rhopart(i) * rad_part(1:npoints,1:nlev,i) )
           elsewhere
-             alpha_part(1:npoints,icol,1:nlev,i) = 0._wp
+             alpha_part(1:npoints,1:nlev,i) = 0._wp
           endwhere
        enddo
        
        ! Optical thicknes
-       tau_part(1:npoints,icol,1:nlev,1:npart) = rdiffm * alpha_part(1:npoints,icol,1:nlev,1:npart)
+       tau_part(1:npoints,1:nlev,1:npart) = rdiffm * alpha_part(1:npoints,1:nlev,1:npart)
        do i = 1, npart
           ! Optical thickness of each layer (particles)
-          tau_part(1:npoints,icol,1:nlev,i) = tau_part(1:npoints,icol,1:nlev,i) &
+          tau_part(1:npoints,1:nlev,i) = tau_part(1:npoints,1:nlev,i) &
                & * (zheight(1:npoints,1:nlev)-zheight(1:npoints,2:nlev+1) )
           ! Optical thickness from TOA to layer k (particles)
-          do k=2,nlev
-             tau_part(1:npoints,icol,k,i) = tau_part(1:npoints,icol,k,i) + tau_part(1:npoints,icol,k-1,i)
+          do k=zi,zf,zinc
+             tau_part(1:npoints,k,i) = tau_part(1:npoints,k,i) + tau_part(1:npoints,k+zoffset,i)
           enddo
        enddo
-       
+ 
        ! ##############################################################################
        ! Beta and optical thickness (total=molecular + particules)
        ! ##############################################################################
        
        DO i = 1, npart
           betatot(1:npoints,icol,1:nlev) = betatot(1:npoints,icol,1:nlev) + &
-               kp_part(1:npoints,1:nlev,i)*alpha_part(1:npoints,icol,1:nlev,i)
+               kp_part(1:npoints,1:nlev,i)*alpha_part(1:npoints,1:nlev,i)
           tautot(1:npoints,icol,1:nlev) = tautot(1:npoints,icol,1:nlev)  + &
-               tau_part(1:npoints,icol,1:nlev,i)
+              tau_part(1:npoints,1:nlev,i)
        ENDDO
        
        ! ##############################################################################
        ! Beta and optical thickness (liquid/ice)
        ! ##############################################################################
-       ! Ice
-       betatot_ice(1:npoints,icol,1:nlev) = betatot_ice(1:npoints,icol,1:nlev)+ &
-            kp_part(1:npoints,1:nlev,INDX_LSICE)*alpha_part(1:npoints,icol,1:nlev,INDX_LSICE)+ &
-            kp_part(1:npoints,1:nlev,INDX_CVICE)*alpha_part(1:npoints,icol,1:nlev,INDX_CVICE)
-       tautot_ice(1:npoints,icol,1:nlev) = tautot_ice(1:npoints,icol,1:nlev)  + &
-            tau_part(1:npoints,icol,1:nlev,INDX_LSICE) + &
-            tau_part(1:npoints,icol,1:nlev,INDX_CVICE)
-       
-       ! Liquid
-       betatot_liq(1:npoints,icol,1:nlev) = betatot_liq(1:npoints,icol,1:nlev)+ &
-            kp_part(1:npoints,1:nlev,INDX_LSLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_LSLIQ)+ &
-            kp_part(1:npoints,1:nlev,INDX_CVLIQ)*alpha_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
-       tautot_liq(1:npoints,icol,1:nlev) = tautot_liq(1:npoints,icol,1:nlev)  + &
-            tau_part(1:npoints,icol,1:nlev,INDX_LSLIQ) + &
-            tau_part(1:npoints,icol,1:nlev,INDX_CVLIQ)
-    enddo
-    
-    ! ##############################################################################    
-    ! Optical depths used by the PARASOL simulator
-    ! ##############################################################################   
-    tautot_S_liq(1:npoints,1:ncolumns) = 0._wp
-    tautot_S_ice(1:npoints,1:ncolumns) = 0._wp
-    do icol=1,ncolumns    
-       tautot_S_liq(1:npoints,icol) = tautot_S_liq(1:npoints,icol)+tau_part(1:npoints,icol,nlev,1)+tau_part(1:npoints,icol,nlev,3)
-       tautot_S_ice(1:npoints,icol) = tautot_S_ice(1:npoints,icol)+tau_part(1:npoints,icol,nlev,2)+tau_part(1:npoints,icol,nlev,4)
+       if (lphaseoptics) then
+          ! Ice
+          betatot_ice(1:npoints,icol,1:nlev) = betatot_ice(1:npoints,icol,1:nlev)+ &
+               kp_part(1:npoints,1:nlev,INDX_LSICE)*alpha_part(1:npoints,1:nlev,INDX_LSICE)+ &
+               kp_part(1:npoints,1:nlev,INDX_CVICE)*alpha_part(1:npoints,1:nlev,INDX_CVICE)
+          tautot_ice(1:npoints,icol,1:nlev) = tautot_ice(1:npoints,icol,1:nlev)  + &
+               tau_part(1:npoints,1:nlev,INDX_LSICE) + &
+               tau_part(1:npoints,1:nlev,INDX_CVICE)
+          
+          ! Liquid
+          betatot_liq(1:npoints,icol,1:nlev) = betatot_liq(1:npoints,icol,1:nlev)+ &
+               kp_part(1:npoints,1:nlev,INDX_LSLIQ)*alpha_part(1:npoints,1:nlev,INDX_LSLIQ)+ &
+               kp_part(1:npoints,1:nlev,INDX_CVLIQ)*alpha_part(1:npoints,1:nlev,INDX_CVLIQ)
+          tautot_liq(1:npoints,icol,1:nlev) = tautot_liq(1:npoints,icol,1:nlev)  + &
+               tau_part(1:npoints,1:nlev,INDX_LSLIQ) + &
+               tau_part(1:npoints,1:nlev,INDX_CVLIQ)
+       endif
+
+       ! ##############################################################################    
+       ! Optical depths used by the PARASOL simulator
+       ! ##############################################################################             
+       if (lparasol) then
+          tautot_S_liq(:,icol) = tau_part(:,nlev,1)+tau_part(:,nlev,3)
+          tautot_S_ice(:,icol) = tau_part(:,nlev,2)+tau_part(:,nlev,4)              
+       endif
     enddo
     
   end subroutine lidar_optics
+
 end module cosp_optics
