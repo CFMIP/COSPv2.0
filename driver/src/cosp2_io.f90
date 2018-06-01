@@ -7,7 +7,7 @@ module mod_cosp_io
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
        reffICE_binCenters, reffLIQ_binCenters, cloudsat_binCenters, PARASOL_SZA,      &
-       calipso_binCenters
+       calipso_binCenters, grLidar532_binCenters, atlid_binCenters 
   implicit none
 
 contains
@@ -466,6 +466,369 @@ contains
        status = nf90_put_att(fileID,varID(19),"units",        "1")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
        status = nf90_put_att(fileID,varID(19),"standard_name", "backscattering_ratio")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+
+       !OPAQ diagnostics
+    if (associated(cospOUT%calipso_cldtype)) then
+       ! Opaque cloud cover
+       status = nf90_def_var(fileID,"clopaquecalipso",nf90_float, (/dimID(1)/),varID(91))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(91),"long_name","CALIPSO Opaque Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(91),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(91),"standard_name", "opaque_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Thin cloud cover
+       status = nf90_def_var(fileID,"clthincalipso",nf90_float, (/dimID(1)/),varID(92))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(92),"long_name","CALIPSO Thin Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(92),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(92),"standard_name", "thin_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! z_opaque altitude
+       status = nf90_def_var(fileID,"clzopaquecalipso",nf90_float, (/dimID(1)/),varID(93))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(93),"long_name","CALIPSO z_opaque Altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(93),"units",        "m")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(93),"standard_name", "z_opaque")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+    !3D cloud fractions
+    if (associated(cospOUT%calipso_lidarcldtype)) then
+       ! Opaque profiles cloud fraction
+       status = nf90_def_var(fileID,"clcalipsoopaque",nf90_float, (/dimID(1),dimID(4)/),varID(94))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(94),"long_name","CALIPSO Opaque Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(94),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(94),"standard_name", "opaque_cloud_area_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       ! Non-Opaque profiles cloud fraction
+       status = nf90_def_var(fileID,"clcalipsothin",nf90_float, (/dimID(1),dimID(4)/),varID(95))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(95),"long_name","CALIPSO Thin Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(95),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(95),"standard_name", "thin_cloud_area_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       ! z_opaque fraction
+       status = nf90_def_var(fileID,"clcalipsozopaque",nf90_float, (/dimID(1),dimID(4)/),varID(96))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(96),"long_name","CALIPSO z_opaque Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(96),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(96),"standard_name", "z_opaque_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))       
+       ! Lidar opacity fraction
+       status = nf90_def_var(fileID,"clcalipsoopacity",nf90_float, (/dimID(1),dimID(4)/),varID(97))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(97),"long_name","CALIPSO opacity Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(97),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(97),"standard_name", "opacity_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))       
+    endif
+    if (associated(cospOUT%calipso_cldtypetemp)) then
+       ! Opaque cloud temperature
+       status = nf90_def_var(fileID,"clopaquetemp",nf90_float, (/dimID(1)/),varID(98))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(98),"long_name","CALIPSO Opaque Cloud Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(98),"units",        "K")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(98),"standard_name", "opaque_cloud_temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Thin cloud temperature
+       status = nf90_def_var(fileID,"clthintemp",nf90_float, (/dimID(1)/),varID(99))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(99),"long_name","CALIPSO Thin Cloud Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(99),"units",        "K")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(99),"standard_name", "thin_cloud_temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! z_opaque temperature
+       status = nf90_def_var(fileID,"clzopaquetemp",nf90_float, (/dimID(1)/),varID(100))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(100),"long_name","CALIPSO z_opaque Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(100),"units",        "K")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(100),"standard_name", "z_opaque_temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+    if (associated(cospOUT%calipso_cldtypemeanz)) then
+       ! Opaque cloud temperature
+       status = nf90_def_var(fileID,"clopaquemeanz",nf90_float, (/dimID(1)/),varID(101))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(101),"long_name","CALIPSO Opaque Cloud Altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(101),"units",        "m")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(101),"standard_name", "opaque_cloud_altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Thin cloud temperature
+       status = nf90_def_var(fileID,"clthinmeanz",nf90_float, (/dimID(1)/),varID(102))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(102),"long_name","CALIPSO Thin Cloud Altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(102),"units",        "m")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(102),"standard_name", "thin_cloud_altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+    if (associated(cospOUT%calipso_cldthinemis)) then
+       ! Thin cloud emissivity
+       status = nf90_def_var(fileID,"clthinemis",nf90_float, (/dimID(1)/),varID(103))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(103),"long_name","CALIPSO Thin Cloud Emissivity")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(103),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(103),"standard_name", "thin_cloud_emissivity")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+    if (associated(cospOUT%calipso_cldtypemeanzse)) then
+       ! Opaque cloud altitude with respect to Surface Elevation
+       status = nf90_def_var(fileID,"clopaquemeanzse",nf90_float, (/dimID(1)/),varID(104))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(104),"long_name","CALIPSO Opaque Cloud Altitude with respect to SE")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(104),"units",        "m")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(104),"standard_name", "opaque_cloud_altitude_se")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Thin cloud 
+       status = nf90_def_var(fileID,"clthinmeanzse",nf90_float, (/dimID(1)/),varID(105))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(105),"long_name","CALIPSO Thin Cloud Altitude with respect to SE")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(105),"units",        "m")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(105),"standard_name", "thin_cloud_altitude_se")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! z_opaque 
+       status = nf90_def_var(fileID,"clzopaquecalipsose",nf90_float, (/dimID(1)/),varID(106))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(106),"long_name","CALIPSO z_opaque Altitude with respect to SE")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(106),"units",        "m")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(106),"standard_name", "z_opaque_se")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+
+    !GROUND LIDAR simulator output
+    if (associated(cospOUT%grLidar532_cldlayer)) then
+       ! Low-level cloud cover
+       status = nf90_def_var(fileID,"cllgrLidar532",nf90_float, (/dimID(1)/),varID(107))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(107),"long_name","GROUND LIDAR Low Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(107),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(107),"standard_name", "grLidar532_low_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Mid-level cloud cover
+       status = nf90_def_var(fileID,"clmgrLidar532",nf90_float, (/dimID(1)/),varID(108))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(108),"long_name","GROUND LIDAR Mid Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(108),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(108),"standard_name", "grLidar532_mid_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! High-level cloud cover
+       status = nf90_def_var(fileID,"clhgrLidar532",nf90_float, (/dimID(1)/),varID(109))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(109),"long_name","GROUND LIDAR High Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(109),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(109),"standard_name", "grLidar532_high_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! Total cloud cover
+       status = nf90_def_var(fileID,"cltgrLidar532",nf90_float, (/dimID(1)/),varID(110))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(110),"long_name","GROUND LIDAR Total Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(110),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(110),"standard_name", "grLidar532_total_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+    endif
+    !3D cloud fraction
+    if (associated(cospOUT%grLidar532_lidarcld)) then
+       status = nf90_def_var(fileID,"clgrLidar532",nf90_float, (/dimID(1),dimID(4)/),varID(111))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(111),"long_name","GROUND LIDAR Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(111),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(111),"standard_name", "grLidar532_cloud_area_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    !Molecular backscatter
+    if (associated(cospOUT%grLidar532_beta_mol)) then
+       status = nf90_def_var(fileID,"lidarBetaMol532gr",nf90_float, (/dimID(1),dimID(3)/),varID(112))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(112),"long_name","GROUND LIDAR  Molecular Backscatter Coefficient (532nm)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(112),"units",        "m-1 sr-1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(112),"standard_name", "grLidar532_volume_attenuated_backwards_scattering_function_in_air_assuming_no_aerosol_or_cloud")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+    endif
+    !Height-Intensity histogram (SR)
+    if (associated(cospOUT%grLidar532_cfad_sr)) then
+       status = nf90_def_var(fileID,"cfadLidarsr532gr",nf90_float, (/dimID(1),dimID(12),dimID(4)/),varID(113))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(113),"long_name","GROUND LIDAR Scattering Ratio CFAD")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(113),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(113),"standard_name", "grLidar532_histogram_of_backscattering_ratio_over_height_above_reference_ellipsoid")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))     
+    endif
+    if (associated(cospOUT%grLidar532_beta_tot)) then
+       status = nf90_def_var(fileID,"atb532gr",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(114))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(114),"long_name","GROUND LIDAR Attenuated Total Backscatter (532nm)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(114),"units",        "m-1 sr-1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(114),"standard_name", "volume_attenuated_backwards_scattering_function_in_air")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    if (associated(cospOUT%grLidar532_srbval) .or. associated(cospOUT%grLidar532_cfad_sr)) then 
+       status = nf90_def_var(fileID,"SR_BINS_GR",nf90_float, (/dimID(12)/),varID(115))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(115),"long_name","GROUND LIDAR Backscattering Ratio (SR) Bin Centers")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(115),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(115),"standard_name", "backscattering_ratio")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       status = nf90_def_var(fileID,"SR_EDGES_GR",nf90_float, (/dimID(6),dimID(12)/),varID(116))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(116),"long_name","GROUND LIDAR Backscattering Ratio (SR) Bin Bounds")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(116),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(116),"standard_name", "backscattering_ratio")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+    endif
+
+    !ATLID simulator output
+    if (associated(cospOUT%atlid_cldlayer)) then
+       ! Low-level cloud cover
+       status = nf90_def_var(fileID,"cllatlid",nf90_float, (/dimID(1)/),varID(117))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(117),"long_name","ATLID Low Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(117),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(117),"standard_name", "atlid_low_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+       ! Mid-level cloud cover
+       status = nf90_def_var(fileID,"clmatlid",nf90_float, (/dimID(1)/),varID(118))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(118),"long_name","ATLID Mid Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(118),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(118),"standard_name", "atlid_mid_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! High-level cloud cover
+       status = nf90_def_var(fileID,"clhatlid",nf90_float, (/dimID(1)/),varID(119))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(119),"long_name","ATLID High Level Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(119),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(119),"standard_name", "atlid_high_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       ! Total cloud cover
+       status = nf90_def_var(fileID,"cltatlid",nf90_float, (/dimID(1)/),varID(120))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(120),"long_name","ATLID Total Cloud Cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(120),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(120),"standard_name", "atlid_total_cloud_cover")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+    endif
+    !3D cloud fraction
+    if (associated(cospOUT%atlid_lidarcld)) then
+       status = nf90_def_var(fileID,"clatlid",nf90_float, (/dimID(1),dimID(4)/),varID(121))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(121),"long_name","ATLID Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(121),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(121),"standard_name", "atlid_cloud_area_fraction_in_atmosphere_layer")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    !Molecular backscatter
+    if (associated(cospOUT%atlid_beta_mol)) then
+       status = nf90_def_var(fileID,"lidarBetaMol355",nf90_float, (/dimID(1),dimID(3)/),varID(122))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(122),"long_name","ATLID Molecular Backscatter Coefficient (355nm)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(122),"units",        "m-1 sr-1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(122),"standard_name", "atlid_volume_attenuated_backwards_scattering_function_in_air_assuming_no_aerosol_or_cloud")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
+    endif
+    !Height-Intensity histogram (SR)
+    if (associated(cospOUT%atlid_cfad_sr)) then
+       status = nf90_def_var(fileID,"cfadLidarsr355",nf90_float, (/dimID(1),dimID(12),dimID(4)/),varID(123))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(123),"long_name","ATLID Scattering Ratio CFAD")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(123),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(123),"standard_name", "atlid_histogram_of_backscattering_ratio_over_height_above_reference_ellipsoid")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))     
+    endif
+    if (associated(cospOUT%atlid_beta_tot)) then
+       status = nf90_def_var(fileID,"atb355",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(124))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(124),"long_name","ATLID Attenuated Total Backscatter (355nm)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(124),"units",        "m-1 sr-1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(124),"standard_name", "volume_attenuated_backwards_scattering_function_in_air")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    if (associated(cospOUT%atlid_srbval) .or. associated(cospOUT%atlid_cfad_sr)) then 
+       status = nf90_def_var(fileID,"SR_BINS_ATLID",nf90_float, (/dimID(12)/),varID(125))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(125),"long_name","ATLID Backscattering Ratio (SR) Bin Centers")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(125),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(125),"standard_name", "backscattering_ratio")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
+       status = nf90_def_var(fileID,"SR_EDGES_ATLID",nf90_float, (/dimID(6),dimID(12)/),varID(126))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(126),"long_name","ATLID Backscattering Ratio (SR) Bin Bounds")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(126),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+       status = nf90_put_att(fileID,varID(126),"standard_name", "backscattering_ratio")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     endif
 
@@ -1023,7 +1386,127 @@ contains
        status = nf90_put_var(fileID,varID(81),calipso_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    
+
+       !OPAQ diagnostics
+    if (associated(cospOUT%calipso_cldtype)) then
+       status = nf90_put_var(fileID,varID(91),cospOUT%calipso_cldtype(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(92),cospOUT%calipso_cldtype(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(93),cospOUT%calipso_cldtype(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%calipso_lidarcldtype)) then
+       status = nf90_put_var(fileID,varID(94),cospOUT%calipso_lidarcldtype(:,:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(95),cospOUT%calipso_lidarcldtype(:,:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(96),cospOUT%calipso_lidarcldtype(:,:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(97),cospOUT%calipso_lidarcldtype(:,:,4))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%calipso_cldtypetemp)) then
+       status = nf90_put_var(fileID,varID(98),cospOUT%calipso_cldtypetemp(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(99),cospOUT%calipso_cldtypetemp(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(100),cospOUT%calipso_cldtypetemp(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%calipso_cldtypemeanz)) then
+       status = nf90_put_var(fileID,varID(101),cospOUT%calipso_cldtypemeanz(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(102),cospOUT%calipso_cldtypemeanz(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%calipso_cldthinemis)) then
+       status = nf90_put_var(fileID,varID(103),cospOUT%calipso_cldthinemis)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%calipso_cldtypemeanzse)) then
+       status = nf90_put_var(fileID,varID(104),cospOUT%calipso_cldtypemeanzse(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(105),cospOUT%calipso_cldtypemeanzse(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(106),cospOUT%calipso_cldtypemeanzse(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    ! GROUND LIDAR simulator output
+    if (associated(cospOUT%grLidar532_cldlayer)) then
+       status = nf90_put_var(fileID,varID(107),cospOUT%grLidar532_cldlayer(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(108),cospOUT%grLidar532_cldlayer(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(109),cospOUT%grLidar532_cldlayer(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(110),cospOUT%grLidar532_cldlayer(:,4))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%grLidar532_lidarcld)) then
+       status = nf90_put_var(fileID,varID(111),cospOUT%grLidar532_lidarcld)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%grLidar532_beta_mol)) then
+       status = nf90_put_var(fileID,varID(112),cospOUT%grLidar532_beta_mol)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%grLidar532_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(113),cospOUT%grLidar532_cfad_sr)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%grLidar532_beta_tot)) then
+       status = nf90_put_var(fileID,varID(114),cospOUT%grLidar532_beta_tot)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    if (associated(cospOUT%grLidar532_srbval)) then
+       status = nf90_put_var(fileID,varID(116),reshape([cospOUT%grLidar532_srbval(1:SR_BINS),cospOUT%grLidar532_srbval(2:SR_BINS+1)],(/2,SR_BINS/)))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%grLidar532_srbval) .or. associated(cospOUT%grLidar532_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(115),grLidar532_binCenters)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    ! ATLID simulator output
+    if (associated(cospOUT%atlid_cldlayer)) then
+       status = nf90_put_var(fileID,varID(117),cospOUT%atlid_cldlayer(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(118),cospOUT%atlid_cldlayer(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(119),cospOUT%atlid_cldlayer(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(120),cospOUT%atlid_cldlayer(:,4))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_lidarcld)) then
+       status = nf90_put_var(fileID,varID(121),cospOUT%atlid_lidarcld)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_beta_mol)) then
+       status = nf90_put_var(fileID,varID(122),cospOUT%atlid_beta_mol)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(123),cospOUT%atlid_cfad_sr)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_beta_tot)) then
+       status = nf90_put_var(fileID,varID(124),cospOUT%atlid_beta_tot)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+    if (associated(cospOUT%atlid_srbval)) then
+       status = nf90_put_var(fileID,varID(126),reshape([cospOUT%atlid_srbval(1:SR_BINS),cospOUT%atlid_srbval(2:SR_BINS+1)],(/2,SR_BINS/)))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%atlid_srbval) .or. associated(cospOUT%atlid_cfad_sr)) then
+       status = nf90_put_var(fileID,varID(125),atlid_binCenters)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
     ! PARASOL simulator output
     if (associated(cospOUT%parasolPix_refl)) then
        status = nf90_put_var(fileID,varID(20),cospOUT%parasolPix_refl)
@@ -1242,7 +1725,7 @@ contains
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                                emsfc_lw,mode,Nlon,Nlat)
+                                emsfc_lw,mode,Nlon,Nlat,surfelev)
      
     ! Arguments
     character(len=512),intent(in) :: fname ! File name
@@ -1252,7 +1735,7 @@ contains
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
-    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit
+    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
     
@@ -1562,6 +2045,12 @@ contains
              skt(1:Npoints) = x1(1:Npoints)
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=skt)
+          endif
+       case ('orography') 
+          if (Lpoint) then
+             surfelev(1:Npoints) = x1(1:Npoints) 
+          else     
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=surfelev)
           endif
        case ('landmask')
           if (Lpoint) then
