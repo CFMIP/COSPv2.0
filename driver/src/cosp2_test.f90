@@ -28,10 +28,12 @@
 !
 ! History
 ! March 2016 - D. Swales - Original version
+! April 2018 - R. Guzman - Added OPAQ diagnostics and Ground LIDar (GLID) simulator
+! April 2018 - R. Guzman - Added ATLID simulator
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp2_test
   use cosp_kinds,          only: wp                         
-  USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,SR_BINS,                &
+  USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
                                  N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
                                  DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
                                  numMODISTauBins,numMODISPresBins,                        &
@@ -41,8 +43,9 @@ program cosp2_test
                                  modis_histTauEdges,tau_binEdges,                         &
                                  modis_histTauCenters,tau_binCenters,ntauV1p4,            &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
-                                 Nlvgrid_local  => Nlvgrid, vgrid_zl, vgrid_zu,           &
-                                 cloudsat_preclvl
+                                 grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
+                                 Nlvgrid_local  => Nlvgrid,                               &
+                                 vgrid_z_local  => vgrid_z,cloudsat_preclvl
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -74,6 +77,7 @@ program cosp2_test
        lon,       & ! Longitude (deg)
        lat,       & ! Latitude (deg)
        skt,       & ! Skin temperature (K)
+       surfelev,  & ! Surface Elevation (m)
        landmask,  & ! Land/sea mask (0/1)
        u_wind,    & ! U-component of wind (m/s)
        v_wind,    & ! V-component of wind (m/s)
@@ -127,6 +131,8 @@ program cosp2_test
        rttov_satellite,           & ! RTTOV: Satellite
        rttov_instrument,          & ! RTTOV: Instrument
        rttov_Nchannels              ! RTTOV: Number of channels to be computed
+  real(wp),dimension(:),allocatable :: & 
+       vgrid_z                      ! mid-level altitude of the vertical grid
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
@@ -166,12 +172,18 @@ program cosp2_test
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
              Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,Lclcalipsoliq,             &
              Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,Lclcalipsotmpliq,Lclcalipsotmpice, &
-             Lclcalipsotmpun,Lclhcalipsoliq,Lcllcalipsoliq,Lclmcalipsoliq,               &
-             Lcltcalipsoliq,Lclhcalipsoice,Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice, &
-             Lclhcalipsoun,Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,          &
-             Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,          &
+             Lclcalipsotmpun,Lclhcalipsoliq,Lcllcalipsoliq,Lclmcalipsoliq,Lcltcalipsoliq,& 
+             Lclhcalipsoice,Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice,Lclhcalipsoun,  & 
+             Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lclopaquecalipso,Lclthincalipso,  & 
+             Lclzopaquecalipso,Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,        & 
+             Lclcalipsoopacity,Lclopaquetemp,Lclthintemp,Lclzopaquetemp,Lclopaquemeanz,  &
+             Lclthinmeanz,Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,Lclzopaquecalipsose,&
+             LlidarBetaMol532gr,LcfadLidarsr532gr,Latb532gr,LclgrLidar532,LclhgrLidar532,&
+             LcllgrLidar532,LclmgrLidar532,LcltgrLidar532,LlidarBetaMol355,              &
+             LcfadLidarsr355,Latb355,Lclatlid,Lclhatlid,Lcllatlid,Lclmatlid,Lcltatlid,   &
+             Lalbisccp,Lboxptopisccp,Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,&
              Lmeantbisccp,Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,            &
-             Lcloudsat_tcc, Lcloudsat_tcc2, Lfracout,                                    &
+             Lcloudsat_tcc, Lcloudsat_tcc2,Lfracout,   &
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
@@ -184,7 +196,15 @@ program cosp2_test
                        Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,Lclhcalipsoliq, &
                        Lcllcalipsoliq,Lclmcalipsoliq,Lcltcalipsoliq,Lclhcalipsoice,      &
                        Lcllcalipsoice,Lclmcalipsoice,Lcltcalipsoice,Lclhcalipsoun,       &
-                       Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lalbisccp,Lboxptopisccp,&
+                       Lcllcalipsoun,Lclmcalipsoun,Lcltcalipsoun,Lclopaquecalipso,       &
+                       Lclthincalipso,Lclzopaquecalipso,Lclcalipsoopaque,Lclcalipsothin, &
+                       Lclcalipsozopaque,Lclcalipsoopacity,Lclopaquetemp,Lclthintemp,    &
+                       Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,Lclthinemis,           &
+                       Lclopaquemeanzse,Lclthinmeanzse,Lclzopaquecalipsose,              &
+                       LlidarBetaMol532gr,LcfadLidarsr532gr,Latb532gr,LclgrLidar532,     &
+                       LclhgrLidar532,LcllgrLidar532,LclmgrLidar532,LcltgrLidar532,      &
+                       LlidarBetaMol355,LcfadLidarsr355,Latb355,Lclatlid,                &
+                       Lclhatlid,Lcllatlid,Lclmatlid,Lcltatlid,Lalbisccp,Lboxptopisccp,  &
                        Lboxtauisccp,Lpctisccp,Lclisccp,Ltauisccp,Lcltisccp,Lmeantbisccp, &
                        Lmeantbclrisccp,LclMISR,Lclcalipso2,Lcltlidarradar,               &
                        Lcloudsat_tcc, Lcloudsat_tcc2, Lfracout,                          &
@@ -198,15 +218,17 @@ program cosp2_test
 
   ! Local variables
   logical :: &
-       lsingle   = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
-       ldouble   = .false., & ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme
-       lisccp    = .false. ,& ! Local on/off switch for simulators (used by initialization)
-       lmodis    = .false., & !
-       lmisr     = .false., & !
-       lcalipso  = .false., & !
-       lcloudsat = .false., & !
-       lrttov    = .false., & !
-       lparasol  = .false.    !
+       lsingle     = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
+       ldouble     = .false., & ! True if using MMF_v3.5_two_moment CLOUDSAT microphysical scheme
+       lisccp      = .false. ,& ! Local on/off switch for simulators (used by initialization)
+       lmodis      = .false., & !
+       lmisr       = .false., & !
+       lcalipso    = .false., & !
+       lgrLidar532 = .false., & !
+       latlid      = .false., & !
+       lcloudsat   = .false., & !
+       lrttov      = .false., & !
+       lparasol    = .false.    !
   type(size_distribution) :: &
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
@@ -253,7 +275,6 @@ program cosp2_test
        gamma_2 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/),&
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
-
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -284,14 +305,14 @@ program cosp2_test
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
-           frac_out(Npoints,Ncolumns,Nlevels))
+           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints))
 
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat)
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev)
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -311,7 +332,22 @@ program cosp2_test
        Lclhcalipsoliq .or. Lclhcalipsoice .or. Lclhcalipsoun .or. Lclmcalipsoliq .or.    &
        Lclmcalipsoice .or. Lclmcalipsoun .or. Lcllcalipsoliq .or. Lcllcalipsoice .or.    &
        Lcllcalipsoun .or. LlidarBetaMol532 .or. LcfadLidarsr532 .or. Lcltlidarradar .or. &
-       Lcltlidarradar .or. Lcloudsat_tcc .or. Lcloudsat_tcc2) lcalipso = .true.
+       Lcltlidarradar .or. Lclopaquecalipso .or. Lclthincalipso .or. Lclzopaquecalipso   &
+       .or. Lclcalipsoopaque .or. Lclcalipsothin .or. Lclcalipsozopaque .or.             &
+       Lclcalipsoopacity .or. Lclopaquetemp .or. Lclthintemp .or. Lclzopaquetemp .or.    &
+       Lclopaquemeanz .or. Lclthinmeanz .or. Lclthinemis .or. Lclopaquemeanzse .or.      & 
+       Lclthinmeanzse .or. Lclzopaquecalipsose) Lcalipso = .true. 
+
+  if (LlidarBetaMol532gr .or. LcfadLidarsr532gr .or. Latb532gr .or. LclgrLidar532 .or.  & 
+       LclhgrLidar532 .or. LcllgrLidar532 .or. LclmgrLidar532 .or. LcltgrLidar532)   & 
+       LgrLidar532 = .true.
+
+  if (LlidarBetaMol355 .or. LcfadLidarsr355 .or. Latb355 .or. Lclatlid .or.              & 
+       Lclhatlid .or. Lcllatlid .or. Lclmatlid .or. Lcltatlid)                           & 
+       Latlid = .true. 
+
+  if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar) Lcloudsat = .true.
+
   if (LcfadDbze94 .or. Ldbze94 .or. Lcltlidarradar .or. Lptradarflag0 .or. Lptradarflag1 &
        .or. Lptradarflag2 .or. Lptradarflag3 .or. Lptradarflag4 .or. Lptradarflag5 .or.  &
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
@@ -345,11 +381,10 @@ program cosp2_test
   call hydro_class_init(lsingle,ldouble,sd)
 
   ! Initialize COSP simulator
-  call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, Lparasol, Lrttov,           &
-       cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
-       isccp_topheight, isccp_topheight_direction, surface_radar, rcfg_cloudsat,         &
-       use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
-  
+  call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid,        &
+       Lparasol, Lrttov, cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,         &
+       cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
+       rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -362,15 +397,22 @@ program cosp2_test
        Lcltmodis, Lclwmodis, Lclimodis, Lclhmodis, Lclmmodis, Lcllmodis, Ltautmodis,     &
        Ltauwmodis, Ltauimodis, Ltautlogmodis, Ltauwlogmodis, Ltauilogmodis,              &
        Lreffclwmodis, Lreffclimodis, Lpctmodis, Llwpmodis, Liwpmodis, Lclmodis, Latb532, &
-       LlidarBetaMol532, LcfadLidarsr532, Lclcalipso2, Lclcalipso, Lclhcalipso,          &
-       Lcllcalipso, Lclmcalipso, Lcltcalipso, Lcltlidarradar, Lcloudsat_tcc,             &
-       Lcloudsat_tcc2, Lclcalipsoliq,                                                    &
+       Latb532gr, Latb355, LlidarBetaMol532, LlidarBetaMol532gr, LlidarBetaMol355,       & 
+       LcfadLidarsr532, LcfadLidarsr532gr, LcfadLidarsr355, Lclcalipso2,                 & 
+       Lclcalipso, LclgrLidar532, Lclatlid, Lclhcalipso, Lcllcalipso, Lclmcalipso,       & 
+       Lcltcalipso, LclhgrLidar532, LcllgrLidar532, LclmgrLidar532, LcltgrLidar532,      & 
+       Lclhatlid, Lcllatlid, Lclmatlid, Lcltatlid, Lcltlidarradar,  Lcloudsat_tcc,             &
+       Lcloudsat_tcc2, Lclcalipsoliq,        & 
        Lclcalipsoice, Lclcalipsoun, Lclcalipsotmp, Lclcalipsotmpliq, Lclcalipsotmpice,   &
        Lclcalipsotmpun, Lcltcalipsoliq, Lcltcalipsoice, Lcltcalipsoun, Lclhcalipsoliq,   &
        Lclhcalipsoice, Lclhcalipsoun, Lclmcalipsoliq, Lclmcalipsoice, Lclmcalipsoun,     &
-       Lcllcalipsoliq, Lcllcalipsoice, Lcllcalipsoun, LcfadDbze94, Ldbze94, Lparasolrefl,&
-       Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
-       Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
+       Lcllcalipsoliq, Lcllcalipsoice, Lcllcalipsoun, Lclopaquecalipso, Lclthincalipso,  & 
+       Lclzopaquecalipso, Lclcalipsoopaque, Lclcalipsothin, Lclcalipsozopaque,           & 
+       Lclcalipsoopacity, Lclopaquetemp, Lclthintemp, Lclzopaquetemp, Lclopaquemeanz,    & 
+       Lclthinmeanz, Lclthinemis, Lclopaquemeanzse, Lclthinmeanzse, Lclzopaquecalipsose, &
+       LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
+       Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
+       Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,&
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -420,6 +462,7 @@ program cosp2_test
      cospstateIN%hgt_matrix  = zlev(start_idx:end_idx,Nlevels:1:-1) ! km
      cospstateIN%sunlit      = sunlit(start_idx:end_idx)            ! 0-1
      cospstateIN%skt         = skt(start_idx:end_idx)               ! K
+     cospstateIN%surfelev    = surfelev(start_idx:end_idx)          ! m
      cospstateIN%land        = landmask(start_idx:end_idx)          ! 0-1 (*note* model specific)
      cospstateIN%qv          = sh(start_idx:end_idx,Nlevels:1:-1)   ! kg/kg
      cospstateIN%at          = T(start_idx:end_idx,Nlevels:1:-1)    ! K
@@ -741,13 +784,32 @@ contains
     ! LIDAR Polarized optics
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if (Lcalipso) then
-       call lidar_optics(nPoints, nColumns, nLevels, 4, lidar_ice_type,                       &
-            mr_hydro(:,:,:,I_LSCLIQ),  mr_hydro(:,:,:,I_LSCICE), mr_hydro(:,:,:,I_CVCLIQ),    &
-            mr_hydro(:,:,:,I_CVCICE), ReffIN(:,:,I_LSCLIQ), ReffIN(:,:,I_LSCICE),             &
-            ReffIN(:,:,I_CVCLIQ), ReffIN(:,:,I_CVCICE), cospstateIN%pfull, cospstateIN%phalf, &
-            cospstateIN%at, cospIN%beta_mol, cospIN%betatot, cospIN%tau_mol, cospIN%tautot,   &
-            cospIN%tautot_S_liq, cospIN%tautot_S_ice, cospIN%betatot_ice, cospIN%betatot_liq, &
-            cospIN%tautot_ice, cospIN%tautot_liq)
+       call lidar_optics(nPoints, nColumns, nLevels, 4, lidar_ice_type, 532, .false.,      &
+            mr_hydro(:,:,:,I_LSCLIQ),  mr_hydro(:,:,:,I_LSCICE), mr_hydro(:,:,:,I_CVCLIQ), &
+            mr_hydro(:,:,:,I_CVCICE), ReffIN(:,:,I_LSCLIQ), ReffIN(:,:,I_LSCICE),          &
+            ReffIN(:,:,I_CVCLIQ), ReffIN(:,:,I_CVCICE), cospstateIN%pfull,                 &
+            cospstateIN%phalf, cospstateIN%at, cospIN%beta_mol_calipso,                    &
+            cospIN%betatot_calipso, cospIN%tau_mol_calipso, cospIN%tautot_calipso,         &
+            cospIN%tautot_S_liq, cospIN%tautot_S_ice, cospIN%betatot_ice_calipso,          &
+            cospIN%betatot_liq_calipso, cospIN%tautot_ice_calipso, cospIN%tautot_liq_calipso)
+    endif
+
+    if (LgrLidar532) then
+       call lidar_optics(nPoints, nColumns, nLevels, 4, lidar_ice_type, 532, .true.,       &
+            mr_hydro(:,:,:,I_LSCLIQ),  mr_hydro(:,:,:,I_LSCICE), mr_hydro(:,:,:,I_CVCLIQ), &
+            mr_hydro(:,:,:,I_CVCICE), ReffIN(:,:,I_LSCLIQ), ReffIN(:,:,I_LSCICE),          &
+            ReffIN(:,:,I_CVCLIQ), ReffIN(:,:,I_CVCICE), cospstateIN%pfull,                 &
+            cospstateIN%phalf, cospstateIN%at, cospIN%beta_mol_grLidar532,                 &
+            cospIN%betatot_grLidar532, cospIN%tau_mol_grLidar532, cospIN%tautot_grLidar532)
+    endif
+    
+    if (Latlid) then
+       call lidar_optics(nPoints, nColumns, nLevels, 4, lidar_ice_type, 355, .false.,      &
+            mr_hydro(:,:,:,I_LSCLIQ),  mr_hydro(:,:,:,I_LSCICE), mr_hydro(:,:,:,I_CVCLIQ), &
+            mr_hydro(:,:,:,I_CVCICE), ReffIN(:,:,I_LSCLIQ), ReffIN(:,:,I_LSCICE),          &
+            ReffIN(:,:,I_CVCLIQ), ReffIN(:,:,I_CVCICE), cospstateIN%pfull,                 &
+            cospstateIN%phalf, cospstateIN%at, cospIN%beta_mol_atlid, cospIN%betatot_atlid,&
+            cospIN%tau_mol_atlid, cospIN%tautot_atlid)
     endif
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -867,18 +929,32 @@ contains
                 y%emiss_11(npoints,       ncolumns,nlevels))
     endif
     if (Lcalipso) then
-       allocate(y%betatot(npoints,        ncolumns,nlevels),&
-                y%betatot_ice(npoints,    ncolumns,nlevels),&
-                y%betatot_liq(npoints,    ncolumns,nlevels),&
-                y%tautot(npoints,         ncolumns,nlevels),&
-                y%tautot_ice(npoints,     ncolumns,nlevels),&
-                y%tautot_liq(npoints,     ncolumns,nlevels),&
-                y%beta_mol(npoints,                nlevels),&
-                y%tau_mol(npoints,                 nlevels),&
+       allocate(y%betatot_calipso(npoints,        ncolumns,nlevels),&
+                y%betatot_ice_calipso(npoints,    ncolumns,nlevels),&
+                y%betatot_liq_calipso(npoints,    ncolumns,nlevels),&
+                y%tautot_calipso(npoints,         ncolumns,nlevels),&
+                y%tautot_ice_calipso(npoints,     ncolumns,nlevels),&
+                y%tautot_liq_calipso(npoints,     ncolumns,nlevels),&
+                y%beta_mol_calipso(npoints,                nlevels),&
+                y%tau_mol_calipso(npoints,                 nlevels),&
                 y%tautot_S_ice(npoints,   ncolumns        ),&
-                y%tautot_S_liq(npoints,   ncolumns))
-
+                y%tautot_S_liq(npoints,   ncolumns        ))
     endif
+
+    if (LgrLidar532) then
+       allocate(y%beta_mol_grLidar532(npoints,          nlevels),& 
+                y%betatot_grLidar532(npoints,  ncolumns,nlevels),& 
+                y%tau_mol_grLidar532(npoints,           nlevels),& 
+                y%tautot_grLidar532(npoints,   ncolumns,nlevels)) 
+    endif
+
+    if (Latlid) then
+       allocate(y%beta_mol_atlid(npoints,             nlevels),& 
+                y%betatot_atlid(npoints,     ncolumns,nlevels),& 
+                y%tau_mol_atlid(npoints,              nlevels),& 
+                y%tautot_atlid(npoints,      ncolumns,nlevels))
+    endif 
+
     if (Lcloudsat) then
        allocate(y%z_vol_cloudsat(npoints,  ncolumns,nlevels),&
                 y%kr_vol_cloudsat(npoints, ncolumns,nlevels),&
@@ -910,7 +986,7 @@ contains
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),           &
-             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),                    &
+             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels+1))
 
@@ -928,23 +1004,31 @@ contains
                                     Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,          &
                                     Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,           &
                                     Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,     &
-                                    Liwpmodis,Lclmodis,Latb532,LlidarBetaMol532,         &
-                                    LcfadLidarsr532,Lclcalipso2,                         &
-                                    Lclcalipso,Lclhcalipso,Lcllcalipso,Lclmcalipso,      &
-                                    Lcltcalipso,Lcltlidarradar,Lcloudsat_tcc,            &
-                                    Lcloudsat_tcc2,Lclcalipsoliq,                        &
+                                    Liwpmodis,Lclmodis,Latb532,Latb532gr,Latb355,        &
+                                    LlidarBetaMol532,LlidarBetaMol532gr,LlidarBetaMol355,&
+                                    LcfadLidarsr532,LcfadLidarsr532gr,LcfadLidarsr355,   & 
+                                    Lclcalipso2,Lclcalipso,LclgrLidar532,Lclatlid,      & 
+                                    Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,     &
+                                    LclhgrLidar532,LcllgrLidar532,LclmgrLidar532,     & 
+                                    LcltgrLidar532,Lclhatlid,Lcllatlid,Lclmatlid,       & 
+                                    Lcltatlid,Lcltlidarradar,Lcloudsat_tcc,            &
+                                    Lcloudsat_tcc2,Lclcalipsoliq,              &
                                     Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,            &
                                     Lclcalipsotmpliq,Lclcalipsotmpice,Lclcalipsotmpun,   &
                                     Lcltcalipsoliq,Lcltcalipsoice,Lcltcalipsoun,         &
                                     Lclhcalipsoliq,Lclhcalipsoice,Lclhcalipsoun,         &
                                     Lclmcalipsoliq,Lclmcalipsoice,Lclmcalipsoun,         &
                                     Lcllcalipsoliq,Lcllcalipsoice,Lcllcalipsoun,         & 
-                                    LcfadDbze94,Ldbze94,Lparasolrefl,Ltbrttov,           &
-                                    Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
+                                    Lclopaquecalipso,Lclthincalipso,Lclzopaquecalipso,   & 
+                                    Lclcalipsoopaque,Lclcalipsothin,Lclcalipsozopaque,   & 
+                                    Lclcalipsoopacity,Lclopaquetemp,Lclthintemp,         & 
+                                    Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,          & 
+                                    Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,         &
+                                    Lclzopaquecalipsose,LcfadDbze94,Ldbze94,Lparasolrefl,&
+                                    Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
-                                    Lptradarflag9,Lradarpia,Npoints,Ncolumns,Nlevels,    &
-                                    Nlvgrid,Nchan,x)
+                                    Lptradarflag9,Lradarpia,Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -976,14 +1060,30 @@ contains
          Liwpmodis,        & ! MODIS cloud ice water path
          Lclmodis,         & ! MODIS cloud area fraction
          Latb532,          & ! CALIPSO attenuated total backscatter (532nm)
+         Latb532gr,        & ! GROUND LIDAR @ 532NM attenuated total backscatter (532nm)
+         Latb355,          & ! ATLID attenuated total backscatter (355nm)
          LlidarBetaMol532, & ! CALIPSO molecular backscatter (532nm)         
+         LlidarBetaMol532gr,&! GROUND LIDAR @ 532NM molecular backscatter (532nm)
+         LlidarBetaMol355, & ! ATLID molecular backscatter (355nm) 
          LcfadLidarsr532,  & ! CALIPSO scattering ratio CFAD
+         LcfadLidarsr532gr,& ! GROUND LIDAR @ 532NM scattering ratio CFAD  
+         LcfadLidarsr355,  & ! ATLID scattering ratio CFAD 
          Lclcalipso2,      & ! CALIPSO cloud fraction undetected by cloudsat
          Lclcalipso,       & ! CALIPSO cloud area fraction
+         LclgrLidar532,   & ! GROUND LIDAR @ 532NM cloud area fraction 
+         Lclatlid,         & ! ATLID cloud area fraction 
          Lclhcalipso,      & ! CALIPSO high-level cloud fraction
          Lcllcalipso,      & ! CALIPSO low-level cloud fraction
          Lclmcalipso,      & ! CALIPSO mid-level cloud fraction
          Lcltcalipso,      & ! CALIPSO total cloud fraction
+         LclhgrLidar532,  & ! GROUND LIDAR @ 532NM high-level cloud fraction 
+         LcllgrLidar532,  & ! GROUND LIDAR @ 532NM low-level cloud fraction 
+         LclmgrLidar532,  & ! GROUND LIDAR @ 532NM mid-level cloud fraction
+         LcltgrLidar532,  & ! GROUND LIDAR @ 532NM total cloud fraction
+         Lclhatlid,        & ! ATLID high-level cloud fraction
+         Lcllatlid,        & ! ATLID low-level cloud fraction  
+         Lclmatlid,        & ! ATLID mid-level cloud fraction 
+         Lcltatlid,        & ! ATLID total cloud fraction
          Lcltlidarradar,   & ! CALIPSO-CLOUDSAT total cloud fraction
          Lcloudsat_tcc,    & !
          Lcloudsat_tcc2,   & !
@@ -1006,6 +1106,22 @@ contains
          Lcllcalipsoliq,   & ! CALIPSO low-level liquid cloud fraction
          Lcllcalipsoice,   & ! CALIPSO low-level ice cloud fraction
          Lcllcalipsoun,    & ! CALIPSO low-level undetected cloud fraction
+         Lclopaquecalipso, & ! CALIPSO opaque cloud cover (2D Map)
+         Lclthincalipso,   & ! CALIPSO thin cloud cover (2D Map)
+         Lclzopaquecalipso,& ! CALIPSO z_opaque altitude (opaque clouds only, 2D Map)
+         Lclcalipsoopaque, & ! CALIPSO opaque cloud profiles 3D fraction 
+         Lclcalipsothin,   & ! CALIPSO thin cloud profiles 3D fraction 
+         Lclcalipsozopaque,& ! CALIPSO z_opaque 3D fraction 
+         Lclcalipsoopacity,& ! CALIPSO opacity 3D fraction 
+         Lclopaquetemp,    & ! CALIPSO opaque cloud temperature 
+         Lclthintemp,      & ! CALIPSO thin cloud temperature
+         Lclzopaquetemp,   & ! CALIPSO z_opaque temperature  
+         Lclopaquemeanz,   & ! CALIPSO opaque cloud altitude  
+         Lclthinmeanz,     & ! CALIPSO thin cloud altitude 
+         Lclthinemis,      & ! CALIPSO thin cloud emissivity
+         Lclopaquemeanzse,   & ! CALIPSO opaque cloud altitude with respect to SE 
+         Lclthinmeanzse,     & ! CALIPSO thin cloud altitude with respect to SE
+         Lclzopaquecalipsose,& ! CALIPSO z_opaque altitude with respect to SE
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
@@ -1103,6 +1219,24 @@ contains
         Lclmcalipsoun  .or. Lclhcalipsoun  .or. Lcltcalipsoun) then
         allocate(x%calipso_cldlayerphase(Npoints,LIDAR_NCAT,6))     
     endif
+    if (Lclopaquecalipso .or. Lclthincalipso .or. Lclzopaquecalipso) then
+        allocate(x%calipso_cldtype(Npoints,LIDAR_NTYPE))
+    endif 
+    if (Lclopaquetemp .or. Lclthintemp .or. Lclzopaquetemp) then 
+        allocate(x%calipso_cldtypetemp(Npoints,LIDAR_NTYPE))  
+    endif
+    if (Lclopaquemeanz .or. Lclthinmeanz) then 
+        allocate(x%calipso_cldtypemeanz(Npoints,2))
+    endif 
+    if (Lclopaquemeanzse .or. Lclthinmeanzse .or. Lclzopaquecalipsose) then 
+        allocate(x%calipso_cldtypemeanzse(Npoints,3)) 
+    endif 
+    if (Lclthinemis) then 
+        allocate(x%calipso_cldthinemis(Npoints))
+    endif
+    if (Lclcalipsoopaque .or. Lclcalipsothin .or. Lclcalipsozopaque .or. Lclcalipsoopacity) then 
+        allocate(x%calipso_lidarcldtype(Npoints,Nlvgrid,LIDAR_NTYPE+1))
+    endif
     ! These 2 outputs are part of the calipso output type, but are not controlled by an 
     ! logical switch in the output namelist, so if all other fields are on, then allocate
     if (LlidarBetaMol532 .or. Latb532        .or. LcfadLidarsr532 .or. Lclcalipso  .or.  &
@@ -1115,7 +1249,31 @@ contains
         Lcllcalipsoun    .or. Lclmcalipsoun  .or. Lclhcalipsoun   .or. Lcltcalipsoun) then
        allocate(x%calipso_tau_tot(Npoints,Ncolumns,Nlevels))       
        allocate(x%calipso_temp_tot(Npoints,Nlevels))               
+    endif
+
+    ! GROUND LIDAR @ 532NM simulator
+    if (LlidarBetaMol532gr) allocate(x%grLidar532_beta_mol(Npoints,Nlevels))
+    if (Latb532gr)          allocate(x%grLidar532_beta_tot(Npoints,Ncolumns,Nlevels))
+    if (LcfadLidarsr532gr) then 
+        allocate(x%grLidar532_srbval(SR_BINS+1)) 
+        allocate(x%grLidar532_cfad_sr(Npoints,SR_BINS,Nlvgrid))
+    endif
+    if (LclgrLidar532)     allocate(x%grLidar532_lidarcld(Npoints,Nlvgrid)) 
+    if (LclhgrLidar532 .or. LclmgrLidar532 .or. LcllgrLidar532 .or. LcltgrLidar532) then
+        allocate(x%grLidar532_cldlayer(Npoints,LIDAR_NCAT))  
+    endif
+      
+    ! ATLID simulator
+    if (LlidarBetaMol355) allocate(x%atlid_beta_mol(Npoints,Nlevels))
+    if (Latb355)          allocate(x%atlid_beta_tot(Npoints,Ncolumns,Nlevels))
+    if (LcfadLidarsr355) then
+        allocate(x%atlid_srbval(SR_BINS+1)) 
+        allocate(x%atlid_cfad_sr(Npoints,SR_BINS,Nlvgrid))
     endif 
+    if (Lclatlid)     allocate(x%atlid_lidarcld(Npoints,Nlvgrid)) 
+    if (Lclhatlid .or. Lclmatlid .or. Lcllatlid .or. Lcltatlid) then
+        allocate(x%atlid_cldlayer(Npoints,LIDAR_NCAT)) 
+    endif
       
     ! PARASOL
     if (Lparasolrefl) then
@@ -1149,28 +1307,34 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine destroy_cospIN(y)
     type(cosp_optical_inputs),intent(inout) :: y
-
-    if (allocated(y%tau_067))         deallocate(y%tau_067)
-    if (allocated(y%emiss_11))        deallocate(y%emiss_11)
-    if (allocated(y%frac_out))        deallocate(y%frac_out)
-    if (allocated(y%beta_mol))        deallocate(y%beta_mol)
-    if (allocated(y%tau_mol))         deallocate(y%tau_mol)
-    if (allocated(y%betatot))         deallocate(y%betatot)
-    if (allocated(y%betatot_ice))     deallocate(y%betatot_ice)
-    if (allocated(y%betatot_liq))     deallocate(y%betatot_liq)
-    if (allocated(y%tautot))          deallocate(y%tautot)
-    if (allocated(y%tautot_ice))      deallocate(y%tautot_ice)
-    if (allocated(y%tautot_liq))      deallocate(y%tautot_liq)
-    if (allocated(y%tautot_S_liq))    deallocate(y%tautot_S_liq)
-    if (allocated(y%tautot_S_ice))    deallocate(y%tautot_S_ice)
-    if (allocated(y%z_vol_cloudsat))  deallocate(y%z_vol_cloudsat)
-    if (allocated(y%kr_vol_cloudsat)) deallocate(y%kr_vol_cloudsat)
-    if (allocated(y%g_vol_cloudsat))  deallocate(y%g_vol_cloudsat)
-    if (allocated(y%asym))            deallocate(y%asym)
-    if (allocated(y%ss_alb))          deallocate(y%ss_alb)
-    if (allocated(y%fracLiq))         deallocate(y%fracLiq)
-    if (allocated(y%fracPrecipIce))   deallocate(y%fracPrecipIce)
-    
+    if (allocated(y%tau_067))             deallocate(y%tau_067)
+    if (allocated(y%emiss_11))            deallocate(y%emiss_11)
+    if (allocated(y%frac_out))            deallocate(y%frac_out)
+    if (allocated(y%beta_mol_calipso))    deallocate(y%beta_mol_calipso)
+    if (allocated(y%tau_mol_calipso))     deallocate(y%tau_mol_calipso)
+    if (allocated(y%betatot_calipso))     deallocate(y%betatot_calipso)
+    if (allocated(y%betatot_ice_calipso)) deallocate(y%betatot_ice_calipso)
+    if (allocated(y%betatot_liq_calipso)) deallocate(y%betatot_liq_calipso)
+    if (allocated(y%tautot_calipso))      deallocate(y%tautot_calipso)
+    if (allocated(y%tautot_ice_calipso))  deallocate(y%tautot_ice_calipso)
+    if (allocated(y%tautot_liq_calipso))  deallocate(y%tautot_liq_calipso)
+    if (allocated(y%tautot_S_liq))        deallocate(y%tautot_S_liq)
+    if (allocated(y%tautot_S_ice))        deallocate(y%tautot_S_ice)
+    if (allocated(y%z_vol_cloudsat))      deallocate(y%z_vol_cloudsat)
+    if (allocated(y%kr_vol_cloudsat))     deallocate(y%kr_vol_cloudsat)
+    if (allocated(y%g_vol_cloudsat))      deallocate(y%g_vol_cloudsat)
+    if (allocated(y%asym))                deallocate(y%asym)
+    if (allocated(y%ss_alb))              deallocate(y%ss_alb)
+    if (allocated(y%fracLiq))             deallocate(y%fracLiq)
+    if (allocated(y%beta_mol_grLidar532)) deallocate(y%beta_mol_grLidar532)
+    if (allocated(y%betatot_grLidar532))  deallocate(y%betatot_grLidar532)
+    if (allocated(y%tau_mol_grLidar532))  deallocate(y%tau_mol_grLidar532)
+    if (allocated(y%tautot_grLidar532))   deallocate(y%tautot_grLidar532)
+    if (allocated(y%beta_mol_atlid))      deallocate(y%beta_mol_atlid) 
+    if (allocated(y%betatot_atlid))       deallocate(y%betatot_atlid) 
+    if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
+    if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
+    if (allocated(y%fracPrecipIce))      deallocate(y%fracPrecipIce)
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
@@ -1199,6 +1363,7 @@ contains
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
     if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
+    if (allocated(y%surfelev))        deallocate(y%surfelev)
     
   end subroutine destroy_cospstateIN
   
@@ -1233,6 +1398,10 @@ contains
         deallocate(y%calipso_lidarcldphase)
         nullify(y%calipso_lidarcldphase)     
      endif
+     if (associated(y%calipso_lidarcldtype))     then
+        deallocate(y%calipso_lidarcldtype) 
+        nullify(y%calipso_lidarcldtype) 
+     endif
      if (associated(y%calipso_cldlayerphase))     then
         deallocate(y%calipso_cldlayerphase)
         nullify(y%calipso_cldlayerphase)     
@@ -1245,6 +1414,26 @@ contains
         deallocate(y%calipso_cldlayer)
         nullify(y%calipso_cldlayer)     
      endif
+     if (associated(y%calipso_cldtype))          then
+        deallocate(y%calipso_cldtype)
+        nullify(y%calipso_cldtype)  
+     endif  
+     if (associated(y%calipso_cldtypetemp))      then
+        deallocate(y%calipso_cldtypetemp) 
+        nullify(y%calipso_cldtypetemp) 
+     endif 
+     if (associated(y%calipso_cldtypemeanz))     then
+        deallocate(y%calipso_cldtypemeanz)
+        nullify(y%calipso_cldtypemeanz)  
+     endif  
+     if (associated(y%calipso_cldtypemeanzse))   then 
+        deallocate(y%calipso_cldtypemeanzse) 
+        nullify(y%calipso_cldtypemeanzse)  
+     endif 
+     if (associated(y%calipso_cldthinemis))      then
+        deallocate(y%calipso_cldthinemis)
+        nullify(y%calipso_cldthinemis)
+     endif 
      if (associated(y%calipso_lidarcld))         then
         deallocate(y%calipso_lidarcld)
         nullify(y%calipso_lidarcld)     
@@ -1256,6 +1445,54 @@ contains
      if (associated(y%calipso_cfad_sr))          then
         deallocate(y%calipso_cfad_sr)
         nullify(y%calipso_cfad_sr)     
+     endif
+     if (associated(y%grLidar532_beta_mol))     then
+        deallocate(y%grLidar532_beta_mol)
+        nullify(y%grLidar532_beta_mol)  
+     endif
+     if (associated(y%grLidar532_beta_tot))     then 
+        deallocate(y%grLidar532_beta_tot) 
+        nullify(y%grLidar532_beta_tot)
+     endif 
+     if (associated(y%grLidar532_cldlayer))     then 
+        deallocate(y%grLidar532_cldlayer) 
+        nullify(y%grLidar532_cldlayer) 
+     endif 
+     if (associated(y%grLidar532_lidarcld))     then 
+        deallocate(y%grLidar532_lidarcld) 
+        nullify(y%grLidar532_lidarcld) 
+     endif 
+     if (associated(y%grLidar532_cfad_sr))      then 
+        deallocate(y%grLidar532_cfad_sr)  
+        nullify(y%grLidar532_cfad_sr) 
+     endif 
+     if (associated(y%grLidar532_srbval))       then
+        deallocate(y%grLidar532_srbval) 
+        nullify(y%grLidar532_srbval) 
+     endif  
+     if (associated(y%atlid_beta_mol))           then
+        deallocate(y%atlid_beta_mol) 
+        nullify(y%atlid_beta_mol) 
+     endif 
+     if (associated(y%atlid_beta_tot))           then
+        deallocate(y%atlid_beta_tot) 
+        nullify(y%atlid_beta_tot) 
+     endif
+     if (associated(y%atlid_cldlayer))           then 
+        deallocate(y%atlid_cldlayer)  
+        nullify(y%atlid_cldlayer) 
+     endif 
+     if (associated(y%atlid_lidarcld))           then 
+        deallocate(y%atlid_lidarcld)  
+        nullify(y%atlid_lidarcld) 
+     endif  
+     if (associated(y%atlid_cfad_sr))            then
+        deallocate(y%atlid_cfad_sr) 
+        nullify(y%atlid_cfad_sr) 
+     endif
+     if (associated(y%atlid_srbval))             then 
+        deallocate(y%atlid_srbval) 
+        nullify(y%atlid_srbval) 
      endif
      if (associated(y%parasolPix_refl))           then
         deallocate(y%parasolPix_refl)

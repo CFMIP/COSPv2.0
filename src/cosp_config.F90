@@ -36,6 +36,9 @@
 ! June 2015- D. Swales        - Moved hydrometeor class variables to hydro_class_init in
 !                               the module quickbeam_optics.
 ! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
+! Mar 2018 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
+! Apr 2018 - R. Guzman        - Added parameters for GROUND LIDAR and ATLID simulators
+!
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MODULE MOD_COSP_CONFIG
@@ -151,8 +154,7 @@ MODULE MOD_COSP_CONFIG
     integer,parameter :: &
          RTTOV_MAX_CHANNELS = 20
     character(len=256),parameter :: &
-         rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
-    
+         rttovDir = '/homedata/rguzman/CALIPSO/RTTOV/rttov_11.3/'
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator.
     ! ####################################################################################  
@@ -312,7 +314,8 @@ MODULE MOD_COSP_CONFIG
 
     integer,parameter  ::     &
        LIDAR_NTEMP = 40, & 
-       LIDAR_NCAT  = 4     ! Number of categories for cloudtop heights (high/mid/low/tot)
+       LIDAR_NCAT  = 4,  & ! Number of categories for cloudtop heights (high/mid/low/tot)
+       LIDAR_NTYPE = 3     ! Number of categories for OPAQ (opaque/thin cloud + z_opaque)
     real(wp),parameter,dimension(LIDAR_NTEMP) :: &
        LIDAR_PHASE_TEMP=                                                                 &
        (/-91.5,-88.5,-85.5,-82.5,-79.5,-76.5,-73.5,-70.5,-67.5,-64.5,                    &
@@ -330,6 +333,48 @@ MODULE MOD_COSP_CONFIG
               -3.,     0.,   0.,   3.,   3.,   6.,   6.,   9.,   9.,  12.,               &
               12.,    15.,  15.,  18.,  18.,  21.,  21.,  24.,  24., 100. /),            &
               shape=(/2,40/))        
+
+    ! ####################################################################################
+    ! Parameters used by the GROUND LIDAR simulator
+    ! #################################################################################### 
+    ! GROUND LIDAR backscatter histogram bins 
+!    real(wp),parameter ::     &
+!       S_cld       = 5.0,     & ! Threshold for cloud detection
+!       S_att       = 0.01,    & !
+!       S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
+    real(wp),parameter,dimension(SR_BINS+1) :: &
+         grLidar532_histBsct = (/-1.,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0,  &
+                                 60.0,80.0,999./)         ! Backscatter histogram bins
+    real(wp),parameter,dimension(2,SR_BINS) :: &
+         grLidar532_binEdges = reshape(source=(/grLidar532_histBsct(1),((grLidar532_histBsct(k),  &
+                                    l=1,2),k=2,SR_BINS),grLidar532_histBsct(SR_BINS+1)/),   &
+                                    shape = (/2,SR_BINS/))     
+    real(wp),parameter,dimension(SR_BINS) :: &
+         grLidar532_binCenters = (grLidar532_binEdges(1,:)+grLidar532_binEdges(2,:))/2._wp  
+
+!    integer,parameter  ::     &
+!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot)
+
+    ! ####################################################################################
+    ! Parameters used by the ATLID LIDAR simulator
+    ! #################################################################################### 
+    ! ATLID LIDAR backscatter histogram bins 
+    real(wp),parameter ::     &
+       S_cld_atlid       = 1.74,    & ! Threshold for cloud detection
+       S_att_atlid       = 0.01,    & !
+       S_cld_att_atlid   = 6.67        ! Threshold for undefined cloud phase detection
+    real(wp),parameter,dimension(SR_BINS+1) :: &
+         atlid_histBsct = (/-1.,0.01,1.03,1.38,1.74,2.07,2.62,3.65,4.63,5.63,6.67,8.8,11.25,  &
+                                 13.2,17.2,999./)         ! Backscatter histogram bins
+    real(wp),parameter,dimension(2,SR_BINS) :: &
+         atlid_binEdges = reshape(source=(/atlid_histBsct(1),((atlid_histBsct(k),  &
+                                    l=1,2),k=2,SR_BINS),atlid_histBsct(SR_BINS+1)/),   &
+                                    shape = (/2,SR_BINS/))     
+    real(wp),parameter,dimension(SR_BINS) :: &
+         atlid_binCenters = (atlid_binEdges(1,:)+atlid_binEdges(2,:))/2._wp  
+
+!    integer,parameter  ::     &
+!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot)
 
     ! ####################################################################################
     ! New vertical grid used by CALIPSO and CLOUDSAT L3 (set up during initialization)
