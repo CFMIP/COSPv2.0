@@ -1568,8 +1568,9 @@ CONTAINS
                   vgrid_zu(Nlvgrid:1:-1),Ze_totFlip,log_units=.true.)   
           endif
           call cloudsat_precipOccurence(cloudsatIN%Npoints, cloudsatIN%Ncolumns, N_HYDRO, &
-               Ze_totFlip(:,:,cloudsat_preclvl), Ze_nonFlip(:,:,cloudsat_preclvl),        &
-               cospIN%fracPrecipIce, cospOUT%cloudsat_precip_cover, cospOUT%cloudsat_pia)
+               Ze_totFlip(:,:,:), Ze_nonFlip(:,:,:), cospgridIN%land(:),                  &
+               cospgridIN%at(:,cospIN%Nlevels), cospIN%fracPrecipIce,                     &
+               cospOUT%cloudsat_precip_cover,  cospOUT%cloudsat_pia)
        endif
     endif
     
