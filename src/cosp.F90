@@ -28,13 +28,15 @@
 !
 ! History:
 ! May 2015- D. Swales - Original version
+! Mar 2018- R. Guzman - Added OPAQ diagnostics and GLID simulator
+! Apr 2018- R. Guzman - Added ATLID simulator
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 MODULE MOD_COSP
   USE COSP_KINDS,                  ONLY: wp
-  USE MOD_COSP_CONFIG,             ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,SR_BINS,       &
+  USE MOD_COSP_CONFIG,             ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE, SR_BINS,&
                                          N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,      &
                                          DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
                                          use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,    &
@@ -44,22 +46,25 @@ MODULE MOD_COSP
                                          ntau,modis_histTau,tau_binBounds,               &
                                          modis_histTauEdges,tau_binEdges,                &
                                          modis_histTauCenters,tau_binCenters,            &
-                                         cloudsat_preclvl
-  USE MOD_COSP_MODIS_INTERFACE,    ONLY: cosp_modis_init,     modis_IN
-  USE MOD_COSP_RTTOV_INTERFACE,    ONLY: cosp_rttov_init,     rttov_IN
-  USE MOD_COSP_MISR_INTERFACE,     ONLY: cosp_misr_init,      misr_IN
-  USE MOD_COSP_ISCCP_INTERFACE,    ONLY: cosp_isccp_init,     isccp_IN
-  USE MOD_COSP_CALIPSO_INTERFACE,  ONLY: cosp_calipso_init,   calipso_IN
-  USE MOD_COSP_PARASOL_INTERFACE,  ONLY: cosp_parasol_init,   parasol_in
-  USE MOD_COSP_CLOUDSAT_INTERFACE, ONLY: cosp_cloudsat_init,  cloudsat_IN
-  USE quickbeam,                   ONLY: quickbeam_subcolumn, quickbeam_column, radar_cfg
-  USE MOD_ICARUS,                  ONLY: icarus_subcolumn,    icarus_column
-  USE MOD_MISR_SIMULATOR,          ONLY: misr_subcolumn,      misr_column
-  USE MOD_LIDAR_SIMULATOR,         ONLY: lidar_subcolumn,     lidar_column
-  USE MOD_MODIS_SIM,               ONLY: modis_subcolumn,     modis_column
-  USE MOD_PARASOL,                 ONLY: parasol_subcolumn,   parasol_column
-  use mod_cosp_rttov,              ONLY: rttov_column
-  USE MOD_COSP_STATS,              ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID,cloudsat_precipOccurence
+                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct                                
+  USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
+  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       rttov_IN
+  USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
+  USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN
+  USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN
+  USE MOD_COSP_ATLID_INTERFACE,      ONLY: cosp_atlid_init,       atlid_IN 
+  USE MOD_COSP_GRLIDAR532_INTERFACE, ONLY: cosp_grLidar532_init, grLidar532_IN
+  USE MOD_COSP_PARASOL_INTERFACE,    ONLY: cosp_parasol_init,     parasol_in
+  USE MOD_COSP_CLOUDSAT_INTERFACE,   ONLY: cosp_cloudsat_init,    cloudsat_IN
+  USE quickbeam,                     ONLY: quickbeam_subcolumn,   quickbeam_column, radar_cfg
+  USE MOD_ICARUS,                    ONLY: icarus_subcolumn,      icarus_column
+  USE MOD_MISR_SIMULATOR,            ONLY: misr_subcolumn,        misr_column
+  USE MOD_LIDAR_SIMULATOR,           ONLY: lidar_subcolumn,       lidar_column
+  USE MOD_MODIS_SIM,                 ONLY: modis_subcolumn,       modis_column
+  USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
+  use mod_cosp_rttov,                ONLY: rttov_column
+  USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID,cloudsat_precipOccurence
+
   IMPLICIT NONE
 
   logical :: linitialization ! Initialization flag
@@ -86,7 +91,8 @@ MODULE MOD_COSP
 
      real(wp),allocatable,dimension(:) :: &
           land,                & ! Land/Sea mask                          (0-1)
-          skt                    ! Surface temperature                    (K)
+          skt,                 & ! Surface temperature                    (K)
+          surfelev               ! Surface Elevation                      (m)
      ! Fields used ONLY by RTTOV
      integer :: &
           month                  ! Month for surface emissivty atlas      (1-12)
@@ -120,34 +126,42 @@ MODULE MOD_COSP
           Npoints,             & ! Number of gridpoints.
           Ncolumns,            & ! Number of columns.
           Nlevels,             & ! Number of levels.
-          Npart,               & ! Number of cloud meteors for LIDAR simulator.
+          Npart,               & ! Number of cloud meteors for LIDAR simulators.
           Nrefl                  ! Number of reflectances for PARASOL simulator
      real(wp) :: &
-          emsfc_lw               ! 11 micron surface emissivity
+          emsfc_lw               ! Surface emissivity @ 11micron
      real(wp),allocatable,dimension(:,:,:) :: &
           frac_out,            & ! Cloud fraction
-          tau_067,             & ! Optical depth
-          fracLiq,             & ! Cloud fraction
-          emiss_11,            & ! Emissivity
-          asym,                & ! Assymetry parameter
-          ss_alb,              & ! Single-scattering albedo
-          betatot,             & ! Backscatter coefficient for polarized optics (total)
-          betatot_ice,         & ! Backscatter coefficient for polarized optics (ice)
-          betatot_liq,         & ! Backscatter coefficient for polarized optics (liquid)
-          tautot,              & ! Optical thickess integrated from top (total)
-          tautot_ice,          & ! Optical thickess integrated from top (ice)
-          tautot_liq,          & ! Optical thickess integrated from top (liquid)
+          tau_067,             & ! Optical depth @ 0.67micron
+          emiss_11,            & ! Emissivity @ 11 micron
+          fracLiq,             & ! Fraction of optical-depth due to liquid (MODIS)
+          asym,                & ! Assymetry parameter @ 3.7micron (MODIS)
+          ss_alb,              & ! Single-scattering albedo @ 3.7micron (MODIS)
+          betatot_calipso,     & ! Lidar backscatter coefficient (calipso @ 532nm)
+          betatot_grLidar532,  & ! Lidar backscatter coefficient (ground-lidar @ 532nm)
+          betatot_atlid,       & ! Lidar backscatter coefficient (atlid @ 355nm)
+          betatot_ice_calipso, & ! Lidar backscatter coefficient ICE (calipso @ 532nm)
+          betatot_liq_calipso, & ! Lidar backscatter coefficient LIQUID (calipso @ 532nm)
+          tautot_calipso,      & ! Lidar Optical thickness (calipso @ 532nm)
+          tautot_grLidar532,   & ! Lidar Optical thickness (ground-lidar @ 532nm)  
+          tautot_atlid,        & ! Lidar Optical thickness (atlid @ 355nm)
+          tautot_ice_calipso,  & ! Lidar Ice Optical thickness (calipso @ 532nm)
+          tautot_liq_calipso,  & ! Lidar Liquid Optical thickness (calipso @ 532nm)
           z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
           g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
      real(wp),allocatable,dimension(:,:) :: &
-          beta_mol,            & ! Molecular backscatter coefficient
-          tau_mol,             & ! Molecular optical depth
-          tautot_S_liq,        & ! Liquid water optical thickness, from TOA to SFC
-          tautot_S_ice,        & ! Ice water optical thickness, from TOA to SFC
+          beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
+          beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 
+          beta_mol_atlid,      & ! Lidar molecular backscatter coefficient (atlid @ 355nm)
+          tau_mol_calipso,     & ! Lidar molecular optical depth (calipso @ 532nm)
+          tau_mol_grLidar532,  & ! Lidar molecular optical depth (ground-lidar @ 532nm) 
+          tau_mol_atlid,       & ! Lidar molecular optical depth (atlid @ 355nm)
+          tautot_S_liq,        & ! Parasol Liquid water optical thickness, from TOA to SFC
+          tautot_S_ice,        & ! Parasol Ice water optical thickness, from TOA to SFC
           fracPrecipIce          ! Fraction of precipitation which is frozen (1).
      type(radar_cfg) :: &
-          rcfg_cloudsat         ! Radar comfiguration information (CLOUDSAT)
+          rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
   end type cosp_optical_inputs
 
   ! ######################################################################################
@@ -161,16 +175,45 @@ MODULE MOD_COSP
           calipso_beta_tot => null(),      & ! Total backscattered signal
           calipso_tau_tot => null(),       & ! Optical thickness integrated from top to level z
           calipso_lidarcldphase => null(), & ! 3D "lidar" phase cloud fraction
+          calipso_lidarcldtype => null(),  & ! 3D "lidar" OPAQ type fraction
           calipso_cldlayerphase => null(), & ! low, mid, high-level lidar phase cloud cover
           calipso_lidarcldtmp => null(),   & ! 3D "lidar" phase cloud temperature
           calipso_cfad_sr => null()          ! CFAD of scattering ratio
      real(wp), dimension(:,:),pointer :: &
-          calipso_lidarcld => null(),      & ! 3D "lidar" cloud fraction
+          calipso_lidarcld => null(),      & ! 3D "lidar" cloud fraction 
           calipso_cldlayer => null(),      & ! low, mid, high-level, total lidar cloud cover
+          calipso_cldtype => null(),       & ! opaque and thin lidar cloud cover + z_opaque altitude
+          calipso_cldtypetemp => null(),   & ! opaque and thin cloud temperature  
+          calipso_cldtypemeanz => null(),  & ! opaque and thin cloud altitude 
+          calipso_cldtypemeanzse => null(),& ! same as just above with respect to SE
           calipso_beta_mol => null(),      & ! Molecular backscatter
           calipso_temp_tot => null()
      real(wp), dimension(:),pointer :: &
+          calipso_cldthinemis => null(),   & ! thin cloud emissivity 
           calipso_srbval => null()           ! SR bins in cfad_sr
+
+     ! GROUND LIDAR outputs
+     real(wp),dimension(:,:,:),pointer :: &  
+          grLidar532_beta_tot => null(),   & ! Total GROUND LIDAR backscattered signal 
+          grLidar532_cfad_sr => null()       ! CFAD of GROUND LIDAR scattering ratio 
+     real(wp), dimension(:,:),pointer :: &  
+          grLidar532_lidarcld => null(),   & ! 3D GROUND "lidar" cloud fraction  
+          grLidar532_cldlayer => null(),   & ! low, mid, high-level, total GROUND lidar cloud cover
+          grLidar532_beta_mol => null()      ! GROUND LIDAR Molecular backscatter 
+     real(wp), dimension(:),pointer :: &  
+          grLidar532_srbval => null()        ! SR bins in cfad_sr
+
+     ! ATLID outputs
+     real(wp),dimension(:,:,:),pointer :: & 
+          atlid_beta_tot => null(),   & ! Total ATLID backscattered signal 
+          atlid_cfad_sr => null()       ! CFAD of ATLID scattering ratio 
+     real(wp), dimension(:,:),pointer :: & 
+          atlid_lidarcld => null(),   & ! 3D ATLID cloud fraction
+          atlid_cldlayer => null(),   & ! low, mid, high-level, total ATLID cloud cover 
+          atlid_beta_mol => null()      ! ATLID Molecular backscatter 
+     real(wp), dimension(:),pointer :: & 
+          atlid_srbval => null()        ! SR bins in cfad_sr
+
 
      ! PARASOL outputs
      real(wp),dimension(:,:,:),pointer :: &
@@ -259,6 +302,8 @@ CONTAINS
     type(isccp_IN)    :: isccpIN    ! Input to the ISCCP simulator
     type(misr_IN)     :: misrIN     ! Input to the LIDAR simulator
     type(calipso_IN)  :: calipsoIN  ! Input to the LIDAR simulator
+    type(grLidar532_IN) :: grLidar532IN ! Input to the GROUND LIDAR simulator
+    type(atlid_IN)    :: atlidIN    ! Input to the ATLID simulator 
     type(parasol_IN)  :: parasolIN  ! Input to the PARASOL simulator
     type(cloudsat_IN) :: cloudsatIN ! Input to the CLOUDSAT radar simulator
     type(modis_IN)    :: modisIN    ! Input to the MODIS simulator
@@ -276,28 +321,34 @@ CONTAINS
     integer,target :: &
          Npoints
     logical :: &
-         Lisccp_subcolumn,    & ! On/Off switch for subcolumn ISCCP simulator
-         Lmisr_subcolumn,     & ! On/Off switch for subcolumn MISR simulator
-         Lcalipso_subcolumn,  & ! On/Off switch for subcolumn CALIPSO simulator
-         Lparasol_subcolumn,  & ! On/Off switch for subcolumn PARASOL simulator
-         Lcloudsat_subcolumn, & ! On/Off switch for subcolumn CLOUDSAT simulator
-         Lmodis_subcolumn,    & ! On/Off switch for subcolumn MODIS simulator
-         Lrttov_subcolumn,    & ! On/Off switch for subcolumn RTTOV simulator
-         Lisccp_column,       & ! On/Off switch for column ISCCP simulator
-         Lmisr_column,        & ! On/Off switch for column MISR simulator
-         Lcalipso_column,     & ! On/Off switch for column CALIPSO simulator
-         Lparasol_column,     & ! On/Off switch for column PARASOL simulator
-         Lcloudsat_column,    & ! On/Off switch for column CLOUDSAT simulator
-         Lmodis_column,       & ! On/Off switch for column MODIS simulator
-         Lrttov_column,       & ! On/Off switch for column RTTOV simulator (not used)
-         Lradar_lidar_tcc,    & ! On/Off switch from joint Calipso/Cloudsat product
+         Lisccp_subcolumn,     & ! On/Off switch for subcolumn ISCCP simulator
+         Lmisr_subcolumn,      & ! On/Off switch for subcolumn MISR simulator
+         Lcalipso_subcolumn,   & ! On/Off switch for subcolumn CALIPSO simulator
+         LgrLidar532_subcolumn,& ! On/Off switch for subcolumn GROUND LIDAR simulator
+         Latlid_subcolumn,     & ! On/Off switch for subcolumn ATLID simulator
+         Lparasol_subcolumn,   & ! On/Off switch for subcolumn PARASOL simulator
+         Lcloudsat_subcolumn,  & ! On/Off switch for subcolumn CLOUDSAT simulator
+         Lmodis_subcolumn,     & ! On/Off switch for subcolumn MODIS simulator
+         Lrttov_subcolumn,     & ! On/Off switch for subcolumn RTTOV simulator
+         Lisccp_column,        & ! On/Off switch for column ISCCP simulator
+         Lmisr_column,         & ! On/Off switch for column MISR simulator
+         Lcalipso_column,      & ! On/Off switch for column CALIPSO simulator
+         LgrLidar532_column,   & ! On/Off switch for column GROUND LIDAR simulator
+         Latlid_column,        & ! On/Off switch for column ATLID simulator
+         Lparasol_column,      & ! On/Off switch for column PARASOL simulator
+         Lcloudsat_column,     & ! On/Off switch for column CLOUDSAT simulator
+         Lmodis_column,        & ! On/Off switch for column MODIS simulator
+         Lrttov_column,        & ! On/Off switch for column RTTOV simulator (not used)
+         Lradar_lidar_tcc,     & ! On/Off switch from joint Calipso/Cloudsat product
          Lcloudsat_tcc,       & !
-         Lcloudsat_tcc2,      & !
+         Lcloudsat_tcc2,      & !         
          Llidar_only_freq_cloud  ! On/Off switch from joint Calipso/Cloudsat product
     logical :: &
-         ok_lidar_cfad  = .false., &
-         lrttov_cleanUp = .false.
-
+         ok_lidar_cfad    = .false., &
+         ok_lidar_cfad_grLidar532 = .false., & 
+         ok_lidar_cfad_atlid = .false., &
+         lrttov_cleanUp   = .false.
+    
     integer, dimension(:,:),allocatable  :: &
          modisRetrievedPhase,isccpLEVMATCH
     real(wp), dimension(:),  allocatable  :: &
@@ -310,12 +361,15 @@ CONTAINS
     REAL(WP), dimension(:,:),allocatable  :: &
          modisRetrievedCloudTopPressure,modisRetrievedTau,modisRetrievedSize,   &
          misr_boxtau,misr_boxztop,misr_dist_model_layertops,isccp_boxtau,       &
-         isccp_boxttop,isccp_boxptop,calipso_beta_mol,lidar_only_freq_cloud
+         isccp_boxttop,isccp_boxptop,calipso_beta_mol,lidar_only_freq_cloud,    &
+         grLidar532_beta_mol,atlid_beta_mol 
     REAL(WP), dimension(:,:,:),allocatable :: &
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq,     &
-         calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl,cloudsatZe_non
+         calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl,   &
+         grLidar532_beta_tot,atlid_beta_tot,cloudsatZe_non
     real(wp),dimension(:),allocatable,target :: &
-         out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6
+         out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6,out1D_7,out1D_8,       &
+         out1D_9,out1D_10,out1D_11,out1D_12 
     real(wp),dimension(:,:,:),allocatable :: &
        betamol_in,betamolFlip,pnormFlip,ze_totFlip,ze_nonFlip
 
@@ -344,6 +398,8 @@ CONTAINS
     Lisccp_subcolumn    = .false.
     Lmisr_subcolumn     = .false.
     Lcalipso_subcolumn  = .false.
+    LgrLidar532_subcolumn = .false.
+    Latlid_subcolumn    = .false. 
     Lparasol_subcolumn  = .false.
     Lcloudsat_subcolumn = .false.
     Lmodis_subcolumn    = .false.
@@ -351,6 +407,8 @@ CONTAINS
     Lisccp_column       = .false.
     Lmisr_column        = .false.
     Lcalipso_column     = .false.
+    LgrLidar532_column = .false.
+    Latlid_column       = .false.
     Lparasol_column     = .false.
     Lcloudsat_column    = .false.
     Lmodis_column       = .false.
@@ -401,6 +459,16 @@ CONTAINS
         associated(cospOUT%calipso_beta_tot))                                            &
        Lcalipso_subcolumn  = .true.
 
+    ! GROUND LIDAR subcolumn 
+    if (associated(cospOUT%grLidar532_beta_mol)                           .or.          &
+        associated(cospOUT%grLidar532_beta_tot))                                        &
+       LgrLidar532_subcolumn  = .true. 
+
+    ! ATLID subcolumn
+    if (associated(cospOUT%atlid_beta_mol)                                 .or.          & 
+        associated(cospOUT%atlid_beta_tot))                                              &
+       Latlid_subcolumn  = .true.  
+
     ! PARASOL subcolumn
     if (associated(cospOUT%parasolPix_refl))                                             &
        Lparasol_subcolumn  = .true.
@@ -435,11 +503,33 @@ CONTAINS
     if (associated(cospOUT%calipso_cfad_sr)                                .or.          &
         associated(cospOUT%calipso_lidarcld)                               .or.          &
         associated(cospOUT%calipso_lidarcldphase)                          .or.          &
+        associated(cospOUT%calipso_lidarcldtype)                           .or.          &
         associated(cospOUT%calipso_cldlayer)                               .or.          &
+        associated(cospOUT%calipso_cldtype)                                .or.          & 
+        associated(cospOUT%calipso_cldtypetemp)                            .or.          & 
+        associated(cospOUT%calipso_cldtypemeanz)                           .or.          & 
+        associated(cospOUT%calipso_cldtypemeanzse)                         .or.          & 
+        associated(cospOUT%calipso_cldthinemis)                            .or.          &
         associated(cospOUT%calipso_cldlayerphase)                          .or.          &
         associated(cospOUT%calipso_lidarcldtmp)) then
        Lcalipso_column    = .true.
        Lcalipso_subcolumn = .true.
+    endif
+
+    ! GROUND LIDAR column 
+    if (associated(cospOUT%grLidar532_cfad_sr)                            .or.          & 
+        associated(cospOUT%grLidar532_lidarcld)                           .or.          & 
+        associated(cospOUT%grLidar532_cldlayer)) then 
+       LgrLidar532_column    = .true. 
+       LgrLidar532_subcolumn = .true. 
+    endif
+
+    ! ATLID column 
+    if (associated(cospOUT%atlid_cfad_sr)                                  .or.          & 
+        associated(cospOUT%atlid_lidarcld)                                 .or.          & 
+        associated(cospOUT%atlid_cldlayer)) then  
+       Latlid_column    = .true. 
+       Latlid_subcolumn = .true.
     endif
 
     ! PARASOL column
@@ -495,13 +585,13 @@ CONTAINS
     !     Enforce bounds on input fields. If input field is out-of-bounds, report error
     !     and turn off simulator
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    call cosp_errorCheck(cospgridIN,cospIN,Lisccp_subcolumn,Lisccp_column,               &
-                         Lmisr_subcolumn,Lmisr_column,Lmodis_subcolumn,Lmodis_column,    &
-                         Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_subcolumn,        &
-                         Lcalipso_column,Lrttov_subcolumn,Lrttov_column,                 &
-                         Lparasol_subcolumn,Lparasol_column,Lradar_lidar_tcc,            &
-                         Llidar_only_freq_cloud,Lcloudsat_tcc,Lcloudsat_tcc2,cospOUT,    &
-                         cosp_simulator,nError)
+    call cosp_errorCheck(cospgridIN, cospIN, Lisccp_subcolumn, Lisccp_column,            &
+         Lmisr_subcolumn, Lmisr_column, Lmodis_subcolumn, Lmodis_column,                 &
+         Lcloudsat_subcolumn, Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column,     &
+         Latlid_subcolumn, Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column,     &
+         Lrttov_subcolumn, Lrttov_column, Lparasol_subcolumn, Lparasol_column,           &
+         Lradar_lidar_tcc, Llidar_only_freq_cloud, Lcloudsat_tcc,Lcloudsat_tcc2, cospOUT,&
+         cosp_simulator, nError)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -536,16 +626,36 @@ CONTAINS
        calipsoIN%Npoints     => Npoints
        calipsoIN%Ncolumns    => cospIN%Ncolumns
        calipsoIN%Nlevels     => cospIN%Nlevels
-       calipsoIN%beta_mol    => cospIN%beta_mol
-       calipsoIN%betatot     => cospIN%betatot
-       calipsoIN%betatot_liq => cospIN%betatot_liq
-       calipsoIN%betatot_ice => cospIN%betatot_ice
-       calipsoIN%tau_mol     => cospIN%tau_mol
-       calipsoIN%tautot      => cospIN%tautot
-       calipsoIN%tautot_liq  => cospIN%tautot_liq
-       calipsoIN%tautot_ice  => cospIN%tautot_ice
+       calipsoIN%beta_mol    => cospIN%beta_mol_calipso
+       calipsoIN%betatot     => cospIN%betatot_calipso
+       calipsoIN%betatot_liq => cospIN%betatot_liq_calipso
+       calipsoIN%betatot_ice => cospIN%betatot_ice_calipso
+       calipsoIN%tau_mol     => cospIN%tau_mol_calipso
+       calipsoIN%tautot      => cospIN%tautot_calipso
+       calipsoIN%tautot_liq  => cospIN%tautot_liq_calipso
+       calipsoIN%tautot_ice  => cospIN%tautot_ice_calipso
     endif
 
+    if (LgrLidar532_subcolumn) then 
+       grLidar532IN%Npoints  => Npoints
+       grLidar532IN%Ncolumns => cospIN%Ncolumns 
+       grLidar532IN%Nlevels  => cospIN%Nlevels
+       grLidar532IN%beta_mol => cospIN%beta_mol_grLidar532 
+       grLidar532IN%betatot  => cospIN%betatot_grLidar532 
+       grLidar532IN%tau_mol  => cospIN%tau_mol_grLidar532 
+       grLidar532IN%tautot   => cospIN%tautot_grLidar532  
+    endif
+    
+    if (Latlid_subcolumn) then 
+       atlidIN%Npoints        => Npoints 
+       atlidIN%Ncolumns       => cospIN%Ncolumns 
+       atlidIN%Nlevels        => cospIN%Nlevels 
+       atlidIN%beta_mol_atlid => cospIN%beta_mol_atlid
+       atlidIN%betatot_atlid  => cospIN%betatot_atlid 
+       atlidIN%tau_mol_atlid  => cospIN%tau_mol_atlid 
+       atlidIN%tautot_atlid   => cospIN%tautot_atlid 
+    endif 
+    
     if (Lparasol_subcolumn) then
        parasolIN%Npoints      => Npoints
        parasolIN%Nlevels      => cospIN%Nlevels
@@ -674,12 +784,11 @@ CONTAINS
                 calipso_beta_tot(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels),&
                 calipso_betaperp_tot(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels))
        ! Call simulator
-       call lidar_subcolumn(calipsoIN%npoints,calipsoIN%ncolumns,calipsoIN%nlevels,      &
-                            calipsoIN%beta_mol,calipsoIN%tau_mol,                        &
-                            calipsoIN%betatot,calipsoIN%tautot,calipsoIN%betatot_ice,    &
-                            calipsoIN%tautot_ice,calipsoIN%betatot_liq,                  &
-                            calipsoIN%tautot_liq,calipso_beta_mol(:,:),                  &
-                            calipso_beta_tot(:,:,:),calipso_betaperp_tot(:,:,:))
+       call lidar_subcolumn(calipsoIN%npoints, calipsoIN%ncolumns, calipsoIN%nlevels, .false., &
+            calipsoIN%beta_mol, calipsoIN%tau_mol, calipsoIN%betatot, calipsoIN%tautot,  &
+            calipso_beta_mol(:,:), calipso_beta_tot(:,:,:), calipsoIN%betatot_ice,       &
+            calipsoIN%tautot_ice, calipsoIN%betatot_liq, calipsoIN%tautot_liq,           &
+            calipso_betaperp_tot(:,:,:))
        ! Store output (if requested)
        if (associated(cospOUT%calipso_beta_mol))                                         &
             cospOUT%calipso_beta_mol(ij:ik,calipsoIN%Nlevels:1:-1) = calipso_beta_mol
@@ -687,7 +796,38 @@ CONTAINS
             cospOUT%calipso_beta_tot(ij:ik,:,calipsoIN%Nlevels:1:-1) = calipso_beta_tot
        if (associated(cospOUT%calipso_betaperp_tot))                                     &
             cospOUT%calipso_betaperp_tot(ij:ik,:,:) = calipso_betaperp_tot
+    endif
 
+    ! GROUND LIDAR subcolumn simulator 
+    if (LgrLidar532_subcolumn) then  
+       ! Allocate space for local variables  
+       allocate(grLidar532_beta_mol(grLidar532IN%Npoints,grLidar532IN%Nlevels),       &  
+                grLidar532_beta_tot(grLidar532IN%Npoints,grLidar532IN%Ncolumns,grLidar532IN%Nlevels))
+       ! Call simulator  
+       call lidar_subcolumn(grLidar532IN%npoints, grLidar532IN%ncolumns, grLidar532IN%nlevels,&
+            .true., grLidar532IN%beta_mol, grLidar532IN%tau_mol, grLidar532IN%betatot,&
+            grLidar532IN%tautot, grLidar532_beta_mol(:,:), grLidar532_beta_tot(:,:,:))
+       ! Store output (if requested) 
+       if (associated(cospOUT%grLidar532_beta_mol))                                      & 
+            cospOUT%grLidar532_beta_mol(ij:ik,grLidar532IN%Nlevels:1:-1) = grLidar532_beta_mol 
+       if (associated(cospOUT%grLidar532_beta_tot))                                         & 
+            cospOUT%grLidar532_beta_tot(ij:ik,:,grLidar532IN%Nlevels:1:-1) = grLidar532_beta_tot 
+    endif 
+
+    ! ATLID subcolumn simulator
+    if (Latlid_subcolumn) then
+       ! Allocate space for local variables
+       allocate(atlid_beta_mol(atlidIN%Npoints,atlidIN%Nlevels),                      & 
+                atlid_beta_tot(atlidIN%Npoints,atlidIN%Ncolumns,atlidIN%Nlevels)) 
+       ! Call simulator 
+       call lidar_subcolumn(atlidIN%npoints, atlidIN%ncolumns, atlidIN%nlevels,&
+            .false., atlidIN%beta_mol_atlid, atlidIN%tau_mol_atlid, atlidIN%betatot_atlid,&
+            atlidIN%tautot_atlid, atlid_beta_mol(:,:), atlid_beta_tot(:,:,:))
+       ! Store output (if requested)
+       if (associated(cospOUT%atlid_beta_mol))                                        & 
+            cospOUT%atlid_beta_mol(ij:ik,atlidIN%Nlevels:1:-1) = atlid_beta_mol 
+       if (associated(cospOUT%atlid_beta_tot))                                        &
+            cospOUT%atlid_beta_tot(ij:ik,:,atlidIN%Nlevels:1:-1) = atlid_beta_tot   
     endif
 
     ! PARASOL subcolumn simulator
@@ -892,23 +1032,48 @@ CONTAINS
        if (.not. associated(cospOUT%calipso_lidarcldtmp)) then
           allocate(out1D_6(Npoints*40*5))
           cospOUT%calipso_lidarcldtmp(ij:ik,1:40,1:5) => out1D_6
+       endif   
+       if (.not. associated(cospOUT%calipso_lidarcldtype)) then
+          allocate(out1D_7(Npoints*Nlvgrid*4))
+          cospOUT%calipso_lidarcldtype(ij:ik,1:Nlvgrid,1:4) => out1D_7
        endif
-
+       if (.not. associated(cospOUT%calipso_cldtype)) then 
+          allocate(out1D_8(Npoints*LIDAR_NTYPE)) 
+          cospOUT%calipso_cldtype(ij:ik,1:LIDAR_NTYPE) => out1D_8  
+       endif 
+       if (.not. associated(cospOUT%calipso_cldtypetemp)) then 
+          allocate(out1D_9(Npoints*LIDAR_NTYPE))  
+          cospOUT%calipso_cldtypetemp(ij:ik,1:LIDAR_NTYPE) => out1D_9 
+       endif 
+       if (.not. associated(cospOUT%calipso_cldtypemeanz)) then 
+          allocate(out1D_10(Npoints*2))
+          cospOUT%calipso_cldtypemeanz(ij:ik,1:2) => out1D_10 
+       endif 
+       if (.not. associated(cospOUT%calipso_cldtypemeanzse)) then
+          allocate(out1D_12(Npoints*3)) 
+          cospOUT%calipso_cldtypemeanzse(ij:ik,1:3) => out1D_12
+       endif
+       if (.not. associated(cospOUT%calipso_cldthinemis)) then
+          allocate(out1D_11(Npoints)) 
+          cospOUT%calipso_cldthinemis(ij:ik) => out1D_11 
+       endif
+       
        ! Call simulator
        ok_lidar_cfad=.true.
-       call lidar_column(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels,         &
-                         Nlvgrid,SR_BINS,cospgridIN%at(:,:),                             &
-                         calipso_beta_tot(:,:,:),calipso_betaperp_tot(:,:,:),            &
-                         calipso_beta_mol(:,:),                                          &
-                         cospgridIN%phalf(:,2:calipsoIN%Nlevels+1),ok_lidar_cfad,        &
-                         LIDAR_NCAT,cospOUT%calipso_cfad_sr(ij:ik,:,:),                  &
-                         cospOUT%calipso_lidarcld(ij:ik,:),                              &
-                         cospOUT%calipso_lidarcldphase(ij:ik,:,:),                       &
-                         cospOUT%calipso_cldlayer(ij:ik,:),                              &
-                         cospgridIN%hgt_matrix,cospgridIN%hgt_matrix_half,               &
-                         cospOUT%calipso_cldlayerphase(ij:ik,:,:),                       &
-                         cospOUT%calipso_lidarcldtmp(ij:ik,:,:))
-       if (associated(cospOUT%calipso_srbval)) cospOUT%calipso_srbval = calipso_histBsct
+       call lidar_column(calipsoIN%Npoints, calipsoIN%Ncolumns, calipsoIN%Nlevels,       &
+            Nlvgrid, SR_BINS, LIDAR_NTYPE, 'calipso',calipso_beta_tot(:,:,:), calipso_beta_mol(:,:),&
+            cospgridIN%phalf(:,2:calipsoIN%Nlevels),cospgridIN%hgt_matrix,               &
+            cospgridIN%hgt_matrix_half, vgrid_z(:), ok_lidar_cfad, LIDAR_NCAT,           &
+            cospOUT%calipso_cfad_sr(ij:ik,:,:), cospOUT%calipso_lidarcld(ij:ik,:),       &
+            cospOUT%calipso_cldlayer(ij:ik,:),                                           &
+            cospgridIN%at(:,:), calipso_betaperp_tot(:,:,:), cospgridIN%surfelev,        & 
+            cospOUT%calipso_lidarcldphase(ij:ik,:,:),                       &
+            cospOUT%calipso_lidarcldtype(ij:ik,:,:),  cospOUT%calipso_cldtype(ij:ik,:),  &
+            cospOUT%calipso_cldtypetemp(ij:ik,:), cospOUT%calipso_cldtypemeanz(ij:ik,:), & 
+            cospOUT%calipso_cldtypemeanzse(ij:ik,:), cospOUT%calipso_cldthinemis(ij:ik), &
+            cospOUT%calipso_cldlayerphase(ij:ik,:,:), cospOUT%calipso_lidarcldtmp(ij:ik,:,:))
+
+         if (associated(cospOUT%calipso_srbval)) cospOUT%calipso_srbval = calipso_histBsct
 
        ! Free up memory (if necessary)
        if (allocated(out1D_1)) then
@@ -935,6 +1100,117 @@ CONTAINS
           deallocate(out1D_6)
           nullify(cospOUT%calipso_lidarcldtmp)
        endif
+       if (allocated(out1D_7)) then
+          deallocate(out1D_7)  
+          nullify(cospOUT%calipso_lidarcldtype)
+       endif  
+       if (allocated(out1D_8)) then
+          deallocate(out1D_8)
+          nullify(cospOUT%calipso_cldtype)
+       endif 
+       if (allocated(out1D_9)) then 
+          deallocate(out1D_9) 
+          nullify(cospOUT%calipso_cldtypetemp)
+       endif 
+       if (allocated(out1D_10)) then 
+          deallocate(out1D_10)
+          nullify(cospOUT%calipso_cldtypemeanz)
+       endif 
+       if (allocated(out1D_12)) then 
+          deallocate(out1D_12) 
+          nullify(cospOUT%calipso_cldtypemeanzse)
+       endif 
+       if (allocated(out1D_11)) then 
+          deallocate(out1D_11) 
+          nullify(cospOUT%calipso_cldthinemis)
+       endif
+
+    endif
+
+    ! GROUND LIDAR Simulator
+    if (LgrLidar532_column) then
+       ! Check to see which outputs are requested. If not requested, use a local dummy array
+       if (.not. associated(cospOUT%grLidar532_cfad_sr)) then
+          allocate(out1D_1(Npoints*SR_BINS*Nlvgrid)) 
+          cospOUT%grLidar532_cfad_sr(ij:ik,1:SR_BINS,1:Nlvgrid) => out1D_1
+       endif 
+       if (.not. associated(cospOUT%grLidar532_lidarcld)) then
+          allocate(out1D_2(Npoints*Nlvgrid)) 
+          cospOUT%grLidar532_lidarcld(ij:ik,1:Nlvgrid) => out1D_2
+       endif
+       if (.not. associated(cospOUT%grLidar532_cldlayer)) then
+          allocate(out1D_3(Npoints*LIDAR_NCAT))
+          cospOUT%grLidar532_cldlayer(ij:ik,1:LIDAR_NCAT) => out1D_3
+       endif
+       
+       ! Call simulator 
+       ok_lidar_cfad_grLidar532=.true.
+       call lidar_column(grLidar532IN%Npoints, grLidar532IN%Ncolumns, grLidar532IN%Nlevels,       &
+            Nlvgrid, SR_BINS, LIDAR_NTYPE, 'grlidar532',grLidar532_beta_tot(:,:,:), grLidar532_beta_mol(:,:),&
+            cospgridIN%phalf(:,2:grLidar532IN%Nlevels),cospgridIN%hgt_matrix,               &
+            cospgridIN%hgt_matrix_half, vgrid_z(:), ok_lidar_cfad_grLidar532, LIDAR_NCAT,      &
+            cospOUT%grLidar532_cfad_sr(ij:ik,:,:), cospOUT%grLidar532_lidarcld(ij:ik,:),       &
+            cospOUT%grLidar532_cldlayer(ij:ik,:))
+
+       if (associated(cospOUT%grLidar532_srbval)) cospOUT%grLidar532_srbval = grLidar532_histBsct
+
+       ! Free up memory (if necessary) 
+       if (allocated(out1D_1)) then
+          deallocate(out1D_1)
+          nullify(cospOUT%grLidar532_cfad_sr)
+       endif 
+       if (allocated(out1D_2)) then
+          deallocate(out1D_2)
+          nullify(cospOUT%grLidar532_lidarcld)
+       endif 
+       if (allocated(out1D_3)) then
+          deallocate(out1D_3)
+          nullify(cospOUT%grLidar532_cldlayer)
+       endif
+
+    endif
+
+    ! ATLID Simulator
+    if (Latlid_column) then
+       ! Check to see which outputs are requested. If not requested, use a local dummy array
+       if (.not. associated(cospOUT%atlid_cfad_sr)) then
+          allocate(out1D_1(Npoints*SR_BINS*Nlvgrid))
+          cospOUT%atlid_cfad_sr(ij:ik,1:SR_BINS,1:Nlvgrid) => out1D_1
+       endif                                    
+       if (.not. associated(cospOUT%atlid_lidarcld)) then 
+          allocate(out1D_2(Npoints*Nlvgrid))                 
+          cospOUT%atlid_lidarcld(ij:ik,1:Nlvgrid) => out1D_2 
+       endif                                                   
+       if (.not. associated(cospOUT%atlid_cldlayer)) then   
+          allocate(out1D_3(Npoints*LIDAR_NCAT))                 
+          cospOUT%atlid_cldlayer(ij:ik,1:LIDAR_NCAT) => out1D_3 
+       endif                                                      
+       
+       ! Call simulator                                                             
+       ok_lidar_cfad_atlid=.true.
+       call lidar_column(atlidIN%Npoints, atlidIN%Ncolumns, atlidIN%Nlevels,       &
+            Nlvgrid, SR_BINS, LIDAR_NTYPE, 'atlid',atlid_beta_tot(:,:,:),     &
+            atlid_beta_mol(:,:), cospgridIN%phalf(:,2:atlidIN%Nlevels),            &
+            cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half, vgrid_z(:),         &
+            ok_lidar_cfad_atlid, LIDAR_NCAT, cospOUT%atlid_cfad_sr(ij:ik,:,:),     &
+            cospOUT%atlid_lidarcld(ij:ik,:), cospOUT%atlid_cldlayer(ij:ik,:))
+       
+       if (associated(cospOUT%atlid_srbval)) cospOUT%atlid_srbval = atlid_histBsct 
+
+       ! Free up memory (if necessary)        
+       if (allocated(out1D_1)) then           
+          deallocate(out1D_1)                 
+          nullify(cospOUT%atlid_cfad_sr)
+       endif                                  
+       if (allocated(out1D_2)) then          
+          deallocate(out1D_2)                
+          nullify(cospOUT%atlid_lidarcld)
+       endif                                  
+       if (allocated(out1D_3)) then          
+          deallocate(out1D_3)
+          nullify(cospOUT%atlid_cldlayer)
+       endif          
+
     endif
 
     ! PARASOL
@@ -1317,10 +1593,21 @@ CONTAINS
                calipsoIN%tau_mol,calipsoIN%tautot,calipsoIN%tautot_liq,calipsoIN%tautot_ice)
     endif
 
+    if (LgrLidar532_subcolumn) then 
+       nullify(grLidar532IN%Npoints,grLidar532IN%Ncolumns,grLidar532IN%Nlevels,grLidar532IN%beta_mol, &
+               grLidar532IN%betatot,grLidar532IN%tau_mol,grLidar532IN%tautot) 
+    endif 
+
+    if (Latlid_subcolumn) then
+       nullify(atlidIN%Npoints,atlidIN%Ncolumns,atlidIN%Nlevels,atlidIN%beta_mol_atlid, &
+               atlidIN%betatot_atlid,atlidIN%tau_mol_atlid,atlidIN%tautot_atlid)
+    endif 
+
     if (Lparasol_subcolumn) then
        nullify(parasolIN%Npoints,parasolIN%Nlevels,parasolIN%Ncolumns,parasolIN%Nrefl,   &
             parasolIN%tautot_S_liq,parasolIN%tautot_S_ice)
     endif
+
 
     if (Lcloudsat_subcolumn) then
        nullify(cloudsatIN%Npoints,cloudsatIN%Nlevels,cloudsatIN%Ncolumns,cloudsatIN%rcfg,&
@@ -1336,7 +1623,11 @@ CONTAINS
     endif
 
     if (allocated(calipso_beta_tot))      deallocate(calipso_beta_tot)
+    if (allocated(grLidar532_beta_tot))  deallocate(grLidar532_beta_tot)
+    if (allocated(atlid_beta_tot))        deallocate(atlid_beta_tot) 
     if (allocated(calipso_beta_mol))      deallocate(calipso_beta_mol)
+    if (allocated(grLidar532_beta_mol))  deallocate(grLidar532_beta_mol)
+    if (allocated(atlid_beta_mol))        deallocate(atlid_beta_mol)
     if (allocated(calipso_betaperp_tot))  deallocate(calipso_betaperp_tot)
     if (allocated(cloudsatDBZe))          deallocate(cloudsatDBZe)
     if (allocated(lidar_only_freq_cloud)) deallocate(lidar_only_freq_cloud)
@@ -1348,13 +1639,13 @@ CONTAINS
   ! ######################################################################################
   ! SUBROUTINE cosp_init
   ! ######################################################################################
-  SUBROUTINE COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, Lparasol, Lrttov,     &
+  SUBROUTINE COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid, Lparasol, Lrttov,     &
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme)
 
     ! INPUTS
-    logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,Lparasol,Lrttov
+    logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & !
          cloudsat_do_ray,            & !
@@ -1418,6 +1709,8 @@ CONTAINS
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
          rcfg,cloudsat_micro_scheme)
     if (Lcalipso) call cosp_calipso_init()
+    if (LgrLidar532) call cosp_grLidar532_init()
+    if (Latlid) call cosp_atlid_init()
     if (Lparasol) call cosp_parasol_init()
 
     linitialization = .FALSE.
@@ -1435,7 +1728,8 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine cosp_errorCheck(cospgridIN, cospIN, Lisccp_subcolumn, Lisccp_column,           &
        Lmisr_subcolumn, Lmisr_column, Lmodis_subcolumn, Lmodis_column, Lcloudsat_subcolumn, &
-       Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column, Lrttov_subcolumn,             &
+       Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column, Latlid_subcolumn,             &
+       Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column, Lrttov_subcolumn,        &
        Lrttov_column, Lparasol_subcolumn, Lparasol_column, Lradar_lidar_tcc,                &
        Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2, cospOUT, errorMessage, nError)
     
@@ -1457,6 +1751,10 @@ CONTAINS
          Lcloudsat_column,    & ! CLOUDSAT column simulator on/off switch
          Lcalipso_subcolumn,  & ! CALIPSO subcolumn simulator on/off switch
          Lcalipso_column,     & ! CALIPSO column simulator on/off switch
+         Latlid_subcolumn,    & ! EarthCare subcolumn simulator on/off switch
+         Latlid_column,       & ! EarthCare column simulator on/off switch
+         LgrLidar532_subcolumn, & ! Ground Lidar subcolumn simulator on/off switch
+         LgrLidar532_column, & ! Ground Lidar column simulator on/off switch
          Lparasol_subcolumn,  & ! PARASOL subcolumn simulator on/off switch
          Lparasol_column,     & ! PARASOL column simulator on/off switch
          Lrttov_subcolumn,    & ! RTTOV subcolumn simulator on/off switch
@@ -1546,7 +1844,7 @@ CONTAINS
        alloc_status = .true.
        if (.not. allocated(cospIN%tau_067)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (MISR simulator): cospgridIN%tau_067 has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (MISR simulator): cospIN%tau_067 has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%sunlit)) then
@@ -1573,52 +1871,164 @@ CONTAINS
           if (associated(cospOUT%misr_cldarea))              cospOUT%misr_cldarea(:)                = R_UNDEF          
        endif
     endif
+
+    ! EarthCare Lidar simulator.
+    if (Latlid_subcolumn .or. Latlid_column) then
+       alloc_status = .true.
+       if (.not. allocated(cospIN%beta_mol_atlid)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospIN%beta_mol_atlid has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%betatot_atlid)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospIN%betatot_atlid has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%tau_mol_atlid)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospIN%tau_mol_atlid has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%tautot_atlid)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospIN%tautot_atlid has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. alloc_status) then
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false.
+          if (associated(cospOUT%atlid_cfad_sr))  cospOUT%atlid_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld)) cospOUT%atlid_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer)) cospOUT%atlid_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_beta_mol)) cospOUT%atlid_beta_mol(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_beta_tot)) cospOUT%atlid_beta_tot(:,:,:) = R_UNDEF
+       endif
+       
+       ! EarthCare column simulator requires additional inputs not required by the subcolumn simulator.
+       alloc_status = .true.
+       if (.not. allocated(cospgridIN%hgt_matrix)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospgridIN%hgt_matrix has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%hgt_matrix_half)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospgridIN%hgt_matrix_half has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%phalf)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (EarthCare Lidar simulator): cospgridIN%phalf has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. alloc_status) then
+          Latlid_column  = .false.
+          if (associated(cospOUT%atlid_cfad_sr)) cospOUT%atlid_cfad_sr(:,:,:) = R_UNDEF
+       endif
+    endif
+
+    ! Ground Lidar simulator.
+    if (LgrLidar532_subcolumn .or. LgrLidar532_column) then
+       alloc_status = .true.
+       if (.not. allocated(cospIN%beta_mol_grLidar532)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospIN%beta_mol_grLidar532 has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%betatot_grLidar532)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospIN%betatot_grLidar532 has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%tau_mol_grLidar532)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospIN%tau_mol_grLidar532 has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%tautot_grLidar532)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospIN%tautot_grLidar532 has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. alloc_status) then
+          LgrLidar532_subcolumn = .false.
+          LgrLidar532_column    = .false.
+          if (associated(cospOUT%grLidar532_cfad_sr))  cospOUT%grLidar532_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld)) cospOUT%grLidar532_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer)) cospOUT%grLidar532_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_mol)) cospOUT%grLidar532_beta_mol(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_tot)) cospOUT%grLidar532_beta_tot(:,:,:) = R_UNDEF
+       endif
+       
+       ! Ground Lidar column simulator requires additional inputs not required by the subcolumn simulator.
+       alloc_status = .true.
+       if (.not. allocated(cospgridIN%hgt_matrix)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospgridIN%hgt_matrix has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%hgt_matrix_half)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospgridIN%hgt_matrix_half has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%phalf)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Ground Lidar simulator): cospgridIN%phalf has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. alloc_status) then
+          LgrLidar532_column  = .false.
+          if (associated(cospOUT%grLidar532_cfad_sr)) cospOUT%grLidar532_cfad_sr(:,:,:) = R_UNDEF
+       endif
+    endif
     
     ! Calipso Lidar simulator
     if (Lcalipso_subcolumn .or. Lcalipso_column) then
        alloc_status = .true.
-       if (.not. allocated(cospIN%beta_mol)) then
+       if (.not. allocated(cospIN%beta_mol_calipso)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%beta_mol has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospIN%beta_mol_calipso has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospIN%betatot)) then
+       if (.not. allocated(cospIN%betatot_calipso)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%betatot has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospIN%betatot_calipso has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospIN%betatot_liq)) then
+       if (.not. allocated(cospIN%betatot_liq_calipso)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
-               ' cospgridIN%betatot_liq has not been allocated'
+               ' cospIN%betatot_liq_calipso has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospIN%betatot_ice)) then
+       if (.not. allocated(cospIN%betatot_ice_calipso)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
-               ' cospgridIN%betatot_ice has not been allocated'
+               ' cospIN%betatot_ice_calipso has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospIN%tau_mol)) then
+       if (.not. allocated(cospIN%tau_mol_calipso)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%tau_mol has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospIN%tau_mol_calipso has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospIN%tautot)) then
+       if (.not. allocated(cospIN%tautot_calipso)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%tautot has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospIN%tautot_calipso has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospIN%tautot_liq)) then
-          nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
-               ' cospgridIN%tautot_liq has not been allocated'
-          alloc_status = .false.
-       endif
-       if (.not. allocated(cospIN%tautot_ice)) then
+       if (.not. allocated(cospIN%tautot_liq_calipso)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
-               ' cospgridIN%tautot_ice has not been allocated'
+               ' cospIN%tautot_liq has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospIN%tautot_ice_calipso)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator):'//&
+               ' cospIN%tautot_ice has not been allocated'
           alloc_status = .false.
        endif
        if (.not. alloc_status) then
@@ -2083,6 +2493,7 @@ CONTAINS
                cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
        endif
     endif
+
     if (any([Lisccp_subcolumn, Lisccp_column, Lmisr_subcolumn, Lmisr_column, Lrttov_column,&
          Lcalipso_column, Lcloudsat_column, Lradar_lidar_tcc,Llidar_only_freq_cloud, &
          Lcloudsat_tcc, Lcloudsat_tcc2])) then
@@ -2120,6 +2531,12 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayer))      cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF 
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
           if (associated(cospOUT%cloudsat_cfad_ze))      cospOUT%cloudsat_cfad_ze(:,:,:)      = R_UNDEF
           if (associated(cospOUT%lidar_only_freq_cloud)) cospOUT%lidar_only_freq_cloud(:,:)   = R_UNDEF
           if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF
@@ -2146,7 +2563,8 @@ CONTAINS
           if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(:,:,:)        = R_UNDEF
        endif
     endif
-    if (any([Lisccp_subcolumn,Lisccp_column,Lmodis_subcolumn,Lmodis_column,Lcalipso_column,Lrttov_column])) then
+    if (any([Lisccp_subcolumn,Lisccp_column,Lmodis_subcolumn,Lmodis_column,Lcalipso_column,Lrttov_column,&
+             LgrLidar532_column,Latlid_column])) then
        if (any(cospgridIN%phalf .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%phalf contains values out of range'
@@ -2156,6 +2574,8 @@ CONTAINS
           Lmodis_column    = .false.
           Lcalipso_column  = .false.
           Lrttov_column    = .false.
+          Latlid_column    = .false.
+          LgrLidar532_column = .false.
           if (associated(cospOUT%rttov_tbs))           cospOUT%rttov_tbs(:,:)         = R_UNDEF
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
@@ -2212,6 +2632,18 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayer))      cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_cfad_sr))         cospOUT%atlid_cfad_sr(:,:,:)         = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))        cospOUT%atlid_lidarcld(:,:)          = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))        cospOUT%atlid_cldlayer(:,:)          = R_UNDEF
+          if (associated(cospOUT%grLidar532_cfad_sr))   cospOUT%grLidar532_cfad_sr(:,:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))  cospOUT%grLidar532_lidarcld(:,:)    = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))  cospOUT%grLidar532_cldlayer(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
     endif
     if (any([Lisccp_subcolumn,Lisccp_column,Lrttov_column])) then
@@ -2234,7 +2666,7 @@ CONTAINS
        endif
     endif
     if (any([Lmisr_subcolumn,Lmisr_column,Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_column,Lradar_lidar_tcc,&
-         Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2])) then
+         Llidar_only_freq_cloud,LgrLidar532_column,Latlid_column,Lcloudsat_tcc, Lcloudsat_tcc2])) then
        if (any(cospgridIN%hgt_matrix .lt. -300)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%hgt_matrix contains values out of range'
@@ -2247,6 +2679,8 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc       = .false.
           Lcloudsat_tcc2      = .false.
+          Latlid_column       = .false.
+          LgrLidar532_column  = .false.
           if (associated(cospOUT%misr_fq))                   cospOUT%misr_fq(:,:,:)                 = R_UNDEF
           if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(:,:) = R_UNDEF
           if (associated(cospOUT%misr_meanztop))             cospOUT%misr_meanztop(:)               = R_UNDEF
@@ -2261,12 +2695,24 @@ CONTAINS
           if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
           if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
           if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF
-          if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
-          if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF
+          if (associated(cospOUT%cloudsat_tcc))              cospOUT%cloudsat_tcc(:)                = R_UNDEF
+          if (associated(cospOUT%cloudsat_tcc2))             cospOUT%cloudsat_tcc2(:)               = R_UNDEF
+          if (associated(cospOUT%atlid_cfad_sr))             cospOUT%atlid_cfad_sr(:,:,:)           = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))            cospOUT%atlid_lidarcld(:,:)            = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))            cospOUT%atlid_cldlayer(:,:)            = R_UNDEF
+          if (associated(cospOUT%grLidar532_cfad_sr))        cospOUT%grLidar532_cfad_sr(:,:,:)      = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))       cospOUT%grLidar532_lidarcld(:,:)       = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))       cospOUT%grLidar532_cldlayer(:,:)       = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))      cospOUT%calipso_lidarcldtype(:,:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))           cospOUT%calipso_cldtype(:,:)           = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))       cospOUT%calipso_cldtypetemp(:,:)       = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))      cospOUT%calipso_cldtypemeanz(:,:)      = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse))    cospOUT%calipso_cldtypemeanzse(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))       cospOUT%calipso_cldthinemis(:)         = R_UNDEF
        endif
     endif
-    if (any([Lrttov_column,Lcloudsat_column,Lcalipso_column,Lradar_lidar_tcc,            &
-             Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2])) then
+    if (any([Lrttov_column,Lcloudsat_column,Lcalipso_column,Lradar_lidar_tcc,Llidar_only_freq_cloud, &
+             LgrLidar532_column, Latlid_column, Lcloudsat_tcc, Lcloudsat_tcc2])) then
        if (any(cospgridIN%hgt_matrix_half .lt. -300)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%hgt_matrix_half contains values out of range'
@@ -2277,18 +2723,32 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc    = .false.
           Lcloudsat_tcc2   = .false.
-          if (associated(cospOUT%rttov_tbs))             cospOUT%rttov_tbs(:,:)               = R_UNDEF
-          if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
-          if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
-          if (associated(cospOUT%calipso_lidarcldphase)) cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
-          if (associated(cospOUT%calipso_cldlayer))      cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
-          if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
-          if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
-          if (associated(cospOUT%cloudsat_cfad_ze))      cospOUT%cloudsat_cfad_ze(:,:,:)      = R_UNDEF
-          if (associated(cospOUT%lidar_only_freq_cloud)) cospOUT%lidar_only_freq_cloud(:,:)   = R_UNDEF
-          if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF
-          if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
-          if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF          
+          Latlid_column       = .false.
+          LgrLidar532_column = .false.
+          if (associated(cospOUT%rttov_tbs))              cospOUT%rttov_tbs(:,:)               = R_UNDEF
+          if (associated(cospOUT%calipso_cfad_sr))        cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcld))       cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldphase))  cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldlayer))       cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
+          if (associated(cospOUT%calipso_cldlayerphase))  cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtmp))    cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
+          if (associated(cospOUT%cloudsat_cfad_ze))       cospOUT%cloudsat_cfad_ze(:,:,:)      = R_UNDEF
+          if (associated(cospOUT%lidar_only_freq_cloud))  cospOUT%lidar_only_freq_cloud(:,:)   = R_UNDEF
+          if (associated(cospOUT%radar_lidar_tcc))        cospOUT%radar_lidar_tcc(:)           = R_UNDEF
+          if (associated(cospOUT%cloudsat_tcc))           cospOUT%cloudsat_tcc(:)              = R_UNDEF
+          if (associated(cospOUT%cloudsat_tcc2))          cospOUT%cloudsat_tcc2(:)             = R_UNDEF          
+          if (associated(cospOUT%atlid_cfad_sr))          cospOUT%atlid_cfad_sr(:,:,:)         = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))         cospOUT%atlid_lidarcld(:,:)          = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))         cospOUT%atlid_cldlayer(:,:)          = R_UNDEF
+          if (associated(cospOUT%grLidar532_cfad_sr))     cospOUT%grLidar532_cfad_sr(:,:,:)    = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))    cospOUT%grLidar532_lidarcld(:,:)     = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))    cospOUT%grLidar532_cldlayer(:,:)     = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))   cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))        cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))    cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))   cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:)  = R_UNDEF 
+          if (associated(cospOUT%calipso_cldthinemis))    cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
     endif
     if (any([Lrttov_column,Lcalipso_column,Lparasol_column])) then
@@ -2305,6 +2765,12 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayer))      cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
           if (associated(cospOUT%parasolGrid_refl))      cospOUT%parasolGrid_refl(:,:)        = R_UNDEF
        endif
     endif
@@ -2586,10 +3052,104 @@ CONTAINS
                cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
        endif
     endif
+    if (any([Latlid_subcolumn,Latlid_column])) then
+       if (any(cospIN%betatot_atlid .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot_atlid contains values out of range'
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false.
+          if (associated(cospOUT%atlid_cfad_sr))       cospOUT%atlid_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))      cospOUT%atlid_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))      cospOUT%atlid_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_beta_tot))      cospOUT%atlid_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%atlid_beta_mol))      cospOUT%atlid_beta_mol(:,:)   = R_UNDEF
+       endif
+       if (any(cospIN%beta_mol_atlid .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%beta_mol_atlid contains values out of range'
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false.
+          if (associated(cospOUT%atlid_cfad_sr))       cospOUT%atlid_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))      cospOUT%atlid_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))      cospOUT%atlid_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_beta_tot))      cospOUT%atlid_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%atlid_beta_mol))      cospOUT%atlid_beta_mol(:,:)   = R_UNDEF
+       endif
+       if (any(cospIN%tautot_atlid .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_atlid contains values out of range'
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false.
+          if (associated(cospOUT%atlid_cfad_sr))       cospOUT%atlid_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))      cospOUT%atlid_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))      cospOUT%atlid_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_beta_tot))      cospOUT%atlid_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%atlid_beta_mol))      cospOUT%atlid_beta_mol(:,:)   = R_UNDEF
+       endif
+       if (any(cospIN%tau_mol_atlid .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tau_mol_atlid contains values out of range'
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false.
+          if (associated(cospOUT%atlid_cfad_sr))       cospOUT%atlid_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%atlid_lidarcld))      cospOUT%atlid_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_cldlayer))      cospOUT%atlid_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%atlid_beta_tot))      cospOUT%atlid_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%atlid_beta_mol))      cospOUT%atlid_beta_mol(:,:)   = R_UNDEF
+       endif
+    endif
+    
+    if (any([LgrLidar532_subcolumn,LgrLidar532_column])) then
+       if (any(cospIN%betatot_grLidar532 .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot_grLidar532 contains values out of range'
+          LgrLidar532_subcolumn = .false.
+          LgrLidar532_column    = .false.
+          if (associated(cospOUT%grLidar532_cfad_sr))       cospOUT%grLidar532_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))      cospOUT%grLidar532_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))      cospOUT%grLidar532_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_tot))      cospOUT%grLidar532_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_mol))      cospOUT%grLidar532_beta_mol(:,:)   = R_UNDEF
+       endif
+       if (any(cospIN%beta_mol_grLidar532 .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%beta_mol_grLidar532 contains values out of range'
+          LgrLidar532_subcolumn = .false.
+          LgrLidar532_column    = .false.
+          if (associated(cospOUT%grLidar532_cfad_sr))       cospOUT%grLidar532_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))      cospOUT%grLidar532_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))      cospOUT%grLidar532_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_tot))      cospOUT%grLidar532_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_mol))      cospOUT%grLidar532_beta_mol(:,:)   = R_UNDEF
+       endif
+       if (any(cospIN%tautot_grLidar532 .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_grLidar532 contains values out of range'
+          LgrLidar532_subcolumn = .false.
+          LgrLidar532_column    = .false.
+          if (associated(cospOUT%grLidar532_cfad_sr))       cospOUT%grLidar532_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))      cospOUT%grLidar532_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))      cospOUT%grLidar532_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_tot))      cospOUT%grLidar532_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_mol))      cospOUT%grLidar532_beta_mol(:,:)   = R_UNDEF
+       endif
+       if (any(cospIN%tau_mol_grLidar532 .lt. 0)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tau_mol_grLidar532 contains values out of range'
+          LgrLidar532_subcolumn = .false.
+          LgrLidar532_column    = .false.
+          if (associated(cospOUT%grLidar532_cfad_sr))       cospOUT%grLidar532_cfad_sr(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%grLidar532_lidarcld))      cospOUT%grLidar532_lidarcld(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_cldlayer))      cospOUT%grLidar532_cldlayer(:,:)   = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_tot))      cospOUT%grLidar532_beta_tot(:,:,:) = R_UNDEF
+          if (associated(cospOUT%grLidar532_beta_mol))      cospOUT%grLidar532_beta_mol(:,:)   = R_UNDEF
+       endif
+    endif
+
     if (any([Lcalipso_subcolumn,Lcalipso_column])) then
-       if (any(cospIN%betatot .lt. 0)) then
+       if (any(cospIN%betatot_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot contains values out of range'
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot_calipso contains values out of range'
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2599,10 +3159,16 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF 
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
-       if (any(cospIN%betatot_liq .lt. 0)) then
+       if (any(cospIN%betatot_liq_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = ('ERROR: COSP input variable: cospIN%betatot_liq contains values out of range')
+          errorMessage(nError) = ('ERROR: COSP input variable: cospIN%betatot_liq_calipso contains values out of range')
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2612,10 +3178,16 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
-       if (any(cospIN%betatot_ice .lt. 0)) then
+       if (any(cospIN%betatot_ice_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot_ice contains values out of range'
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%betatot_ice_calipso contains values out of range'
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2625,10 +3197,16 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
-       if (any(cospIN%tautot .lt. 0)) then
+       if (any(cospIN%tautot_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot contains values out of range'
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_calipso contains values out of range'
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2638,10 +3216,16 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
-       if (any(cospIN%tautot_liq .lt. 0)) then
+       if (any(cospIN%tautot_liq_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = ('ERROR: COSP input variable: cospIN%tautot_liq contains values out of range')
+          errorMessage(nError) = ('ERROR: COSP input variable: cospIN%tautot_liq_calipso contains values out of range')
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2651,10 +3235,16 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
-       if (any(cospIN%tautot_ice .lt. 0)) then
+       if (any(cospIN%tautot_ice_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_ice contains values out of range'
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tautot_ice_calipso contains values out of range'
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2664,10 +3254,16 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
-       if (any(cospIN%tau_mol .lt. 0)) then
+       if (any(cospIN%tau_mol_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tau_mol contains values out of range'
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tau_mol_calipso contains values out of range'
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -2677,13 +3273,19 @@ CONTAINS
           if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
           if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))  cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtype))       cospOUT%calipso_cldtype(:,:)         = R_UNDEF 
+          if (associated(cospOUT%calipso_cldtypetemp))   cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanz))  cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))   cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
     endif
     if (any([Lcalipso_subcolumn,Lcalipso_column,Lcloudsat_column,Lradar_lidar_tcc,       &
         Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2])) then
-       if (any(cospIN%beta_mol .lt. 0)) then
+       if (any(cospIN%beta_mol_calipso .lt. 0)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%beta_mol contains values out of range'
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%beta_mol_calipso contains values out of range'
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           Lcloudsat_column   = .false.
@@ -2691,18 +3293,24 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc      = .false.
           Lcloudsat_tcc2     = .false.
-          if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
-          if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
-          if (associated(cospOUT%calipso_lidarcldphase)) cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
-          if (associated(cospOUT%calipso_cldlayer))      cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
-          if (associated(cospOUT%calipso_cldlayerphase)) cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
-          if (associated(cospOUT%calipso_lidarcldtmp))   cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
-          if (associated(cospOUT%calipso_srbval))        cospOUT%calipso_srbval(:)            = R_UNDEF
-          if (associated(cospOUT%cloudsat_cfad_ze))      cospOUT%cloudsat_cfad_ze(:,:,:)      = R_UNDEF
-          if (associated(cospOUT%lidar_only_freq_cloud)) cospOUT%lidar_only_freq_cloud(:,:)   = R_UNDEF
-          if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF
-          if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
-          if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF
+          if (associated(cospOUT%calipso_cfad_sr))        cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcld))       cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldphase))  cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cldlayer))       cospOUT%calipso_cldlayer(:,:)        = R_UNDEF
+          if (associated(cospOUT%calipso_cldlayerphase))  cospOUT%calipso_cldlayerphase(:,:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtmp))    cospOUT%calipso_lidarcldtmp(:,:,:)   = R_UNDEF
+          if (associated(cospOUT%calipso_srbval))         cospOUT%calipso_srbval(:)            = R_UNDEF
+          if (associated(cospOUT%cloudsat_cfad_ze))       cospOUT%cloudsat_cfad_ze(:,:,:)      = R_UNDEF
+          if (associated(cospOUT%lidar_only_freq_cloud))  cospOUT%lidar_only_freq_cloud(:,:)   = R_UNDEF
+          if (associated(cospOUT%radar_lidar_tcc))        cospOUT%radar_lidar_tcc(:)           = R_UNDEF
+          if (associated(cospOUT%cloudsat_tcc))           cospOUT%cloudsat_tcc(:)              = R_UNDEF
+          if (associated(cospOUT%cloudsat_tcc2))          cospOUT%cloudsat_tcc2(:)             = R_UNDEF
+          if (associated(cospOUT%calipso_lidarcldtype))   cospOUT%calipso_lidarcldtype(:,:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldtype))        cospOUT%calipso_cldtype(:,:)         = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypetemp))    cospOUT%calipso_cldtypetemp(:,:)     = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanz))   cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF
+          if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:)  = R_UNDEF
+          if (associated(cospOUT%calipso_cldthinemis))    cospOUT%calipso_cldthinemis(:)       = R_UNDEF
        endif
     endif
     if (any([Lparasol_subcolumn,Lparasol_column])) then
@@ -2903,41 +3511,95 @@ CONTAINS
           errorMessage(nError) = 'ERROR(cloudsat_simulator): The number of levels in the input fields are inconsistent'
        endif
     endif
+
+    ! GROUND LIDAR @ 532nm
+    if (size(cospIN%beta_mol_grLidar532,1)    .ne. cospIN%Npoints .OR. & 
+        size(cospIN%betatot_grLidar532,1)     .ne. cospIN%Npoints .OR. &
+        size(cospIN%tau_mol_grLidar532,1)     .ne. cospIN%Npoints .OR. &
+        size(cospIN%tautot_grLidar532,1)      .ne. cospIN%Npoints) then
+       LgrLidar532_subcolumn = .false.
+       LgrLidar532_column    = .false.
+       nError=nError+1
+       errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of points in the input fields are inconsistent'
+    endif
+    if (size(cospIN%betatot_grLidar532,2)    .ne. cospIN%Ncolumns .OR. & 
+        size(cospIN%tautot_grLidar532,2)     .ne. cospIN%Ncolumns) then 
+       LgrLidar532_subcolumn = .false. 
+       LgrLidar532_column    = .false. 
+       nError=nError+1
+       errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of sub-columns in the input fields are inconsistent'
+    endif
+    if (size(cospIN%beta_mol_grLidar532,2)    .ne. cospIN%Nlevels .OR. &
+        size(cospIN%betatot_grLidar532,3)     .ne. cospIN%Nlevels .OR. &
+        size(cospIN%tau_mol_grLidar532,2)     .ne. cospIN%Nlevels .OR. &
+        size(cospIN%tautot_grLidar532,3)      .ne. cospIN%Nlevels) then
+       LgrLidar532_subcolumn = .false. 
+       LgrLidar532_column    = .false. 
+       nError=nError+1
+       errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of levels in the input fields are inconsistent' 
+    endif
     
+    ! ATLID
+    if (size(cospIN%beta_mol_atlid,1)    .ne. cospIN%Npoints .OR. &
+        size(cospIN%betatot_atlid,1)     .ne. cospIN%Npoints .OR. &
+        size(cospIN%tau_mol_atlid,1)     .ne. cospIN%Npoints .OR. & 
+        size(cospIN%tautot_atlid,1)      .ne. cospIN%Npoints) then 
+       Latlid_subcolumn = .false. 
+       Latlid_column    = .false. 
+       nError=nError+1             
+       errorMessage(nError) = 'ERROR(atlid_simulator): The number of points in the input fields are inconsistent'
+    endif
+    if (size(cospIN%betatot_atlid,2)    .ne. cospIN%Ncolumns .OR. &
+        size(cospIN%tautot_atlid,2)     .ne. cospIN%Ncolumns) then 
+       Latlid_subcolumn = .false.
+       Latlid_column    = .false.
+       nError=nError+1              
+       errorMessage(nError) = 'ERROR(atlid_simulator): The number of sub-columns in the input fields are inconsistent'
+    endif
+    if (size(cospIN%beta_mol_atlid,2)    .ne. cospIN%Nlevels .OR. &
+        size(cospIN%betatot_atlid,3)     .ne. cospIN%Nlevels .OR. & 
+        size(cospIN%tau_mol_atlid,2)     .ne. cospIN%Nlevels .OR. &
+        size(cospIN%tautot_atlid,3)      .ne. cospIN%Nlevels) then 
+       Latlid_subcolumn = .false.
+       Latlid_column    = .false. 
+       nError=nError+1 
+       errorMessage(nError) = 'ERROR(atlid_simulator): The number of levels in the input fields are inconsistent'
+    endif
+
     ! CALIPSO
     if (Lcalipso_subcolumn .or. Lcalipso_column) then
-       if (size(cospIN%beta_mol,1)    .ne. cospIN%Npoints .OR. &
-           size(cospIN%betatot,1)     .ne. cospIN%Npoints .OR. &
-           size(cospIN%betatot_liq,1) .ne. cospIN%Npoints .OR. &
-           size(cospIN%betatot_ice,1) .ne. cospIN%Npoints .OR. &
-           size(cospIN%tau_mol,1)     .ne. cospIN%Npoints .OR. &
-           size(cospIN%tautot,1)      .ne. cospIN%Npoints .OR. &
-           size(cospIN%tautot_liq,1)  .ne. cospIN%Npoints .OR. &
-           size(cospIN%tautot_ice,1)  .ne. cospIN%Npoints) then
+       if (size(cospIN%beta_mol_calipso,1)    .ne. cospIN%Npoints .OR. &
+           size(cospIN%betatot_calipso,1)     .ne. cospIN%Npoints .OR. &
+           size(cospIN%betatot_liq_calipso,1) .ne. cospIN%Npoints .OR. &
+           size(cospIN%betatot_ice_calipso,1) .ne. cospIN%Npoints .OR. &
+           size(cospIN%tau_mol_calipso,1)     .ne. cospIN%Npoints .OR. &
+           size(cospIN%tautot_calipso,1)      .ne. cospIN%Npoints .OR. &
+           size(cospIN%tautot_liq_calipso,1)  .ne. cospIN%Npoints .OR. &
+           size(cospIN%tautot_ice_calipso,1)  .ne. cospIN%Npoints) then
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           nError=nError+1
           errorMessage(nError) = 'ERROR(calipso_simulator): The number of points in the input fields are inconsistent'
        endif
-       if (size(cospIN%betatot,2)     .ne. cospIN%Ncolumns .OR. &
-           size(cospIN%betatot_liq,2) .ne. cospIN%Ncolumns .OR. &
-           size(cospIN%betatot_ice,2) .ne. cospIN%Ncolumns .OR. &
-           size(cospIN%tautot,2)      .ne. cospIN%Ncolumns .OR. &
-           size(cospIN%tautot_liq,2)  .ne. cospIN%Ncolumns .OR. &
-           size(cospIN%tautot_ice,2)  .ne. cospIN%Ncolumns) then
+       if (size(cospIN%betatot_calipso,2)     .ne. cospIN%Ncolumns .OR. &
+           size(cospIN%betatot_liq_calipso,2) .ne. cospIN%Ncolumns .OR. &
+           size(cospIN%betatot_ice_calipso,2) .ne. cospIN%Ncolumns .OR. &
+           size(cospIN%tautot_calipso,2)      .ne. cospIN%Ncolumns .OR. &
+           size(cospIN%tautot_liq_calipso,2)  .ne. cospIN%Ncolumns .OR. &
+           size(cospIN%tautot_ice_calipso,2)  .ne. cospIN%Ncolumns) then
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           nError=nError+1
           errorMessage(nError) = 'ERROR(calipso_simulator): The number of sub-columns in the input fields are inconsistent'
        endif
-       if (size(cospIN%beta_mol,2)    .ne. cospIN%Nlevels .OR. &
-           size(cospIN%betatot,3)     .ne. cospIN%Nlevels .OR. &
-           size(cospIN%betatot_liq,3) .ne. cospIN%Nlevels .OR. &
-           size(cospIN%betatot_ice,3) .ne. cospIN%Nlevels .OR. &
-           size(cospIN%tau_mol,2)     .ne. cospIN%Nlevels .OR. &
-           size(cospIN%tautot,3)      .ne. cospIN%Nlevels .OR. &
-           size(cospIN%tautot_liq,3)  .ne. cospIN%Nlevels .OR. &
-           size(cospIN%tautot_ice,3)  .ne. cospIN%Nlevels) then
+       if (size(cospIN%beta_mol_calipso,2)    .ne. cospIN%Nlevels .OR. &
+           size(cospIN%betatot_calipso,3)     .ne. cospIN%Nlevels .OR. &
+           size(cospIN%betatot_liq_calipso,3) .ne. cospIN%Nlevels .OR. &
+           size(cospIN%betatot_ice_calipso,3) .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tau_mol_calipso,2)     .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tautot_calipso,3)      .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tautot_liq_calipso,3)  .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tautot_ice_calipso,3)  .ne. cospIN%Nlevels) then
           Lcalipso_subcolumn = .false.
           Lcalipso_column    = .false.
           nError=nError+1
