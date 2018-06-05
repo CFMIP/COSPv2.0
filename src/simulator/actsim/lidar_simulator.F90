@@ -1422,11 +1422,15 @@ contains
 	      enddo
      ! Summing opaque cloud mean temperatures and altitudes
      ! as defined in Vaillant de Guelis et al. 2017a, AMT
-              cldtypetemp(ip,1) = cldtypetemp(ip,1) + ( tmp(ip,zopac) + tmp(ip,z_top) )/2.
-              cldtypetemp(ip,3) = cldtypetemp(ip,3) + tmp(ip,zopac)                 ! z_opaque
-              cldtypemeanz(ip,1) = cldtypemeanz(ip,1) + ( vgrid_z(zopac) + vgrid_z(z_top) )/2.
-              cldtypemeanzse(ip,1) = cldtypemeanzse(ip,1) + (( vgrid_z(zopac) + vgrid_z(z_top) )/2.) - surfelev(ip)
-              cldtypemeanzse(ip,3) = cldtypemeanzse(ip,3) + ( vgrid_z(zopac) - surfelev(ip) )
+              if (zopac .ne. 0) then 
+                 cldtypetemp(ip,1) = cldtypetemp(ip,1) + ( tmp(ip,zopac) + tmp(ip,z_top) )/2.
+                 cldtypetemp(ip,3) = cldtypetemp(ip,3) + tmp(ip,zopac)                 ! z_opaque
+                 cldtypemeanz(ip,1) = cldtypemeanz(ip,1) + ( vgrid_z(zopac) + vgrid_z(z_top) )/2.
+                 cldtypemeanzse(ip,1) = cldtypemeanzse(ip,1) + (( vgrid_z(zopac) + vgrid_z(z_top) )/2.) - surfelev(ip)
+                 cldtypemeanzse(ip,3) = cldtypemeanzse(ip,3) + ( vgrid_z(zopac) - surfelev(ip) )
+              else
+                 cldlay(ip,ic,1) = 0
+              endif
 	   endif
 
      ! Thin cloud profiles
