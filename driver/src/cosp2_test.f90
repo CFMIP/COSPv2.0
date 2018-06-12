@@ -35,7 +35,7 @@ program cosp2_test
   use cosp_kinds,          only: wp                         
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
                                  N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
-                                 DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
+                                 cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
                                  numMODISTauBins,numMODISPresBins,                        &
                                  numMODISReffIceBins,numMODISReffLiqBins,                 &
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins,         &
@@ -1283,11 +1283,11 @@ contains
 
     ! Cloudsat simulator
     if (Ldbze94)        allocate(x%cloudsat_Ze_tot(Npoints,Ncolumns,Nlevels))
-    if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,DBZE_BINS,Nlvgrid))
+    if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,cloudsat_DBZE_BINS,Nlvgrid))
     if (Lptradarflag0 .or. Lptradarflag1 .or. Lptradarflag2 .or. Lptradarflag3 .or. &
         Lptradarflag4 .or. Lptradarflag5 .or. Lptradarflag6 .or. Lptradarflag7 .or. &
         Lptradarflag8 .or. Lptradarflag9) then
-       allocate(x%cloudsat_precip_cover(Npoints,DBZE_BINS))
+       allocate(x%cloudsat_precip_cover(Npoints,cloudsat_DBZE_BINS))
     endif
     if (Lradarpia) allocate(x%cloudsat_pia(Npoints))
 

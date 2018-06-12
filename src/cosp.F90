@@ -38,13 +38,13 @@ MODULE MOD_COSP
   USE COSP_KINDS,                  ONLY: wp
   USE MOD_COSP_CONFIG,             ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE, SR_BINS,&
                                          N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,      &
-                                         DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
+                                         cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,&
                                          use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,    &
                                          numMODISTauBins,numMODISPresBins,               &
                                          numMODISReffIceBins,numMODISReffLiqBins,        &
                                          numISCCPTauBins,numISCCPPresBins,numMISRTauBins,&
                                          ntau,modis_histTau,tau_binBounds,               &
-                                         modis_histTauEdges,tau_binEdges,                &
+                                         modis_histTauEdges,tau_binEdges,nCloudsatPrecipClass,&
                                          modis_histTauCenters,tau_binCenters,            &
                                          cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct                                
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
@@ -63,7 +63,7 @@ MODULE MOD_COSP
   USE MOD_MODIS_SIM,                 ONLY: modis_subcolumn,       modis_column
   USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
   use mod_cosp_rttov,                ONLY: rttov_column
-  USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID,cloudsat_precipOccurence
+  USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID
 
   IMPLICIT NONE
 
@@ -371,7 +371,7 @@ CONTAINS
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6,out1D_7,out1D_8,       &
          out1D_9,out1D_10,out1D_11,out1D_12 
     real(wp),dimension(:,:,:),allocatable :: &
-       betamol_in,betamolFlip,pnormFlip,ze_totFlip,ze_nonFlip
+       betamol_in,betamoli,pnormi,ze_toti,ze_noni
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
@@ -1225,18 +1225,38 @@ CONTAINS
     if (Lcloudsat_column) then
        ! Check to see which outputs are requested. If not requested, use a local dummy array
        if (.not. associated(cospOUT%cloudsat_cfad_ze)) then
-          allocate(out1D_1(Npoints*DBZE_BINS*Nlvgrid))
-          cospOUT%cloudsat_cfad_ze(ij:ik,1:DBZE_BINS,1:Nlvgrid) => out1D_1
+          allocate(out1D_1(Npoints*cloudsat_DBZE_BINS*Nlvgrid))
+          cospOUT%cloudsat_cfad_ze(ij:ik,1:cloudsat_DBZE_BINS,1:Nlvgrid) => out1D_1
        endif
 
+       if (.not. associated(cospOUT%cloudsat_pia)) then
+          allocate(out1D_2(Npoints))
+          cospOUT%cloudsat_pia(ij:ik) => out1D_2
+       endif
+       if (.not. associated(cospOUT%cloudsat_precip_cover)) then
+          allocate(out1D_3(Npoints*nCloudsatPrecipClass))
+          cospOUT%cloudsat_precip_cover(ij:ik,1:nCloudsatPrecipClass) => out1D_3
+       endif
+          
        ! Call simulator
-       call quickbeam_column(cloudsatIN%Npoints,cloudsatIN%Ncolumns,cloudsatIN%Nlevels,  &
-                             Nlvgrid,cloudsatDBZe,cospgridIN%hgt_matrix,                 &
-                             cospgridIN%hgt_matrix_half,cospOUT%cloudsat_cfad_ze(ij:ik,:,:))
+       call quickbeam_column(cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,&
+            Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,       &
+            cospgridIN%land(:), cospgridIN%at(:,cospIN%Nlevels), cospIN%fracPrecipIce,   &
+            cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,                           &
+            cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover,          &
+            cospOUT%cloudsat_pia)
        ! Free up memory  (if necessary)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
           nullify(cospOUT%cloudsat_cfad_ze)
+       endif
+       if (allocated(out1D_2)) then
+          deallocate(out1D_2)
+          nullify(cospOUT%cloudsat_pia)
+       endif
+       if (allocated(out1D_3)) then
+          deallocate(out1D_3)
+          nullify(cospOUT%cloudsat_precip_cover)
        endif
     endif
 
@@ -1494,34 +1514,36 @@ CONTAINS
                radar_lidar_tcc(cloudsatIN%Npoints), cloudsat_tcc(cloudsatIN%Npoints),    &
                cloudsat_tcc2(cloudsatIN%Npoints))
           allocate(betamol_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),                  &
-                   betamolFlip(cloudsatIN%Npoints,1,Nlvgrid),                            &
-                   pnormFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),            &
-                   Ze_totFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
+                   betamoli(cloudsatIN%Npoints,1,Nlvgrid),                               &
+                   pnormI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),               &
+                   Ze_totI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
 
+          ! Regrid in the vertical (*NOTE* This routine requires SFC-2-TOA ordering, so flip
+          ! inputs and outputs to maintain TOA-2-SFC ordering convention in COSP2.)
           betamol_in(:,1,:) = calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1)
           call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
                cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),                         &
                cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),betamol_in,         &
                Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),                    &
-               betamolFlip(:,1,Nlvgrid:1:-1))
+               betamolI(:,1,Nlvgrid:1:-1))
 
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
                cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
                calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                    &
-               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),pnormFlip(:,:,Nlvgrid:1:-1))
+               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),pnormI(:,:,Nlvgrid:1:-1))
 
           call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
                cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
                cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
                cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
-               vgrid_zu(Nlvgrid:1:-1),Ze_totFlip(:,:,Nlvgrid:1:-1),log_units=.true.)
+               vgrid_zu(Nlvgrid:1:-1),Ze_totI(:,:,Nlvgrid:1:-1),log_units=.true.)
 
           call cosp_lidar_only_cloud(cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,   &
-             pnormFlip, betamolFlip, Ze_totFlip, lidar_only_freq_cloud, radar_lidar_tcc, &
+             pnormI, betamolI, Ze_totI, lidar_only_freq_cloud, radar_lidar_tcc,          &
              cloudsat_tcc, cloudsat_tcc2)
 
-          deallocate(betamol_in,betamolFlip,pnormFlip,ze_totFlip)
+          deallocate(betamol_in,betamolI,pnormI,ze_totI)
        else
           allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,cloudsatIN%Nlevels),         &
                radar_lidar_tcc(cloudsatIN%Npoints), cloudsat_tcc(cloudsatIN%Npoints),    &
@@ -1548,32 +1570,6 @@ CONTAINS
        endif
     endif
 
-    ! Cloudsat rain/snow occurence products.
-    if (associated(cospOUT%cloudsat_pia) .or. associated(cospOUT%cloudsat_precip_cover)) then
-       if (use_vgrid) then
-          
-          ! Regrid in vertical
-          allocate(Ze_nonFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
-          call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,            &
-               cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),         &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                       &
-               cloudsatZe_non(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1),  &
-               vgrid_zu(Nlvgrid:1:-1),Ze_nonFlip,log_units=.true.) 
-          if (.not. allocated(Ze_totFlip)) then
-             allocate(Ze_totFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
-             call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
-                  cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
-                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
-                  cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
-                  vgrid_zu(Nlvgrid:1:-1),Ze_totFlip,log_units=.true.)   
-          endif
-          call cloudsat_precipOccurence(cloudsatIN%Npoints, cloudsatIN%Ncolumns, N_HYDRO, &
-               Ze_totFlip(:,:,:), Ze_nonFlip(:,:,:), cospgridIN%land(:),                  &
-               cospgridIN%at(:,cospIN%Nlevels), cospIN%fracPrecipIce,                     &
-               cospOUT%cloudsat_precip_cover,  cospOUT%cloudsat_pia)
-       endif
-    endif
-    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 7) Cleanup
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
