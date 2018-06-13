@@ -3510,57 +3510,61 @@ CONTAINS
     endif
 
     ! GROUND LIDAR @ 532nm
-    if (size(cospIN%beta_mol_grLidar532,1)    .ne. cospIN%Npoints .OR. & 
-        size(cospIN%betatot_grLidar532,1)     .ne. cospIN%Npoints .OR. &
-        size(cospIN%tau_mol_grLidar532,1)     .ne. cospIN%Npoints .OR. &
-        size(cospIN%tautot_grLidar532,1)      .ne. cospIN%Npoints) then
-       LgrLidar532_subcolumn = .false.
-       LgrLidar532_column    = .false.
-       nError=nError+1
-       errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of points in the input fields are inconsistent'
-    endif
-    if (size(cospIN%betatot_grLidar532,2)    .ne. cospIN%Ncolumns .OR. & 
-        size(cospIN%tautot_grLidar532,2)     .ne. cospIN%Ncolumns) then 
-       LgrLidar532_subcolumn = .false. 
-       LgrLidar532_column    = .false. 
-       nError=nError+1
-       errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of sub-columns in the input fields are inconsistent'
-    endif
-    if (size(cospIN%beta_mol_grLidar532,2)    .ne. cospIN%Nlevels .OR. &
-        size(cospIN%betatot_grLidar532,3)     .ne. cospIN%Nlevels .OR. &
-        size(cospIN%tau_mol_grLidar532,2)     .ne. cospIN%Nlevels .OR. &
-        size(cospIN%tautot_grLidar532,3)      .ne. cospIN%Nlevels) then
-       LgrLidar532_subcolumn = .false. 
-       LgrLidar532_column    = .false. 
-       nError=nError+1
-       errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of levels in the input fields are inconsistent' 
+    if (LgrLidar532_subcolumn .or. LgrLidar532_column) then
+       if (size(cospIN%beta_mol_grLidar532,1)    .ne. cospIN%Npoints .OR. & 
+           size(cospIN%betatot_grLidar532,1)     .ne. cospIN%Npoints .OR. &
+           size(cospIN%tau_mol_grLidar532,1)     .ne. cospIN%Npoints .OR. &
+           size(cospIN%tautot_grLidar532,1)      .ne. cospIN%Npoints) then
+          LgrLidar532_subcolumn = .false.
+          LgrLidar532_column    = .false.
+          nError=nError+1
+          errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of points in the input fields are inconsistent'
+       endif
+       if (size(cospIN%betatot_grLidar532,2)    .ne. cospIN%Ncolumns .OR. & 
+           size(cospIN%tautot_grLidar532,2)     .ne. cospIN%Ncolumns) then 
+          LgrLidar532_subcolumn = .false. 
+          LgrLidar532_column    = .false. 
+          nError=nError+1
+          errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of sub-columns in the input fields are inconsistent'
+       endif
+       if (size(cospIN%beta_mol_grLidar532,2)    .ne. cospIN%Nlevels .OR. &
+           size(cospIN%betatot_grLidar532,3)     .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tau_mol_grLidar532,2)     .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tautot_grLidar532,3)      .ne. cospIN%Nlevels) then
+          LgrLidar532_subcolumn = .false. 
+          LgrLidar532_column    = .false. 
+          nError=nError+1
+          errorMessage(nError) = 'ERROR(grLidar532_simulator): The number of levels in the input fields are inconsistent' 
+       endif
     endif
     
     ! ATLID
-    if (size(cospIN%beta_mol_atlid,1)    .ne. cospIN%Npoints .OR. &
-        size(cospIN%betatot_atlid,1)     .ne. cospIN%Npoints .OR. &
-        size(cospIN%tau_mol_atlid,1)     .ne. cospIN%Npoints .OR. & 
-        size(cospIN%tautot_atlid,1)      .ne. cospIN%Npoints) then 
-       Latlid_subcolumn = .false. 
-       Latlid_column    = .false. 
-       nError=nError+1             
-       errorMessage(nError) = 'ERROR(atlid_simulator): The number of points in the input fields are inconsistent'
-    endif
-    if (size(cospIN%betatot_atlid,2)    .ne. cospIN%Ncolumns .OR. &
-        size(cospIN%tautot_atlid,2)     .ne. cospIN%Ncolumns) then 
-       Latlid_subcolumn = .false.
-       Latlid_column    = .false.
-       nError=nError+1              
-       errorMessage(nError) = 'ERROR(atlid_simulator): The number of sub-columns in the input fields are inconsistent'
-    endif
-    if (size(cospIN%beta_mol_atlid,2)    .ne. cospIN%Nlevels .OR. &
-        size(cospIN%betatot_atlid,3)     .ne. cospIN%Nlevels .OR. & 
-        size(cospIN%tau_mol_atlid,2)     .ne. cospIN%Nlevels .OR. &
-        size(cospIN%tautot_atlid,3)      .ne. cospIN%Nlevels) then 
-       Latlid_subcolumn = .false.
-       Latlid_column    = .false. 
-       nError=nError+1 
-       errorMessage(nError) = 'ERROR(atlid_simulator): The number of levels in the input fields are inconsistent'
+    if (Latlid_subcolumn .or. Latlid_column) then
+       if (size(cospIN%beta_mol_atlid,1)    .ne. cospIN%Npoints .OR. &
+           size(cospIN%betatot_atlid,1)     .ne. cospIN%Npoints .OR. &
+           size(cospIN%tau_mol_atlid,1)     .ne. cospIN%Npoints .OR. & 
+           size(cospIN%tautot_atlid,1)      .ne. cospIN%Npoints) then 
+          Latlid_subcolumn = .false. 
+          Latlid_column    = .false. 
+          nError=nError+1             
+          errorMessage(nError) = 'ERROR(atlid_simulator): The number of points in the input fields are inconsistent'
+       endif
+       if (size(cospIN%betatot_atlid,2)    .ne. cospIN%Ncolumns .OR. &
+           size(cospIN%tautot_atlid,2)     .ne. cospIN%Ncolumns) then 
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false.
+          nError=nError+1              
+          errorMessage(nError) = 'ERROR(atlid_simulator): The number of sub-columns in the input fields are inconsistent'
+       endif
+       if (size(cospIN%beta_mol_atlid,2)    .ne. cospIN%Nlevels .OR. &
+           size(cospIN%betatot_atlid,3)     .ne. cospIN%Nlevels .OR. & 
+           size(cospIN%tau_mol_atlid,2)     .ne. cospIN%Nlevels .OR. &
+           size(cospIN%tautot_atlid,3)      .ne. cospIN%Nlevels) then 
+          Latlid_subcolumn = .false.
+          Latlid_column    = .false. 
+          nError=nError+1 
+          errorMessage(nError) = 'ERROR(atlid_simulator): The number of levels in the input fields are inconsistent'
+       endif
     endif
 
     ! CALIPSO
