@@ -24,7 +24,7 @@ contains
 
     integer :: fileID,status,ij
     integer,dimension(20)  :: dimID
-    integer,dimension(100) :: varID
+    integer,dimension(150) :: varID
     integer,dimension(Npoints) :: loc
     integer,dimension(Ncolumns) :: cosp_scol
     integer,dimension(2) :: bnds
@@ -1676,6 +1676,12 @@ contains
        status = nf90_put_var(fileID,varID(57),cospOUT%radar_lidar_tcc)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
+
+    if (associated(cospOUT%rttov_tbs)) then
+       status = nf90_put_var(fileID,varID(57),cospOUT%radar_lidar_tcc)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
+
 
     ! Close file
     status = nf90_close(fileID)

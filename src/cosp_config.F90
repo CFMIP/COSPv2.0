@@ -153,8 +153,9 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################  
     integer,parameter :: &
          RTTOV_MAX_CHANNELS = 20
-    character(len=256),parameter :: &
-         rttovDir = '/homedata/rguzman/CALIPSO/RTTOV/rttov_11.3/'
+    CHARACTER(len=256),PARAMETER :: &
+      rttovDir = '/home/h03/frdv/spice/RTTOV12.2/'
+    
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator.
     ! ####################################################################################  

@@ -379,9 +379,10 @@ program cosp2_test
   call hydro_class_init(lsingle,ldouble,sd)
 
   ! Initialize COSP simulator
-  call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid,        &
-       Lparasol, Lrttov, cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,         &
-       cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
+  call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid,          &
+       Lparasol, Lrttov, cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,           &
+       cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,         &
+       rttov_Nchannels, rttov_Channels, rttov_platform, rttov_satellite, rttov_instrument, &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
   call cpu_time(driver_time(3))
   
