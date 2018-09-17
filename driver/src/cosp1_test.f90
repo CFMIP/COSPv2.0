@@ -33,7 +33,7 @@ program cosp1_test
   use cosp_kinds,          only: wp                         
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,SR_BINS,                &
                                  N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
-                                 DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
+                                 cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
                                  numMODISTauBins,numMODISPresBins,                        &
                                  numMODISReffIceBins,numMODISReffLiqBins,                 &
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins,         &

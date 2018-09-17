@@ -39,7 +39,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
                                  modis_histTauEdges,modis_histTauCenters,ntau,ntauV1p4,   &
                                  tau_binBounds,tau_binEdges,tau_binCenters,R_UNDEF,       &
                                  tau_binBoundsV1p4,tau_binEdgesV1p4,tau_binCentersV1p4,   &
-                                 numMISRHgtBins,SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,DBZE_BINS, &
+                                 numMISRHgtBins,SR_BINS,LIDAR_NCAT,LIDAR_NTEMP,cloudsat_DBZE_BINS, &
                                  numMODISReffIceBins, numMODISPresBins,PARASOL_NREFL,     &
                                  numMODISReffLiqBins,vgrid_zl,vgrid_zu,vgrid_z,           &
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins
@@ -555,7 +555,7 @@ MODULE MOD_COSP_INTERFACE_v1p4
           Nlevels,            & ! Number of model levels
           Nhydro                ! Number of hydrometeors
      real(wp), dimension(:,:,:), pointer :: &
-          cfad_ze               ! Ze CFAD(Npoints,dBZe_bins,Nlevels)
+          cfad_ze               ! Ze CFAD(Npoints,cloudsat_dBZe_bins,Nlevels)
      real(wp),dimension(:),pointer :: &
           radar_lidar_tcc       ! Radar&lidar total cloud amount, grid-box scale (Npoints)
      real(wp), dimension(:,:),pointer :: &
@@ -1673,7 +1673,7 @@ contains
     x%Nhydro   => Nhydro
 
     ! Allocate
-    allocate(x%cfad_ze(Npoints,DBZE_BINS,Nlevels),x%lidar_only_freq_cloud(Npoints,Nlevels), &
+    allocate(x%cfad_ze(Npoints,cloudsat_DBZE_BINS,Nlevels),x%lidar_only_freq_cloud(Npoints,Nlevels), &
              x%radar_lidar_tcc(Npoints))
     
     ! Initialize
@@ -2241,7 +2241,7 @@ contains
 
     ! Cloudsat simulator
     if (Ldbze94)        allocate(x%cloudsat_Ze_tot(Npoints,Ncolumns,Nlevels))
-    if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,DBZE_BINS,Nlvgrid))
+    if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,cloudsat_DBZE_BINS,Nlvgrid))
 
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
