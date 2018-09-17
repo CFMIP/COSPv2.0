@@ -2,7 +2,7 @@ module mod_cosp1_io
   use cosp_kinds, only: wp
   use mod_cosp,   only: cosp_outputs
   use netcdf
-  USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, DBZE_BINS, &
+  USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
        numMODISReffIceBins, numMODISReffLiqBins, ntau, tau_binBounds, tau_binCenters, &
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
@@ -86,7 +86,7 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"PARASOL_NREFL",PARASOL_NREFL,dimID(13))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_def_dim(fileID,"DBZE_BINS",DBZE_BINS,dimID(14))
+    status = nf90_def_dim(fileID,"cloudsat_DBZE_BINS",cloudsat_DBZE_BINS,dimID(14))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"RELIQ_MODIS",numMODISReffLiqBins,dimID(15))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -559,7 +559,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(23),"standard_name", "histogram_of_equivalent_reflectivity_factor_over_height_above_reference_ellipsoid")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-       status = nf90_def_var(fileID,"DBZE_BINS",nf90_float, (/dimID(14)/),varID(83))
+       status = nf90_def_var(fileID,"cloudsat_DBZE_BINS",nf90_float, (/dimID(14)/),varID(83))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(83),"long_name","CloudSat simulator equivalent radar reflectivity factor")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))

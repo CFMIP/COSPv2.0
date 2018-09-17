@@ -2,7 +2,7 @@ module mod_cosp_io
   use cosp_kinds, only: wp
   use mod_cosp,   only: cosp_outputs
   use netcdf
-  USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, DBZE_BINS, &
+  USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
        numMODISReffIceBins, numMODISReffLiqBins, ntau, tau_binBounds, tau_binCenters, &
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
@@ -24,7 +24,7 @@ contains
 
     integer :: fileID,status,ij
     integer,dimension(20)  :: dimID
-    integer,dimension(100) :: varID
+    integer,dimension(150) :: varID
     integer,dimension(Npoints) :: loc
     integer,dimension(Ncolumns) :: cosp_scol
     integer,dimension(2) :: bnds
@@ -67,7 +67,7 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"PARASOL_NREFL",PARASOL_NREFL,dimID(13))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_def_dim(fileID,"DBZE_BINS",DBZE_BINS,dimID(14))
+    status = nf90_def_dim(fileID,"cloudsat_DBZE_BINS",cloudsat_DBZE_BINS,dimID(14))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"RELIQ_MODIS",numMODISReffLiqBins,dimID(15))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -151,40 +151,40 @@ contains
     status = nf90_put_att(fileID,varID(8),"standard_name", "altitude")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     ! Levels
-    status = nf90_def_var(fileID,"lev",  nf90_float, (/dimID(3)/),varID(86))
+    status = nf90_def_var(fileID,"lev",  nf90_float, (/dimID(3)/),varID(84))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(86),"long_name","level indices")
+    status = nf90_put_att(fileID,varID(84),"long_name","level indices")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(86),"units",        "1")
+    status = nf90_put_att(fileID,varID(84),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! Levels for statistical diagnostics (lidar and radar)
-    status = nf90_def_var(fileID,"levStat",  nf90_float, (/dimID(4)/),varID(87))
+    status = nf90_def_var(fileID,"levStat",  nf90_float, (/dimID(4)/),varID(85))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(87),"long_name","level indices")
+    status = nf90_put_att(fileID,varID(85),"long_name","level indices")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(87),"units",        "1")
+    status = nf90_put_att(fileID,varID(85),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! Subcolumms
-    status = nf90_def_var(fileID,"cosp_scol",  nf90_float, (/dimID(2)/),varID(88))
+    status = nf90_def_var(fileID,"cosp_scol",  nf90_float, (/dimID(2)/),varID(86))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(88),"long_name","subcolumn indices")
+    status = nf90_put_att(fileID,varID(86),"long_name","subcolumn indices")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(88),"units",        "1")
+    status = nf90_put_att(fileID,varID(86),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! Bnds
-    status = nf90_def_var(fileID,"bnds",  nf90_float, (/dimID(6)/),varID(89))
+    status = nf90_def_var(fileID,"bnds",  nf90_float, (/dimID(6)/),varID(82))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(89),"long_name","bounds")
+    status = nf90_put_att(fileID,varID(82),"long_name","bounds")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(89),"units",        "1")
+    status = nf90_put_att(fileID,varID(82),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! loc
-    status = nf90_def_var(fileID,"loc",  nf90_float, (/dimID(1)/),varID(90))
+    status = nf90_def_var(fileID,"loc",  nf90_float, (/dimID(1)/),varID(83))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(90),"long_name","loc")
+    status = nf90_put_att(fileID,varID(83),"long_name","loc")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_att(fileID,varID(90),"units",        "1")
+    status = nf90_put_att(fileID,varID(83),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! CALIPSO simulator output
@@ -469,7 +469,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     endif
 
-       !OPAQ diagnostics
+    !OPAQ diagnostics
     if (associated(cospOUT%calipso_cldtype)) then
        ! Opaque cloud cover
        status = nf90_def_var(fileID,"clopaquecalipso",nf90_float, (/dimID(1)/),varID(91))
@@ -854,13 +854,13 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))       
     endif
     if (associated(cospOUT%parasolPix_refl) .or.associated(cospOUT%parasolGrid_refl)) then
-       status = nf90_def_var(fileID,"PARASOL_NREFL",nf90_float, (/dimID(13)/),varID(82))
+       status = nf90_def_var(fileID,"PARASOL_NREFL",nf90_float, (/dimID(13)/),varID(87))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(82),"long_name","PARASOL Solar Zenith Angle")
+       status = nf90_put_att(fileID,varID(87),"long_name","PARASOL Solar Zenith Angle")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(82),"units",        "degree")
+       status = nf90_put_att(fileID,varID(87),"units",        "degree")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(82),"standard_name", "solar_zenith_angle")
+       status = nf90_put_att(fileID,varID(87),"standard_name", "solar_zenith_angle")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
     
@@ -884,16 +884,86 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(23),"standard_name", "histogram_of_equivalent_reflectivity_factor_over_height_above_reference_ellipsoid")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-       status = nf90_def_var(fileID,"DBZE_BINS",nf90_float, (/dimID(14)/),varID(83))
+       status = nf90_def_var(fileID,"cloudsat_DBZE_BINS",nf90_float, (/dimID(14)/),varID(88))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(83),"long_name","CloudSat simulator equivalent radar reflectivity factor")
+       status = nf90_put_att(fileID,varID(88),"long_name","CloudSat simulator equivalent radar reflectivity factor")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(83),"units",        "dBZ")
+       status = nf90_put_att(fileID,varID(88),"units",        "dBZ")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(83),"standard_name", "equivalent_reflectivity_factor")
+       status = nf90_put_att(fileID,varID(88),"standard_name", "equivalent_reflectivity_factor")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))              
     endif
-    
+    if (associated(cospOUT%cloudsat_precip_cover)) then
+       status = nf90_def_var(fileID,"ptcloudsatflag0",nf90_float, (/dimID(1)/),varID(127))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(127),"long_name","Cloudsat precipitation cover for flag0")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(127),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag1",nf90_float, (/dimID(1)/),varID(128))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(128),"long_name","Cloudsat precipitation cover for flag1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(128),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag2",nf90_float, (/dimID(1)/),varID(129))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(129),"long_name","Cloudsat precipitation cover for flag2")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(129),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag3",nf90_float, (/dimID(1)/),varID(130))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(130),"long_name","Cloudsat precipitation cover for flag3")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(130),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag4",nf90_float, (/dimID(1)/),varID(131))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(131),"long_name","Cloudsat precipitation cover for flag4")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(131),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag5",nf90_float, (/dimID(1)/),varID(132))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(132),"long_name","Cloudsat precipitation cover for flag5")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(132),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag6",nf90_float, (/dimID(1)/),varID(133))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(133),"long_name","Cloudsat precipitation cover for flag6")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(133),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag7",nf90_float, (/dimID(1)/),varID(134))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(134),"long_name","Cloudsat precipitation cover for flag7")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(134),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag8",nf90_float, (/dimID(1)/),varID(135))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(135),"long_name","Cloudsat precipitation cover for flag8")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(135),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ptcloudsatflag9",nf90_float, (/dimID(1)/),varID(136))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(136),"long_name","Cloudsat precipitation cover for flag9")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(136),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
+    if (associated(cospOUT%cloudsat_pia)) then
+       status = nf90_def_var(fileID,"cloudsatpia",nf90_float, (/dimID(1)/),varID(137))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(137),"long_name","Cloudsat path integrated attenuation")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(137),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+    endif
+
     ! ISCCP simulator outputs
     if (associated(cospOUT%isccp_totalcldarea)) then
        status = nf90_def_var(fileID,"cltisccp",nf90_float, (/dimID(1)/),varID(24))
@@ -1206,16 +1276,12 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(54),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-!       status = nf90_put_att(fileID,varID(54),"standard_name", "histogram_of_cloud_optical_depth_over_particle_size")
-!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-       status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(15)/),varID(84))
+       status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(15)/),varID(89))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(84),"long_name","MODIS Joint-PDF ice particle size bin centers")
+       status = nf90_put_att(fileID,varID(89),"long_name","MODIS Joint-PDF ice particle size bin centers")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(84),"units",        "meters")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-!       status = nf90_put_att(fileID,varID(84),"standard_name", "effective_radius_of_cloud_ice_particle")
-!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))        
+       status = nf90_put_att(fileID,varID(89),"units",        "meters")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ)) then
        status = nf90_def_var(fileID,"modis_Optical_Thickness_vs_ReffLIQ",nf90_float, (/dimID(1),dimID(5),dimID(15)/),varID(55))
@@ -1224,16 +1290,12 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(55),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-!       status = nf90_put_att(fileID,varID(55),"standard_name", "histogram_of_cloud_optical_depth_over_particle_size")
-!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"RELIQ_MODIS",nf90_float, (/dimID(15)/),varID(85))
+       status = nf90_def_var(fileID,"RELIQ_MODIS",nf90_float, (/dimID(15)/),varID(90))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(85),"long_name","MODIS Joint-PDF liquid particle size bin centers")
+       status = nf90_put_att(fileID,varID(90),"long_name","MODIS Joint-PDF liquid particle size bin centers")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(85),"units",        "meters")
+       status = nf90_put_att(fileID,varID(90),"units",        "meters")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
-!       status = nf90_put_att(fileID,varID(85),"standard_name", "effective_radius_of_cloud_liquid_particle")
-!       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
 
     ! Joint simulator products.
@@ -1257,6 +1319,27 @@ contains
        status = nf90_put_att(fileID,varID(57),"standard_name", "cloud_area_fraction")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
+    if (associated(cospOUT%cloudsat_tcc)) then
+       status = nf90_def_var(fileID,"cloudsat_tcc",nf90_float, (/dimID(1)/),varID(138))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(138),"long_name","CloudSat Total Cloud Fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(138),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+       status = nf90_put_att(fileID,varID(138),"standard_name", "cloud_area_fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+    endif
+    if (associated(cospOUT%cloudsat_tcc2)) then
+       status = nf90_def_var(fileID,"cloudsat_tcc2",nf90_float, (/dimID(1)/),varID(139))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(139),"long_name","CloudSat Total Cloud Fraction (no 1km)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(139),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+       status = nf90_put_att(fileID,varID(139),"standard_name", "cloud_area_fraction")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+    endif    
+    
     
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
@@ -1285,15 +1368,15 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_var(fileID,varID(8),hgt_binEdges)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(86),lev)
+    status = nf90_put_var(fileID,varID(84),lev)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(87),vgrid_z)
+    status = nf90_put_var(fileID,varID(85),vgrid_z)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(88),cosp_scol)
+    status = nf90_put_var(fileID,varID(86),cosp_scol)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(89),bnds)
+    status = nf90_put_var(fileID,varID(82),bnds)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(90),loc)
+    status = nf90_put_var(fileID,varID(83),loc)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! CALIPSO simulator output
@@ -1517,7 +1600,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
     if (associated(cospOUT%parasolPix_refl) .or.associated(cospOUT%parasolGrid_refl)) then
-       status = nf90_put_var(fileID,varID(82),PARASOL_SZA)
+       status = nf90_put_var(fileID,varID(87),PARASOL_SZA)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
     
@@ -1529,7 +1612,33 @@ contains
     if (associated(cospOUT%cloudsat_cfad_ze)) then
        status = nf90_put_var(fileID,varID(23),cospOUT%cloudsat_cfad_ze)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(83),cloudsat_binCenters)
+       status = nf90_put_var(fileID,varID(88),cloudsat_binCenters)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%cloudsat_precip_cover)) then
+       status = nf90_put_var(fileID,varID(127),cospOUT%cloudsat_precip_cover(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(128),cospOUT%cloudsat_precip_cover(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(129),cospOUT%cloudsat_precip_cover(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(130),cospOUT%cloudsat_precip_cover(:,4))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(131),cospOUT%cloudsat_precip_cover(:,5))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(132),cospOUT%cloudsat_precip_cover(:,6))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(133),cospOUT%cloudsat_precip_cover(:,7))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(134),cospOUT%cloudsat_precip_cover(:,8))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(135),cospOUT%cloudsat_precip_cover(:,9))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(136),cospOUT%cloudsat_precip_cover(:,10))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%cloudsat_pia)) then
+       status = nf90_put_var(fileID,varID(137),cospOUT%cloudsat_pia)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
@@ -1658,13 +1767,13 @@ contains
     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffICE)) then
        status = nf90_put_var(fileID,varID(54),cospOUT%modis_Optical_Thickness_vs_ReffICE)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(84),reffICE_binCenters)
+       status = nf90_put_var(fileID,varID(89),reffICE_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ)) then
        status = nf90_put_var(fileID,varID(55),cospOUT%modis_Optical_Thickness_vs_ReffLIQ)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
-       status = nf90_put_var(fileID,varID(85),reffLIQ_binCenters)
+       status = nf90_put_var(fileID,varID(90),reffLIQ_binCenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
@@ -1676,7 +1785,16 @@ contains
        status = nf90_put_var(fileID,varID(57),cospOUT%radar_lidar_tcc)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
+    if (associated(cospOUT%cloudsat_tcc)) then
+       status = nf90_put_var(fileID,varID(138),cospOUT%cloudsat_tcc)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
+    if (associated(cospOUT%cloudsat_tcc2)) then
+       status = nf90_put_var(fileID,varID(139),cospOUT%cloudsat_tcc2)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
 
+    
     ! Close file
     status = nf90_close(fileID)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -1758,7 +1876,7 @@ contains
     
     Npoints = Npnts
     Nlevels = Nl
-    
+
     ! Open file
     errst = nf90_open(fname, nf90_nowrite, ncid)
     if (errst /= 0) then
