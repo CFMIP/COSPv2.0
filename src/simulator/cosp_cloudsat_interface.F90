@@ -30,8 +30,6 @@
 ! May 2015 - D. Swales - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_CLOUDSAT_INTERFACE
-  USE MOD_COSP_CONFIG, ONLY: DBZE_BINS,CFAD_ZE_MIN,CFAD_ZE_WIDTH,SR_BINS,DBZE_MAX,       &
-                             DBZE_MIN
   USE COSP_KINDS,      ONLY: wp
   USE quickbeam,       ONLY: quickbeam_init,radar_cfg,Re_MAX_BIN,Re_BIN_LENGTH
   IMPLICIT NONE
@@ -40,7 +38,7 @@ MODULE MOD_COSP_CLOUDSAT_INTERFACE
   character(len=120) :: RADAR_SIM_LUT_DIRECTORY = './'
   logical :: RADAR_SIM_LOAD_scale_LUTs_flag   = .false.
   logical :: RADAR_SIM_UPDATE_scale_LUTs_flag = .false.
-
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE cloudsat_IN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

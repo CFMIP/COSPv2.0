@@ -49,8 +49,11 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module quickbeam
   USE COSP_KINDS,           ONLY: wp
-  USE MOD_COSP_CONFIG,      ONLY: DBZE_BINS,DBZE_MIN,DBZE_MAX,CFAD_ZE_MIN,CFAD_ZE_WIDTH, &
-                                  R_UNDEF,cloudsat_histRef,use_vgrid,vgrid_zl,vgrid_zu
+  USE MOD_COSP_CONFIG,      ONLY: R_UNDEF,cloudsat_histRef,use_vgrid,vgrid_zl,vgrid_zu,&
+                                  pClass_noPrecip, pClass_Rain1, pClass_Rain2, pClass_Rain3,&
+                                  pClass_Snow1, pClass_Snow2, pClass_Mixed1, pClass_Mixed2, &
+                                  pClass_Rain4, pClass_default, Zenonbinval, Zbinvallnd,    &
+                                  N_HYDRO,nCloudsatPrecipClass,cloudsat_preclvl
   USE MOD_COSP_STATS,       ONLY: COSP_LIDAR_ONLY_CLOUD,hist1D,COSP_CHANGE_VERTICAL_GRID
   implicit none
 
@@ -98,9 +101,7 @@ contains
   ! ######################################################################################
   ! SUBROUTINE quickbeam_subcolumn
   ! ######################################################################################
-  !subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,&
-  !                               a_to_vol,g_to_vol,dBZe,Ze_non,Ze_ray)
-  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,dBZe)
+  subroutine quickbeam_subcolumn(rcfg,nprof,ngate,hgt_matrix,z_vol,kr_vol,g_vol,dBZe,Ze_non)
 
     ! INPUTS
     type(radar_cfg),intent(inout) :: &
@@ -116,16 +117,12 @@ contains
     
     ! OUTPUTS
     real(wp), intent(out),dimension(nprof,ngate) :: &
-!         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
-!         Ze_ray,        & ! Rayleigh reflectivity (dBZ)
-!         g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
-!         a_to_vol,      & ! Hydromets attenuation, radar to vol (dB)
+         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
          dBZe             ! Effective radar reflectivity factor (dBZ)
 
     ! LOCAL VARIABLES
     integer :: k,pr,start_gate,end_gate,d_gate
     real(wp),dimension(nprof,ngate) :: &
-         Ze_non,        & ! Radar reflectivity without attenuation (dBZ)
          Ze_ray,        & ! Rayleigh reflectivity (dBZ)
          g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
          a_to_vol,      & ! Hydromets attenuation, radar to vol (dB) 
@@ -215,7 +212,6 @@ contains
        elsewhere
           Ze_Ray(1:nprof,1:ngate) = 0._wp
        endwhere
-!djs       Ze_ray(1:nprof,1:ngate) = merge(10._wp*log10(z_ray(1:nprof,1:ngate)), 1._wp*R_UNDEF, z_ray(1:nprof,1:ngate) > 0._wp)
     else 
       Ze_ray(1:nprof,1:ngate) = R_UNDEF
     end if
@@ -235,15 +231,26 @@ contains
   ! ######################################################################################
   ! SUBROUTINE quickbeam_column
   ! ######################################################################################
-  subroutine quickbeam_column(npoints,ncolumns,nlevels,llm,Ze_tot,zlev,zlev_half,cfad_ze)
+  subroutine quickbeam_column(npoints, ncolumns, nlevels, llm, DBZE_BINS, platform,      &
+       Ze_tot, Ze_tot_non, land, t2m, fracPrecipIce, zlev, zlev_half, cfad_ze,           &
+       cloudsat_precip_cover, cloudsat_pia)
     ! Inputs
     integer,intent(in) :: &
          npoints,    & ! Number of horizontal grid points
          ncolumns,   & ! Number of subcolumns
          nlevels,    & ! Number of vertical layers in OLD grid
-         llm           ! NUmber of vertical layers in NEW grid
+         llm,        & ! Number of vertical layers in NEW grid
+         DBZE_BINS     ! Number of bins for cfad.
+    character(len=*),intent(in) :: &
+         platform      ! Name of platform (e.g. cloudsat)
+    real(wp),dimension(Npoints),intent(in) :: &
+         land,               & ! Land/Sea mask. (1/0)
+         t2m                   ! Near-surface temperature
+    real(wp),dimension(Npoints,Ncolumns),intent(in) :: &
+         fracPrecipIce         ! Fraction of precipitation which is frozen.     (1)
     real(wp),intent(in),dimension(npoints,ncolumns,Nlevels) :: &
-         Ze_tot        ! 
+         Ze_tot,     & ! Effective reflectivity factor                 (dBZ)
+         Ze_tot_non    ! Effective reflectivity factor w/o attenuation (dBZ)
     real(wp),intent(in),dimension(npoints,Nlevels) :: &
          zlev          ! Model full levels
     real(wp),intent(in),dimension(npoints,Nlevels+1) :: &
@@ -252,39 +259,273 @@ contains
     ! Outputs
     real(wp),intent(inout),dimension(npoints,DBZE_BINS,llm) :: &
          cfad_ze    !
-
+    real(wp),dimension(Npoints,nCloudsatPrecipClass),intent(out) :: &
+         cloudsat_precip_cover ! Model precip rate in by CloudSat precip flag
+    real(wp),dimension(Npoints),intent(out) :: &
+         cloudsat_pia          ! Cloudsat path integrated attenuation
+    
     ! Local variables
     integer :: i,j
-    real(wp),dimension(npoints,ncolumns,llm) :: ze_totFlip
-    
-    if (use_vgrid) then
-       ! Regrid in the vertical
-       call cosp_change_vertical_grid(Npoints,Ncolumns,Nlevels,zlev(:,nlevels:1:-1),&
-            zlev_half(:,nlevels:1:-1),Ze_tot(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),&
-            vgrid_zu(llm:1:-1),Ze_totFlip(:,:,llm:1:-1),log_units=.true.)
+    real(wp),dimension(npoints,ncolumns,llm) :: ze_toti,ze_noni
+    logical :: lcloudsat = .false.
 
-       ! Effective reflectivity histogram
-       do i=1,Npoints
-          do j=1,llm
-             cfad_ze(i,:,j) = hist1D(Ncolumns,Ze_totFlip(i,:,j),DBZE_BINS,cloudsat_histRef)
-          enddo
-       enddo
-       where(cfad_ze .ne. R_UNDEF) cfad_ze = cfad_ze/Ncolumns
+    ! Which platforms to create diagnostics for?
+    if (platform .eq. 'cloudsat') lcloudsat=.true.
 
-    else
-       ! Effective reflectivity histogram
-       do i=1,Npoints
-          do j=1,llm
-             cfad_ze(i,:,j) = hist1D(Ncolumns,Ze_tot(i,:,j),DBZE_BINS,cloudsat_histRef)
+    ! Create Cloudsat diagnostics.
+    if (lcloudsat) then
+       if (use_vgrid) then
+          ! Regrid in the vertical (*NOTE* This routine requires SFC-2-TOA ordering, so flip
+          ! inputs and outputs to maintain TOA-2-SFC ordering convention in COSP2.)
+          call cosp_change_vertical_grid(Npoints,Ncolumns,Nlevels,zlev(:,nlevels:1:-1),&
+               zlev_half(:,nlevels:1:-1),Ze_tot(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),&
+               vgrid_zu(llm:1:-1),Ze_toti(:,:,llm:1:-1),log_units=.true.)
+          
+          ! Effective reflectivity histogram
+          do i=1,Npoints
+             do j=1,llm
+                cfad_ze(i,:,j) = hist1D(Ncolumns,Ze_toti(i,:,j),DBZE_BINS,cloudsat_histRef)
+             enddo
           enddo
-       enddo
-       where(cfad_ze .ne. R_UNDEF) cfad_ze = cfad_ze/Ncolumns
-    endif   
+          where(cfad_ze .ne. R_UNDEF) cfad_ze = cfad_ze/Ncolumns
+
+          ! Compute cloudsat near-surface precipitation diagnostics
+          ! First, regrid in the vertical Ze_tot_non.
+          call cosp_change_vertical_grid(Npoints,Ncolumns,Nlevels,zlev(:,nlevels:1:-1),&
+               zlev_half(:,nlevels:1:-1),Ze_tot_non(:,:,nlevels:1:-1),llm,vgrid_zl(llm:1:-1),&
+               vgrid_zu(llm:1:-1),Ze_noni(:,:,llm:1:-1),log_units=.true.)
+          ! Not call routine to generate diagnostics.
+          call cloudsat_precipOccurence(Npoints, Ncolumns, llm, N_HYDRO, Ze_toti, Ze_noni, &
+               land, t2m, fracPrecipIce, cloudsat_precip_cover, cloudsat_pia)
+       else
+          ! Effective reflectivity histogram
+          do i=1,Npoints
+             do j=1,llm
+                cfad_ze(i,:,j) = hist1D(Ncolumns,Ze_tot(i,:,j),DBZE_BINS,cloudsat_histRef)
+             enddo
+          enddo
+          where(cfad_ze .ne. R_UNDEF) cfad_ze = cfad_ze/Ncolumns
+       endif
+    endif
 
   end subroutine quickbeam_column
   ! ##############################################################################################
   ! ##############################################################################################
+  ! ######################################################################################
+  ! SUBROUTINE cloudsat_precipOccurence
+  !
+  ! Notes from July 2016: Add precip flag also looped over subcolumns
+  ! Modified by Tristan L'Ecuyer (TSL) to add precipitation flagging
+  ! based on CloudSat's 2C-PRECIP-COLUMN algorithm (Haynes et al, JGR, 2009).
+  ! To mimic the satellite algorithm, this code applies thresholds to non-attenuated
+  ! reflectivities, Ze_non, consistent with those outlined in Haynes et al, JGR (2009).
+  !
+  ! Procedures/Notes:
+  !
+  ! (1) If the 2-way attenuation exceeds 40 dB, the pixel will be flagged as 'heavy rain'
+  ! consistent with the multiple-scattering analysis of Battaglia et al, JGR (2008).
+  ! (2) Rain, snow, and mixed precipitation scenes are separated according to the fraction
+  ! of the total precipitation hydrometeor mixing ratio that exists as ice.
+  ! (3) The entire analysis is applied to the range gate from 480-960 m to be consistent with
+  ! CloudSat's 720 m ground-clutter.
+  ! (4) Only a single flag is assigned to each model grid since there is no variation in
+  ! hydrometeor contents across a single model level.  Unlike CFADs, whose variation enters
+  ! due to differening attenuation corrections from hydrometeors aloft, the non-attenuated
+  ! reflectivities used in the computation of this flag cannot vary across sub-columns.
+  !
+  ! radar_prec_flag = 1-Rain possible 2-Rain probable 3-Rain certain 
+  !                   4-Snow possible 5-Snow certain 
+  !                   6-Mixed possible 7-Mixed certain 
+  !                   8-Heavy Rain
+  !                   9- default value
+  !
+  ! Modified by Dustin Swales (University of Colorado) for use with COSP2.
+  ! *NOTE* All inputs (Ze_out, Ze_non_out, fracPrecipIce) are at a single level from the
+  !        statistical output grid used by Cloudsat. This level is controlled by the
+  !        parameter cloudsat_preclvl, defined in src/cosp_config.F90
+  ! ######################################################################################
+  subroutine cloudsat_precipOccurence(Npoints, Ncolumns, llm, Nhydro, Ze_out, Ze_non_out, &
+       land, t2m, fracPrecipIce,  cloudsat_precip_cover, cloudsat_pia)
+ 
+    ! Inputs
+    integer,intent(in) :: &
+         Npoints,            & ! Number of columns
+         Ncolumns,           & ! Numner of subcolumns
+         Nhydro,             & ! Number of hydrometeor types
+         llm                   ! Number of levels
+    real(wp),dimension(Npoints),intent(in) :: &
+         land,               & ! Land/Sea mask. (1/0)
+         t2m                   ! Near-surface temperature
+    real(wp),dimension(Npoints,Ncolumns,llm),intent(in) :: &
+         Ze_out,             & ! Effective reflectivity factor                  (dBZ)
+         Ze_non_out            ! Effective reflectivity factor, w/o attenuation (dBZ)
+    real(wp),dimension(Npoints,Ncolumns),intent(in) :: &
+         fracPrecipIce         ! Fraction of precipitation which is frozen.     (1)
 
+    ! Outputs 
+    real(wp),dimension(Npoints,nCloudsatPrecipClass),intent(out) :: &
+         cloudsat_precip_cover ! Model precip rate in by CloudSat precip flag
+    real(wp),dimension(Npoints),intent(out) :: &
+         cloudsat_pia          ! Cloudsat path integrated attenuation
+    
+    ! Local variables 
+    integer,dimension(Npoints,Ncolumns) :: &
+         cloudsat_pflag,      & ! Subcolumn precipitation flag
+         cloudsat_precip_pia    ! Subcolumn path integrated attenutation.
+    integer :: pr,i,k,m,j
+    real(wp) :: Zmax
+    
+    ! Initialize 
+    cloudsat_pflag(:,:)        = pClass_default
+    cloudsat_precip_pia(:,:)   = 0._wp
+    cloudsat_precip_cover(:,:) = 0._wp
+    cloudsat_pia(:)            = 0._wp
+
+    ! ######################################################################################
+    ! SUBCOLUMN processing
+    ! ######################################################################################
+    do i=1, Npoints
+       do pr=1,Ncolumns
+          ! 1) Compute the PIA in all profiles containing hydrometeors
+          if ( (Ze_non_out(i,pr,cloudsat_preclvl).gt.-100) .and. (Ze_out(i,pr,cloudsat_preclvl).gt.-100) ) then
+             if ( (Ze_non_out(i,pr,cloudsat_preclvl).lt.100) .and. (Ze_out(i,pr,cloudsat_preclvl).lt.100) ) then
+                cloudsat_precip_pia(i,pr) = Ze_non_out(i,pr,cloudsat_preclvl) - Ze_out(i,pr,cloudsat_preclvl)
+             endif
+          endif
+          
+          ! 2) Compute precipitation flag
+          ! ################################################################################
+          ! 2a) Oceanic points.
+          ! ################################################################################
+          if (land(i) .eq. 0) then
+             ! Snow
+             if(fracPrecipIce(i,pr).gt.0.9) then
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(2)) then
+                   cloudsat_pflag(i,pr) = pClass_Snow2                   ! TSL: Snow certain
+                endif
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(4).and. &
+                     Ze_non_out(i,pr,cloudsat_preclvl).le.Zenonbinval(2)) then
+                   cloudsat_pflag(i,pr) = pClass_Snow1                   ! TSL: Snow possible
+                endif
+             endif
+             
+             ! Mixed
+             if(fracPrecipIce(i,pr).gt.0.1.and.fracPrecipIce(i,pr).le.0.9) then
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(2)) then
+                   cloudsat_pflag(i,pr) = pClass_Mixed2                  ! TSL: Mixed certain
+                endif
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(4).and. &
+                     Ze_non_out(i,pr,cloudsat_preclvl).le.Zenonbinval(2)) then
+                   cloudsat_pflag(i,pr) = pClass_Mixed1                  ! TSL: Mixed possible
+                endif
+             endif
+             
+             ! Rain
+             if(fracPrecipIce(i,pr).le.0.1) then
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(1)) then
+                   cloudsat_pflag(i,pr) = pClass_Rain3                   ! TSL: Rain certain
+                endif
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(3).and. &
+                     Ze_non_out(i,pr,cloudsat_preclvl).le.Zenonbinval(1)) then
+                   cloudsat_pflag(i,pr) = pClass_Rain2                   ! TSL: Rain probable
+                endif
+                if(Ze_non_out(i,pr,cloudsat_preclvl).gt.Zenonbinval(4).and. &
+                     Ze_non_out(i,pr,cloudsat_preclvl).le.Zenonbinval(3)) then
+                   cloudsat_pflag(i,pr) = pClass_Rain1                   ! TSL: Rain possible
+                endif
+                if(cloudsat_precip_pia(i,pr).gt.40) then
+                   cloudsat_pflag(i,pr) = pClass_Rain4                   ! TSL: Heavy Rain
+                endif
+             endif
+             
+             ! No precipitation
+             if(Ze_non_out(i,pr,cloudsat_preclvl).le.-15) then
+                cloudsat_pflag(i,pr) = pClass_noPrecip                   ! TSL: Not Raining
+             endif
+          endif ! Ocean points
+          
+          ! ################################################################################
+          ! 2b) Land points.
+          ! ################################################################################
+          if (land(i) .eq. 1) then
+             ! Find Zmax, the maximum reflectivity value in the attenuated profile (Ze_out);
+             Zmax=maxval(Ze_out(i,pr,:))
+
+             ! Snow (T<273)
+             if(t2m(i) .lt. 273._wp) then
+                if(Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(5)) then
+                   cloudsat_pflag(i,pr) = pClass_Snow2                      ! JEK: Snow certain
+                endif
+                if(Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(6) .and. &
+                     Ze_out(i,pr,cloudsat_preclvl).le.Zbinvallnd(5)) then
+                   cloudsat_pflag(i,pr) = pClass_Snow1                      ! JEK: Snow possible
+                endif
+             endif
+             
+             ! Mized phase (273<T<275)
+             if(t2m(i) .ge. 273._wp .and. t2m(i) .le. 275._wp) then
+                if ((Zmax .gt. Zbinvallnd(1) .and. cloudsat_precip_pia(i,pr).gt.30) .or. &
+                     (Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(4))) then
+                   cloudsat_pflag(i,pr) = pClass_Mixed2                     ! JEK: Mixed certain
+                endif
+                if ((Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(6)  .and. &
+                     Ze_out(i,pr,cloudsat_preclvl) .le. Zbinvallnd(4)) .and. &
+                     (Zmax .gt. Zbinvallnd(5)) ) then
+                   cloudsat_pflag(i,pr) = pClass_Mixed1                     ! JEK: Mixed possible
+                endif
+             endif
+
+             ! Rain (T>275)
+             if(t2m(i) .gt. 275) then
+                if ((Zmax .gt. Zbinvallnd(1) .and. cloudsat_precip_pia(i,pr).gt.30) .or. &
+                     (Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(2))) then
+                   cloudsat_pflag(i,pr) = pClass_Rain3                      ! JEK: Rain certain
+                endif
+                if((Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(6)) .and. &
+                     (Zmax .gt. Zbinvallnd(3))) then
+                   cloudsat_pflag(i,pr) = pClass_Rain2                      ! JEK: Rain probable
+                endif
+                if((Ze_out(i,pr,cloudsat_preclvl) .gt. Zbinvallnd(6)) .and. &
+                     (Zmax.lt.Zbinvallnd(3))) then
+                   cloudsat_pflag(i,pr) = pClass_Rain1                      ! JEK: Rain possible
+                endif
+                if(cloudsat_precip_pia(i,pr).gt.40) then
+                   cloudsat_pflag(i,pr) = pClass_Rain4                      ! JEK: Heavy Rain
+                endif
+             endif
+             
+             ! No precipitation
+             if(Ze_out(i,pr,cloudsat_preclvl).le.-15) then
+                cloudsat_pflag(i,pr) =  pClass_noPrecip                     ! JEK: Not Precipitating
+             endif         
+          endif ! Land points
+       enddo ! Sub-columns
+    enddo    ! Gridpoints
+
+    ! ######################################################################################
+    ! COLUMN processing
+    ! ######################################################################################
+
+    ! Aggregate subcolumns
+    do i=1,Npoints
+       ! Gridmean precipitation fraction for each precipitation type
+       do k=1,nCloudsatPrecipClass
+          if (any(cloudsat_pflag(i,:) .eq. k-1)) then
+             cloudsat_precip_cover(i,k) = count(cloudsat_pflag(i,:) .eq. k-1)
+          endif
+       enddo
+
+       ! Gridmean path integrated attenuation (pia)
+       cloudsat_pia(i)=sum(cloudsat_precip_pia(i,:))
+    enddo
+  
+    ! Normalize by number of subcolumns
+    where ((cloudsat_precip_cover /= R_UNDEF).and.(cloudsat_precip_cover /= 0.0)) &
+         cloudsat_precip_cover = cloudsat_precip_cover / Ncolumns
+    where ((cloudsat_pia/= R_UNDEF).and.(cloudsat_pia/= 0.0)) &
+         cloudsat_pia = cloudsat_pia / Ncolumns 
+
+  end subroutine cloudsat_precipOccurence
   
   ! ##############################################################################################
   ! ##############################################################################################
