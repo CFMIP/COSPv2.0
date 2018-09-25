@@ -708,7 +708,7 @@ CONTAINS
        enddo
        ! Store output (if requested)
        if (associated(cospOUT%cloudsat_Ze_tot)) then
-          cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1)
+          cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe(:,:,1:cloudsatIN%Nlevels)
        endif
     endif
 
