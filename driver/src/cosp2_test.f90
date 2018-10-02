@@ -30,12 +30,19 @@
 ! March 2016 - D. Swales - Original version
 ! April 2018 - R. Guzman - Added OPAQ diagnostics and Ground LIDar (GLID) simulator
 ! April 2018 - R. Guzman - Added ATLID simulator
+!   May 2018 - T. Michibata - Inline Diagnostic Driver (IDiD)
+!   Sep 2018 - T. Michibata - modified IDiD output
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp2_test
   use cosp_kinds,          only: wp                         
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
                                  N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
-                                 cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,                  &
+                                 cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
+                                 CFODD_NBINX, CFODD_NBINY, Nclass,                        & ! IDiD
+                                 CFODD_BNDRE, CFODD_NREFF,                                & ! IDiD
+                                 CFODD_XMIN,  CFODD_XMAX, CFODD_YMIN, CFODD_YMAX,         & ! IDiD
+                                 CFODD_DELX,  CFODD_DELY,                                 & ! IDiD
+                                 PDFMAP_NPHASE,                                           & ! IDiD
                                  numMODISTauBins,numMODISPresBins,                        &
                                  numMODISReffIceBins,numMODISReffLiqBins,                 &
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins,         &
@@ -189,7 +196,8 @@ program cosp2_test
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
              Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
-             Lptradarflag9,Lradarpia
+             Lptradarflag9,Lradarpia,                                                    &
+             Lidid_cfodd,Lidid_pdfmap
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -214,7 +222,8 @@ program cosp2_test
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov,    &
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
-                       Lptradarflag8,Lptradarflag9,Lradarpia
+                       Lptradarflag8,Lptradarflag9,Lradarpia,                            &
+                       Lidid_cfodd,Lidid_pdfmap
 
   ! Local variables
   logical :: &
@@ -413,6 +422,7 @@ program cosp2_test
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
        Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,&
+       Lidid_cfodd, Lidid_pdfmap,                                                        & ! IDiD
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1028,7 +1038,8 @@ contains
                                     Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
-                                    Lptradarflag9,Lradarpia,Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
+                                    Lptradarflag9,Lradarpia,Lidid_cfodd,Lidid_pdfmap,    &
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1136,7 +1147,9 @@ contains
          Lptradarflag7,    & ! CLOUDSAT 
          Lptradarflag8,    & ! CLOUDSAT 
          Lptradarflag9,    & ! CLOUDSAT 
-         Lradarpia           ! CLOUDSAT 
+         Lradarpia,        & ! CLOUDSAT 
+         Lidid_cfodd,      & ! IDiD WR CFODD generator
+         Lidid_pdfmap        ! IDiD WR PDFMAP generator
          
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
@@ -1299,7 +1312,13 @@ contains
             
     ! RTTOV
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
- 
+
+    ! IDiD Joint MODIS/CloudSat Statistics
+    if (Lidid_cfodd)   allocate(x%ncfodd(Npoints,CFODD_NBINX,CFODD_NBINY,Nclass))
+    if (Lidid_cfodd)   allocate(x%cfodd (Npoints,CFODD_NBINX,CFODD_NBINY,Nclass))
+    if (Lidid_pdfmap)  allocate(x%npdfmap(Npoints,PDFMAP_NPHASE))
+    if (Lidid_pdfmap)  allocate(x%pdfmap (Npoints,PDFMAP_NPHASE))
+
   end subroutine construct_cosp_outputs
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1678,7 +1697,24 @@ contains
         deallocate(y%modis_Optical_thickness_vs_ReffICE)
         nullify(y%modis_Optical_thickness_vs_ReffICE)
      endif
-        
+     ! IDiD
+     if (associated(y%cfodd)) then
+        deallocate(y%cfodd)
+        nullify(y%cfodd)
+     endif
+     if (associated(y%ncfodd)) then
+        deallocate(y%ncfodd)
+        nullify(y%ncfodd)
+     endif
+     if (associated(y%pdfmap)) then
+        deallocate(y%pdfmap)
+        nullify(y%pdfmap)
+     endif
+     if (associated(y%npdfmap)) then
+        deallocate(y%npdfmap)
+        nullify(y%npdfmap)
+     endif
+
    end subroutine destroy_cosp_outputs
   
  end program cosp2_test

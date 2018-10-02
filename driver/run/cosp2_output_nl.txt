@@ -145,5 +145,8 @@
   Lptradarflag7=.true.,
   Lptradarflag8=.true.,
   Lptradarflag9=.true.,
-  Lradarpia=.true.
+  Lradarpia=.true.,
+  !- IDID Warm Rain
+  Lidid_cfodd=.true.,
+  Lidid_pdfmap=.true.
 /

@@ -38,6 +38,7 @@
 ! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
 ! Mar 2018 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
 ! Apr 2018 - R. Guzman        - Added parameters for GROUND LIDAR and ATLID simulators
+! May 2018 - T. Michibata     - Inline Diagnostic Driver (IDiD)
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -277,6 +278,19 @@ MODULE MOD_COSP_CONFIG
        CLOUDSAT_DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
        CLOUDSAT_CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
        CLOUDSAT_CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
+    ! IDiD Warm Rain
+    integer,parameter :: CFODD_NREFF   =      4 ! # of Reff classification for CFODDs
+    integer,parameter :: PDFMAP_NPHASE =      3 ! # of rain-phase for PDFMAP (non-precip/drizzling/raining)
+    integer,parameter :: Nclass        =  CFODD_NREFF  ! # of classification for CFODDs
+    real,parameter,dimension(CFODD_NREFF) :: CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
+    real,parameter    :: CFODD_XMIN    =  -30.0 ! Minimum value of CFODD dBZe bin
+    real,parameter    :: CFODD_XMAX    =   20.0 ! Maximum value of CFODD dBZe bin
+    real,parameter    :: CFODD_YMIN    =    0.0 ! Minimum value of CFODD ICOD bin
+    real,parameter    :: CFODD_YMAX    =   60.0 ! Maximum value of CFODD ICOD bin
+    real,parameter    :: CFODD_DELX    =    2.0 ! Bin width (dBZe)
+    real,parameter    :: CFODD_DELY    =    2.0 ! Bin width (ICOD)
+    integer,parameter :: CFODD_NBINX   = INT( (CFODD_XMAX-CFODD_XMIN)/CFODD_DELX )  ! Number of CFODD dBZe bins
+    integer,parameter :: CFODD_NBINY   = INT( (CFODD_YMAX-CFODD_YMIN)/CFODD_DELY )  ! Number of CFODD ICOD bins
 
     real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS+1) :: &
          cloudsat_histRef = (/CLOUDSAT_DBZE_MIN,(/(i, i=int(CLOUDSAT_CFAD_ZE_MIN+CLOUDSAT_CFAD_ZE_WIDTH),&
