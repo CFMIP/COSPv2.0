@@ -568,7 +568,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
     endif
     if (associated(cospOUT%calipso_cldtypemeanz)) then
-       ! Opaque cloud temperature
+       ! Opaque cloud altitude
        status = nf90_def_var(fileID,"clopaquemeanz",nf90_float, (/dimID(1)/),varID(101))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(101),"long_name","CALIPSO Opaque Cloud Altitude")
@@ -577,7 +577,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(101),"standard_name", "opaque_cloud_altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
-       ! Thin cloud temperature
+       ! Thin cloud altitude
        status = nf90_def_var(fileID,"clthinmeanz",nf90_float, (/dimID(1)/),varID(102))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(102),"long_name","CALIPSO Thin Cloud Altitude")
@@ -608,7 +608,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(104),"standard_name", "opaque_cloud_altitude_se")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))           
-       ! Thin cloud 
+       ! Thin cloud altitude with respect to Surface Elevation
        status = nf90_def_var(fileID,"clthinmeanzse",nf90_float, (/dimID(1)/),varID(105))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(105),"long_name","CALIPSO Thin Cloud Altitude with respect to SE")
@@ -617,7 +617,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(105),"standard_name", "thin_cloud_altitude_se")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))    
-       ! z_opaque 
+       ! z_opaque altitude with respect to Surface Elevation
        status = nf90_def_var(fileID,"clzopaquecalipsose",nf90_float, (/dimID(1)/),varID(106))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(106),"long_name","CALIPSO z_opaque Altitude with respect to SE")
