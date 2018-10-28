@@ -148,5 +148,5 @@
   Lradarpia=.true.,
   !- IDID Warm Rain
   Lidid_cfodd=.true.,
-  Lidid_pdfmap=.true.
+  Lidid_wrfreq=.true.
 /

@@ -42,8 +42,8 @@ MODULE MOD_COSP
                                          N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,      &
                                          cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,&
                                          use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,    &
-                                         PDFMAP_NPHASE, Nclass,                          & ! IDiD
-                                         CFODD_NBINX,   CFODD_NBINY,                     & ! IDiD
+                                         WR_NREGIME, CFODD_NCLASS,                       & ! IDiD
+                                         CFODD_NDBZE,   CFODD_NICOD,                     & ! IDiD
                                          numMODISTauBins,numMODISPresBins,               &
                                          numMODISReffIceBins,numMODISReffLiqBins,        &
                                          numISCCPTauBins,numISCCPPresBins,numMISRTauBins,&
@@ -297,11 +297,9 @@ MODULE MOD_COSP
 
      ! IDiD outputs
      real(wp),dimension(:,:,:,:),pointer :: &
-          ncfodd => null(),     & ! # of CFODD (Npoints,CFODD_NBINX,CFODD_NBINY,Nclass)
-          cfodd => null()         ! CFODD (Npoints,CFODD_NBINX,CFODD_NBINY,Nclass)
+          cfodd_ntotal => null()       ! # of CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
      real(wp),dimension(:,:),    pointer :: &
-          npdfmap => null(),    & ! # of nonprecip/drizzle/precip (Npoints,PDFMAP_NPHASE)
-          pdfmap => null()        ! PDFs of nonprecip/drizzle/precip (Npoints,PDFMAP_NPHASE)
+          wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
 
   end type cosp_outputs
 
@@ -368,7 +366,7 @@ CONTAINS
     logical, save :: ofirst_idid  = .true.
     logical :: &
          Lidid_cfodd    = .false., &
-         Lidid_pdfmap   = .false.
+         Lidid_wrfreq   = .false.
 
     integer, dimension(:,:),allocatable  :: &
          modisRetrievedPhase,isccpLEVMATCH
@@ -396,13 +394,11 @@ CONTAINS
     ! restore again for IDiD (the name following the old version of COSP)
     real(wp),dimension(:,:,:),allocatable :: &
          t_in,tmpFlip,ze_totFlip
-    real(wp), allocatable :: &
-         zlev   (:,:),       & ! altitude (used only when use_vgrid=.true.)
-         delz   (:,:),       & ! delta Z
-         ncfodd (:,:,:,:),   & ! # of CFODD (Npoints,CFODD_NBINX,CFODD_NBINY,Nclass)
-         cfodd  (:,:,:,:),   & ! CFODD (Npoints,CFODD_NBINX,CFODD_NBINY,Nclass)
-         npdfmap(:,:),       & ! # of nonprecip/drizzle/precip (Npoints,PDFMAP_NPHASE)
-         pdfmap (:,:)          ! PDFs of nonprecip/drizzle/precip (Npoints,PDFMAP_NPHASE)
+    real(wp), allocatable ::     &
+         zlev   (:,:),           & ! altitude (used only when use_vgrid=.true.)
+         delz   (:,:),           & ! delta Z
+         cfodd_ntotal (:,:,:,:), & ! # of total samples for CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
+         wr_occfreq_ntotal(:,:)    ! # of warm-rain (nonprecip/drizzle/precip) (Npoints,WR_NREGIME)
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
@@ -614,11 +610,11 @@ CONTAINS
     ! IDID joint statistics
     if ( Lmodis_column    .and. Lmodis_subcolumn    .and. &
          Lcloudsat_column .and. Lcloudsat_subcolumn       ) then
-       if ( associated(cospOUT%cfodd) ) then
+       if ( associated(cospOUT%cfodd_ntotal) ) then
           Lidid_cfodd  = .true.
        endif
-       if ( associated(cospOUT%pdfmap) ) then
-          Lidid_pdfmap = .true.
+       if ( associated(cospOUT%wr_occfreq_ntotal) ) then
+          Lidid_wrfreq = .true.
        endif
     !else
        !write(*,*) '### IDiD: BOTH MODIS and CloudSat SIMULATORS MUST BE ACTIVATED!'
@@ -1626,11 +1622,9 @@ CONTAINS
        endif
     endif
 
-    !--- IDiD CloudSat/MODIS products (CFODD GENERATOR, PDFMAP GENERATOR)
-    allocate( ncfodd (cloudsatIN%Npoints, CFODD_NBINX, CFODD_NBINY, Nclass), &
-               cfodd (cloudsatIN%Npoints, CFODD_NBINX, CFODD_NBINY, Nclass)  )
-    allocate( npdfmap(cloudsatIN%Npoints, PDFMAP_NPHASE), &
-               pdfmap(cloudsatIN%Npoints, PDFMAP_NPHASE)  )
+    !--- IDiD CloudSat/MODIS joint statistics
+    allocate( cfodd_ntotal (cloudsatIN%Npoints, CFODD_NDBZE, CFODD_NICOD, CFODD_NCLASS) )
+    allocate( wr_occfreq_ntotal(cloudsatIN%Npoints, WR_NREGIME) )
 
     if ( use_vgrid ) then
        if ( ofirst_idid ) then
@@ -1672,10 +1666,8 @@ CONTAINS
                           cospOUT%modis_Cloud_Fraction_Ice_Mean,        & !! in
                           cospIN%frac_out,                              & !! in
                           Ze_totFlip,                                   & !! in
-                          ncfodd,                                       & !! inout
-                          cfodd,                                        & !! inout
-                          npdfmap,                                      & !! inout
-                          pdfmap                                        ) !! inout
+                          cfodd_ntotal,                                 & !! inout
+                          wr_occfreq_ntotal                             ) !! inout
        deallocate( zlev, delz, t_in, tmpFlip, ze_totFlip )
     else  ! do not use vgrid interporation ---------------------------------------!
        if ( ofirst_idid ) then
@@ -1704,21 +1696,17 @@ CONTAINS
                           cospOUT%modis_Cloud_Fraction_Ice_Mean,        & !! in
                           cospIN%frac_out,                              & !! in
                           cospOUT%cloudsat_Ze_tot,                      & !! in
-                          ncfodd,                                       & !! inout
-                          cfodd,                                        & !! inout
-                          npdfmap,                                      & !! inout
-                          pdfmap                                        ) !! inout
+                          cfodd_ntotal,                                 & !! inout
+                          wr_occfreq_ntotal                             ) !! inout
        deallocate( delz )
     endif  !! use_vgrid or not
 
     ! Store, when necessary
-    if ( associated(cospOUT%cfodd) .or. associated(cospOUT%ncfodd) ) then
-       cospOUT%ncfodd(ij:ik,:,:,:) = ncfodd
-       cospOUT%cfodd (ij:ik,:,:,:) =  cfodd
+    if ( associated(cospOUT%cfodd_ntotal) ) then
+       cospOUT%cfodd_ntotal(ij:ik,:,:,:) = cfodd_ntotal
     endif
-    if ( associated(cospOUT%pdfmap) .or. associated(cospOUT%npdfmap) ) then
-       cospOUT%npdfmap(ij:ik,:) = npdfmap
-       cospOUT%pdfmap (ij:ik,:) =  pdfmap
+    if ( associated(cospOUT%wr_occfreq_ntotal) ) then
+       cospOUT%wr_occfreq_ntotal(ij:ik,:) = wr_occfreq_ntotal
     endif
     ofirst_idid = .false.  ! .true. only first time (for debug)
 
@@ -1785,10 +1773,8 @@ CONTAINS
     if (allocated(cloudsat_tcc))          deallocate(cloudsat_tcc)
     if (allocated(cloudsat_tcc2))         deallocate(cloudsat_tcc2)
     ! IDiD
-    if (allocated(cfodd ))                deallocate(cfodd)
-    if (allocated(ncfodd))                deallocate(ncfodd)
-    if (allocated(pdfmap))                deallocate(pdfmap)
-    if (allocated(npdfmap))               deallocate(npdfmap)
+    if (allocated(cfodd_ntotal))          deallocate(cfodd_ntotal)
+    if (allocated(wr_occfreq_ntotal))     deallocate(wr_occfreq_ntotal)
 
   end function COSP_SIMULATOR
   ! ######################################################################################
@@ -1869,8 +1855,7 @@ CONTAINS
     if (Lparasol) call cosp_parasol_init()
 
     ! IDiD initialization (disassociated)
-    nullify(cospOUT%ncfodd,  cospOUT%cfodd)
-    nullify(cospOUT%npdfmap, cospOUT%pdfmap)
+    nullify(cospOUT%cfodd_ntotal, cospOUT%wr_occfreq_ntotal)  !! IDiD Warm-Rain
 
     linitialization = .FALSE.
   END SUBROUTINE COSP_INIT

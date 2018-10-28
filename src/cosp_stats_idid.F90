@@ -33,12 +33,13 @@
 MODULE MOD_COSP_STATS_IDID
   USE COSP_KINDS, ONLY: wp
   USE MOD_COSP_CONFIG, &
-      ONLY: R_UNDEF,     R_GROUND,                            &
-            CFODD_NBINX, CFODD_NBINY, Nclass,                 &
-            CFODD_BNDRE, CFODD_NREFF,                         &
-            CFODD_XMIN,  CFODD_XMAX, CFODD_YMIN, CFODD_YMAX,  &
-            CFODD_DELX,  CFODD_DELY,                          &
-            PDFMAP_NPHASE
+      ONLY: R_UNDEF,          R_GROUND,         &
+            CFODD_NDBZE,      CFODD_NICOD,      &
+            CFODD_BNDRE,      CFODD_NCLASS,     &
+            CFODD_DBZE_MIN,   CFODD_DBZE_MAX,   &
+            CFODD_ICOD_MIN,   CFODD_ICOD_MAX,   &
+            CFODD_DBZE_WIDTH, CFODD_ICOD_WIDTH, &
+            WR_NREGIME
   IMPLICIT NONE
 CONTAINS
 
@@ -48,7 +49,7 @@ CONTAINS
   ! All rights reserved.
   ! * Purpose:    1) Diagnose Contoured Frequency by Optical Depth Diagram (CFODD)
   !                  from CloudSat Radar and MODIS retrievals.
-  !               2) Diagnose PDFs of Warm-Rain Phase (nonprecip/drizzle/rain)
+  !               2) Diagnose Warm-Rain Occurrence Frequency (nonprecip/drizzle/rain)
   !                  from CloudSat Radar.
   ! * History:    2018.01.25 (T.Michibata): Test run
   !               2018.05.17 (T.Michibata): update for COSP2
@@ -65,10 +66,8 @@ CONTAINS
                            lwp,     liqcot,   liqreff, liqcfrc,  & !! in
                            iwp,     icecot,   icereff, icecfrc,  & !! in
                            fracout, dbze,                        & !! in
-                           ncfodd,                               & !! inout
-                           cfodd,                                & !! inout
-                           nslwc,                                & !! inout
-                           pdf                                   ) !! inout
+                           cfodd_ntotal,                         & !! inout
+                           wr_occfreq_ntotal                     ) !! inout
 
     ! Inputs
     integer, intent(in) :: &
@@ -95,12 +94,10 @@ CONTAINS
          dbze                ! Radar reflectivity [dBZe]
 
     ! Outputs
-    real(wp),dimension(Npoints,CFODD_NBINX,CFODD_NBINY,Nclass),intent(inout) :: &
-         ncfodd,           & ! # of CFODD samples for each ICOD/dBZe bin
-         cfodd               ! CFODD histgram
-    real(wp),dimension(Npoints,PDFMAP_NPHASE),intent(inout) :: &
-         nslwc,            & ! # of SLWC samples
-         pdf                 ! pdf of nonprecip/drizzle/precip occurrences
+    real(wp),dimension(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS),intent(inout) :: &
+         cfodd_ntotal        ! # of CFODD samples for each ICOD/dBZe bin
+    real(wp),dimension(Npoints,WR_NREGIME),intent(inout) :: &
+         wr_occfreq_ntotal   ! # of SLWC samples
     
     ! Local variables
     integer  :: i, j, k
@@ -116,12 +113,10 @@ CONTAINS
     logical  :: octop, ocbtm, oslwc
 
 
-    isum = CFODD_NREFF  !! for gathering all Reff samples
+    isum = CFODD_NCLASS  !! for gathering all Reff samples
     !! initialize
-    cfodd (:,:,:,:) = 0._wp
-    ncfodd(:,:,:,:) = 0._wp
-    pdf   (:,:)     = 0._wp
-    nslwc (:,:)     = 0._wp
+    cfodd_ntotal(:,:,:,:)  = 0._wp
+    wr_occfreq_ntotal(:,:) = 0._wp
 
     do i = 1, Npoints
        !! check by MODIS retrieval
@@ -187,7 +182,7 @@ CONTAINS
           enddo
           if ( .not. oslwc ) cycle  !! return to the j (subcolumn) loop
 
-          !! warm rain fraction (PDFMAP)
+          !! warm-rain occurrence frequency
           iphase = 0
           if( cmxdbz .lt. -15.0 ) then
              iphase = 1  !! non-precipitating
@@ -196,7 +191,7 @@ CONTAINS
           elseif( cmxdbz .ge. 0.0 ) then
              iphase = 3  !! raining
           endif
-          nslwc(i,iphase) = nslwc(i,iphase) + 1._wp
+          wr_occfreq_ntotal(i,iphase) = wr_occfreq_ntotal(i,iphase) + 1._wp
 
           !! retrievals of ICOD and dBZe bin for CFODD plane
           diagcgt = zlev(i,kctop) - zlev(i,kcbtm)
@@ -209,44 +204,18 @@ CONTAINS
                 diagicod = liqcot(i) * ( 1._wp - ( (zlev(i,k)-cbtmh)/diagcgt)**(5._wp/3._wp) )
              endif
              !! retrieve the CFODD array based on ICOD and dBZe
-             diagdbze = min( dbze(i,j,k), CFODD_XMAX )
-             diagicod = min( diagicod,    CFODD_YMAX )
-             ix = int( ( diagdbze - CFODD_XMIN ) / CFODD_DELX ) + 1
-             iy = int( ( diagicod - CFODD_YMIN ) / CFODD_DELY ) + 1
-             ix = max( 1, min( ix, CFODD_NBINX ) )  !! for safety
-             iy = max( 1, min( iy, CFODD_NBINY ) )  !! for safety
-             ncfodd(i,ix,iy,icls) = ncfodd(i,ix,iy,icls) + 1._wp
-             ncfodd(i,ix,iy,isum) = ncfodd(i,ix,iy,isum) + 1._wp
+             diagdbze = min( dbze(i,j,k), CFODD_DBZE_MAX )
+             diagicod = min( diagicod,    CFODD_ICOD_MAX )
+             ix = int( ( diagdbze - CFODD_DBZE_MIN ) / CFODD_DBZE_WIDTH ) + 1
+             iy = int( ( diagicod - CFODD_ICOD_MIN ) / CFODD_ICOD_WIDTH ) + 1
+             ix = max( 1, min( ix, CFODD_NDBZE ) )  !! for safety
+             iy = max( 1, min( iy, CFODD_NICOD ) )  !! for safety
+             cfodd_ntotal(i,ix,iy,icls) = cfodd_ntotal(i,ix,iy,icls) + 1._wp
+             cfodd_ntotal(i,ix,iy,isum) = cfodd_ntotal(i,ix,iy,isum) + 1._wp
           enddo
 
        enddo  ! j (Ncolumns)
     enddo     ! i (Npoints)
-
-    !! summary statistics of warm-rain PDFs (nonprecip/drizzling/raining)
-    do iphase = 1, PDFMAP_NPHASE
-       do i = 1, Npoints, 1
-          if ( sum( nslwc(i,:) ) .ge. 1.0 ) then
-             pdf(i,iphase) = nslwc(i,iphase) / sum( nslwc(i,:) ) * 100.0  !! PDF % in each phase
-          else  !! in case nslwc==0
-             pdf(i,iphase) = R_UNDEF
-          endif
-       enddo
-    enddo
-    !! summary statistics of CFODDs
-    do icls = 1, Nclass
-       do iy = 1, CFODD_NBINY
-          do ix = 1, CFODD_NBINX
-             do i = 1, Npoints
-                if ( sum( ncfodd(i,:,iy,icls) ) .ge. 1.0 ) then
-                   cfodd(i,ix,iy,icls) = real( ncfodd(i,ix,iy,icls) ) / real( sum( ncfodd(i,:,iy,icls) ) )
-                   cfodd(i,ix,iy,icls) = cfodd(i,ix,iy,icls) * 100._wp  !! %
-                else
-                   cfodd(i,ix,iy,icls) = R_UNDEF
-                endif
-             enddo
-          enddo
-       enddo
-    enddo
 
   RETURN
   END SUBROUTINE COSP_IDID_WR

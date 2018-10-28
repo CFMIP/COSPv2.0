@@ -279,18 +279,19 @@ MODULE MOD_COSP_CONFIG
        CLOUDSAT_CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
        CLOUDSAT_CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
     ! IDiD Warm Rain
-    integer,parameter :: CFODD_NREFF   =      4 ! # of Reff classification for CFODDs
-    integer,parameter :: PDFMAP_NPHASE =      3 ! # of rain-phase for PDFMAP (non-precip/drizzling/raining)
-    integer,parameter :: Nclass        =  CFODD_NREFF  ! # of classification for CFODDs
-    real,parameter,dimension(CFODD_NREFF) :: CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
-    real,parameter    :: CFODD_XMIN    =  -30.0 ! Minimum value of CFODD dBZe bin
-    real,parameter    :: CFODD_XMAX    =   20.0 ! Maximum value of CFODD dBZe bin
-    real,parameter    :: CFODD_YMIN    =    0.0 ! Minimum value of CFODD ICOD bin
-    real,parameter    :: CFODD_YMAX    =   60.0 ! Maximum value of CFODD ICOD bin
-    real,parameter    :: CFODD_DELX    =    2.0 ! Bin width (dBZe)
-    real,parameter    :: CFODD_DELY    =    2.0 ! Bin width (ICOD)
-    integer,parameter :: CFODD_NBINX   = INT( (CFODD_XMAX-CFODD_XMIN)/CFODD_DELX )  ! Number of CFODD dBZe bins
-    integer,parameter :: CFODD_NBINY   = INT( (CFODD_YMAX-CFODD_YMIN)/CFODD_DELY )  ! Number of CFODD ICOD bins
+    integer,parameter :: CFODD_NCLASS      =      4 ! # of classes for CFODD (classified by MODIS Reff)
+    integer,parameter :: WR_NREGIME        =      3 ! # of warm-rain regimes (non-precip/drizzling/raining)
+    real,parameter,dimension(CFODD_NCLASS) :: CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
+    real,parameter    :: CFODD_DBZE_MIN    =  -30.0 ! Minimum value of CFODD dBZe bin
+    real,parameter    :: CFODD_DBZE_MAX    =   20.0 ! Maximum value of CFODD dBZe bin
+    real,parameter    :: CFODD_ICOD_MIN    =    0.0 ! Minimum value of CFODD ICOD bin
+    real,parameter    :: CFODD_ICOD_MAX    =   60.0 ! Maximum value of CFODD ICOD bin
+    real,parameter    :: CFODD_DBZE_WIDTH  =    2.0 ! Bin width (dBZe)
+    real,parameter    :: CFODD_ICOD_WIDTH  =    2.0 ! Bin width (ICOD)
+    integer,parameter :: &
+         CFODD_NDBZE = INT( (CFODD_DBZE_MAX-CFODD_DBZE_MIN)/CFODD_DBZE_WIDTH ) ! Number of CFODD dBZe bins
+    integer,parameter :: &
+         CFODD_NICOD = INT( (CFODD_ICOD_MAX-CFODD_ICOD_MIN)/CFODD_ICOD_WIDTH ) ! Number of CFODD ICOD bins
 
     real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS+1) :: &
          cloudsat_histRef = (/CLOUDSAT_DBZE_MIN,(/(i, i=int(CLOUDSAT_CFAD_ZE_MIN+CLOUDSAT_CFAD_ZE_WIDTH),&
