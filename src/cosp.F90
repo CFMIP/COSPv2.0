@@ -1641,16 +1641,30 @@ CONTAINS
           delz(:,k) = vgrid_zu(k) - vgrid_zl(k)
        enddo
        t_in(:,1,:) = cospgridIN%at(:,:)
-       call cosp_change_vertical_grid(cloudsatIN%Npoints, 1,                     &
-                                      cloudsatIN%Nlevels, cospgridIN%hgt_matrix, &
-                                      cospgridIN%hgt_matrix_half, t_in,          &
-                                      Nlvgrid, vgrid_zl, vgrid_zu,               &
-                                      tmpFlip)
-       call cosp_change_vertical_grid(cloudsatIN%Npoints, cloudsatIN%Ncolumns,   &
-                                      cloudsatIN%Nlevels, cospgridIN%hgt_matrix, &
-                                      cospgridIN%hgt_matrix_half, cloudsatDBZe,  &
-                                      Nlvgrid, vgrid_zl, vgrid_zu,               &
-                                      Ze_totFlip, log_units=.true.)                               
+!       call cosp_change_vertical_grid(cloudsatIN%Npoints, 1,                     &
+!                                      cloudsatIN%Nlevels, cospgridIN%hgt_matrix, &
+!                                      cospgridIN%hgt_matrix_half, t_in,          &
+!                                      Nlvgrid, vgrid_zl, vgrid_zu,               &
+!                                      tmpFlip)
+!       call cosp_change_vertical_grid(cloudsatIN%Npoints, cloudsatIN%Ncolumns,   &
+!                                      cloudsatIN%Nlevels, cospgridIN%hgt_matrix, &
+!                                      cospgridIN%hgt_matrix_half, cloudsatDBZe,  &
+!                                      Nlvgrid, vgrid_zl, vgrid_zu,               &
+!                                      Ze_totFlip, log_units=.true.)
+       call cosp_change_vertical_grid (                                  &
+            cloudsatIN%Npoints, 1, cloudsatIN%Nlevels,                   &
+            cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),            &
+            cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),       &
+            t_in(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,                  &
+            vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),              &
+            tmpFlip(:,:,Nlvgrid:1:-1)                                    )
+       call cosp_change_vertical_grid (                                  &
+            cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels, &
+            cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),            &
+            cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),       &
+            cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,          &
+            vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),              &
+            Ze_totFlip(:,:,Nlvgrid:1:-1), log_units=.true.               )
        call cosp_idid_wr( cloudsatIN%Npoints, cloudsatIN%Ncolumns,      & !! in
                           Nlvgrid,                                      & !! in
                           tmpFlip,                                      & !! in
