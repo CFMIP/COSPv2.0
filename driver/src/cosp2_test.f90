@@ -30,20 +30,19 @@
 ! March 2016 - D. Swales - Original version
 ! April 2018 - R. Guzman - Added OPAQ diagnostics and Ground LIDar (GLID) simulator
 ! April 2018 - R. Guzman - Added ATLID simulator
-!   May 2018 - T. Michibata - Inline Diagnostic Driver (IDiD)
-!   Sep 2018 - T. Michibata - modified IDiD output
+!   Nov 2018 - T. Michibata - Added CloudSat+MODIS Warmrain Diagnostics
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp2_test
   use cosp_kinds,          only: wp                         
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
                                  N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
                                  cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
-                                 CFODD_NDBZE,      CFODD_NICOD,                           & ! IDiD
-                                 CFODD_BNDRE,      CFODD_NCLASS,                          & ! IDiD
-                                 CFODD_DBZE_MIN,   CFODD_DBZE_MAX,                        & ! IDiD
-                                 CFODD_ICOD_MIN,   CFODD_ICOD_MAX,                        & ! IDiD
-                                 CFODD_DBZE_WIDTH, CFODD_ICOD_WIDTH,                      & ! IDiD
-                                 WR_NREGIME,                                              & ! IDiD
+                                 CFODD_NDBZE,      CFODD_NICOD,                           &
+                                 CFODD_BNDRE,      CFODD_NCLASS,                          &
+                                 CFODD_DBZE_MIN,   CFODD_DBZE_MAX,                        &
+                                 CFODD_ICOD_MIN,   CFODD_ICOD_MAX,                        &
+                                 CFODD_DBZE_WIDTH, CFODD_ICOD_WIDTH,                      &
+                                 WR_NREGIME,                                              &
                                  numMODISTauBins,numMODISPresBins,                        &
                                  numMODISReffIceBins,numMODISReffLiqBins,                 &
                                  numISCCPTauBins,numISCCPPresBins,numMISRTauBins,         &
@@ -198,7 +197,7 @@ program cosp2_test
              Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lidid_cfodd,Lidid_wrfreq
+             Lwarmrain
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -224,7 +223,7 @@ program cosp2_test
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
-                       Lidid_cfodd,Lidid_wrfreq
+                       Lwarmrain
 
   ! Local variables
   logical :: &
@@ -392,7 +391,8 @@ program cosp2_test
 
   ! Initialize COSP simulator
   call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid,        &
-       Lparasol, Lrttov, cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,         &
+       Lparasol, Lrttov, Lwarmrain,                                                      &
+       cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
   call cpu_time(driver_time(3))
@@ -423,7 +423,7 @@ program cosp2_test
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
        Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,&
-       Lidid_cfodd, Lidid_wrfreq,                                                        & ! IDiD
+       Lwarmrain,                                                                        &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1039,7 +1039,7 @@ contains
                                     Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
-                                    Lptradarflag9,Lradarpia,Lidid_cfodd,Lidid_wrfreq,    &
+                                    Lptradarflag9,Lradarpia,Lwarmrain,                   &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
@@ -1149,8 +1149,7 @@ contains
          Lptradarflag8,    & ! CLOUDSAT 
          Lptradarflag9,    & ! CLOUDSAT 
          Lradarpia,        & ! CLOUDSAT 
-         Lidid_cfodd,      & ! IDiD WR CFODD generator
-         Lidid_wrfreq        ! IDiD WR PDFMAP generator
+         Lwarmrain           ! CloudSat+MODIS joint diagnostics
          
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
@@ -1314,9 +1313,11 @@ contains
     ! RTTOV
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
 
-    ! IDiD Joint MODIS/CloudSat Statistics
-    if (Lidid_cfodd)   allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
-    if (Lidid_wrfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
+    ! Joint MODIS/CloudSat Statistics
+    if (Lwarmrain) then
+       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
+       allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
+    endif
 
   end subroutine construct_cosp_outputs
   
@@ -1696,7 +1697,6 @@ contains
         deallocate(y%modis_Optical_thickness_vs_ReffICE)
         nullify(y%modis_Optical_thickness_vs_ReffICE)
      endif
-     ! IDiD
      if (associated(y%cfodd_ntotal)) then
         deallocate(y%cfodd_ntotal)
         nullify(y%cfodd_ntotal)

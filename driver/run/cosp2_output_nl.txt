@@ -146,7 +146,6 @@
   Lptradarflag8=.true.,
   Lptradarflag9=.true.,
   Lradarpia=.true.,
-  !- IDID Warm Rain
-  Lidid_cfodd=.true.,
-  Lidid_wrfreq=.true.
+  !- CloudSat+MODIS joint diagnostics
+  Lwarmrain=.true.
 /

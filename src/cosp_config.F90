@@ -38,7 +38,7 @@
 ! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
 ! Mar 2018 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
 ! Apr 2018 - R. Guzman        - Added parameters for GROUND LIDAR and ATLID simulators
-! May 2018 - T. Michibata     - Inline Diagnostic Driver (IDiD)
+! Nov 2018 - T. Michibata     - Added CloudSat+MODIS Warmrain Diagnostics
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -278,20 +278,6 @@ MODULE MOD_COSP_CONFIG
        CLOUDSAT_DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
        CLOUDSAT_CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
        CLOUDSAT_CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
-    ! IDiD Warm Rain
-    integer,parameter :: CFODD_NCLASS      =      4 ! # of classes for CFODD (classified by MODIS Reff)
-    integer,parameter :: WR_NREGIME        =      3 ! # of warm-rain regimes (non-precip/drizzling/raining)
-    real,parameter,dimension(CFODD_NCLASS) :: CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
-    real,parameter    :: CFODD_DBZE_MIN    =  -30.0 ! Minimum value of CFODD dBZe bin
-    real,parameter    :: CFODD_DBZE_MAX    =   20.0 ! Maximum value of CFODD dBZe bin
-    real,parameter    :: CFODD_ICOD_MIN    =    0.0 ! Minimum value of CFODD ICOD bin
-    real,parameter    :: CFODD_ICOD_MAX    =   60.0 ! Maximum value of CFODD ICOD bin
-    real,parameter    :: CFODD_DBZE_WIDTH  =    2.0 ! Bin width (dBZe)
-    real,parameter    :: CFODD_ICOD_WIDTH  =    2.0 ! Bin width (ICOD)
-    integer,parameter :: &
-         CFODD_NDBZE = INT( (CFODD_DBZE_MAX-CFODD_DBZE_MIN)/CFODD_DBZE_WIDTH ) ! Number of CFODD dBZe bins
-    integer,parameter :: &
-         CFODD_NICOD = INT( (CFODD_ICOD_MAX-CFODD_ICOD_MIN)/CFODD_ICOD_WIDTH ) ! Number of CFODD ICOD bins
 
     real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS+1) :: &
          cloudsat_histRef = (/CLOUDSAT_DBZE_MIN,(/(i, i=int(CLOUDSAT_CFAD_ZE_MIN+CLOUDSAT_CFAD_ZE_WIDTH),&
@@ -303,7 +289,7 @@ MODULE MOD_COSP_CONFIG
                                    shape = (/2,CLOUDSAT_DBZE_BINS/))     
     real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS) :: &
          cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp
-    
+
     ! Parameters for Cloudsat near-surface precipitation diagnostics.
     ! Precipitation classes.
     integer, parameter :: &
@@ -328,7 +314,41 @@ MODULE MOD_COSP_CONFIG
     ! Level 39 of Nlvgrid(40) is 480-960m.
     integer, parameter :: &
          cloudsat_preclvl = 39
-    
+
+    ! ####################################################################################
+    ! CLOUDSAT and MODIS joint product information (2018.11.22)
+    ! ####################################################################################
+    ! @ COSP_DIAG_WARMRAIN:
+    integer, parameter :: CFODD_NCLASS  =    4 ! # of classes for CFODD (classified by MODIS Reff)
+    integer, parameter :: WR_NREGIME    =    3 ! # of warm-rain regimes (non-precip/drizzling/raining)
+    integer, parameter :: SGCLD_CLR     =    0 ! sub-grid cloud ID (fracout): clear-sky
+    integer, parameter :: SGCLD_ST      =    1 ! sub-grid cloud ID (fracout): stratiform
+    integer, parameter :: SGCLD_CUM     =    2 ! sub-grid cloud ID (fracout): cumulus
+    real(wp),parameter :: CWP_THRESHOLD = 0.00 ! cloud water path threshold
+    real(wp),parameter :: COT_THRESHOLD = 0.30 ! cloud optical thickness threshold
+    real(wp),parameter,dimension(CFODD_NCLASS) :: &
+         CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
+    real(wp),parameter,dimension(2) :: &
+         CFODD_BNDZE = (/-15.0, 0.0/)                        ! dBZe bnds (cloud/drizzle/precip)
+    real(wp),parameter :: CFODD_DBZE_MIN    =  -30.0 ! Minimum value of CFODD dBZe bin
+    real(wp),parameter :: CFODD_DBZE_MAX    =   20.0 ! Maximum value of CFODD dBZe bin
+    real(wp),parameter :: CFODD_ICOD_MIN    =    0.0 ! Minimum value of CFODD ICOD bin
+    real(wp),parameter :: CFODD_ICOD_MAX    =   60.0 ! Maximum value of CFODD ICOD bin
+    real(wp),parameter :: CFODD_DBZE_WIDTH  =    2.0 ! Bin width (dBZe)
+    real(wp),parameter :: CFODD_ICOD_WIDTH  =    2.0 ! Bin width (ICOD)
+    integer,parameter :: &
+         CFODD_NDBZE = INT( (CFODD_DBZE_MAX-CFODD_DBZE_MIN)/CFODD_DBZE_WIDTH ) ! Number of CFODD dBZe bins
+    integer,parameter :: &
+         CFODD_NICOD = INT( (CFODD_ICOD_MAX-CFODD_ICOD_MIN)/CFODD_ICOD_WIDTH ) ! Number of CFODD ICOD bins
+    real(wp),parameter,dimension(CFODD_NDBZE+1) :: &
+         CFODD_HISTDBZE = (/int(CFODD_DBZE_MIN),(/(i, i=int(CFODD_DBZE_MIN+CFODD_DBZE_WIDTH), &
+                           int(CFODD_DBZE_MIN+(CFODD_NDBZE-1)*CFODD_DBZE_WIDTH),              &
+                           int(CFODD_DBZE_WIDTH))/),int(CFODD_DBZE_MAX)/)
+    real(wp),parameter,dimension(CFODD_NICOD+1) :: &
+         CFODD_HISTICOD = (/int(CFODD_ICOD_MIN),(/(i, i=int(CFODD_ICOD_MIN+CFODD_ICOD_WIDTH), &
+                           int(CFODD_ICOD_MIN+(CFODD_NICOD-1)*CFODD_ICOD_WIDTH),              &
+                           int(CFODD_ICOD_WIDTH))/),int(CFODD_ICOD_MAX)/)
+
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator
     ! #################################################################################### 
