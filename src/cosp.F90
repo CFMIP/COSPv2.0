@@ -40,7 +40,7 @@ MODULE MOD_COSP
   USE MOD_COSP_CONFIG,             ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE, SR_BINS,&
                                          N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,      &
                                          cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,&
-                                         use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,    &
+                                         use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,dz, &
                                          WR_NREGIME, CFODD_NCLASS,                       &
                                          CFODD_NDBZE,   CFODD_NICOD,                     &
                                          numMODISTauBins,numMODISPresBins,               &
@@ -66,8 +66,8 @@ MODULE MOD_COSP
   USE MOD_MODIS_SIM,                 ONLY: modis_subcolumn,       modis_column
   USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
   use mod_cosp_rttov,                ONLY: rttov_column
-  USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID
-  USE MOD_COSP_DIAGNOSTICS,          ONLY: COSP_DIAG_WARMRAIN
+  USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID, &
+                                           COSP_DIAG_WARMRAIN
 
   IMPLICIT NONE
 
@@ -1609,7 +1609,7 @@ CONTAINS
                  Ze_totFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid) )
        do k = 1, Nlvgrid
           zlev(:,k) = vgrid_zu(k)
-          delz(:,k) = vgrid_zu(k) - vgrid_zl(k)
+          delz(:,k) = dz(k)
        enddo
        t_in(:,1,:) = cospgridIN%at(:,:)
        call cosp_change_vertical_grid (                                  &
@@ -1750,14 +1750,12 @@ CONTAINS
   ! SUBROUTINE cosp_init
   ! ######################################################################################
   SUBROUTINE COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid, Lparasol, Lrttov,     &
-       Lwarmrain,                                                                        &
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
-    logical,intent(in) :: Lwarmrain
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & !
          cloudsat_do_ray,            & !
@@ -1797,7 +1795,7 @@ CONTAINS
 
     if (use_vgrid) then
       Nlvgrid  = Nvgrid
-       allocate(vgrid_zl(Nlvgrid),vgrid_zu(Nlvgrid),vgrid_z(Nlvgrid))
+       allocate(vgrid_zl(Nlvgrid),vgrid_zu(Nlvgrid),vgrid_z(Nlvgrid),dz(Nlvgrid))
        ! CloudSat grid requested
        if (luseCSATvgrid)       zstep = 480._wp
        ! Other grid requested. Constant vertical spacing with top at 20 km
@@ -1807,9 +1805,10 @@ CONTAINS
           vgrid_zu(Nlvgrid-i+1) = i*zstep
        enddo
        vgrid_z = (vgrid_zl+vgrid_zu)/2._wp
+       dz = zstep
     else
        Nlvgrid = Nlevels
-       allocate(vgrid_zl(Nlvgrid),vgrid_zu(Nlvgrid),vgrid_z(Nlvgrid))
+       allocate(vgrid_zl(Nlvgrid),vgrid_zu(Nlvgrid),vgrid_z(Nlvgrid),dz(Nlvgrid))
     endif
 
     ! Initialize simulators
@@ -1825,8 +1824,6 @@ CONTAINS
     if (Latlid) call cosp_atlid_init()
     if (Lparasol) call cosp_parasol_init()
 
-    if ( Lwarmrain ) nullify(cospOUT%cfodd_ntotal, cospOUT%wr_occfreq_ntotal)
-
     linitialization = .FALSE.
   END SUBROUTINE COSP_INIT
 
@@ -1834,7 +1831,7 @@ CONTAINS
   ! SUBROUTINE cosp_cleanUp
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine cosp_cleanUp()
-    deallocate(vgrid_zl,vgrid_zu,vgrid_z)
+    deallocate(vgrid_zl,vgrid_zu,vgrid_z,dz)
   end subroutine cosp_cleanUp
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

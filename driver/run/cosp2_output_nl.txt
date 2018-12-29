@@ -147,5 +147,6 @@
   Lptradarflag9=.true.,
   Lradarpia=.true.,
   !- CloudSat+MODIS joint diagnostics
-  Lwarmrain=.true.
+  Lwr_occfreq=.true.,
+  Lcfodd=.true.
 /

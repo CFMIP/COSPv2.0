@@ -197,7 +197,7 @@ program cosp2_test
              Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lwarmrain
+             Lwr_occfreq, Lcfodd
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -223,7 +223,7 @@ program cosp2_test
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
-                       Lwarmrain
+                       Lwr_occfreq, Lcfodd
 
   ! Local variables
   logical :: &
@@ -391,7 +391,7 @@ program cosp2_test
 
   ! Initialize COSP simulator
   call COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid,        &
-       Lparasol, Lrttov, Lwarmrain,                                                      &
+       Lparasol, Lrttov,                                                                 &
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
@@ -421,9 +421,9 @@ program cosp2_test
        Lclcalipsoopacity, Lclopaquetemp, Lclthintemp, Lclzopaquetemp, Lclopaquemeanz,    & 
        Lclthinmeanz, Lclthinemis, Lclopaquemeanzse, Lclthinmeanzse, Lclzopaquecalipsose, &
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
-       Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,   &
-       Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,&
-       Lwarmrain,                                                                        &
+       Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,  &
+       Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
+       Lwr_occfreq, Lcfodd,                                                              &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1036,10 +1036,10 @@ contains
                                     Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,          & 
                                     Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,         &
                                     Lclzopaquecalipsose,LcfadDbze94,Ldbze94,Lparasolrefl,&
-                                    Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
+                                    Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2, &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
-                                    Lptradarflag9,Lradarpia,Lwarmrain,                   &
+                                    Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
@@ -1149,7 +1149,8 @@ contains
          Lptradarflag8,    & ! CLOUDSAT 
          Lptradarflag9,    & ! CLOUDSAT 
          Lradarpia,        & ! CLOUDSAT 
-         Lwarmrain           ! CloudSat+MODIS joint diagnostics
+         Lwr_occfreq,      & ! CloudSat+MODIS joint diagnostics
+         Lcfodd              ! CloudSat+MODIS joint diagnostics
          
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
@@ -1314,10 +1315,8 @@ contains
     if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
 
     ! Joint MODIS/CloudSat Statistics
-    if (Lwarmrain) then
-       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
-       allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
-    endif
+    if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
+    if (Lcfodd)       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
 
   end subroutine construct_cosp_outputs
   

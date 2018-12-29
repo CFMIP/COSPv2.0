@@ -348,6 +348,18 @@ MODULE MOD_COSP_CONFIG
          CFODD_HISTICOD = (/int(CFODD_ICOD_MIN),(/(i, i=int(CFODD_ICOD_MIN+CFODD_ICOD_WIDTH), &
                            int(CFODD_ICOD_MIN+(CFODD_NICOD-1)*CFODD_ICOD_WIDTH),              &
                            int(CFODD_ICOD_WIDTH))/),int(CFODD_ICOD_MAX)/)
+    real(wp),parameter,dimension(2,CFODD_NDBZE) :: &
+         CFODD_HISTDBZEedges = reshape(source=(/CFODD_HISTDBZE(1),((CFODD_HISTDBZE(k),    &
+                                 l=1,2),k=2,CFODD_NDBZE),CFODD_HISTDBZE(CFODD_NDBZE+1)/), &
+                                 shape = (/2,CFODD_NDBZE/))
+    real(wp),parameter,dimension(CFODD_NDBZE) :: &
+         CFODD_HISTDBZEcenters = (CFODD_HISTDBZEedges(1,:)+CFODD_HISTDBZEedges(2,:))/2._wp
+    real(wp),parameter,dimension(2,CFODD_NICOD) :: &
+         CFODD_HISTICODedges = reshape(source=(/CFODD_HISTICOD(1),((CFODD_HISTICOD(k),    &
+                                 l=1,2),k=2,CFODD_NICOD),CFODD_HISTICOD(CFODD_NICOD+1)/), &
+                                 shape = (/2,CFODD_NICOD/))
+    real(wp),parameter,dimension(CFODD_NICOD) :: &
+         CFODD_HISTICODcenters = (CFODD_HISTICODedges(1,:)+CFODD_HISTICODedges(2,:))/2._wp
 
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator
@@ -439,6 +451,7 @@ MODULE MOD_COSP_CONFIG
     real(wp),dimension(:),allocatable :: &
        vgrid_zl,  & ! New grid bottoms
        vgrid_zu,  & ! New grid tops
-       vgrid_z      ! New grid center
+       vgrid_z,   & ! New grid center
+       dz           ! dZ
 
 END MODULE MOD_COSP_CONFIG
