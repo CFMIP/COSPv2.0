@@ -108,6 +108,8 @@
   !- Use lidar and radar
   Lclcalipso2=.true.,
   Lcltlidarradar=.true.,
+  Lcloudsat_tcc=.true.,
+  Lcloudsat_tcc2=.true.,
   !- These are provided for debugging or special purposes
   Lfracout=.true.,
   LlidarBetaMol532=.true.,  
@@ -132,4 +134,16 @@
   Lclmodis=.true.,
   !- RTTOV
   Ltbrttov=.true.,
+  ! -CLOUDSAT precipitation frequency/occurence diagnostics
+  Lptradarflag0=.true.,
+  Lptradarflag1=.true.,
+  Lptradarflag2=.true.,
+  Lptradarflag3=.true.,
+  Lptradarflag4=.true.,
+  Lptradarflag5=.true.,
+  Lptradarflag6=.true.,
+  Lptradarflag7=.true.,
+  Lptradarflag8=.true.,
+  Lptradarflag9=.true.,
+  Lradarpia=.true.
 /

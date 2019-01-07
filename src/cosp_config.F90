@@ -273,23 +273,48 @@ MODULE MOD_COSP_CONFIG
     ! CLOUDSAT reflectivity histogram information 
     ! ####################################################################################
     integer,parameter :: &
-       DBZE_BINS     =   15, & ! Number of dBZe bins in histogram (cfad)
-       DBZE_MIN      = -100, & ! Minimum value for radar reflectivity
-       DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
-       CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
-       CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
+       CLOUDSAT_DBZE_BINS     =   15, & ! Number of dBZe bins in histogram (cfad)
+       CLOUDSAT_DBZE_MIN      = -100, & ! Minimum value for radar reflectivity
+       CLOUDSAT_DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
+       CLOUDSAT_CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
+       CLOUDSAT_CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
 
-    real(wp),parameter,dimension(DBZE_BINS+1) :: &
-         cloudsat_histRef = (/DBZE_MIN,(/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),           &
-                             int(CFAD_ZE_MIN+(DBZE_BINS-1)*CFAD_ZE_WIDTH),               &
-                             int(CFAD_ZE_WIDTH))/),DBZE_MAX/)
-    real(wp),parameter,dimension(2,DBZE_BINS) :: &
+    real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS+1) :: &
+         cloudsat_histRef = (/CLOUDSAT_DBZE_MIN,(/(i, i=int(CLOUDSAT_CFAD_ZE_MIN+CLOUDSAT_CFAD_ZE_WIDTH),&
+                             int(CLOUDSAT_CFAD_ZE_MIN+(CLOUDSAT_DBZE_BINS-1)*CLOUDSAT_CFAD_ZE_WIDTH),    &
+                             int(CLOUDSAT_CFAD_ZE_WIDTH))/),CLOUDSAT_DBZE_MAX/)
+    real(wp),parameter,dimension(2,CLOUDSAT_DBZE_BINS) :: &
          cloudsat_binEdges = reshape(source=(/cloudsat_histRef(1),((cloudsat_histRef(k), &
-                                   l=1,2),k=2,DBZE_BINS),cloudsat_histRef(DBZE_BINS+1)/),&
-                                   shape = (/2,DBZE_BINS/))     
-    real(wp),parameter,dimension(DBZE_BINS) :: &
-         cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp  
-
+                                   l=1,2),k=2,CLOUDSAT_DBZE_BINS),cloudsat_histRef(CLOUDSAT_DBZE_BINS+1)/),&
+                                   shape = (/2,CLOUDSAT_DBZE_BINS/))     
+    real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS) :: &
+         cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp
+    
+    ! Parameters for Cloudsat near-surface precipitation diagnostics.
+    ! Precipitation classes.
+    integer, parameter :: &
+         nCloudsatPrecipClass = 10
+    integer, parameter :: &
+         pClass_noPrecip      = 0, & ! No precipitation
+         pClass_Rain1         = 1, & ! Rain possible
+         pClass_Rain2         = 2, & ! Rain probable
+         pClass_Rain3         = 3, & ! Rain certain
+         pClass_Snow1         = 4, & ! Snow possible
+         pClass_Snow2         = 5, & ! Snow certain
+         pClass_Mixed1        = 6, & ! Mixed-precipitation possible
+         pClass_Mixed2        = 7, & ! Mixed-precipitation certain
+         pClass_Rain4         = 8, & ! Heavy rain
+         pClass_default       = 9    ! Default
+    ! Reflectivity bin boundaries, used by decision tree to classify precipitation type.
+    real(wp), dimension(4),parameter :: &
+         Zenonbinval =(/0._wp, -5._wp, -7.5_wp, -15._wp/)
+    real(wp), dimension(6),parameter :: &
+         Zbinvallnd = (/10._wp, 5._wp, 2.5_wp, -2.5_wp, -5._wp, -15._wp/)
+    ! Vertical level index(Nlvgrid) for Cloudsat precipitation occurence/frequency diagnostics.
+    ! Level 39 of Nlvgrid(40) is 480-960m.
+    integer, parameter :: &
+         cloudsat_preclvl = 39
+    
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator
     ! #################################################################################### 

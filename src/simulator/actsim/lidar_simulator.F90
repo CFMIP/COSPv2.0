@@ -1349,7 +1349,7 @@ contains
           cldy(:,:,k)=0._wp
        endwhere
        ! Fully attenuated layer detection at subgrid-scale:
-       where ( (x(:,:,k) .lt. S_att_opaq) .and. (x(:,:,k) .gt. 0.) .and. (x(:,:,k) .ne. undef) ) !DEBUG
+       where ( (x(:,:,k) .lt. S_att_opaq) .and. (x(:,:,k) .ge. 0.) .and. (x(:,:,k) .ne. undef) )
           cldyopaq(:,:,k)=1._wp
        elsewhere
           cldyopaq(:,:,k)=0._wp
@@ -1363,7 +1363,7 @@ contains
           srok(:,:,k)=0._wp
        endwhere
        ! Number of usefull sub-columns layers for z_opaque 3D fraction:
-       where ( (x(:,:,k) .gt. 0.) .and. (x(:,:,k) .ne. undef) ) !DEBUG
+       where ( (x(:,:,k) .ge. 0.) .and. (x(:,:,k) .ne. undef) )
           srokopaq(:,:,k)=1._wp
        elsewhere
           srokopaq(:,:,k)=0._wp
@@ -1422,11 +1422,15 @@ contains
 	      enddo
      ! Summing opaque cloud mean temperatures and altitudes
      ! as defined in Vaillant de Guelis et al. 2017a, AMT
-              cldtypetemp(ip,1) = cldtypetemp(ip,1) + ( tmp(ip,zopac) + tmp(ip,z_top) )/2.
-              cldtypetemp(ip,3) = cldtypetemp(ip,3) + tmp(ip,zopac)                 ! z_opaque
-              cldtypemeanz(ip,1) = cldtypemeanz(ip,1) + ( vgrid_z(zopac) + vgrid_z(z_top) )/2.
-              cldtypemeanzse(ip,1) = cldtypemeanzse(ip,1) + (( vgrid_z(zopac) + vgrid_z(z_top) )/2.) - surfelev(ip)
-              cldtypemeanzse(ip,3) = cldtypemeanzse(ip,3) + ( vgrid_z(zopac) - surfelev(ip) )
+              if (zopac .ne. 0) then 
+                 cldtypetemp(ip,1) = cldtypetemp(ip,1) + ( tmp(ip,zopac) + tmp(ip,z_top) )/2.
+                 cldtypetemp(ip,3) = cldtypetemp(ip,3) + tmp(ip,zopac)                 ! z_opaque
+                 cldtypemeanz(ip,1) = cldtypemeanz(ip,1) + ( vgrid_z(zopac) + vgrid_z(z_top) )/2.
+                 cldtypemeanzse(ip,1) = cldtypemeanzse(ip,1) + (( vgrid_z(zopac) + vgrid_z(z_top) )/2.) - surfelev(ip)
+                 cldtypemeanzse(ip,3) = cldtypemeanzse(ip,3) + ( vgrid_z(zopac) - surfelev(ip) )
+              else
+                 cldlay(ip,ic,1) = 0
+              endif
 	   endif
 
      ! Thin cloud profiles
