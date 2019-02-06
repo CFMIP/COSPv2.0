@@ -46,7 +46,8 @@ MODULE MOD_COSP
                                          ntau,modis_histTau,tau_binBounds,               &
                                          modis_histTauEdges,tau_binEdges,nCloudsatPrecipClass,&
                                          modis_histTauCenters,tau_binCenters,            &
-                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct                                
+!                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct !PREC_BUG
+                                         grLidar532_histBsct,atlid_histBsct
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       rttov_IN
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
@@ -1241,8 +1242,10 @@ CONTAINS
        ! Call simulator
        call quickbeam_column(cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,&
             Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,       &
-            cospgridIN%land(:), cospgridIN%at(:,cospIN%Nlevels), cospIN%fracPrecipIce,   &
-            cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,                           &
+!            cospgridIN%land(:), cospgridIN%at(:,cospIN%Nlevels), cospIN%fracPrecipIce,   & !PREC_BUG
+!            cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,                           & !PREC_BUG
+            cospgridIN%land(:), cospgridIN%surfelev(:), cospgridIN%at(:,cospIN%Nlevels), & !PREC_BUG
+      cospIN%fracPrecipIce, cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,     & !PREC_BUG
             cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover,          &
             cospOUT%cloudsat_pia)
        ! Free up memory  (if necessary)

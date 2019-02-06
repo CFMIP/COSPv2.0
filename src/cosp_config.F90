@@ -311,8 +311,8 @@ MODULE MOD_COSP_CONFIG
          Zbinvallnd = (/10._wp, 5._wp, 2.5_wp, -2.5_wp, -5._wp, -15._wp/)
     ! Vertical level index(Nlvgrid) for Cloudsat precipitation occurence/frequency diagnostics.
     ! Level 39 of Nlvgrid(40) is 480-960m.
-    integer, parameter :: &
-         cloudsat_preclvl = 39
+!    integer, parameter :: &    !PREC_BUG
+!         cloudsat_preclvl = 39 !PREC_BUG
     
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator

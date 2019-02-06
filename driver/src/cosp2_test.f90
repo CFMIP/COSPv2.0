@@ -45,7 +45,8 @@ program cosp2_test
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
                                  grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
                                  Nlvgrid_local  => Nlvgrid,                               &
-                                 vgrid_z_local  => vgrid_z,cloudsat_preclvl
+!                                 vgrid_z_local  => vgrid_z,cloudsat_preclvl !PREC_BUG
+                                 vgrid_z_local  => vgrid_z !PREC_BUG
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -547,6 +548,7 @@ contains
     ! Local variables
     type(rng_state),allocatable,dimension(:) :: rngs  ! Seeds for random number generator
     integer,dimension(:),allocatable :: seed
+    integer,dimension(:),allocatable :: cloudsat_preclvl_index !PREC_BUG
     integer :: i,j,k
     real(wp),dimension(:,:), allocatable :: &
          ls_p_rate, cv_p_rate, frac_ls, frac_cv, prec_ls, prec_cv,g_vol
@@ -857,11 +859,21 @@ contains
        fracPrecipIce_statGrid(:,:,:) = 0._wp
        call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
             cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
-            vgrid_zl(Nlvgrid_local:1:-1),  vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid)
+!            vgrid_zl(Nlvgrid_local:1:-1),  vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid !PREC_BUG
+            vgrid_zl(Nlvgrid_local:1:-1),  vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid(:,:,Nlvgrid_local:1:-1)) !PREC_BUG
+
+       ! Find proper layer above de surface elevation to compute precip flags in Cloudsat/Calipso statistical grid     !PREC_BUG
+       allocate(cloudsat_preclvl_index(nPoints))                                            !PREC_BUG
+       cloudsat_preclvl_index(:) = 0._wp                                                    !PREC_BUG
+       ! Computing altitude index for precip flags calculation (one layer above surfelev layer)   !PREC_BUG
+       cloudsat_preclvl_index(:) = 39 - floor( cospstateIN%surfelev(:)/480. )               !PREC_BUG
 
        ! For near-surface diagnostics, we only need the frozen fraction at one layer.
-       cospIN%fracPrecipIce(:,:) = fracPrecipIce_statGrid(:,:,cloudsat_preclvl)
-       
+!       cospIN%fracPrecipIce(:,:) = fracPrecipIce_statGrid(:,:,cloudsat_preclvl) !PREC_BUG
+        do i=1,nPoints                                                                       !PREC_BUG
+          cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i)) !PREC_BUG
+        enddo                                                                                !PREC_BUG
+
     endif
    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -53,7 +53,9 @@ module quickbeam
                                   pClass_noPrecip, pClass_Rain1, pClass_Rain2, pClass_Rain3,&
                                   pClass_Snow1, pClass_Snow2, pClass_Mixed1, pClass_Mixed2, &
                                   pClass_Rain4, pClass_default, Zenonbinval, Zbinvallnd,    &
-                                  N_HYDRO,nCloudsatPrecipClass,cloudsat_preclvl
+!                                  N_HYDRO,nCloudsatPrecipClass,cloudsat_preclvl !PREC_BUG
+                                  N_HYDRO,nCloudsatPrecipClass !PREC_BUG
+
   USE MOD_COSP_STATS,       ONLY: COSP_LIDAR_ONLY_CLOUD,hist1D,COSP_CHANGE_VERTICAL_GRID
   implicit none
 
@@ -232,7 +234,8 @@ contains
   ! SUBROUTINE quickbeam_column
   ! ######################################################################################
   subroutine quickbeam_column(npoints, ncolumns, nlevels, llm, DBZE_BINS, platform,      &
-       Ze_tot, Ze_tot_non, land, t2m, fracPrecipIce, zlev, zlev_half, cfad_ze,           &
+!       Ze_tot, Ze_tot_non, land, t2m, fracPrecipIce, zlev, zlev_half, cfad_ze,           & !PREC_BUG
+       Ze_tot, Ze_tot_non, land, surfelev, t2m, fracPrecipIce, zlev, zlev_half, cfad_ze, & !PREC_BUG
        cloudsat_precip_cover, cloudsat_pia)
     ! Inputs
     integer,intent(in) :: &
@@ -245,6 +248,7 @@ contains
          platform      ! Name of platform (e.g. cloudsat)
     real(wp),dimension(Npoints),intent(in) :: &
          land,               & ! Land/Sea mask. (1/0)
+         surfelev,           & ! Surface Elevation (m) !PREC_BUG
          t2m                   ! Near-surface temperature
     real(wp),dimension(Npoints,Ncolumns),intent(in) :: &
          fracPrecipIce         ! Fraction of precipitation which is frozen.     (1)
@@ -296,7 +300,8 @@ contains
                vgrid_zu(llm:1:-1),Ze_noni(:,:,llm:1:-1),log_units=.true.)
           ! Not call routine to generate diagnostics.
           call cloudsat_precipOccurence(Npoints, Ncolumns, llm, N_HYDRO, Ze_toti, Ze_noni, &
-               land, t2m, fracPrecipIce, cloudsat_precip_cover, cloudsat_pia)
+!               land, t2m, fracPrecipIce, cloudsat_precip_cover, cloudsat_pia) !PREC_BUG
+               land, surfelev, t2m, fracPrecipIce, cloudsat_precip_cover, cloudsat_pia) !PREC_BUG
        else
           ! Effective reflectivity histogram
           do i=1,Npoints
@@ -345,7 +350,8 @@ contains
   !        parameter cloudsat_preclvl, defined in src/cosp_config.F90
   ! ######################################################################################
   subroutine cloudsat_precipOccurence(Npoints, Ncolumns, llm, Nhydro, Ze_out, Ze_non_out, &
-       land, t2m, fracPrecipIce,  cloudsat_precip_cover, cloudsat_pia)
+!       land, t2m, fracPrecipIce,  cloudsat_precip_cover, cloudsat_pia) !PREC_BUG
+       land, surfelev, t2m, fracPrecipIce,  cloudsat_precip_cover, cloudsat_pia) !PREC_BUG
  
     ! Inputs
     integer,intent(in) :: &
@@ -355,6 +361,7 @@ contains
          llm                   ! Number of levels
     real(wp),dimension(Npoints),intent(in) :: &
          land,               & ! Land/Sea mask. (1/0)
+         surfelev,           & ! Surface Elevation (m) !PREC_BUG
          t2m                   ! Near-surface temperature
     real(wp),dimension(Npoints,Ncolumns,llm),intent(in) :: &
          Ze_out,             & ! Effective reflectivity factor                  (dBZ)
@@ -372,7 +379,11 @@ contains
     integer,dimension(Npoints,Ncolumns) :: &
          cloudsat_pflag,      & ! Subcolumn precipitation flag
          cloudsat_precip_pia    ! Subcolumn path integrated attenutation.
-    integer :: pr,i,k,m,j
+    integer,dimension(Npoints) :: &                                           !PREC_BUG
+         cloudsat_preclvl_index ! Altitude index for precip flags calculation !PREC_BUG
+                                ! in 40-level grid (one layer above surfelev) !PREC_BUG     
+!    integer :: pr,i,k,m,j                                                    !PREC_BUG
+     integer :: pr,i,k,m,j,cloudsat_preclvl                                   !PREC_BUG
     real(wp) :: Zmax
     
     ! Initialize 
@@ -380,11 +391,17 @@ contains
     cloudsat_precip_pia(:,:)   = 0._wp
     cloudsat_precip_cover(:,:) = 0._wp
     cloudsat_pia(:)            = 0._wp
+    cloudsat_preclvl_index(:)  = 0._wp !PREC_BUG
+
+!!! Computing altitude index for precip flags calculation  !PREC_BUG
+cloudsat_preclvl_index(:) = 39 - floor( surfelev(:)/480. ) !PREC_BUG
 
     ! ######################################################################################
     ! SUBCOLUMN processing
     ! ######################################################################################
     do i=1, Npoints
+       cloudsat_preclvl = cloudsat_preclvl_index(i) !PREC_BUG
+
        do pr=1,Ncolumns
           ! 1) Compute the PIA in all profiles containing hydrometeors
           if ( (Ze_non_out(i,pr,cloudsat_preclvl).gt.-100) .and. (Ze_out(i,pr,cloudsat_preclvl).gt.-100) ) then
