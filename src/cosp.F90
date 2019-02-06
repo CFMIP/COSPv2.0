@@ -47,7 +47,7 @@ MODULE MOD_COSP
                                          modis_histTauEdges,tau_binEdges,nCloudsatPrecipClass,&
                                          modis_histTauCenters,tau_binCenters,            &
 !                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct !PREC_BUG
-                                         grLidar532_histBsct,atlid_histBsct
+                                         grLidar532_histBsct,atlid_histBsct !PREC_BUG
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       rttov_IN
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
