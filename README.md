@@ -18,7 +18,7 @@ The simulators in COSP (ISCCP, MISR, MODIS, radar/CloudSat and lidar/CALIPSO) ha
 
 # Conditions of use
 
-The code is distributed under [BSD License](http://www.opensource.org/licenses/bsd-license.php). Each source file includes a copy of this license with details on the Owner, Year and Organisation. The license in the file quickbeam/README applies to all the files in the directory quickbeam.
+The code is distributed under [BSD License](https://opensource.org/licenses/BSD-3-Clause). Each source file includes a copy of this license with details on the Owner, Year and Organisation. The license in the file `quickbeam/README` applies to all the files in the directory quickbeam.
 
 # What's in the distribution
 
@@ -53,7 +53,13 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
     1. Reference data for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`. CMOR compliant reference data is also provided, `driver/data/outputs/UKMO/cmor/ref1D/`.
     1. To compare driver output to reference data. In `driver/`, invoke Python script `test_cosp2imp.py`. This script requires the following Python modules: os, numpy, netCDF4, argparse, warnings, fnmatch, sys. Examples are below.
        1. For standard netCDF output:
+```
     python test_cosp2Imp.py data/outputs/UKMO/cosp2_output_um.ref.nc data/outputs/UKMO/cosp2_output_um.nc
+```
        1. For CMOR compliant output:
+
+```
     python test_cosp2Imp.py data/outputs/UKMO/cmor/ref1D/ data/outputs/UKMO/cmor/1D --cmor 1D
-    By default the script will only report relative differences which are greater than 1e-5. This can be changed by the user through the optional argument "--zeroThresh".
+```
+
+    By default the script will only report relative differences which are greater than 1e-5. This can be changed by the user through the optional argument `--zeroThresh`.
