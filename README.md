@@ -50,16 +50,14 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
     simulator specific information (i.e. Radar simulator frequency). The output namelist controls the output diagnostics.
 
 1. Regression testing (comparing to reference data)
-    1. Reference data for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`. CMOR compliant reference data is also provided, `driver/data/outputs/UKMO/cmor/ref1D/`.
-    1. To compare driver output to reference data. In `driver/`, invoke Python script `test_cosp2imp.py`. This script requires the following Python modules: os, numpy, netCDF4, argparse, warnings, fnmatch, sys. Examples are below.
-       1. For standard netCDF output:
-```
-    python test_cosp2Imp.py data/outputs/UKMO/cosp2_output_um.ref.nc data/outputs/UKMO/cosp2_output_um.nc
-```
-       1. For CMOR compliant output:
+   1. Reference data for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`. CMOR compliant reference data is also provided, `driver/data/outputs/UKMO/cmor/ref1D/`.
+   1. To compare driver output to reference data. In `driver/`, invoke Python script `test_cosp2imp.py`. This script requires the following Python modules: os, numpy, netCDF4, argparse, warnings, fnmatch, sys. Examples are below.
+      1. For standard netCDF output:
 
-```
-    python test_cosp2Imp.py data/outputs/UKMO/cmor/ref1D/ data/outputs/UKMO/cmor/1D --cmor 1D
-```
+      `python test_cosp2Imp.py data/outputs/UKMO/cosp2_output_um.ref.nc data/outputs/UKMO/cosp2_output_um.nc`
 
-    By default the script will only report relative differences which are greater than 1e-5. This can be changed by the user through the optional argument `--zeroThresh`.
+      1. For CMOR compliant output:
+
+      `python test_cosp2Imp.py data/outputs/UKMO/cmor/ref1D/ data/outputs/UKMO/cmor/1D --cmor 1D`
+
+   By default the script will only report relative differences which are greater than 1e-5. This can be changed by the user through the optional argument `--zeroThresh`.
