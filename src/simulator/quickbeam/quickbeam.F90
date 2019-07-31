@@ -383,7 +383,7 @@ contains
     integer,dimension(Npoints) :: &
          cloudsat_preclvl_index ! Altitude index for precip flags calculation
                                 ! in 40-level grid (one layer above surfelev) 
-    integer :: pr,i,k,m,j
+    integer :: pr,i,k,m,j,radar_preclvl
     real(wp) :: Zmax
     
     ! Initialize 
@@ -402,10 +402,16 @@ contains
     do i=1, Npoints
 
        do pr=1,Ncolumns
+          j = 40
+	  do while (Ze_out(i,pr,j) .eq. R_UNDEF)
+	     j = j-1
+          enddo
+          radar_preclvl = j-1
+
           ! 1) Compute the PIA in all profiles containing hydrometeors
-          if ( (Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.-100) .and. (Ze_out(i,pr,cloudsat_preclvl_index(i)).gt.-100) ) then
-             if ( (Ze_non_out(i,pr,cloudsat_preclvl_index(i)).lt.100) .and. (Ze_out(i,pr,cloudsat_preclvl_index(i)).lt.100) ) then
-                cloudsat_precip_pia(i,pr) = Ze_non_out(i,pr,cloudsat_preclvl_index(i)) - Ze_out(i,pr,cloudsat_preclvl_index(i))
+          if ( (Ze_non_out(i,pr,radar_preclvl).gt.-100) .and. (Ze_out(i,pr,radar_preclvl).gt.-100) ) then
+             if ( (Ze_non_out(i,pr,radar_preclvl).lt.100) .and. (Ze_out(i,pr,radar_preclvl).lt.100) ) then
+                cloudsat_precip_pia(i,pr) = Ze_non_out(i,pr,radar_preclvl) - Ze_out(i,pr,radar_preclvl)
              endif
           endif
           
@@ -416,37 +422,37 @@ contains
           if (land(i) .eq. 0) then
              ! Snow
              if(fracPrecipIce(i,pr).gt.0.9) then
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(2)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(2)) then
                    cloudsat_pflag(i,pr) = pClass_Snow2                   ! TSL: Snow certain
                 endif
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(4).and. &
-                     Ze_non_out(i,pr,cloudsat_preclvl_index(i)).le.Zenonbinval(2)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(4).and. &
+                     Ze_non_out(i,pr,radar_preclvl).le.Zenonbinval(2)) then
                    cloudsat_pflag(i,pr) = pClass_Snow1                   ! TSL: Snow possible
                 endif
              endif
              
              ! Mixed
              if(fracPrecipIce(i,pr).gt.0.1.and.fracPrecipIce(i,pr).le.0.9) then
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(2)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(2)) then
                    cloudsat_pflag(i,pr) = pClass_Mixed2                  ! TSL: Mixed certain
                 endif
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(4).and. &
-                     Ze_non_out(i,pr,cloudsat_preclvl_index(i)).le.Zenonbinval(2)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(4).and. &
+                     Ze_non_out(i,pr,radar_preclvl).le.Zenonbinval(2)) then
                    cloudsat_pflag(i,pr) = pClass_Mixed1                  ! TSL: Mixed possible
                 endif
              endif
              
              ! Rain
              if(fracPrecipIce(i,pr).le.0.1) then
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(1)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(1)) then
                    cloudsat_pflag(i,pr) = pClass_Rain3                   ! TSL: Rain certain
                 endif
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(3).and. &
-                     Ze_non_out(i,pr,cloudsat_preclvl_index(i)).le.Zenonbinval(1)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(3).and. &
+                     Ze_non_out(i,pr,radar_preclvl).le.Zenonbinval(1)) then
                    cloudsat_pflag(i,pr) = pClass_Rain2                   ! TSL: Rain probable
                 endif
-                if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).gt.Zenonbinval(4).and. &
-                     Ze_non_out(i,pr,cloudsat_preclvl_index(i)).le.Zenonbinval(3)) then
+                if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(4).and. &
+                     Ze_non_out(i,pr,radar_preclvl).le.Zenonbinval(3)) then
                    cloudsat_pflag(i,pr) = pClass_Rain1                   ! TSL: Rain possible
                 endif
                 if(cloudsat_precip_pia(i,pr).gt.40) then
@@ -455,7 +461,7 @@ contains
              endif
              
              ! No precipitation
-             if(Ze_non_out(i,pr,cloudsat_preclvl_index(i)).le.-15) then
+             if(Ze_non_out(i,pr,radar_preclvl).le.-15) then
                 cloudsat_pflag(i,pr) = pClass_noPrecip                   ! TSL: Not Raining
              endif
           endif ! Ocean points
@@ -469,11 +475,11 @@ contains
 
              ! Snow (T<273)
              if(t2m(i) .lt. 273._wp) then
-                if(Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(5)) then
+                if(Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(5)) then
                    cloudsat_pflag(i,pr) = pClass_Snow2                      ! JEK: Snow certain
                 endif
-                if(Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(6) .and. &
-                     Ze_out(i,pr,cloudsat_preclvl_index(i)-1).le.Zbinvallnd(5)) then
+                if(Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(6) .and. &
+                     Ze_out(i,pr,radar_preclvl-1).le.Zbinvallnd(5)) then
                    cloudsat_pflag(i,pr) = pClass_Snow1                      ! JEK: Snow possible
                 endif
              endif
@@ -481,11 +487,11 @@ contains
              ! Mized phase (273<T<275)
              if(t2m(i) .ge. 273._wp .and. t2m(i) .le. 275._wp) then
                 if ((Zmax .gt. Zbinvallnd(1) .and. cloudsat_precip_pia(i,pr).gt.30) .or. &
-                     (Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(4))) then
+                     (Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(4))) then
                    cloudsat_pflag(i,pr) = pClass_Mixed2                     ! JEK: Mixed certain
                 endif
-                if ((Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(6)  .and. &
-                     Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .le. Zbinvallnd(4)) .and. &
+                if ((Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(6)  .and. &
+                     Ze_out(i,pr,radar_preclvl-1) .le. Zbinvallnd(4)) .and. &
                      (Zmax .gt. Zbinvallnd(5)) ) then
                    cloudsat_pflag(i,pr) = pClass_Mixed1                     ! JEK: Mixed possible
                 endif
@@ -494,14 +500,14 @@ contains
              ! Rain (T>275)
              if(t2m(i) .gt. 275) then
                 if ((Zmax .gt. Zbinvallnd(1) .and. cloudsat_precip_pia(i,pr).gt.30) .or. &
-                     (Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(2))) then
+                     (Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(2))) then
                    cloudsat_pflag(i,pr) = pClass_Rain3                      ! JEK: Rain certain
                 endif
-                if((Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(6)) .and. &
+                if((Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(6)) .and. &
                      (Zmax .gt. Zbinvallnd(3))) then
                    cloudsat_pflag(i,pr) = pClass_Rain2                      ! JEK: Rain probable
                 endif
-                if((Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. Zbinvallnd(6)) .and. &
+                if((Ze_out(i,pr,radar_preclvl-1) .gt. Zbinvallnd(6)) .and. &
                      (Zmax.lt.Zbinvallnd(3))) then
                    cloudsat_pflag(i,pr) = pClass_Rain1                      ! JEK: Rain possible
                 endif
@@ -511,7 +517,7 @@ contains
              endif
              
              ! No precipitation
-             if(Ze_out(i,pr,cloudsat_preclvl_index(i)-1).le.-15) then
+             if(Ze_out(i,pr,radar_preclvl-1).le.-15) then
                 cloudsat_pflag(i,pr) =  pClass_noPrecip                     ! JEK: Not Precipitating
              endif         
           endif ! Land points
