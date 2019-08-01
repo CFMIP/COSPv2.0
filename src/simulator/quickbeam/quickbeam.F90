@@ -265,8 +265,7 @@ contains
          cloudsat_precip_cover ! Model precip rate in by CloudSat precip flag
     real(wp),dimension(Npoints),intent(out) :: &
          cloudsat_pia          ! Cloudsat path integrated attenuation
-    real(wp),dimension(nPoint,nColumns)  :: &
-        radar_preclvl
+    
     ! Local variables
     integer :: i,j
     real(wp) :: zstep
@@ -351,7 +350,7 @@ contains
   !        parameter cloudsat_preclvl, defined in src/cosp_config.F90
   ! ######################################################################################
   subroutine cloudsat_precipOccurence(Npoints, Ncolumns, llm, Nhydro, Ze_out, Ze_non_out, &
-       land, surfelev, t2m, fracPrecipIce,  cloudsat_precip_cover, cloudsat_pia, zstep, radar_preclvl)
+       land, surfelev, t2m, fracPrecipIce,  cloudsat_precip_cover, cloudsat_pia, zstep)
  
     ! Inputs
     integer,intent(in) :: &

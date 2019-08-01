@@ -1244,7 +1244,7 @@ CONTAINS
             cospgridIN%land(:), cospgridIN%surfelev(:), cospgridIN%at(:,cospIN%Nlevels), &
             cospIN%fracPrecipIce, cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,     &
             cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover,          &
-            cospOUT%cloudsat_pia))
+            cospOUT%cloudsat_pia)
        ! Free up memory  (if necessary)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
