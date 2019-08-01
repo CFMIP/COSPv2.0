@@ -407,19 +407,20 @@ contains
 	     j = j-1
           enddo
           radar_preclvl = j-1
-
-          ! 1) Compute the PIA in all profiles containing hydrometeors
-          if ( (Ze_non_out(i,pr,radar_preclvl).gt.-100) .and. (Ze_out(i,pr,radar_preclvl).gt.-100) ) then
-             if ( (Ze_non_out(i,pr,radar_preclvl).lt.100) .and. (Ze_out(i,pr,radar_preclvl).lt.100) ) then
-                cloudsat_precip_pia(i,pr) = Ze_non_out(i,pr,radar_preclvl) - Ze_out(i,pr,radar_preclvl)
-             endif
-          endif
           
-          ! 2) Compute precipitation flag
+          ! Compute precipitation flag
           ! ################################################################################
-          ! 2a) Oceanic points.
+          ! 1) Oceanic points.
           ! ################################################################################
           if (land(i) .eq. 0) then
+
+             ! 1a) Compute the PIA in all profiles containing hydrometeors
+             if ( (Ze_non_out(i,pr,radar_preclvl).gt.-100) .and. (Ze_out(i,pr,radar_preclvl).gt.-100) ) then
+                if ( (Ze_non_out(i,pr,radar_preclvl).lt.100) .and. (Ze_out(i,pr,radar_preclvl).lt.100) ) then
+                   cloudsat_precip_pia(i,pr) = Ze_non_out(i,pr,radar_preclvl) - Ze_out(i,pr,radar_preclvl)
+                endif
+             endif
+
              ! Snow
              if(fracPrecipIce(i,pr).gt.0.9) then
                 if(Ze_non_out(i,pr,radar_preclvl).gt.Zenonbinval(2)) then
@@ -467,9 +468,16 @@ contains
           endif ! Ocean points
           
           ! ################################################################################
-          ! 2b) Land points.
+          ! 2) Land points.
           ! ################################################################################
           if (land(i) .eq. 1) then
+             ! 2a) Compute the PIA in all profiles containing hydrometeors
+             if ( (Ze_non_out(i,pr,radar_preclvl-1).gt.-100) .and. (Ze_out(i,pr,radar_preclvl-1).gt.-100) ) then
+                if ( (Ze_non_out(i,pr,radar_preclvl-1).lt.100) .and. (Ze_out(i,pr,radar_preclvl-1).lt.100) ) then
+                   cloudsat_precip_pia(i,pr) = Ze_non_out(i,pr,radar_preclvl-1) - Ze_out(i,pr,radar_preclvl-1)
+                endif
+             endif
+
              ! Find Zmax, the maximum reflectivity value in the attenuated profile (Ze_out);
              Zmax=maxval(Ze_out(i,pr,:))
 
