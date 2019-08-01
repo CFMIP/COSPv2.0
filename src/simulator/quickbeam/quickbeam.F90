@@ -403,7 +403,7 @@ contains
     ! ######################################################################################
     do i=1, Npoints
        do pr=1,Ncolumns
-          j = 40
+          j = cloudsat_preclvl
 	  do while (Ze_out(i,pr,j) .eq. R_UNDEF)
 	     j = j-1
           enddo
