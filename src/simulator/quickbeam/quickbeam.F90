@@ -518,7 +518,7 @@ contains
              endif
              
              ! No precipitation
-             if(Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .le. -15 .and. Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .gt. -100) then
+             if(Ze_out(i,pr,cloudsat_preclvl_index(i)-1) .le. -15) then
                 cloudsat_pflag(i,pr) =  pClass_noPrecip                     ! JEK: Not Precipitating
              endif         
           endif ! Land points
