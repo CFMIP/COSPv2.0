@@ -97,7 +97,9 @@ if (args.cmor == 'None'):
         # Compute relative difference.
         diff  = var/var_ref-1
         diff[numpy.where(var_ref == 0.0)] = 0.0
-        
+        # Relative difference = 1 if var_ref = 0 and var != var_ref
+        diff[(var_ref == 0.0) & (var != var_ref)] = 1.0
+
         # Flag any point which exceeds error threshold. 
         error = numpy.argwhere(abs(diff) >= args.zeroThresh)
         

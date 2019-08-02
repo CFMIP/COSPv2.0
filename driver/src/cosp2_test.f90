@@ -547,7 +547,9 @@ contains
     ! Local variables
     type(rng_state),allocatable,dimension(:) :: rngs  ! Seeds for random number generator
     integer,dimension(:),allocatable :: seed
+    integer,dimension(:),allocatable :: cloudsat_preclvl_index
     integer :: i,j,k
+    real(wp) :: zstep
     real(wp),dimension(:,:), allocatable :: &
          ls_p_rate, cv_p_rate, frac_ls, frac_cv, prec_ls, prec_cv,g_vol
     real(wp),dimension(:,:,:),  allocatable :: &
@@ -857,11 +859,21 @@ contains
        fracPrecipIce_statGrid(:,:,:) = 0._wp
        call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
             cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
-            vgrid_zl(Nlvgrid_local:1:-1),  vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid)
+            vgrid_zl(Nlvgrid_local:1:-1), vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid(:,:,Nlvgrid_local:1:-1))
+
+       ! Find proper layer above de surface elevation to compute precip flags in Cloudsat/Calipso statistical grid
+       allocate(cloudsat_preclvl_index(nPoints))
+       cloudsat_preclvl_index(:) = 0._wp
+       ! Compute the zstep distance between two atmopsheric layers
+       zstep = vgrid_zl(1)-vgrid_zl(2)
+       ! Computing altitude index for precip flags calculation (one layer above surfelev layer)
+       cloudsat_preclvl_index(:) = cloudsat_preclvl - floor( cospstateIN%surfelev(:)/zstep )
 
        ! For near-surface diagnostics, we only need the frozen fraction at one layer.
-       cospIN%fracPrecipIce(:,:) = fracPrecipIce_statGrid(:,:,cloudsat_preclvl)
-       
+        do i=1,nPoints
+          cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i))
+        enddo
+
     endif
    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
