@@ -7,7 +7,9 @@ module mod_cosp_io
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
        reffICE_binCenters, reffLIQ_binCenters, cloudsat_binCenters, PARASOL_SZA,      &
-       calipso_binCenters, grLidar532_binCenters, atlid_binCenters 
+       calipso_binCenters, grLidar532_binCenters, atlid_binCenters,                   &
+       CFODD_NDBZE,  CFODD_HISTDBZE, CFODD_HISTDBZEcenters,                           &
+       CFODD_NICOD,  CFODD_HISTICOD, CFODD_HISTICODcenters
   implicit none
 
 contains
@@ -72,6 +74,10 @@ contains
     status = nf90_def_dim(fileID,"RELIQ_MODIS",numMODISReffLiqBins,dimID(15))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"REICE_MODIS",numMODISReffIceBins,dimID(16))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_def_dim(fileID,"CFODD_NDBZE",CFODD_NDBZE,dimID(17))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_def_dim(fileID,"CFODD_NICOD",CFODD_NICOD,dimID(18))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
     ! ---------------------------------------------------------------------------------------
@@ -1339,7 +1345,77 @@ contains
        status = nf90_put_att(fileID,varID(139),"standard_name", "cloud_area_fraction")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif    
-    
+    ! warm-rain occurrence frequency diagnostics
+    if (associated(cospOUT%wr_occfreq_ntotal)) then
+       status = nf90_def_var(fileID,"npdfcld",nf90_float, (/dimID(1)/),varID(140))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(140),"long_name","# of Non-Precipitating Clouds")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(140),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(140),"standard_name", "number_of_slwc_nonprecip")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"npdfdrz",nf90_float, (/dimID(1)/),varID(141))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(141),"long_name","# of Drizzling Clouds")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(141),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(141),"standard_name", "number_of_slwc_drizzle")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"npdfrain",nf90_float, (/dimID(1)/),varID(142))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(142),"long_name","# of Precipitating Clouds")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(142),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(142),"standard_name", "number_of_slwc_precip")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    ! Contoured Frequency by Optical Depth Diagram (CFODD)
+    if (associated(cospOUT%cfodd_ntotal)) then
+       status = nf90_def_var(fileID,"ncfodd1",nf90_float, (/dimID(1),dimID(17),dimID(18)/),varID(143))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(143),"long_name","# of CFODD (05 < Reff < 12 micron)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(143),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(143),"standard_name", "cfodd_reff_small")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ncfodd2",nf90_float, (/dimID(1),dimID(17),dimID(18)/),varID(144))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(144),"long_name","# of CFODD (12 < Reff < 18 micron)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(144),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(144),"standard_name", "cfodd_reff_medium")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"ncfodd3",nf90_float, (/dimID(1),dimID(17),dimID(18)/),varID(145))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(145),"long_name","# of CFODD (18 < Reff < 35 micron)")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(145),"units",        "1")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(145),"standard_name", "cfodd_reff_large")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       !! axes for CFODD
+       status = nf90_def_var(fileID,"CFODD_NDBZE",nf90_float,(/dimID(17)/),varID(146))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(146),"long_name","CloudSat+MODIS dBZe vs ICOD joint PDF X-axis")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(146),"units",        "dBZ")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(146),"standard_name", "cloudsat_quivalent_reflectivity_factor")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"CFODD_NICOD",nf90_float,(/dimID(18)/),varID(147))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","CloudSat+MODIS dBZe vs ICOD joint PDF Y-axis")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "none")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"standard_name", "modis_in-cloud_optical_depth")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif 
     
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
@@ -1792,6 +1868,30 @@ contains
     if (associated(cospOUT%cloudsat_tcc2)) then
        status = nf90_put_var(fileID,varID(139),cospOUT%cloudsat_tcc2)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
+
+    ! Cloudsat+MODIS Joint simulators output
+      !! warm-rain occurrence frequency diagnostics
+    if (associated(cospOUT%wr_occfreq_ntotal)) then
+       status = nf90_put_var(fileID,varID(140),cospOUT%wr_occfreq_ntotal(:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(141),cospOUT%wr_occfreq_ntotal(:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(142),cospOUT%wr_occfreq_ntotal(:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+      !! Contoured Frequency by Optical Depth Diagram (CFODD)
+    if (associated(cospOUT%cfodd_ntotal)) then
+       status = nf90_put_var(fileID,varID(143),cospOUT%cfodd_ntotal(:,:,:,1))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(144),cospOUT%cfodd_ntotal(:,:,:,2))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(145),cospOUT%cfodd_ntotal(:,:,:,3))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(146),CFODD_HISTDBZEcenters)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(147),CFODD_HISTICODcenters)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
     
