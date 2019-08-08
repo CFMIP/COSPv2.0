@@ -72,13 +72,14 @@ driver_COSP1.4:
 # Dependencies for libary
 cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  cosp_rttov_interfaceSTUB.o \
 	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
-	cosp_cloudsat_interface.o  cosp_stats.o cosp_parasol_interface.o cosp_rttovSTUB.o \
+	cosp_cloudsat_interface.o  cosp_stats.o                                           \
+	cosp_parasol_interface.o cosp_rttovSTUB.o \
         cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
         parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 cosp_constants.o            : cosp_kinds.o
 cosp_config.o               : cosp_kinds.o
 cosp_errorHandling.o        : cosp_kinds.o
-cosp_stats.o                : cosp_kinds.o cosp_config.o
+cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o
 cosp_isccp_interface.o      : cosp_kinds.o icarus.o
 icarus.o	            : cosp_kinds.o cosp_constants.o  cosp_stats.o
 cosp_misr_interface.o       : cosp_kinds.o
