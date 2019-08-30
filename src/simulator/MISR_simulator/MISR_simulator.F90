@@ -213,9 +213,13 @@ contains
 !    ! DS2015 END
      
     ! Fill dark scenes 
-    do j=1,numMISRHgtBins
-       where(sunlit .ne. 1) dist_model_layertops(1:npoints,j) = R_UNDEF
-    enddo
+    do j = 1,npoints
+      if (sunlit(j) .ne. 1) then
+        dist_model_layertops(j,:) = R_UNDEF
+        box_MISR_ztop(j,:) = R_UNDEF
+        tauOUT(j,:) = R_UNDEF
+      end if
+    end do
 
   end SUBROUTINE MISR_SUBCOLUMN
 
@@ -284,6 +288,7 @@ contains
        else
           MISR_cldarea(j)         = R_UNDEF
           MISR_mean_ztop(npoints) = R_UNDEF
+          fq_MISR_TAU_v_CTH(j,:,:) = R_UNDEF
        endif
     enddo
 
