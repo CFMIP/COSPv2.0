@@ -469,7 +469,7 @@ contains
        if((abs(p1+1) > 1E-8) ) then   ! N0 has been specified, determine ld
           N0   = p1
           tmp1 = 1._wp/(1._wp+bpm)
-          ld   = ((apm*gamma(1.+bpm)*N0)/(rho_a*Q*1E-3))**tmp1
+          ld   = ((apm*gamma(1._wp+bpm)*N0)/(rho_a*Q*1E-3))**tmp1
           ld   = ld/1E6                     ! set units to microns^-1
        elseif (abs(p2+1) > 1E-8) then  ! lambda=ld has been specified as default
           ld = p2     ! should have units of microns^-1 
@@ -710,23 +710,23 @@ contains
        
        if(Re>0) then
           ld = 1.5_wp/Re   ! units 1/um
-          fc = (ld*1E6)**(1.+bpm)/(apm*gamma(1+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
+          fc = (ld*1E6)**(1.+bpm)/(apm*gamma(1._wp+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
           N  = fc*rho_a*(Q*1E-3)
        elseif (abs(p1+1) > 1E-8) then
           ! Use N0 default value
           N0   = p1
           tmp1 = 1._wp/(1._wp+bpm)
-          fc   = ((apm*gamma(1.+bpm)*N0)**tmp1)*(D*1E-6)
+          fc   = ((apm*gamma(1._wp+bpm)*N0)**tmp1)*(D*1E-6)
           N    = (N0*exp(-1._wp*fc*(1._wp/(rho_a*Q*1E-3))**tmp1)) * 1E-12
        elseif (abs(p2+1) > 1E-8) then
           ! Use default value for lambda 
           ld = p2
-          fc = (ld*1E6)**(1._wp+bpm)/(apm*gamma(1+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
+          fc = (ld*1E6)**(1._wp+bpm)/(apm*gamma(1._wp+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
           N  = fc*rho_a*(Q*1E-3)
        else
           ! ld "parameterized" from temperature (carry over from original Quickbeam).
           ld = 1220._wp*10._wp**(-0.0245_wp*tc)*1E-6
-          N0 = ((ld*1E6)**(1._wp+bpm)*Q*1E-3*rho_a)/(apm*gamma(1+bpm))
+          N0 = ((ld*1E6)**(1._wp+bpm)*Q*1E-3*rho_a)/(apm*gamma(1._wp+bpm))
           N  = (N0*exp(-ld*D)) * 1E-12
        endif
        
