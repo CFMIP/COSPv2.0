@@ -286,8 +286,8 @@ contains
           endif
 
        else
-          MISR_cldarea(j)         = R_UNDEF
-          MISR_mean_ztop(npoints) = R_UNDEF
+          MISR_cldarea(j)          = R_UNDEF
+          MISR_mean_ztop(j)        = R_UNDEF
           fq_MISR_TAU_v_CTH(j,:,:) = R_UNDEF
        endif
     enddo
