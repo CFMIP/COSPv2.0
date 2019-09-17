@@ -710,16 +710,8 @@ CONTAINS
        modisIN%tau       => cospIN%tau_067
        modisIN%g         => cospIN%asym
        modisIN%w0        => cospIN%ss_alb
-       modisIN%Nsunlit   = count(cospgridIN%sunlit > 0)
-       if (modisIN%Nsunlit .gt. 0) then
-          allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
-          modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
-          modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
-       endif
-       if (count(cospgridIN%sunlit <= 0) .gt. 0) then
-          allocate(modisIN%notSunlit(count(cospgridIN%sunlit <= 0)))
-          modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),mask = .not. cospgridIN%sunlit > 0)
-       endif
+       modisIN%sunlit    => cospgridIN%sunlit
+       modisIN%pres      => cospgridIN%phalf
     endif
 
     if (Lrttov_column) then
@@ -893,26 +885,21 @@ CONTAINS
     endif
 
     if (Lmodis_subcolumn) then
-       if(modisiN%nSunlit > 0) then
-          ! Allocate space for local variables
-          allocate(modisRetrievedTau(modisIN%nSunlit,modisIN%nColumns),                  &
-                   modisRetrievedSize(modisIN%nSunlit,modisIN%nColumns),                 &
-                   modisRetrievedPhase(modisIN%nSunlit,modisIN%nColumns),                &
-                   modisRetrievedCloudTopPressure(modisIN%nSunlit,modisIN%nColumns))
-          ! Call simulator
-          do i = 1, modisIN%nSunlit
-             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,modisIN%pres(i,:),    &
-                                  modisIN%tau(int(modisIN%sunlit(i)),:,:),               &
-                                  modisIN%liqFrac(int(modisIN%sunlit(i)),:,:),           &
-                                  modisIN%g(int(modisIN%sunlit(i)),:,:),                 &
-                                  modisIN%w0(int(modisIN%sunlit(i)),:,:),                &
-                                  isccp_boxptop(int(modisIN%sunlit(i)),:),               &
-                                  modisRetrievedPhase(i,:),                              &
-                                  modisRetrievedCloudTopPressure(i,:),                   &
-                                  modisRetrievedTau(i,:),modisRetrievedSize(i,:))
-          end do
-       endif
-    endif
+       ! Allocate space for local variables
+       allocate(modisRetrievedTau(modisIN%nPoints,modisIN%nColumns),                    &
+                modisRetrievedSize(modisIN%nPoints,modisIN%nColumns),                   &
+                modisRetrievedPhase(modisIN%nPoints,modisIN%nColumns),                  &
+                modisRetrievedCloudTopPressure(modisIN%nPoints,modisIN%nColumns))
+       do i=1,modisIN%nPoints
+          if (modisIN%sunlit(i) .eq. 1) then
+             call modis_subcolumn(modisIN%Ncolumns, modisIN%Nlevels, modisIN%pres(i,:), &
+                  modisIN%tau(i,:,:), modisIN%liqFrac(i,:,:), modisIN%g(i,:,:),         &
+                  modisIN%w0(i,:,:), isccp_boxptop(i,:),                                &
+                  modisRetrievedPhase(i,:), modisRetrievedCloudTopPressure(i,:),        &
+                  modisRetrievedTau(i,:), modisRetrievedSize(i,:))
+          endif ! Sunlit
+       end do   ! Npoints
+    endif       ! doMODIS
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 5) Call column simulators
@@ -963,10 +950,10 @@ CONTAINS
 
        ! Clear up memory (if necessary)
        if (allocated(isccp_boxttop))   deallocate(isccp_boxttop)
-       if (allocated(isccp_boxptop))   deallocate(isccp_boxptop)
        if (allocated(isccp_boxtau))    deallocate(isccp_boxtau)
        if (allocated(isccp_meantbclr)) deallocate(isccp_meantbclr)
        if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
+       if (allocated(isccp_boxptop))   deallocate(isccp_boxptop)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
           nullify(cospOUT%isccp_meanalbedocld)
@@ -1288,228 +1275,112 @@ CONTAINS
 
     ! MODIS
     if (Lmodis_column) then
-       if(modisiN%nSunlit > 0) then
-          ! Allocate space for local variables
-          allocate(modisCftotal(modisIN%nSunlit), modisCfLiquid(modisIN%nSunlit),        &
-                   modisCfIce(modisIN%nSunlit),modisCfHigh(modisIN%nSunlit),             &
-                   modisCfMid(modisIN%nSunlit),modisCfLow(modisIN%nSunlit),              &
-                   modisMeanTauTotal(modisIN%nSunlit),                                   &
-                   modisMeanTauLiquid(modisIN%nSunlit),modisMeanTauIce(modisIN%nSunlit), &
-                   modisMeanLogTauTotal(modisIN%nSunlit),                                &
-                   modisMeanLogTauLiquid(modisIN%nSunlit),                               &
-                   modisMeanLogTauIce(modisIN%nSunlit),                                  &
-                   modisMeanSizeLiquid(modisIN%nSunlit),                                 &
-                   modisMeanSizeIce(modisIN%nSunlit),                                    &
-                   modisMeanCloudTopPressure(modisIN%nSunlit),                           &
-                   modisMeanLiquidWaterPath(modisIN%nSunlit),                            &
-                   modisMeanIceWaterPath(modisIN%nSunlit),                               &
-                   modisJointHistogram(modisIN%nSunlit,numMODISTauBins,numMODISPresBins),&
-                   modisJointHistogramIce(modisIN%nSunlit,numModisTauBins,numMODISReffIceBins),&
-                   modisJointHistogramLiq(modisIN%nSunlit,numModisTauBins,numMODISReffLiqBins))
-          ! Call simulator
-          call modis_column(modisIN%nSunlit, modisIN%Ncolumns,modisRetrievedPhase,       &
-                             modisRetrievedCloudTopPressure,modisRetrievedTau,           &
-                             modisRetrievedSize, modisCfTotal, modisCfLiquid, modisCfIce,&
-                             modisCfHigh, modisCfMid, modisCfLow, modisMeanTauTotal,     &
-                             modisMeanTauLiquid, modisMeanTauIce, modisMeanLogTauTotal,  &
-                             modisMeanLogTauLiquid, modisMeanLogTauIce,                  &
-                             modisMeanSizeLiquid, modisMeanSizeIce,                      &
-                             modisMeanCloudTopPressure, modisMeanLiquidWaterPath,        &
-                             modisMeanIceWaterPath, modisJointHistogram,                 &
-                             modisJointHistogramIce,modisJointHistogramLiq)
-          ! Store data (if requested)
-          if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean)) then
-             cospOUT%modis_Cloud_Fraction_Total_Mean(ij+int(modisIN%sunlit(:))-1)   =    &
-                  modisCfTotal
-          endif
-          if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean)) then
-             cospOUT%modis_Cloud_Fraction_Water_Mean(ij+int(modisIN%sunlit(:))-1)   =    &
-                  modisCfLiquid
-          endif
-          if (associated(cospOUT%modis_Cloud_Fraction_Ice_Mean)) then
-             cospOUT%modis_Cloud_Fraction_Ice_Mean(ij+int(modisIN%sunlit(:))-1)     =    &
-                  modisCfIce
-          endif
-          if (associated(cospOUT%modis_Cloud_Fraction_High_Mean)) then
-             cospOUT%modis_Cloud_Fraction_High_Mean(ij+int(modisIN%sunlit(:))-1)    =    &
-                  modisCfHigh
-          endif
-          if (associated(cospOUT%modis_Cloud_Fraction_Mid_Mean)) then
-             cospOUT%modis_Cloud_Fraction_Mid_Mean(ij+int(modisIN%sunlit(:))-1)     =    &
-                  modisCfMid
-          endif
-          if (associated(cospOUT%modis_Cloud_Fraction_Low_Mean)) then
-             cospOUT%modis_Cloud_Fraction_Low_Mean(ij+int(modisIN%sunlit(:))-1)     =    &
-                  modisCfLow
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_Total_Mean)) then
-             cospOUT%modis_Optical_Thickness_Total_Mean(ij+int(modisIN%sunlit(:))-1) =   &
-                  modisMeanTauTotal
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_Water_Mean)) then
-             cospOUT%modis_Optical_Thickness_Water_Mean(ij+int(modisIN%sunlit(:))-1) =   &
-                  modisMeanTauLiquid
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_Ice_Mean)) then
-             cospOUT%modis_Optical_Thickness_Ice_Mean(ij+int(modisIN%sunlit(:))-1)  =    &
-                  modisMeanTauIce
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_Total_LogMean)) then
-             cospOUT%modis_Optical_Thickness_Total_LogMean(ij+int(modisIN%sunlit(:))-1)= &
-                  modisMeanLogTauTotal
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_Water_LogMean)) then
-             cospOUT%modis_Optical_Thickness_Water_LogMean(ij+int(modisIN%sunlit(:))-1) = &
-                  modisMeanLogTauLiquid
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_Ice_LogMean)) then
-             cospOUT%modis_Optical_Thickness_Ice_LogMean(ij+int(modisIN%sunlit(:))-1) =  &
-                  modisMeanLogTauIce
-          endif
-          if (associated(cospOUT%modis_Cloud_Particle_Size_Water_Mean)) then
-             cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij+int(modisIN%sunlit(:))-1) = &
-                  modisMeanSizeLiquid
-          endif
-          if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean)) then
-             cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij+int(modisIN%sunlit(:))-1) =   &
-                  modisMeanSizeIce
-          endif
-          if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean)) then
-             cospOUT%modis_Cloud_Top_Pressure_Total_Mean(ij+int(modisIN%sunlit(:))-1) =  &
-                  modisMeanCloudTopPressure
-          endif
-          if (associated(cospOUT%modis_Liquid_Water_Path_Mean)) then
-             cospOUT%modis_Liquid_Water_Path_Mean(ij+int(modisIN%sunlit(:))-1)      =    &
-                  modisMeanLiquidWaterPath
-          endif
-          if (associated(cospOUT%modis_Ice_Water_Path_Mean)) then
-              cospOUT%modis_Ice_Water_Path_Mean(ij+int(modisIN%sunlit(:))-1)         =   &
-                  modisMeanIceWaterPath
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then
-             cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+            &
-                  int(modisIN%sunlit(:))-1, 1:numModisTauBins, :) = modisJointHistogram(:, :, :)
-             ! Reorder pressure bins in joint histogram to go from surface to TOA
-             cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,:) = &
-                  cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,numMODISPresBins:1:-1)
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
-                modisJointHistogramIce(:,:,:)
-          endif
-          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
-                modisJointHistogramLiq(:,:,:)
-          endif
-
-          if(modisIN%nSunlit < modisIN%Npoints) then
-             ! Where it's night and we haven't done the retrievals the values are undefined
-             if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                    &
-                cospOUT%modis_Cloud_Fraction_Total_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean))                    &
-                cospOUT%modis_Cloud_Fraction_Water_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Fraction_Ice_Mean))                      &
-                cospOUT%modis_Cloud_Fraction_Ice_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Fraction_High_Mean))                     &
-                cospOUT%modis_Cloud_Fraction_High_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Fraction_Mid_Mean))                      &
-                cospOUT%modis_Cloud_Fraction_Mid_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Fraction_Low_Mean))                      &
-                cospOUT%modis_Cloud_Fraction_Low_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_Total_Mean))                 &
-                cospOUT%modis_Optical_Thickness_Total_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_Water_Mean))                 &
-                cospOUT%modis_Optical_Thickness_Water_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_Ice_Mean))                   &
-                cospOUT%modis_Optical_Thickness_Ice_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_Total_LogMean))              &
-                cospOUT%modis_Optical_Thickness_Total_LogMean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_Water_LogMean))              &
-                cospOUT%modis_Optical_Thickness_Water_LogMean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_Ice_LogMean))                &
-                cospOUT%modis_Optical_Thickness_Ice_LogMean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Particle_Size_Water_Mean))               &
-                cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean))                 &
-                cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean))                &
-                cospOUT%modis_Cloud_Top_Pressure_Total_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Liquid_Water_Path_Mean))                       &
-                cospOUT%modis_Liquid_Water_Path_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Ice_Water_Path_Mean))                          &
-                cospOUT%modis_Ice_Water_Path_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))      &
-                cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
-          end if
-       else
-          ! It's nightime everywhere - everything is undefined
-          if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                       &
-             cospOUT%modis_Cloud_Fraction_Total_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean))                       &
-             cospOUT%modis_Cloud_Fraction_Water_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Fraction_Ice_Mean))                         &
-             cospOUT%modis_Cloud_Fraction_Ice_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Fraction_High_Mean))                        &
-             cospOUT%modis_Cloud_Fraction_High_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Fraction_Mid_Mean))                         &
-             cospOUT%modis_Cloud_Fraction_Mid_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Fraction_Low_Mean))                         &
-             cospOUT%modis_Cloud_Fraction_Low_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_Total_Mean))                    &
-             cospOUT%modis_Optical_Thickness_Total_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_Water_Mean))                    &
-             cospOUT%modis_Optical_Thickness_Water_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_Ice_Mean))                      &
-             cospOUT%modis_Optical_Thickness_Ice_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_Total_LogMean))                 &
-             cospOUT%modis_Optical_Thickness_Total_LogMean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_Water_LogMean))                 &
-             cospOUT%modis_Optical_Thickness_Water_LogMean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_Ice_LogMean))                   &
-             cospOUT%modis_Optical_Thickness_Ice_LogMean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Particle_Size_Water_Mean))                  &
-             cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean))                    &
-              cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean))                   &
-             cospOUT%modis_Cloud_Top_Pressure_Total_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Liquid_Water_Path_Mean))                          &
-             cospOUT%modis_Liquid_Water_Path_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Ice_Water_Path_Mean))                             &
-             cospOUT%modis_Ice_Water_Path_Mean(ij:ik) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))         &
-             cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, :, :) = R_UNDEF
+       ! Allocate space for local variables
+       allocate(modisCftotal(modisIN%nPoints),&
+                modisCfLiquid(modisIN%nPoints),&
+                modisCfIce(modisIN%nPoints),&
+                modisCfHigh(modisIN%nPoints),&
+                modisCfMid(modisIN%nPoints),&
+                modisCfLow(modisIN%nPoints),&
+                modisMeanTauTotal(modisIN%nPoints),&
+                modisMeanTauLiquid(modisIN%nPoints),&
+                modisMeanTauIce(modisIN%nPoints),&
+                modisMeanLogTauTotal(modisIN%nPoints),&
+                modisMeanLogTauLiquid(modisIN%nPoints),&
+                modisMeanLogTauIce(modisIN%nPoints),&
+                modisMeanSizeLiquid(modisIN%nPoints),&
+                modisMeanSizeIce(modisIN%nPoints),&
+                modisMeanCloudTopPressure(modisIN%nPoints),&
+                modisMeanLiquidWaterPath(modisIN%nPoints),&
+                modisMeanIceWaterPath(modisIN%nPoints),&
+                modisJointHistogram(modisIN%nPoints,numMODISTauBins,numMODISPresBins),&
+                modisJointHistogramIce(modisIN%nPoints,numModisTauBins,numMODISReffIceBins),&
+                modisJointHistogramLiq(modisIN%nPoints,numModisTauBins,numMODISReffLiqBins))
+       ! Call simulator
+       call modis_column(modisIN%nPoints, modisIN%Ncolumns, modisIN%sunlit, modisRetrievedPhase, &
+            modisRetrievedCloudTopPressure, modisRetrievedTau, modisRetrievedSize, modisCfTotal, &
+            modisCfLiquid, modisCfIce, modisCfHigh, modisCfMid, modisCfLow, modisMeanTauTotal,   &
+            modisMeanTauLiquid, modisMeanTauIce, modisMeanLogTauTotal, modisMeanLogTauLiquid,    &
+            modisMeanLogTauIce, modisMeanSizeLiquid, modisMeanSizeIce, modisMeanCloudTopPressure,&
+            modisMeanLiquidWaterPath, modisMeanIceWaterPath, modisJointHistogram,                &
+            modisJointHistogramIce,modisJointHistogramLiq)
+       ! Store data (if requested)
+       if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean)) then
+          cospOUT%modis_Cloud_Fraction_Total_Mean(ij:ik)   = modisCfTotal
        endif
-       ! Free up memory (if necessary)
-       if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)
-       if (allocated(modisRetrievedSize))              deallocate(modisRetrievedSize)
-       if (allocated(modisRetrievedPhase))             deallocate(modisRetrievedPhase)
-       if (allocated(modisRetrievedCloudTopPressure))  deallocate(modisRetrievedCloudTopPressure)
-       if (allocated(modisCftotal))                    deallocate(modisCftotal)
-       if (allocated(modisCfLiquid))                   deallocate(modisCfLiquid)
-       if (allocated(modisCfIce))                      deallocate(modisCfIce)
-       if (allocated(modisCfHigh))                     deallocate(modisCfHigh)
-       if (allocated(modisCfMid))                      deallocate(modisCfMid)
-       if (allocated(modisCfLow))                      deallocate(modisCfLow)
-       if (allocated(modisMeanTauTotal))               deallocate(modisMeanTauTotal)
-       if (allocated(modisMeanTauLiquid))              deallocate(modisMeanTauLiquid)
-       if (allocated(modisMeanTauIce))                 deallocate(modisMeanTauIce)
-       if (allocated(modisMeanLogTauTotal))            deallocate(modisMeanLogTauTotal)
-       if (allocated(modisMeanLogTauLiquid))           deallocate(modisMeanLogTauLiquid)
-       if (allocated(modisMeanLogTauIce))              deallocate(modisMeanLogTauIce)
-       if (allocated(modisMeanSizeLiquid))             deallocate(modisMeanSizeLiquid)
-       if (allocated(modisMeanSizeIce))                deallocate(modisMeanSizeIce)
-       if (allocated(modisMeanCloudTopPressure))       deallocate(modisMeanCloudTopPressure)
-       if (allocated(modisMeanLiquidWaterPath))        deallocate(modisMeanLiquidWaterPath)
-       if (allocated(modisMeanIceWaterPath))           deallocate(modisMeanIceWaterPath)
-       if (allocated(modisJointHistogram))             deallocate(modisJointHistogram)
-       if (allocated(modisJointHistogramIce))          deallocate(modisJointHistogramIce)
-       if (allocated(modisJointHistogramLiq))          deallocate(modisJointHistogramLiq)
-       if (allocated(isccp_boxttop))                   deallocate(isccp_boxttop)
-       if (allocated(isccp_boxptop))                   deallocate(isccp_boxptop)
-       if (allocated(isccp_boxtau))                    deallocate(isccp_boxtau)
-       if (allocated(isccp_meantbclr))                 deallocate(isccp_meantbclr)
-       if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
+       if (associated(cospOUT%modis_Cloud_Fraction_Water_Mean)) then
+          cospOUT%modis_Cloud_Fraction_Water_Mean(ij:ik)   = modisCfLiquid
+       endif
+       if (associated(cospOUT%modis_Cloud_Fraction_Ice_Mean)) then
+          cospOUT%modis_Cloud_Fraction_Ice_Mean(ij:ik)     = modisCfIce
+       endif
+       if (associated(cospOUT%modis_Cloud_Fraction_High_Mean)) then
+          cospOUT%modis_Cloud_Fraction_High_Mean(ij:ik)    = modisCfHigh
+       endif
+       if (associated(cospOUT%modis_Cloud_Fraction_Mid_Mean)) then
+          cospOUT%modis_Cloud_Fraction_Mid_Mean(ij:ik)     =  modisCfMid
+       endif
+       if (associated(cospOUT%modis_Cloud_Fraction_Low_Mean)) then
+          cospOUT%modis_Cloud_Fraction_Low_Mean(ij:ik)     =  modisCfLow
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_Total_Mean)) then
+          cospOUT%modis_Optical_Thickness_Total_Mean(ij:ik) = modisMeanTauTotal
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_Water_Mean)) then
+          cospOUT%modis_Optical_Thickness_Water_Mean(ij:ik) = modisMeanTauLiquid
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_Ice_Mean)) then
+          cospOUT%modis_Optical_Thickness_Ice_Mean(ij:ik)  = modisMeanTauIce
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_Total_LogMean)) then
+          cospOUT%modis_Optical_Thickness_Total_LogMean(ij:ik)= modisMeanLogTauTotal
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_Water_LogMean)) then
+          cospOUT%modis_Optical_Thickness_Water_LogMean(ij:ik) = modisMeanLogTauLiquid
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_Ice_LogMean)) then
+          cospOUT%modis_Optical_Thickness_Ice_LogMean(ij:ik) =  modisMeanLogTauIce
+       endif
+       if (associated(cospOUT%modis_Cloud_Particle_Size_Water_Mean)) then
+          cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij:ik) = modisMeanSizeLiquid
+       endif
+       if (associated(cospOUT%modis_Cloud_Particle_Size_Ice_Mean)) then
+          cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij:ik) = modisMeanSizeIce
+       endif
+       if (associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean)) then
+          cospOUT%modis_Cloud_Top_Pressure_Total_Mean(ij:ik) = modisMeanCloudTopPressure
+       endif
+       if (associated(cospOUT%modis_Liquid_Water_Path_Mean)) then
+          cospOUT%modis_Liquid_Water_Path_Mean(ij:ik)      = modisMeanLiquidWaterPath
+       endif
+       if (associated(cospOUT%modis_Ice_Water_Path_Mean)) then
+          cospOUT%modis_Ice_Water_Path_Mean(ij:ik)         =  modisMeanIceWaterPath
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then
+          cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, 1:numModisTauBins, :) = &
+               modisJointHistogram(:, :, :)
+          ! Reorder pressure bins in joint histogram to go from surface to TOA
+          cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,:) = &
+               cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,numMODISPresBins:1:-1)
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
+          cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik, 1:numMODISTauBins,:) = &
+               modisJointHistogramIce(:,:,:)
+       endif
+       if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
+          cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik, 1:numMODISTauBins,:) = &
+               modisJointHistogramLiq(:,:,:)
+       endif
+
+       ! Free up memory
+       deallocate(modisRetrievedTau, modisRetrievedSize, modisRetrievedPhase,      &
+            modisRetrievedCloudTopPressure, modisCftotal ,modisCfLiquid,           &
+            modisCfIce, modisCfHigh, modisCfMid, modisCfLow, modisMeanTauTotal,    &
+            modisMeanTauLiquid, modisMeanTauIce, modisMeanLogTauTotal,             &
+            modisMeanLogTauLiquid, modisMeanLogTauIce, modisMeanSizeLiquid,        &
+            modisMeanSizeIce, modisMeanCloudTopPressure, modisMeanLiquidWaterPath, &
+            modisMeanIceWaterPath, modisJointHistogram, modisJointHistogramIce,    &
+            modisJointHistogramLiq)
     endif
 
     ! RTTOV
@@ -1724,10 +1595,7 @@ CONTAINS
 
     if (Lmodis_subcolumn) then
        nullify(modisIN%Npoints,modisIN%Ncolumns,modisIN%Nlevels,modisIN%tau,modisIN%g,   &
-               modisIN%liqFrac,modisIN%w0)
-       if (allocated(modisIN%sunlit))    deallocate(modisIN%sunlit)
-       if (allocated(modisIN%notSunlit)) deallocate(modisIN%notSunlit)
-       if (allocated(modisIN%pres))      deallocate(modisIN%pres)
+               modisIN%liqFrac,modisIN%w0,modisIN%sunlit,modisIN%pres)
     endif
 
     if (allocated(calipso_beta_tot))      deallocate(calipso_beta_tot)

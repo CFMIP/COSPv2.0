@@ -234,19 +234,25 @@ contains
   end subroutine modis_subcolumn
 
   ! ########################################################################################
-  subroutine modis_column(nPoints,nSubCols,phase, cloud_top_pressure, optical_thickness, particle_size,     &
-       Cloud_Fraction_Total_Mean,         Cloud_Fraction_Water_Mean,         Cloud_Fraction_Ice_Mean,        &
-       Cloud_Fraction_High_Mean,          Cloud_Fraction_Mid_Mean,           Cloud_Fraction_Low_Mean,        &
-       Optical_Thickness_Total_Mean,      Optical_Thickness_Water_Mean,      Optical_Thickness_Ice_Mean,     &
-       Optical_Thickness_Total_MeanLog10, Optical_Thickness_Water_MeanLog10, Optical_Thickness_Ice_MeanLog10,&
-       Cloud_Particle_Size_Water_Mean,    Cloud_Particle_Size_Ice_Mean,      Cloud_Top_Pressure_Total_Mean,  &
-       Liquid_Water_Path_Mean,            Ice_Water_Path_Mean,                                               &    
-       Optical_Thickness_vs_Cloud_Top_Pressure,Optical_Thickness_vs_ReffIce,Optical_Thickness_vs_ReffLiq)
+  subroutine modis_column(nPoints, nSubCols, sunlit, phase, cloud_top_pressure,            &
+       optical_thickness, particle_size,                                                   &
+       Cloud_Fraction_Total_Mean,         Cloud_Fraction_Water_Mean,                       &
+       Cloud_Fraction_Ice_Mean,           Cloud_Fraction_High_Mean,                        &
+       Cloud_Fraction_Mid_Mean,           Cloud_Fraction_Low_Mean,                         &
+       Optical_Thickness_Total_Mean,      Optical_Thickness_Water_Mean,                    &
+       Optical_Thickness_Ice_Mean,        Optical_Thickness_Total_MeanLog10,               &
+       Optical_Thickness_Water_MeanLog10, Optical_Thickness_Ice_MeanLog10,                 &
+       Cloud_Particle_Size_Water_Mean,    Cloud_Particle_Size_Ice_Mean,                    &
+       Cloud_Top_Pressure_Total_Mean,     Liquid_Water_Path_Mean,                          &
+       Ice_Water_Path_Mean,               Optical_Thickness_vs_Cloud_Top_Pressure,         &
+       Optical_Thickness_vs_ReffIce,      Optical_Thickness_vs_ReffLiq)
     
     ! INPUTS
     integer,intent(in) :: &
          nPoints,                           & ! Number of horizontal gridpoints
          nSubCols                             ! Number of subcolumns
+    integer,intent(in), dimension(nPoints) :: &
+         sunlit                               ! Sunlit flag (1=day/0=night)
     integer,intent(in), dimension(nPoints, nSubCols) ::  &
          phase                             
     real(wp),intent(in),dimension(nPoints, nSubCols) ::  &
@@ -283,144 +289,186 @@ contains
     ! LOCAL VARIABLES
     real(wp), parameter :: &
          LWP_conversion = 2._wp/3._wp * 1000._wp ! MKS units  
-    integer :: j
+    integer :: i, j, nSunlit
     logical, dimension(nPoints,nSubCols) :: &
          cloudMask,      &
          waterCloudMask, &
          iceCloudMask,   &
          validRetrievalMask
+    integer, dimension(:), allocatable :: &
+         sunny
     real(wp),dimension(nPoints,nSubCols) :: &
          tauWRK,ctpWRK,reffIceWRK,reffLiqWRK
 
-    ! ########################################################################################
-    ! Include only those pixels with successful retrievals in the statistics 
-    ! ########################################################################################
-    validRetrievalMask(1:nPoints,1:nSubCols) = particle_size(1:nPoints,1:nSubCols) > 0.
-    cloudMask(1:nPoints,1:nSubCols) = phase(1:nPoints,1:nSubCols) /= phaseIsNone .and.       &
-         validRetrievalMask(1:nPoints,1:nSubCols)
-    waterCloudMask(1:nPoints,1:nSubCols) = phase(1:nPoints,1:nSubCols) == phaseIsLiquid .and. &
-         validRetrievalMask(1:nPoints,1:nSubCols)
-    iceCloudMask(1:nPoints,1:nSubCols)   = phase(1:nPoints,1:nSubCols) == phaseIsIce .and.    &
-         validRetrievalMask(1:nPoints,1:nSubCols)
+    ! Initialize
+    Cloud_Fraction_Total_Mean(:)         = R_UNDEF
+    Cloud_Fraction_Water_Mean(:)         = R_UNDEF
+    Cloud_Fraction_Ice_Mean(:)           = R_UNDEF
+    Cloud_Fraction_High_Mean(:)          = R_UNDEF
+    Cloud_Fraction_Mid_Mean(:)           = R_UNDEF
+    Cloud_Fraction_Low_Mean(:)           = R_UNDEF
+    Optical_Thickness_Total_Mean(:)      = R_UNDEF
+    Optical_Thickness_Water_Mean(:)      = R_UNDEF
+    Optical_Thickness_Ice_Mean(:)        = R_UNDEF
+    Optical_Thickness_Total_MeanLog10(:) = R_UNDEF
+    Optical_Thickness_Water_MeanLog10(:) = R_UNDEF
+    Optical_Thickness_Ice_MeanLog10(:)   = R_UNDEF
+    Cloud_Particle_Size_Water_Mean(:)    = R_UNDEF
+    Cloud_Particle_Size_Ice_Mean(:)      = R_UNDEF
+    Cloud_Top_Pressure_Total_Mean(:)     = R_UNDEF
+    Liquid_Water_Path_Mean(:)            = R_UNDEF
+    Ice_Water_Path_Mean(:)               = R_UNDEF
+    Optical_Thickness_vs_ReffIce(:,:,:)  = R_UNDEF
+    Optical_Thickness_vs_ReffLiq(:,:,:)  = R_UNDEF
+    Optical_Thickness_vs_Cloud_Top_Pressure(:,:,:) = R_UNDEF
+
+    ! Are there any sunlit points?
+    nSunlit = count(sunlit > 0)
     
-    ! ########################################################################################
-    ! Use these as pixel counts at first 
-    ! ########################################################################################
-    Cloud_Fraction_Total_Mean(1:nPoints) = real(count(cloudMask,      dim = 2))
-    Cloud_Fraction_Water_Mean(1:nPoints) = real(count(waterCloudMask, dim = 2))
-    Cloud_Fraction_Ice_Mean(1:nPoints)   = real(count(iceCloudMask,   dim = 2))
-    Cloud_Fraction_High_Mean(1:nPoints)  = real(count(cloudMask .and. cloud_top_pressure <=          &
-                                           highCloudPressureLimit, dim = 2)) 
-    Cloud_Fraction_Low_Mean(1:nPoints)   = real(count(cloudMask .and. cloud_top_pressure >           &
-                                           lowCloudPressureLimit,  dim = 2)) 
-    Cloud_Fraction_Mid_Mean(1:nPoints)   = Cloud_Fraction_Total_Mean(1:nPoints) - Cloud_Fraction_High_Mean(1:nPoints)&
-                                           - Cloud_Fraction_Low_Mean(1:nPoints)
+    if (nSunlit .gt. 0) then
+       ! What indices are sunlit?
+       allocate(sunny(nSunlit))
+       sunny = int(pack((/ (i, i = 1, Npoints ) /),mask = sunlit > 0))
+       
+       ! ########################################################################################
+       ! Include only those pixels with successful retrievals in the statistics 
+       ! ########################################################################################
+       validRetrievalMask(sunny,1:nSubCols) = particle_size(sunny,1:nSubCols) > 0.
+       cloudMask(sunny,1:nSubCols) = phase(sunny,1:nSubCols) /= phaseIsNone .and.       &
+            validRetrievalMask(sunny,1:nSubCols)
+       waterCloudMask(sunny,1:nSubCols) = phase(sunny,1:nSubCols) == phaseIsLiquid .and. &
+            validRetrievalMask(sunny,1:nSubCols)
+       iceCloudMask(sunny,1:nSubCols)   = phase(sunny,1:nSubCols) == phaseIsIce .and.    &
+            validRetrievalMask(sunny,1:nSubCols)
 
-    ! ########################################################################################
-    ! Compute column amounts.
-    ! ########################################################################################
-    where(Cloud_Fraction_Total_Mean(1:nPoints) > 0)
-       Optical_Thickness_Total_Mean(1:nPoints) = sum(optical_thickness, mask = cloudMask,      dim = 2) / &
-            Cloud_Fraction_Total_Mean(1:nPoints)
-       Optical_Thickness_Total_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = cloudMask, &
-            dim = 2) / Cloud_Fraction_Total_Mean(1:nPoints)
-    elsewhere
-       Optical_Thickness_Total_Mean      = R_UNDEF
-       Optical_Thickness_Total_MeanLog10 = R_UNDEF
-    endwhere
-    where(Cloud_Fraction_Water_Mean(1:nPoints) > 0)
-       Optical_Thickness_Water_Mean(1:nPoints) = sum(optical_thickness, mask = waterCloudMask, dim = 2) / &
-            Cloud_Fraction_Water_Mean(1:nPoints)
-       Liquid_Water_Path_Mean(1:nPoints) = LWP_conversion*sum(particle_size*optical_thickness, &
-            mask=waterCloudMask,dim=2)/Cloud_Fraction_Water_Mean(1:nPoints)
-       Optical_Thickness_Water_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = waterCloudMask,&
-            dim = 2) / Cloud_Fraction_Water_Mean(1:nPoints)
-       Cloud_Particle_Size_Water_Mean(1:nPoints) = sum(particle_size, mask = waterCloudMask, dim = 2) / &
-            Cloud_Fraction_Water_Mean(1:nPoints)
-    elsewhere
-       Optical_Thickness_Water_Mean      = R_UNDEF
-       Optical_Thickness_Water_MeanLog10 = R_UNDEF
-       Cloud_Particle_Size_Water_Mean    = R_UNDEF
-       Liquid_Water_Path_Mean            = R_UNDEF
-    endwhere
-    where(Cloud_Fraction_Ice_Mean(1:nPoints) > 0)
-       Optical_Thickness_Ice_Mean(1:nPoints)   = sum(optical_thickness, mask = iceCloudMask,   dim = 2) / &
-            Cloud_Fraction_Ice_Mean(1:nPoints)
-       Ice_Water_Path_Mean(1:nPoints) = LWP_conversion * ice_density*sum(particle_size*optical_thickness,&
-            mask=iceCloudMask,dim = 2) /Cloud_Fraction_Ice_Mean(1:nPoints) 
-       Optical_Thickness_Ice_MeanLog10(1:nPoints) = sum(log10(abs(optical_thickness)), mask = iceCloudMask,&
-            dim = 2) / Cloud_Fraction_Ice_Mean(1:nPoints)
-       Cloud_Particle_Size_Ice_Mean(1:nPoints) = sum(particle_size, mask = iceCloudMask,   dim = 2) / &
-            Cloud_Fraction_Ice_Mean(1:nPoints)    
-    elsewhere
-       Optical_Thickness_Ice_Mean        = R_UNDEF
-       Optical_Thickness_Ice_MeanLog10   = R_UNDEF
-       Cloud_Particle_Size_Ice_Mean      = R_UNDEF
-       Ice_Water_Path_Mean               = R_UNDEF
-    endwhere
-    Cloud_Top_Pressure_Total_Mean  = sum(cloud_top_pressure, mask = cloudMask, dim = 2) / &
-                                     max(1, count(cloudMask, dim = 2))
-
-    ! ########################################################################################
-    ! Normalize pixel counts to fraction. 
-    ! ########################################################################################
-    Cloud_Fraction_High_Mean(1:nPoints)  = Cloud_Fraction_High_Mean(1:nPoints)  /nSubcols
-    Cloud_Fraction_Mid_Mean(1:nPoints)   = Cloud_Fraction_Mid_Mean(1:nPoints)   /nSubcols
-    Cloud_Fraction_Low_Mean(1:nPoints)   = Cloud_Fraction_Low_Mean(1:nPoints)   /nSubcols
-    Cloud_Fraction_Total_Mean(1:nPoints) = Cloud_Fraction_Total_Mean(1:nPoints) /nSubcols
-    Cloud_Fraction_Ice_Mean(1:nPoints)   = Cloud_Fraction_Ice_Mean(1:nPoints)   /nSubcols
-    Cloud_Fraction_Water_Mean(1:nPoints) = Cloud_Fraction_Water_Mean(1:nPoints) /nSubcols
     
-    ! ########################################################################################
-    ! Joint histograms
-    ! ########################################################################################
-    ! Loop over all points
-    tauWRK(1:nPoints,1:nSubCols)     = optical_thickness(1:nPoints,1:nSubCols)
-    ctpWRK(1:nPoints,1:nSubCols)     = cloud_top_pressure(1:nPoints,1:nSubCols)
-    reffIceWRK(1:nPoints,1:nSubCols) = merge(particle_size,R_UNDEF,iceCloudMask)
-    reffLiqWRK(1:nPoints,1:nSubCols) = merge(particle_size,R_UNDEF,waterCloudMask)
-    do j=1,nPoints
-
-       ! Fill clear and optically thin subcolumns with fill
-       where(.not. cloudMask(j,1:nSubCols)) 
-          tauWRK(j,1:nSubCols) = -999._wp
-          ctpWRK(j,1:nSubCols) = -999._wp
+       ! ########################################################################################
+       ! Use these as pixel counts at first 
+       ! ########################################################################################
+       Cloud_Fraction_Total_Mean(sunny) = real(count(cloudMask(sunny,1:nSubCols),      dim = 2))
+       Cloud_Fraction_Water_Mean(sunny) = real(count(waterCloudMask(sunny,1:nSubCols), dim = 2))
+       Cloud_Fraction_Ice_Mean(sunny)   = real(count(iceCloudMask(sunny,1:nSubCols),   dim = 2))
+       Cloud_Fraction_High_Mean(sunny)  = real(count(cloudMask(sunny,1:nSubCols) .and. &
+            cloud_top_pressure(sunny,1:nSubCols) <= highCloudPressureLimit, dim = 2)) 
+       Cloud_Fraction_Low_Mean(sunny)   = real(count(cloudMask(sunny,1:nSubCols) .and. &
+            cloud_top_pressure(sunny,1:nSubCols) > lowCloudPressureLimit,   dim = 2)) 
+       Cloud_Fraction_Mid_Mean(sunny)   = Cloud_Fraction_Total_Mean(sunny) - &
+            Cloud_Fraction_High_Mean(sunny)  - Cloud_Fraction_Low_Mean(sunny)
+       
+       ! ########################################################################################
+       ! Compute column amounts.
+       ! ########################################################################################
+       where(Cloud_Fraction_Total_Mean(sunny) > 0) !sunlit cloudy scene
+          Optical_Thickness_Total_Mean(sunny) = sum(optical_thickness(sunny,1:nSubCols),&
+               mask = cloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Total_Mean(sunny)
+          Optical_Thickness_Total_MeanLog10(sunny) = sum(log10(abs(optical_thickness)), &
+               mask = cloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Total_Mean(sunny)
+       elsewhere ! Sunlit clear scene
+          Optical_Thickness_Total_Mean(sunny)      = R_UNDEF
+          Optical_Thickness_Total_MeanLog10(sunny) = R_UNDEF
        endwhere
-       ! Joint histogram of tau/CTP
-       call hist2D(tauWRK(j,1:nSubCols),ctpWRK(j,1:nSubCols),nSubCols,&
-                   modis_histTau,numMODISTauBins,&
-                   modis_histPres,numMODISPresBins,&
-                   Optical_Thickness_vs_Cloud_Top_Pressure(j,1:numMODISTauBins,1:numMODISPresBins))
-       ! Joint histogram of tau/ReffICE
-       call hist2D(tauWRK(j,1:nSubCols),reffIceWrk(j,1:nSubCols),nSubCols,               &
-                   modis_histTau,numMODISTauBins,modis_histReffIce,         &
-                   numMODISReffIceBins, Optical_Thickness_vs_ReffIce(j,1:numMODISTauBins,1:numMODISReffIceBins))
-       ! Joint histogram of tau/ReffLIQ
-       call hist2D(tauWRK(j,1:nSubCols),reffLiqWrk(j,1:nSubCols),nSubCols,               &
-                   modis_histTau,numMODISTauBins,modis_histReffLiq,         &
-                   numMODISReffLiqBins, Optical_Thickness_vs_ReffLiq(j,1:numMODISTauBins,1:numMODISReffLiqBins))                   
+       where(Cloud_Fraction_Water_Mean(sunny) > 0)
+          Optical_Thickness_Water_Mean(sunny) = sum(optical_thickness(sunny,1:nSubCols), &
+               mask = waterCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Water_Mean(sunny)
+          !
+          Liquid_Water_Path_Mean(sunny) = LWP_conversion*sum(particle_size(sunny,1:nSubCols)*optical_thickness(sunny,1:nSubCols),&
+               mask = waterCloudMask(sunny,1:nSubCols), dim=2)   / Cloud_Fraction_Water_Mean(sunny)
+          !
+          Optical_Thickness_Water_MeanLog10(sunny) = sum(log10(abs(optical_thickness(sunny,1:nSubCols))), &
+               mask = waterCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Water_Mean(sunny)
+          !
+          Cloud_Particle_Size_Water_Mean(sunny) = sum(particle_size(sunny,1:nSubCols), &
+               mask = waterCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Water_Mean(sunny)
+       elsewhere
+          Optical_Thickness_Water_Mean(sunny)      = R_UNDEF
+          Optical_Thickness_Water_MeanLog10(sunny) = R_UNDEF
+          Cloud_Particle_Size_Water_Mean(sunny)    = R_UNDEF
+          Liquid_Water_Path_Mean(sunny)            = R_UNDEF
+       endwhere
 
-    enddo   
-    Optical_Thickness_vs_Cloud_Top_Pressure(1:nPoints,1:numMODISTauBins,1:numMODISPresBins) = &
-         Optical_Thickness_vs_Cloud_Top_Pressure(1:nPoints,1:numMODISTauBins,1:numMODISPresBins)/nSubCols
-    Optical_Thickness_vs_ReffIce(1:nPoints,1:numMODISTauBins,1:numMODISReffIceBins) = &
-         Optical_Thickness_vs_ReffIce(1:nPoints,1:numMODISTauBins,1:numMODISReffIceBins)/nSubCols
-    Optical_Thickness_vs_ReffLiq(1:nPoints,1:numMODISTauBins,1:numMODISReffLiqBins) = &
-         Optical_Thickness_vs_ReffLiq(1:nPoints,1:numMODISTauBins,1:numMODISReffLiqBins)/nSubCols 
-                 
+       
+       where(Cloud_Fraction_Ice_Mean(sunny) > 0)
+          Optical_Thickness_Ice_Mean(sunny)   = sum(optical_thickness(sunny,1:nSubCols), &
+               mask = iceCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Ice_Mean(sunny)
+          !
+          Ice_Water_Path_Mean(sunny) = LWP_conversion * ice_density*sum(particle_size(sunny,1:nSubCols)*optical_thickness(sunny,1:nSubCols),&
+               mask = iceCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Ice_Mean(sunny)
+          !
+          Optical_Thickness_Ice_MeanLog10(sunny) = sum(log10(abs(optical_thickness(sunny,1:nSubCols))), &
+               mask = iceCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Ice_Mean(sunny)
+          !
+          Cloud_Particle_Size_Ice_Mean(sunny) = sum(particle_size(sunny,1:nSubCols),&
+               mask = iceCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Ice_Mean(sunny)    
+       elsewhere
+          Optical_Thickness_Ice_Mean(sunny)        = R_UNDEF
+          Optical_Thickness_Ice_MeanLog10(sunny)   = R_UNDEF
+          Cloud_Particle_Size_Ice_Mean(sunny)      = R_UNDEF
+          Ice_Water_Path_Mean(sunny)               = R_UNDEF
+       endwhere
+       Cloud_Top_Pressure_Total_Mean(sunny)  = sum(cloud_top_pressure(sunny,1:nSubCols), &
+            mask = cloudMask(sunny,1:nSubCols), dim = 2) / max(1, count(cloudMask(sunny,1:nSubCols), dim = 2))
 
-    ! Unit conversion
-    where(Optical_Thickness_vs_Cloud_Top_Pressure /= R_UNDEF) &
-      Optical_Thickness_vs_Cloud_Top_Pressure = Optical_Thickness_vs_Cloud_Top_Pressure*100._wp
-    where(Optical_Thickness_vs_ReffIce /= R_UNDEF) Optical_Thickness_vs_ReffIce = Optical_Thickness_vs_ReffIce*100._wp
-    where(Optical_Thickness_vs_ReffLiq /= R_UNDEF) Optical_Thickness_vs_ReffLiq = Optical_Thickness_vs_ReffLiq*100._wp
-    where(Cloud_Fraction_Total_Mean /= R_UNDEF) Cloud_Fraction_Total_Mean = Cloud_Fraction_Total_Mean*100._wp
-    where(Cloud_Fraction_Water_Mean /= R_UNDEF) Cloud_Fraction_Water_Mean = Cloud_Fraction_Water_Mean*100._wp
-    where(Cloud_Fraction_Ice_Mean /= R_UNDEF)   Cloud_Fraction_Ice_Mean = Cloud_Fraction_Ice_Mean*100._wp
-    where(Cloud_Fraction_High_Mean /= R_UNDEF)  Cloud_Fraction_High_Mean = Cloud_Fraction_High_Mean*100._wp
-    where(Cloud_Fraction_Mid_Mean /= R_UNDEF)   Cloud_Fraction_Mid_Mean = Cloud_Fraction_Mid_Mean*100._wp
-    where(Cloud_Fraction_Low_Mean /= R_UNDEF)   Cloud_Fraction_Low_Mean = Cloud_Fraction_Low_Mean*100._wp
-
+       ! ########################################################################################
+       ! Normalize pixel counts to fraction. 
+       ! ########################################################################################
+       Cloud_Fraction_High_Mean(sunny)  = Cloud_Fraction_High_Mean(sunny)  /nSubcols
+       Cloud_Fraction_Mid_Mean(sunny)   = Cloud_Fraction_Mid_Mean(sunny)   /nSubcols
+       Cloud_Fraction_Low_Mean(sunny)   = Cloud_Fraction_Low_Mean(sunny)   /nSubcols
+       Cloud_Fraction_Total_Mean(sunny) = Cloud_Fraction_Total_Mean(sunny) /nSubcols
+       Cloud_Fraction_Ice_Mean(sunny)   = Cloud_Fraction_Ice_Mean(sunny)   /nSubcols
+       Cloud_Fraction_Water_Mean(sunny) = Cloud_Fraction_Water_Mean(sunny) /nSubcols       
+  
+       ! ########################################################################################
+       ! Joint histograms
+       ! ########################################################################################
+       ! Loop over all points
+       tauWRK(1:nPoints,1:nSubCols)     = optical_thickness(1:nPoints,1:nSubCols)
+       ctpWRK(1:nPoints,1:nSubCols)     = cloud_top_pressure(1:nPoints,1:nSubCols)
+       reffIceWRK(1:nPoints,1:nSubCols) = merge(particle_size,R_UNDEF,iceCloudMask)
+       reffLiqWRK(1:nPoints,1:nSubCols) = merge(particle_size,R_UNDEF,waterCloudMask)
+       do j=1,nPoints
+          if (sunlit(j) .eq. 1) then
+             ! Fill clear and optically thin subcolumns with fill
+             where(.not. cloudMask(j,1:nSubCols)) 
+                tauWRK(j,1:nSubCols) = -999._wp
+                ctpWRK(j,1:nSubCols) = -999._wp
+             endwhere
+             ! Joint histogram of tau/CTP
+             call hist2D(tauWRK(j,1:nSubCols),ctpWRK(j,1:nSubCols),nSubCols,&
+                  modis_histTau,numMODISTauBins,&
+                  modis_histPres,numMODISPresBins,&
+                  Optical_Thickness_vs_Cloud_Top_Pressure(j,1:numMODISTauBins,1:numMODISPresBins))
+             ! Joint histogram of tau/ReffICE
+             call hist2D(tauWRK(j,1:nSubCols),reffIceWrk(j,1:nSubCols),nSubCols,               &
+                  modis_histTau,numMODISTauBins,modis_histReffIce,         &
+                  numMODISReffIceBins, Optical_Thickness_vs_ReffIce(j,1:numMODISTauBins,1:numMODISReffIceBins))
+             ! Joint histogram of tau/ReffLIQ
+             call hist2D(tauWRK(j,1:nSubCols),reffLiqWrk(j,1:nSubCols),nSubCols,               &
+                  modis_histTau,numMODISTauBins,modis_histReffLiq,         &
+                  numMODISReffLiqBins, Optical_Thickness_vs_ReffLiq(j,1:numMODISTauBins,1:numMODISReffLiqBins))          
+             ! Normalize by number of sub-columns
+             Optical_Thickness_vs_Cloud_Top_Pressure(j,1:numMODISTauBins,1:numMODISPresBins) = &
+                  Optical_Thickness_vs_Cloud_Top_Pressure(j,1:numMODISTauBins,1:numMODISPresBins)/nSubCols
+             Optical_Thickness_vs_ReffIce(j,1:numMODISTauBins,1:numMODISReffIceBins) = &
+                  Optical_Thickness_vs_ReffIce(j,1:numMODISTauBins,1:numMODISReffIceBins)/nSubCols
+             Optical_Thickness_vs_ReffLiq(j,1:numMODISTauBins,1:numMODISReffLiqBins) = &
+                  Optical_Thickness_vs_ReffLiq(j,1:numMODISTauBins,1:numMODISReffLiqBins)/nSubCols           
+          endif
+       enddo
+    
+       ! Unit conversion
+       where(Optical_Thickness_vs_Cloud_Top_Pressure /= R_UNDEF) &
+            Optical_Thickness_vs_Cloud_Top_Pressure = Optical_Thickness_vs_Cloud_Top_Pressure*100._wp
+       where(Optical_Thickness_vs_ReffIce /= R_UNDEF) Optical_Thickness_vs_ReffIce = Optical_Thickness_vs_ReffIce*100._wp
+       where(Optical_Thickness_vs_ReffLiq /= R_UNDEF) Optical_Thickness_vs_ReffLiq = Optical_Thickness_vs_ReffLiq*100._wp
+       where(Cloud_Fraction_Total_Mean /= R_UNDEF) Cloud_Fraction_Total_Mean = Cloud_Fraction_Total_Mean*100._wp
+       where(Cloud_Fraction_Water_Mean /= R_UNDEF) Cloud_Fraction_Water_Mean = Cloud_Fraction_Water_Mean*100._wp
+       where(Cloud_Fraction_Ice_Mean /= R_UNDEF)   Cloud_Fraction_Ice_Mean = Cloud_Fraction_Ice_Mean*100._wp
+       where(Cloud_Fraction_High_Mean /= R_UNDEF)  Cloud_Fraction_High_Mean = Cloud_Fraction_High_Mean*100._wp
+       where(Cloud_Fraction_Mid_Mean /= R_UNDEF)   Cloud_Fraction_Mid_Mean = Cloud_Fraction_Mid_Mean*100._wp
+       where(Cloud_Fraction_Low_Mean /= R_UNDEF)   Cloud_Fraction_Low_Mean = Cloud_Fraction_Low_Mean*100._wp
+    endif ! Sunny
+    
   end subroutine modis_column
 
   ! ########################################################################################

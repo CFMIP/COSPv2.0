@@ -49,12 +49,9 @@ MODULE MOD_COSP_Modis_INTERFACE
           Npoints,        & ! Number of horizontal gridpoints
           Ncolumns,       & ! Number of subcolumns
           Nlevels           ! Number of vertical levels
-     integer :: &
-          Nsunlit           ! Number of sunlit lit pixels
-     real(wp),allocatable,dimension(:) :: &
-          sunlit,         & ! Sunlit scenes
-          notSunlit         ! Dark scenes
-     real(wp),allocatable,dimension(:,:) :: &
+     integer,pointer,dimension(:) :: &
+          sunlit            ! Sunlit scenes
+     real(wp),pointer,dimension(:,:) :: &
           pres              ! Gridmean pressure at layer edges (Pa) 
      real(wp),pointer ::  &
           tau(:,:,:),     & ! Subcolumn optical thickness @ 0.67 microns.
