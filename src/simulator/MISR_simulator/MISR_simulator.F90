@@ -79,102 +79,111 @@ contains
 
     do j=1,npoints
 
-       ! Estimate distribution of Model layer tops
-       dist_model_layertops(j,:)=0
-       do ilev=1,nlev
-          ! Define location of "layer top"
-          if(ilev.eq.1 .or. ilev.eq.nlev) then
-             ztest=zfull(j,ilev)
-          else
-             ztest=0.5_wp*(zfull(j,ilev)+zfull(j,ilev-1))
-          endif
+       ! Only do retrieval over sunlit points
+       if (sunlit(j) == 1) then
 
-          ! Find MISR layer that contains this level
-          ! *NOTE* the first MISR level is "no height" level
-          iMISR_ztop=2
-          do loop=2,numMISRHgtBins
-             if ( ztest .gt. 1000*misr_histHgt(loop+1) ) then
-                iMISR_ztop=loop+1
-             endif
-          enddo
-          
-          dist_model_layertops(j,iMISR_ztop) = dist_model_layertops(j,iMISR_ztop)+1
-       enddo
-
-       ! For each GCM cell or horizontal model grid point   
-       do ibox=1,ncol
-          ! Compute optical depth as a cummulative distribution in the vertical (nlev).
-          tauOUT(j,ibox)=sum(dtau(j,ibox,1:nlev))
-
-          thres_crossed_MISR=0
+          ! Estimate distribution of Model layer tops
+          dist_model_layertops(j,:)=0
           do ilev=1,nlev
-             ! If there a cloud, start the counter and store this height
-             if(thres_crossed_MISR .eq. 0 .and. dtau(j,ibox,ilev) .gt. 0.) then
-                ! First encountered a "cloud"
-                thres_crossed_MISR = 1  
-                cloud_dtau         = 0            
+             ! Define location of "layer top"
+             if(ilev.eq.1 .or. ilev.eq.nlev) then
+                ztest=zfull(j,ilev)
+             else
+                ztest=0.5_wp*(zfull(j,ilev)+zfull(j,ilev-1))
              endif
 
-             if( thres_crossed_MISR .lt. 99 .and. thres_crossed_MISR .gt. 0 ) then
-                if( dtau(j,ibox,ilev) .eq. 0.) then
-                   ! We have come to the end of the current cloud layer without yet 
-                   ! selecting a CTH boundary. Restart cloud tau counter 
-                   cloud_dtau=0
-                else
-                   ! Add current optical depth to count for the current cloud layer
-                   cloud_dtau=cloud_dtau+dtau(j,ibox,ilev)
+             ! Find MISR layer that contains this level
+             ! *NOTE* the first MISR level is "no height" level
+             iMISR_ztop=2
+             do loop=2,numMISRHgtBins
+                if ( ztest .gt. 1000*misr_histHgt(loop+1) ) then
+                   iMISR_ztop=loop+1
                 endif
-                
-                ! If the cloud is continuous but optically thin (< 1) from above the 
-                ! current layer cloud top to the current level then MISR will like 
-                ! see a top below the top of the current layer.
-                if( dtau(j,ibox,ilev).gt.0 .and. (cloud_dtau-dtau(j,ibox,ilev)) .lt. 1) then
-                   if(dtau(j,ibox,ilev) .lt. 1 .or. ilev.eq.1 .or. ilev.eq.nlev) then
-                      ! MISR will likely penetrate to some point within this layer ... the middle
-                      MISR_penetration_height=zfull(j,ilev)
+             enddo
+             
+             dist_model_layertops(j,iMISR_ztop) = dist_model_layertops(j,iMISR_ztop)+1
+          enddo
+
+          ! For each GCM cell or horizontal model grid point   
+          do ibox=1,ncol
+             ! Compute optical depth as a cummulative distribution in the vertical (nlev).
+             tauOUT(j,ibox)=sum(dtau(j,ibox,1:nlev))
+
+             thres_crossed_MISR=0
+             do ilev=1,nlev
+                ! If there a cloud, start the counter and store this height
+                if(thres_crossed_MISR .eq. 0 .and. dtau(j,ibox,ilev) .gt. 0.) then
+                   ! First encountered a "cloud"
+                   thres_crossed_MISR = 1  
+                   cloud_dtau         = 0            
+                endif
+
+                if( thres_crossed_MISR .lt. 99 .and. thres_crossed_MISR .gt. 0 ) then
+                   if( dtau(j,ibox,ilev) .eq. 0.) then
+                      ! We have come to the end of the current cloud layer without yet 
+                      ! selecting a CTH boundary. Restart cloud tau counter 
+                      cloud_dtau=0
                    else
-                      ! Take the OD = 1.0 level into this layer
-                      MISR_penetration_height=0.5_wp*(zfull(j,ilev)+zfull(j,ilev-1)) - &
-                           0.5_wp*(zfull(j,ilev-1)-zfull(j,ilev+1))/dtau(j,ibox,ilev) 
+                      ! Add current optical depth to count for the current cloud layer
+                      cloud_dtau=cloud_dtau+dtau(j,ibox,ilev)
                    endif
-                   box_MISR_ztop(j,ibox)=MISR_penetration_height
+                   
+                   ! If the cloud is continuous but optically thin (< 1) from above the 
+                   ! current layer cloud top to the current level then MISR will like 
+                   ! see a top below the top of the current layer.
+                   if( dtau(j,ibox,ilev).gt.0 .and. (cloud_dtau-dtau(j,ibox,ilev)) .lt. 1) then
+                      if(dtau(j,ibox,ilev) .lt. 1 .or. ilev.eq.1 .or. ilev.eq.nlev) then
+                         ! MISR will likely penetrate to some point within this layer ... the middle
+                         MISR_penetration_height=zfull(j,ilev)
+                      else
+                         ! Take the OD = 1.0 level into this layer
+                         MISR_penetration_height=0.5_wp*(zfull(j,ilev)+zfull(j,ilev-1)) - &
+                              0.5_wp*(zfull(j,ilev-1)-zfull(j,ilev+1))/dtau(j,ibox,ilev) 
+                      endif
+                      box_MISR_ztop(j,ibox)=MISR_penetration_height
+                   endif
+                   
+                   ! Check for a distinctive water layer
+                   if(dtau(j,ibox,ilev) .gt. 1 .and. at(j,ilev) .gt. 273 ) then
+                      ! Must be a water cloud, take this as CTH level
+                      thres_crossed_MISR=99
+                   endif
+                   
+                   ! If the total column optical depth is "large" than MISR can't see
+                   ! anything else. Set current point as CTH level
+                   if(sum(dtau(j,ibox,1:ilev)) .gt. 5) then
+                      thres_crossed_MISR=99           
+                   endif
                 endif
-                
-                ! Check for a distinctive water layer
-                if(dtau(j,ibox,ilev) .gt. 1 .and. at(j,ilev) .gt. 273 ) then
-                   ! Must be a water cloud, take this as CTH level
-                   thres_crossed_MISR=99
-                endif
-                
-                ! If the total column optical depth is "large" than MISR can't see
-                ! anything else. Set current point as CTH level
-                if(sum(dtau(j,ibox,1:ilev)) .gt. 5) then
-                   thres_crossed_MISR=99           
+             enddo  
+             
+             ! Check to see if there was a cloud for which we didn't 
+             ! set a MISR cloud top boundary
+             if( thres_crossed_MISR .eq. 1) then
+                ! If the cloud has a total optical depth of greater
+                ! than ~ 0.5 MISR will still likely pick up this cloud
+                ! with a height near the true cloud top
+                ! otherwise there should be no CTH
+                if(sum(dtau(j,ibox,1:nlev)) .gt. 0.5) then
+                   ! keep MISR detected CTH
+                elseif(sum(dtau(j,ibox,1:nlev)) .gt. 0.2) then
+                   ! MISR may detect but wont likley have a good height
+                   box_MISR_ztop(j,ibox)=-1
+                else
+                   ! MISR not likely to even detect.
+                   ! so set as not cloudy
+                   box_MISR_ztop(j,ibox)=0
                 endif
              endif
-          enddo  
-          
-          ! Check to see if there was a cloud for which we didn't 
-          ! set a MISR cloud top boundary
-          if( thres_crossed_MISR .eq. 1) then
-             ! If the cloud has a total optical depth of greater
-             ! than ~ 0.5 MISR will still likely pick up this cloud
-             ! with a height near the true cloud top
-             ! otherwise there should be no CTH
-             if(sum(dtau(j,ibox,1:nlev)) .gt. 0.5) then
-                ! keep MISR detected CTH
-             elseif(sum(dtau(j,ibox,1:nlev)) .gt. 0.2) then
-                ! MISR may detect but wont likley have a good height
-                box_MISR_ztop(j,ibox)=-1
-             else
-                ! MISR not likely to even detect.
-                ! so set as not cloudy
-                box_MISR_ztop(j,ibox)=0
-             endif
-          endif
-       enddo  ! loop of subcolumns
+          enddo  ! loop of subcolumns
        
-    enddo    ! loop of gridpoints
+       else
+          ! Set night columns to fillvalue
+          dist_model_layertops(j,:) = R_UNDEF
+          box_MISR_ztop(j,:) = R_UNDEF
+          tauOUT(j,:) = R_UNDEF
+       endif  ! sunlit
+    enddo  ! loop of gridpoints
     
     ! Modify MISR CTH for satellite spatial / pattern matcher effects
     ! Code in this region added by roj 5/2006 to account
@@ -212,15 +221,6 @@ contains
 !    endif
 !    ! DS2015 END
      
-    ! Fill dark scenes 
-    do j = 1,npoints
-      if (sunlit(j) .ne. 1) then
-        dist_model_layertops(j,:) = R_UNDEF
-        box_MISR_ztop(j,:) = R_UNDEF
-        tauOUT(j,:) = R_UNDEF
-      end if
-    end do
-
   end SUBROUTINE MISR_SUBCOLUMN
 
   ! ######################################################################################
