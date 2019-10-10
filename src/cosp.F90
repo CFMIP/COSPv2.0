@@ -1088,7 +1088,7 @@ CONTAINS
        ok_lidar_cfad=.true.
        call lidar_column(calipsoIN%Npoints, calipsoIN%Ncolumns, calipsoIN%Nlevels,       &
             Nlvgrid, SR_BINS, LIDAR_NTYPE, 'calipso',calipso_beta_tot(:,:,:), calipso_beta_mol(:,:),&
-            cospgridIN%phalf(:,2:calipsoIN%Nlevels),cospgridIN%hgt_matrix,               &
+            cospgridIN%phalf(:,2:calipsoIN%Nlevels+1),cospgridIN%hgt_matrix,             &
             cospgridIN%hgt_matrix_half, vgrid_z(:), ok_lidar_cfad, LIDAR_NCAT,           &
             cospOUT%calipso_cfad_sr(ij:ik,:,:), cospOUT%calipso_lidarcld(ij:ik,:),       &
             cospOUT%calipso_cldlayer(ij:ik,:),                                           &
@@ -1173,7 +1173,7 @@ CONTAINS
        ok_lidar_cfad_grLidar532=.true.
        call lidar_column(grLidar532IN%Npoints, grLidar532IN%Ncolumns, grLidar532IN%Nlevels,       &
             Nlvgrid, SR_BINS, LIDAR_NTYPE, 'grlidar532',grLidar532_beta_tot(:,:,:), grLidar532_beta_mol(:,:),&
-            cospgridIN%phalf(:,2:grLidar532IN%Nlevels),cospgridIN%hgt_matrix,               &
+            cospgridIN%phalf(:,2:grLidar532IN%Nlevels+1),cospgridIN%hgt_matrix,               &
             cospgridIN%hgt_matrix_half, vgrid_z(:), ok_lidar_cfad_grLidar532, LIDAR_NCAT,      &
             cospOUT%grLidar532_cfad_sr(ij:ik,:,:), cospOUT%grLidar532_lidarcld(ij:ik,:),       &
             cospOUT%grLidar532_cldlayer(ij:ik,:))
@@ -1216,7 +1216,7 @@ CONTAINS
        ok_lidar_cfad_atlid=.true.
        call lidar_column(atlidIN%Npoints, atlidIN%Ncolumns, atlidIN%Nlevels,       &
             Nlvgrid, SR_BINS, LIDAR_NTYPE, 'atlid',atlid_beta_tot(:,:,:),     &
-            atlid_beta_mol(:,:), cospgridIN%phalf(:,2:atlidIN%Nlevels),            &
+            atlid_beta_mol(:,:), cospgridIN%phalf(:,2:atlidIN%Nlevels+1),            &
             cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half, vgrid_z(:),         &
             ok_lidar_cfad_atlid, LIDAR_NCAT, cospOUT%atlid_cfad_sr(ij:ik,:,:),     &
             cospOUT%atlid_lidarcld(ij:ik,:), cospOUT%atlid_cldlayer(ij:ik,:))
