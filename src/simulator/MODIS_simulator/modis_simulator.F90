@@ -361,7 +361,7 @@ contains
        where(Cloud_Fraction_Total_Mean(sunny) > 0) !sunlit cloudy scene
           Optical_Thickness_Total_Mean(sunny) = sum(optical_thickness(sunny,1:nSubCols),&
                mask = cloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Total_Mean(sunny)
-          Optical_Thickness_Total_MeanLog10(sunny) = sum(log10(abs(optical_thickness)), &
+          Optical_Thickness_Total_MeanLog10(sunny) = sum(log10(abs(optical_thickness(sunny,1:nSubCols))), &
                mask = cloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Total_Mean(sunny)
        elsewhere ! Sunlit clear scene
           Optical_Thickness_Total_Mean(sunny)      = 0._wp
