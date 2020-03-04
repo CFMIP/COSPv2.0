@@ -62,8 +62,8 @@ args    = parser.parse_args()
 # Supress Python warnings
 warnings.filterwarnings("ignore")
 
-print "############################################################################################"
-print 'Treating relative differences less than {0:.10f}% as insignificant'.format(100*args.zeroThresh)
+print("############################################################################################")
+print('Treating relative differences less than {0:.10f}% as insignificant'.format(100*args.zeroThresh))
 
 count = 0
 ##########################################################################################
@@ -76,8 +76,8 @@ if (args.cmor == 'None'):
 
     # Extract variable names from netCDF files.
     dset    = netCDF4.Dataset(fileRef)
-    varlist = dset.variables.keys()   # Variable names
-    nvars   = len(varlist)            # Number of variables
+    varlist = list(dset.variables.keys()) # Variable names
+    nvars   = len(varlist)                # Number of variables
     
     # Loop over each variable name and perform comparison.
     fracError = [0]*nvars             # Error fraction
@@ -117,12 +117,12 @@ if (args.cmor == 'None'):
             
             # Display differences to screen
             count = count + 1
-            print "  "+(varlist[ij]+":").ljust(16)+(" %1.2f" % err).rjust(10),"% of values differ,"+\
+            print( "  "+(varlist[ij]+":").ljust(16)+(" %1.2f" % err).rjust(10),"% of values differ,"+\
                 "relative range:".rjust(16)+(" %1.2e " % minError[ij]).rjust(12)+"to"+\
-                (" %1.2e" % maxError[ij]).rjust(10)
+                (" %1.2e" % maxError[ij]).rjust(10))
 
-    if (count != 0): print "All other fields match."
-    if (count == 0): print "All fields match"
+    if (count != 0): print("All other fields match.")
+    if (count == 0): print("All fields match")
 
 ##########################################################################################
 # B) CMOR compliant output
@@ -158,8 +158,8 @@ if (args.cmor != 'None'):
         test1 = filesOUT[ij];
         test2 = find(test1[len(dirOUT)+1:len(test1)-55]+'_*'+dataset+'*.nc',dirREF);
         if (test2 == []):
-            print "Variables in output diretory, but missing from reference directory"
-            print test1
+            print("Variables in output diretory, but missing from reference directory")
+            print(test1)
             fileflag[ij] = 0
             filesREF[ij] = ''
         else:
@@ -168,14 +168,14 @@ if (args.cmor != 'None'):
             
         # HOOK 1) User provided reference data directory does not contain data
         if (sum(fileflag) == 0):
-            print "ERROR: User provided reference data directory is empty"
-            print "EXITING!!!"
+            print("ERROR: User provided reference data directory is empty")
+            print("EXITING!!!")
             quit()
                 
         # HOOK 2) User provided output data directory does not contain any data
         if (nfilesOUT == 0):
-            print "ERROR: User provided output data directory is empty"
-            print "EXITING!!!"
+            print("ERROR: User provided output data directory is empty")
+            print("EXITING!!!")
             quit()
 
     ##############################################################################################
@@ -200,8 +200,8 @@ if (args.cmor != 'None'):
             # Pull out name of variable to read-in from filename
             test1       = filesOUT[ij]
             varList[ij] = test1[len(dirOUT)+1:len(test1)-55]
-            if (ij == 0): print "Comparing variables"
-            print varList[ij]
+            if (ij == 0): print("Comparing variables")
+            print(varList[ij])
             
             # Read-in output data 
             var_out = fileID_out.variables[varList[ij]][:]
@@ -229,26 +229,26 @@ if (args.cmor != 'None'):
     # Print out where differences exist
     if (sum(fileError) >= 1):
         for ij in range(0,nfilesOUT):
-            if (ij == 0): print "Differences exist in reference and test files for:"
+            if (ij == 0): print("Differences exist in reference and test files for:")
             if (fileError[ij] == 1):
                 err  = valError[ij]*100.00
-                print "  "+(varList[ij]+":").ljust(16)+(" %1.2f" % err).rjust(10),"% of values differ,"+\
+                print("  "+(varList[ij]+":").ljust(16)+(" %1.2f" % err).rjust(10),"% of values differ,"+\
                 "relative range:".rjust(16)+(" %1.2e " % minError[ij]).rjust(12)+"to"+\
-                (" %1.2e" % maxError[ij]).rjust(10)
-                if (ij == nfilesOUT-1): print "All other files match."
+                (" %1.2e" % maxError[ij]).rjust(10))
+                if (ij == nfilesOUT-1): print("All other files match.")
 
     # Print out if test data is non zero and reference data is zero
     if (sum(noref) > 1):
         for ij in range(0,nfilesOUT):
-            if (ij == 0): print "Test data exists, while reference data is missing for the following:"
+            if (ij == 0): print("Test data exists, while reference data is missing for the following:")
             if (noref[ij] > 0):
                 err  = valError[ij]*100.00
-                print "  "+(varList[ij]+":").ljust(16)+(" %1.2f" % noref[ij]).rjust(10),"% of the time."
-                if (ij == nfilesOUT-1): print "All other files match."
+                print("  "+(varList[ij]+":").ljust(16)+(" %1.2f" % noref[ij]).rjust(10),"% of the time.")
+                if (ij == nfilesOUT-1): print("All other files match.")
 
 
     # Print summary for zero errors.
-    if (sum(fileError) == 0):print "All Files Match"
+    if (sum(fileError) == 0):print("All Files Match")
 
 
 

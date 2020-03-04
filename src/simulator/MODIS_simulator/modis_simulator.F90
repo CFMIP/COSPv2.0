@@ -364,8 +364,8 @@ contains
           Optical_Thickness_Total_MeanLog10(sunny) = sum(log10(abs(optical_thickness)), &
                mask = cloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Total_Mean(sunny)
        elsewhere ! Sunlit clear scene
-          Optical_Thickness_Total_Mean(sunny)      = R_UNDEF
-          Optical_Thickness_Total_MeanLog10(sunny) = R_UNDEF
+          Optical_Thickness_Total_Mean(sunny)      = 0._wp
+          Optical_Thickness_Total_MeanLog10(sunny) = 0._WP
        endwhere
        where(Cloud_Fraction_Water_Mean(sunny) > 0)
           Optical_Thickness_Water_Mean(sunny) = sum(optical_thickness(sunny,1:nSubCols), &
@@ -380,10 +380,10 @@ contains
           Cloud_Particle_Size_Water_Mean(sunny) = sum(particle_size(sunny,1:nSubCols), &
                mask = waterCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Water_Mean(sunny)
        elsewhere
-          Optical_Thickness_Water_Mean(sunny)      = R_UNDEF
-          Optical_Thickness_Water_MeanLog10(sunny) = R_UNDEF
-          Cloud_Particle_Size_Water_Mean(sunny)    = R_UNDEF
-          Liquid_Water_Path_Mean(sunny)            = R_UNDEF
+          Optical_Thickness_Water_Mean(sunny)      = 0._WP
+          Optical_Thickness_Water_MeanLog10(sunny) = 0._WP
+          Cloud_Particle_Size_Water_Mean(sunny)    = 0._WP
+          Liquid_Water_Path_Mean(sunny)            = 0._WP
        endwhere
 
        
@@ -400,10 +400,10 @@ contains
           Cloud_Particle_Size_Ice_Mean(sunny) = sum(particle_size(sunny,1:nSubCols),&
                mask = iceCloudMask(sunny,1:nSubCols), dim = 2) / Cloud_Fraction_Ice_Mean(sunny)    
        elsewhere
-          Optical_Thickness_Ice_Mean(sunny)        = R_UNDEF
-          Optical_Thickness_Ice_MeanLog10(sunny)   = R_UNDEF
-          Cloud_Particle_Size_Ice_Mean(sunny)      = R_UNDEF
-          Ice_Water_Path_Mean(sunny)               = R_UNDEF
+          Optical_Thickness_Ice_Mean(sunny)        = 0._WP
+          Optical_Thickness_Ice_MeanLog10(sunny)   = 0._WP
+          Cloud_Particle_Size_Ice_Mean(sunny)      = 0._WP
+          Ice_Water_Path_Mean(sunny)               = 0._WP
        endwhere
        Cloud_Top_Pressure_Total_Mean(sunny)  = sum(cloud_top_pressure(sunny,1:nSubCols), &
             mask = cloudMask(sunny,1:nSubCols), dim = 2) / max(1, count(cloudMask(sunny,1:nSubCols), dim = 2))
