@@ -1319,7 +1319,7 @@ contains
 
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
-    if (Lcltlidarradar) allocate(x%radar_lidar_tcc(Npoints))
+    if (Lcltlidarradar) allocate(x%cloudsat_calipso_tcc(Npoints))
     if (Lcloudsat_tcc) allocate(x%cloudsat_tcc(Npoints))
     if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
             
@@ -1556,9 +1556,9 @@ contains
         deallocate(y%cloudsat_tcc2) 
         nullify(y%cloudsat_tcc2)  
      endif
-     if (associated(y%radar_lidar_tcc))           then
-        deallocate(y%radar_lidar_tcc) 
-        nullify(y%radar_lidar_tcc)  
+     if (associated(y%cloudsat_calipso_tcc))           then
+        deallocate(y%cloudsat_calipso_tcc) 
+        nullify(y%cloudsat_calipso_tcc)  
      endif
      if (associated(y%cloudsat_tcc))           then
         deallocate(y%cloudsat_tcc) 
