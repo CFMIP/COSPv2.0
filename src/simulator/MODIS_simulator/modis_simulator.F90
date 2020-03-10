@@ -333,7 +333,7 @@ contains
        ! ########################################################################################
        ! Include only those pixels with successful retrievals in the statistics 
        ! ########################################################################################
-       validRetrievalMask(sunny,1:nSubCols) = particle_size(sunny,1:nSubCols) > 0.
+       validRetrievalMask(sunny,1:nSubCols) = .true.!particle_size(sunny,1:nSubCols) > 0.
        cloudMask(sunny,1:nSubCols) = phase(sunny,1:nSubCols) /= phaseIsNone .and.       &
             validRetrievalMask(sunny,1:nSubCols)
        waterCloudMask(sunny,1:nSubCols) = phase(sunny,1:nSubCols) == phaseIsLiquid .and. &
