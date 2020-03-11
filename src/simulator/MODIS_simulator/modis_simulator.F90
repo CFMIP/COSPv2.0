@@ -63,7 +63,7 @@ module mod_modis_sim
   ! ##########################################################################
   ! Retrieval parameters
    integer, parameter :: &
-        num_trial_res = 50              ! Increase to make the linear pseudo-retrieval of size more accurate
+        num_trial_res = 15              ! Increase to make the linear pseudo-retrieval of size more accurate
    
    real(wp) :: &
        min_OpticalThickness,          & ! Minimum detectable optical thickness
@@ -211,6 +211,11 @@ contains
                 retrievedSize(i) = 1.0e-06_wp*interpolate_to_min(trial_re_i(1:num_trial_res), &
                      predicted_Refl_nir(1:num_trial_res), obs_Refl_nir)
              endif
+             ! Add print statement for debugging in CAM
+             !if (retrievedSize(i) .eq. 1.0e-06*R_UNDEF) then
+             write(*,"(a12,i3,f10.2,16f10.5)") "COSP_DEBUG: ",retrievedPhase(i),1.0e06_wp*retrievedSize(i),&
+                  obs_Refl_nir, predicted_Refl_nir(1:num_trial_res)
+             !endif
           else 
              retrievedSize(i) = re_fill
           endif
