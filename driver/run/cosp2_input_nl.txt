@@ -25,7 +25,7 @@
 
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
-  NPOINTS=153,! Number of gridpoints 153,27840,7081,6912
+  NPOINTS=1236,! Number of gridpoints 153,27840,7081,6912
   NPOINTS_IT=5000,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=38,   ! Number of model levels
