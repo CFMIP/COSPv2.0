@@ -2,7 +2,7 @@ module mod_cosp_io
   use cosp_kinds, only: wp
   use mod_cosp,   only: cosp_outputs
   use netcdf
-  USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
+  USE MOD_COSP_CONFIG, ONLY:  LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
        numMODISReffIceBins, numMODISReffLiqBins, ntau, tau_binBounds, tau_binCenters, &
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
@@ -17,8 +17,8 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE write_cosp2_output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, lev, lon, lat, cospOUT, outFileName)
-    integer,intent(in) :: Npoints, Ncolumns, Nlevels
+  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, lev, Nlvgrid, lon, lat, cospOUT, outFileName)
+    integer,intent(in) :: Npoints, Ncolumns, Nlevels, Nlvgrid
     real(wp),dimension(Npoints),intent(in) :: lon,lat
     real(wp),dimension(Nlevels),intent(in) :: lev
     type(cosp_outputs),intent(in) :: cospOUT
