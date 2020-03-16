@@ -2,7 +2,7 @@ module mod_cosp_io
   use cosp_kinds, only: wp
   use mod_cosp,   only: cosp_outputs
   use netcdf
-  USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
+  USE MOD_COSP_CONFIG, ONLY:  LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
        numMODISReffIceBins, numMODISReffLiqBins, ntau, tau_binBounds, tau_binCenters, &
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
        hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
@@ -17,8 +17,8 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE write_cosp2_output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, lev, lon, lat, cospOUT, outFileName)
-    integer,intent(in) :: Npoints, Ncolumns, Nlevels
+  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, lev, Nlvgrid, lon, lat, cospOUT, outFileName)
+    integer,intent(in) :: Npoints, Ncolumns, Nlevels, Nlvgrid
     real(wp),dimension(Npoints),intent(in) :: lon,lat
     real(wp),dimension(Nlevels),intent(in) :: lev
     type(cosp_outputs),intent(in) :: cospOUT
@@ -1315,7 +1315,7 @@ contains
        status = nf90_put_att(fileID,varID(56),"standard_name", "cloud_area_fraction_in_atmosphere_layer")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
-    if (associated(cospOUT%radar_lidar_tcc)) then
+    if (associated(cospOUT%cloudsat_calipso_tcc)) then
        status = nf90_def_var(fileID,"cltlidarradar",nf90_float, (/dimID(1)/),varID(57))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(57),"long_name","CALIPSO and CloudSat Total Cloud Fraction")
@@ -1857,8 +1857,8 @@ contains
        status = nf90_put_var(fileID,varID(56),cospOUT%lidar_only_freq_cloud)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
-    if (associated(cospOUT%radar_lidar_tcc)) then
-       status = nf90_put_var(fileID,varID(57),cospOUT%radar_lidar_tcc)
+    if (associated(cospOUT%cloudsat_calipso_tcc)) then
+       status = nf90_put_var(fileID,varID(57),cospOUT%cloudsat_calipso_tcc)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
     if (associated(cospOUT%cloudsat_tcc)) then

@@ -38,7 +38,8 @@ MODULE MOD_COSP_Modis_INTERFACE
                              re_water_max,re_ice_min,re_ice_max,               &
                              highCloudPressureLimit,lowCloudPressureLimit,phaseIsNone,   &
                              phaseIsLiquid,phaseIsIce,phaseIsUndetermined,trial_re_w,    &
-                             trial_re_i,g_w,g_i,w0_w,w0_i, get_g_nir,get_ssa_nir
+                             trial_re_i,g_w,g_i,w0_w,w0_i, get_g_nir=>get_g_nir_old,     &
+                             get_ssa_nir=>get_ssa_nir_old
   implicit none
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -49,12 +50,9 @@ MODULE MOD_COSP_Modis_INTERFACE
           Npoints,        & ! Number of horizontal gridpoints
           Ncolumns,       & ! Number of subcolumns
           Nlevels           ! Number of vertical levels
-     integer :: &
-          Nsunlit           ! Number of sunlit lit pixels
-     real(wp),allocatable,dimension(:) :: &
-          sunlit,         & ! Sunlit scenes
-          notSunlit         ! Dark scenes
-     real(wp),allocatable,dimension(:,:) :: &
+     integer,pointer,dimension(:) :: &
+          sunlit            ! Sunlit scenes
+     real(wp),pointer,dimension(:,:) :: &
           pres              ! Gridmean pressure at layer edges (Pa) 
      real(wp),pointer ::  &
           tau(:,:,:),     & ! Subcolumn optical thickness @ 0.67 microns.

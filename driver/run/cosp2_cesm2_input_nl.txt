@@ -1,0 +1,21 @@
+&COSP_INPUT
+  NPOINTS_IT                = 1000,
+  USE_VGRID                 = .true.,
+  NLVGRID                   = 40,      
+  CSAT_VGRID                = .true.,
+  DINPUT                    = './', 
+  FINPUT                    = '../data/inputs/CESM2/b1850.f19_g17.take25.cam.rh0.0001-01-02-00000.nc',
+!  FINPUT                    = '../data/inputs/CESM2/cesm2.cosp2.inputs.nc',
+  FOUTPUT                   = '../data/outputs/CESM2/cesm2.cosp2.outputs.nc',
+  cloudsat_RADAR_FREQ       = 94.0,
+  SURFACE_RADAR             = 0,
+  cloudsat_use_gas_abs      = 1,
+  cloudsat_do_ray           = 0,
+  cloudsat_k2               = -1,
+  use_precipitation_fluxes  = .true.,
+  cloudsat_micro_scheme     = 'MMF_v3_single_moment',
+  lidar_ice_type            = 0,
+  OVERLAP                   = 3,
+  ISCCP_TOPHEIGHT           = 1,
+  ISCCP_TOPHEIGHT_DIRECTION = 2
+/
