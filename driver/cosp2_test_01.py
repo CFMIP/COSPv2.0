@@ -40,7 +40,11 @@ def get_var_list(ncfile):
 
 def read_var(fname, vname):
     """
-    Returns the variable 'vname' in a NetCDF file.
+    Reads a variable from a NetCDF file.
+    
+    Arguments:
+        fname: path to NetCDF file.
+        vname: variable name.
     """
     f_id = netCDF4.Dataset(fname,'r')
     return f_id.variables[vname][:]
