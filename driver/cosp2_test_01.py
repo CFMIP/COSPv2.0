@@ -52,7 +52,9 @@ def read_var(fname, vname):
 def calculate_stats(tst, kgo, atol=0.0, rtol=None):
     """
     Returns a dictionary with some basic summary statistics of the differences
-    between two numpy arrays. The dictionary contains the following keys:
+    between two numpy arrays. When a threshold for relative differences is
+    passed, then the results refer to relative differences.
+    The dictionary contains the following keys:
         'N': number of differences.
         'AvgDiff': average difference.
         'MinDiff': minimum difference.
@@ -86,7 +88,7 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
             rdiffs = diffs / maskedKgo
             rdiffs[maskedKgo == 0.0] = np.sign(diffs[maskedKgo == 0.0])
             # Keep only those diffs larger than relative tolerance
-            diffs = diffs[np.absolute(rdiffs) > rtol]
+            diffs = rdiffs[np.absolute(rdiffs) > rtol]
             NallDiff = len(diffs)
         # Calculate summary stats
         summary_stats['N'] = NallDiff
@@ -98,12 +100,32 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
         
     return summary_stats
 
-def print_stats_table(summary_stats):
+def print_stats_table(summary_stats, print_all=False):
     """
     Print table of summary statistics.
+    
+    Arguments:
+      summary_stats: dictionary with summary statts. Output from called
+                     to function calculate_stats.
+
+    Keywords:
+      print_all: by default, it only prints lines with differences,
+                 unless print_all==True.
     """
-    for key, s in summary_stats.items():
-        print(key,s)
+    # Header and column names
+    print(42*'=', ' Summary statistics ', 42*'=')
+    line = ('{:>40s} {:>10s} {:>12s} {:>12s} {:>12s} {:>12s}').format('Variable',
+            'N', 'AvgDiff', 'MinDiff', 'MaxDiff', 'StDev')
+    print(line)
+    # Main table.
+    for vname, vstats in summary_stats.items():
+        line = ('{vname:>40s} {N:10d} {AvgDiff:12.4e} {MinDiff:12.4e} '
+                '{MaxDiff:12.4e} {StDev:12.4e}').format(vname=vname,**vstats)
+        if (vstats['N'] > 0):
+            print(line)
+        else:
+            if print_all: print(line)
+    print(106*'=')
 
 #######################
 # Main
@@ -114,10 +136,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("kgo_file", help="File with known good outputs.")
     parser.add_argument("tst_file", help="Test output file.")
-    parser.add_argument("--atol",type=float,
-                        default=0.0,help="Absolute tolerance.")
-    parser.add_argument("--rtol",type=float,
-                        default=None,help="Relative tolerance.")
+    parser.add_argument("--atol", type=float, default=0.0,
+                        help="Absolute tolerance.")
+    parser.add_argument("--rtol", type=float, default=None,
+                        help="Relative tolerance.")
+    parser.add_argument("--allvar", type=bool, default=False,
+                        help="Print summary stats for all variables.")
     args = parser.parse_args()
 
     # Get list of variables
@@ -143,16 +167,16 @@ if __name__ == '__main__':
         if summary_stats[vname]['N'] > 0: errored = True
 
     # Print summary stats
-    print_stats_table(summary_stats)
+    print_stats_table(summary_stats, print_all=args.allvar)
     
     # Error if files have different number variables. If the number 
     # of variables is the same but they have different names, it will
     # fail in summary_stats.
     if (nkgo != ntst):
         errored = True
-        print("=== Variables in KGO ===")
+        print("===== Variables in KGO: ", nkgo)
         print(kgo_vars)
-        print("=== Variables in Test ===")
+        print("===== Variables in Test: ", ntst)
         print(tst_vars)
 
     # Exit with correct error condition
