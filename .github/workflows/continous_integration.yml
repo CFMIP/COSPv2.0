@@ -81,7 +81,7 @@ jobs:
     - name: Compare output against KGO
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output_um.ref.nc
+        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python cosp2_test_01.py ${KGO} ${TST} --atol=0.0 --rtol=0.0
     # Make output file available if the test fails
