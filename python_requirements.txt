@@ -1,3 +1,0 @@
-netCDF4
-argparse
-numpy
