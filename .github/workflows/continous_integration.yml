@@ -51,7 +51,7 @@ jobs:
     - name: Install python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r python_requirements.txt
+        pip install netCDF4 argparse numpy
     # Install FORTRAN compiler and NetCDF libraries
     - name: Install FORTRAN compiler and NetCDF
       run: sudo apt-get install ${{ matrix.fortran-compiler }} libnetcdf-dev
@@ -78,7 +78,7 @@ jobs:
         cd driver/run
         ./cosp2_test
     # Compare results against known good outputs
-    - name: Compare output against KGO
+    - name: Compare test output against known good output (KGO)
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc

@@ -105,7 +105,7 @@ def print_stats_table(summary_stats, print_all=False):
     Print table of summary statistics.
     
     Arguments:
-      summary_stats: dictionary with summary statts. Output from called
+      summary_stats: dictionary with summary statistics. Output from call
                      to function calculate_stats.
 
     Keywords:
