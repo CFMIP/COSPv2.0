@@ -1,0 +1,93 @@
+# (c) British Crown Copyright 2020, the Met Office.
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+#   * Redistributions of source code must retain the above copyright notice,
+#     this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#   * Neither the name of the Met Office nor the names of its contributors may
+#     be used to endorse or promote products derived from this softwarewithout
+#     specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+# Workflow for continuous integration tests
+name: CI
+on: [push, pull_request]
+
+jobs:
+  # This workflow contains a single job called "test"
+  test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        fortran-compiler: [gfortran, gfortran-8, gfortran-9]
+    env:
+      F90: ${{ matrix.fortran-compiler }}
+    # Sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out repository under $GITHUB_WORKSPACE
+    - uses: actions/checkout@v2
+    # Set up Python and install dependencies
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
+    - name: Install python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install netCDF4 argparse numpy
+    # Install FORTRAN compiler and NetCDF libraries
+    - name: Install FORTRAN compiler and NetCDF
+      run: sudo apt-get install ${{ matrix.fortran-compiler }} libnetcdf-dev
+    # NetCDF FORTRAN library
+    - name: NetCDF FORTRAN library for standard gfortran
+      if: ${{ matrix.fortran-compiler == 'gfortran' }}
+      run: sudo apt-get install libnetcdff-dev
+    - name: NetCDF FORTRAN library for other gfortran
+      if: ${{ matrix.fortran-compiler != 'gfortran' }}
+      run: |
+        git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
+        cd netcdf-fortran
+        ./configure --prefix=/usr
+        make
+        sudo make install
+    # Build COSP2 driver
+    - name: Build driver
+      run: |
+        cd build
+        make driver
+    # Run COSP2 test
+    - name: Run test
+      run: |
+        cd driver/run
+        ./cosp2_test
+    # Compare results against known good outputs
+    - name: Compare test output against known good output (KGO)
+      run: |
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
+        TST=data/outputs/UKMO/cosp2_output_um.nc
+        python cosp2_test_01.py ${KGO} ${TST} --atol=0.0 --rtol=0.0
+    # Make output file available if the test fails
+    - name: Upload output file if test fails
+      if: failure()
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: cosp2_output_um.nc
+        path: driver/data/outputs/UKMO/cosp2_output_um.nc
