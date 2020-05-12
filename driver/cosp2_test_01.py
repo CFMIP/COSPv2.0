@@ -150,6 +150,11 @@ if __name__ == '__main__':
     nkgo = len(kgo_vars)
     ntst = len(tst_vars)
 
+    # Colours for error messages
+    red_colour   = '\033[91m'
+    green_colour = '\033[92m'
+    std_colour   = '\033[0m'
+
     # Dictionary for summary statistics
     summary_stats = {}
 
@@ -167,13 +172,21 @@ if __name__ == '__main__':
         if summary_stats[vname]['N'] > 0: errored = True
 
     # Print summary stats
-    print_stats_table(summary_stats, print_all=args.allvar)
-    
+    if errored:
+        print(red_colour + "===== ERROR: some of the differences are larger "
+              "than the tolerances." + std_colour)
+        print_stats_table(summary_stats, print_all=args.allvar)
+    elif args.allvar:
+        print_stats_table(summary_stats, print_all=args.allvar)
+
     # Error if files have different number variables. If the number 
     # of variables is the same but they have different names, it will
     # fail in summary_stats.
     if (nkgo != ntst):
         errored = True
+        print(red_colour +
+              "===== ERROR: files differ in the number of variables." +
+              std_colour)
         print("===== Variables in KGO: ", nkgo)
         print(kgo_vars)
         print("===== Variables in Test: ", ntst)
@@ -181,6 +194,10 @@ if __name__ == '__main__':
 
     # Exit with correct error condition
     if errored:
+        print(red_colour + "===== ERROR: the test is exiting with an error, "
+              "please review the output above." + std_colour)
         sys.exit(1)
     else:
+        print(green_colour + "===== Test completed successfully: "
+              "all outputs are within the expected tolerances." + std_colour)
         sys.exit()
