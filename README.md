@@ -50,14 +50,10 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
     simulator specific information (i.e. Radar simulator frequency). The output namelist controls the output diagnostics.
 
 1. Regression testing (comparing to reference data)
-   1. Reference data for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`. CMOR compliant reference data is also provided, `driver/data/outputs/UKMO/cmor/ref1D/`.
-   1. To compare driver output to reference data. In `driver/`, invoke Python script `test_cosp2imp.py`. This script requires the following Python modules: os, numpy, netCDF4, argparse, warnings, fnmatch, sys. Examples are below.
+   1. Reference data for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`.
+   1. To compare driver output to reference data. In `driver/`, invoke Python script `cosp2_test_01.py`. This script requires the following Python modules: numpy, netCDF4, argparse, sys. Examples are below.
       1. For standard netCDF output:
 
-      `python test_cosp2Imp.py data/outputs/UKMO/cosp2_output_um.ref.nc data/outputs/UKMO/cosp2_output_um.nc`
+      `python cosp2_test_01.py data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc data/outputs/UKMO/cosp2_output_um.nc --rtol=0.0005`
 
-      1. For CMOR compliant output:
-
-      `python test_cosp2Imp.py data/outputs/UKMO/cmor/ref1D/ data/outputs/UKMO/cmor/1D --cmor 1D`
-
-   By default the script will only report relative differences which are greater than 1e-5. This can be changed by the user through the optional argument `--zeroThresh`.
+   The script accepts thresholds for absolute and relative tolerances, named `atol` and `rtol`, respectively. By default the script will report all differences, i.e. `--atol=0.0 --rtol=0.0`. The example above allows for a relative tolerance of 0.05\%. Previous tests indicate that this threshold is appropriate when gfortran is used to build the driver program. If a different compiler is available, it is encouraged to build the driver using that compiler. For non-gfortran compilers, the number of differences will be bigger, so it may be appropriate to relax the tolerances. Previous experience indicates that adding an additional absolute tolerance `--atol=1.0e-20` is a good option.
