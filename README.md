@@ -50,9 +50,9 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
     simulator specific information (i.e. Radar simulator frequency). The output namelist controls the output diagnostics.
 
 1. Regression testing (comparing to reference data)
-   1. Reference data for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`.
-   1. To compare driver output to reference data. In `driver/`, invoke Python 3 script `cosp2_test_01.py`. This script requires the following Python modules: numpy, netCDF4, argparse, sys. The following example shows how to call this script from the command line:
+   1. Reference data or known good output (KGO) for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`.
+   1. To compare driver output to the KGO, in `driver/`, invoke Python 3 script `compare_to_kgo.py`. This script requires the following Python modules: numpy, netCDF4, argparse, and sys. The following example shows how to call this script from the command line:
 
-      `python cosp2_test_01.py data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc data/outputs/UKMO/cosp2_output_um.nc --atol=1.0e-20 --rtol=0.0005`
+      `python compare_to_kgo.py data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc data/outputs/UKMO/cosp2_output_um.nc --atol=1.0e-20 --rtol=0.0005`
 
    The script accepts thresholds for absolute and relative tolerances, named `atol` and `rtol` respectively. By default the script will report all differences, i.e. `--atol=0.0 --rtol=0.0`. The example above allows for a relative tolerance of 0.05\% in the subset of absolute differences larger or equal than 1.0e-20. Previous tests indicate that these thresholds are appropriate when gfortran is used to build the driver program. If a different compiler is available, it is encouraged to build the driver using that compiler to increase the robustness of the tests. For non-gfortran compilers, the differences may be larger. This is not necessarily an issue, but further investigations may be required.
