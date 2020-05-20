@@ -89,8 +89,7 @@ jobs:
     # Environment variables for COSP build
     - name: Environment variables for COSP build
       if: ${{ matrix.fortran-compiler == 'ifort' }}
-      env:
-        F90FLAGS: "-O3"
+      run: export F90FLAGS="-O3"
     # Build COSP2 driver
     - name: Build driver
       run: |
