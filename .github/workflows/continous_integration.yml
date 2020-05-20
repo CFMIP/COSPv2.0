@@ -99,6 +99,7 @@ jobs:
     # Run COSP2 test
     - name: Run test
       run: |
+        source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test
     # Compare results against known good outputs
