@@ -36,9 +36,10 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9]
+        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
+      F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
     # Sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -52,21 +53,44 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install netCDF4 argparse numpy
-    # Install FORTRAN compiler and NetCDF libraries
-    - name: Install FORTRAN compiler and NetCDF
-      run: sudo apt-get install ${{ matrix.fortran-compiler }} libnetcdf-dev
+    # Install FORTRAN compiler
+    - name: Install gfortran compiler and NetCDF
+      if: ${{ matrix.fortran-compiler != 'ifort' }}
+      run: sudo apt-get install ${{ matrix.fortran-compiler }}
+    # Intel compilers and libraries if needed
+    #   https://software.intel.com/content/www/us/en/develop/articles/oneapi-repo-instructions.html#aptpkg
+    - name: Install Intel compilers and libraries
+      if: ${{ matrix.fortran-compiler == 'ifort' }}
+      run: |
+        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
+        sudo apt-get update
+        sudo apt-get install intel-oneapi-common-licensing
+        sudo apt-get install intel-oneapi-common-vars
+        sudo apt-get install intel-oneapi-dev-utilities
+        sudo apt-get install intel-oneapi-ifort
+    # Install NetCDF library
+    - name: Install NetCDF library
+      run: sudo apt-get install libnetcdf-dev
     # NetCDF FORTRAN library
-    - name: NetCDF FORTRAN library for standard gfortran
+    - name: Install NetCDF FORTRAN library for standard gfortran
       if: ${{ matrix.fortran-compiler == 'gfortran' }}
       run: sudo apt-get install libnetcdff-dev
-    - name: NetCDF FORTRAN library for other gfortran
+    - name: Build NetCDF FORTRAN library
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
+        source /opt/intel/inteloneapi/setvars.sh || true
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
         ./configure --prefix=/usr
         make
         sudo make install
+    # Environment variables for COSP build
+    - name: Environment variables for COSP build
+      if: ${{ matrix.fortran-compiler == 'ifort' }}
+      env:
+        F90FLAGS: "-O3"
     # Build COSP2 driver
     - name: Build driver
       run: |
