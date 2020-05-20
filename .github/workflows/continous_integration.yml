@@ -40,6 +40,8 @@ jobs:
     env:
       F90: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
+      ATOL: 0.0
+      RTOL: 0.0
     # Sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -105,10 +107,14 @@ jobs:
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
       run: |
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          ATOL=1.0e-20
+          RTOL=0.0006
+        fi
         cd driver
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
-        python compare_to_kgo.py ${KGO} ${TST} --atol=0.0 --rtol=0.0
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # Make output file available if the test fails
     - name: Upload output file if test fails
       if: failure()
