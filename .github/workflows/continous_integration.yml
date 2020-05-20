@@ -86,13 +86,13 @@ jobs:
         ./configure --prefix=/usr
         make
         sudo make install
-    # Environment variables for COSP build
-    - name: Environment variables for COSP build
-      if: ${{ matrix.fortran-compiler == 'ifort' }}
-      run: export F90FLAGS="-O3"
     # Build COSP2 driver
     - name: Build driver
       run: |
+        if [[ $(ifort --version) ]]; then
+          ifort --version
+          export F90FLAGS="-O3"
+        fi
         cd build
         make driver
     # Run COSP2 test
