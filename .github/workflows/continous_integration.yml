@@ -89,7 +89,8 @@ jobs:
     # Build COSP2 driver
     - name: Build driver
       run: |
-        if [[ $(ifort --version) ]]; then
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          source /opt/intel/inteloneapi/setvars.sh;
           ifort --version
           export F90FLAGS="-O3"
         fi
