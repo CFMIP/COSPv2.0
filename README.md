@@ -26,7 +26,6 @@ The repository include directories
 - `src/` contains the COSP layer and the underlying satellite simulators
 - `model-interface/` contains routines used by COSP to couple to the host model. Edit these before building.
 - `subsample_and_optics_example/` contains an example implementation, following COSP 1, of the routines to map model-derived grid-scale physical properties to the subgrid-scale optical properties needed by COSP.
-- `cosp-1.4-interface/` contains a wrapper mapping the calling structure and arguments from COSP 1 to COSP 2, making it possible to call COSP 2 using COSP 1 arguments.
 - `driver/` contains codes that run COSP on example inputs and scripts that compare the current implementation to a reference.
 - `build/` contains a Makefile describing build dependencies. Users may build a COSP library and other targets from this Makefile.
 - `unit_testing/` contains small programs meant to exercise some of the simulators.
@@ -42,7 +41,7 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
  1. Build the drivers.
     1. Edit the files in `model-interface/` if necessary. By default COSP is built using double-precision real variables and printing any error messages to the standard output.
     1. In `build/` edit `Makefile.conf` to reflect the choice of compiler, compiler flags, and library names and locations. If you intend to build the CMOR driver this includes all libraries necessary for CMOR. Building the CMOR driver also requires a change to the definition of the DRIVER variable in Makefile.
-    1. In build `make driver` will build a COSP library, a separate library with the example mapping from model state to COSP inputs, and the `cosp2_test` executable, which is then copied to `driver/run`. `make driver_COSP1.4` is analogous but builds a `cosp1_test` executable that uses the COSP 1.4 calling conventions.
+    1. In build `make driver` will build a COSP library, a separate library with the example mapping from model state to COSP inputs, and the `cosp2_test` executable, which is then copied to `driver/run`.
 
 1. Running the test program
     1. Directory `test/run` contains namelists and other files needed by the test programs. If the executables have been built they should run in this directory using these files as supplied.
