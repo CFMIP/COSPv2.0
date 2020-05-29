@@ -15,10 +15,6 @@ VPATH = $(SRC_PATH):$(HOOKS):$(SIM_PATH):$(RT_PATH):$(RS_PATH):$(CS_PATH):$(ISCC
 SUBCOLS = ../subsample_and_optics_example
 VPATH += $(SUBCOLS)/optics:$(SUBCOLS)/optics/quickbeam_optics:$(SUBCOLS)/subcol:$(SUBCOLS)/subcol/rng
 
-# COSP1.4 wrapper around COSP2
-COSP1WRAPPER = ../cosp-1.4-interface
-VPATH += $(COSP1WRAPPER)
-
 # Standalone driver
 DRIVER = ../driver/src
 VPATH += $(DRIVER)
@@ -65,9 +61,6 @@ clean:
 driver:
 	make cosp2_test
 	mv cosp2_test ../driver/run
-driver_COSP1.4:
-	make cosp1_test
-	mv cosp1_test ../driver/run
 
 # Dependencies for libary
 cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  cosp_rttov_interfaceSTUB.o \
@@ -90,8 +83,8 @@ cosp_parasol_interface.o    : cosp_kinds.o
 parasol.o                   : cosp_kinds.o cosp_config.o cosp_constants.o
 cosp_calipso_interface.o    : cosp_kinds.o lidar_simulator.o
 lidar_simulator.o           : cosp_kinds.o cosp_config.o cosp_stats.o
-cosp_grLidar532_interface.o : cosp_kinds.o 
-cosp_atlid_interface.o      : cosp_kinds.o 
+cosp_grLidar532_interface.o : cosp_kinds.o
+cosp_atlid_interface.o      : cosp_kinds.o
 cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
 cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
@@ -117,9 +110,3 @@ mo_rng.o     : cosp_kinds.o
 cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
 cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
-
-# Offline driver using COSP 1.4 interface
-cosp_interface_v1p4.o : cosp_kinds.o libcosp.a libsubcol.a
-cosp1_io.o    : cosp_kinds.o cosp_config.o cosp.o cosp_interface_v1p4.o
-cosp1_test.o  : cosp1_io.o
-cosp1_test    : cosp1_test.o cosp1_io.o cosp_interface_v1p4.o
