@@ -385,7 +385,7 @@ CONTAINS
     real(wp),dimension(:,:,:),allocatable :: &
        betamol_in,betamoli,pnormi,ze_toti,ze_noni
     real(wp),dimension(:,:,:),allocatable :: &
-         t_in,tempI,frac_outI
+         t_in,tempI,frac_outI      ! subscript "I": vertical interpolation (use_vgrid=.true.)
     real(wp), allocatable ::     &
          zlev   (:,:),           & ! altitude (used only when use_vgrid=.true.)
          delz   (:,:),           & ! delta Z
@@ -606,7 +606,7 @@ CONTAINS
        Lmodis_subcolumn    = .true.
        Lcloudsat_column    = .true.
        Lcloudsat_subcolumn = .true.
-       Lcloudsat_modis_wr  = .true.
+       Lcloudsat_modis_wr  = .true. ! WR: warm rain product
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

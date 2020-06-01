@@ -274,9 +274,11 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   !               2018.09.19 (T.Michibata): modified I/O
   !               2018.11.22 (T.Michibata): minor revisions
   !               2020.05.27 (T.Michibata and X.Jing): bug-fix for frac_out dimsize
-  ! * References: Michibata et al. (GMD'19, GRL'20)
-  !               Suzuki et al. (JAS'10, JAS'11, JGR'13, GRL'13, JAS'15)
-  !               Jing et al. (JGR'17); Jing and Suzuki (GRL'18)
+  ! * References: Michibata et al. (GMD'19, doi:10.5194/gmd-12-4297-2019)
+  !               Michibata et al. (GRL'20, doi:10.1029/2020GL088340)
+  !               Suzuki et al. (JAS'10, doi:10.1175/2010JAS3463.1)
+  !               Suzuki et al. (JAS'15, doi:10.1175/JAS-D-14-0265.1)
+  !               Jing et al. (JCLIM'19, doi:10.1175/jcli-d-18-0789.1)
   ! * Contact:    Takuro Michibata (RIAM, Kyushu University, Japan).
   !               E-mail: michibata@riam.kyushu-u.ac.jp
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -332,9 +334,7 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     real(wp), dimension(Npoints,Ncolumns,Nlevels) :: icod  !! in-cloud optical depth (ICOD)
     logical  :: octop, ocbtm, oslwc
     integer, dimension(Npoints,Ncolumns,Nlevels) :: fracout_int  !! fracout (decimal to integer)
-    where (fracout .le. 0.5)                        fracout_int = SGCLD_CLR ! 0 = clear-sky
-    where (fracout .gt. 0.5 .and. fracout .lt. 1.5) fracout_int = SGCLD_ST  ! 1 = cloudy (St)
-    where (fracout .ge. 1.5)                        fracout_int = SGCLD_CUM ! 2 = cloudy (Cu)
+    fracout_int(:,:,:) = NINT( fracout(:,:,:) )  !! assign an integer subpixcel ID (0=clear-sky; 1=St; 2=Cu)
 
     !! initialize
     cfodd_ntotal(:,:,:,:)  = 0._wp
