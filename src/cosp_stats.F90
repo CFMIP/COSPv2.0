@@ -273,10 +273,12 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   !               2018.05.17 (T.Michibata): update for COSP2
   !               2018.09.19 (T.Michibata): modified I/O
   !               2018.11.22 (T.Michibata): minor revisions
-  ! * References: Suzuki et al. (JAS'10, JAS'11, JGR'13, GRL'13, JAS'15)
-  !               Jing et al. (JGR'17); Jing and Suzuki (GRL'18)
-  !               Kay et al. (JGR'18)
-  !               Michibata et al. (ACP'14)
+  !               2020.05.27 (T.Michibata and X.Jing): bug-fix for frac_out dimsize
+  ! * References: Michibata et al. (GMD'19, doi:10.5194/gmd-12-4297-2019)
+  !               Michibata et al. (GRL'20, doi:10.1029/2020GL088340)
+  !               Suzuki et al. (JAS'10, doi:10.1175/2010JAS3463.1)
+  !               Suzuki et al. (JAS'15, doi:10.1175/JAS-D-14-0265.1)
+  !               Jing et al. (JCLIM'19, doi:10.1175/jcli-d-18-0789.1)
   ! * Contact:    Takuro Michibata (RIAM, Kyushu University, Japan).
   !               E-mail: michibata@riam.kyushu-u.ac.jp
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -331,7 +333,8 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     real(wp) :: cbtmh     !! diagnosed in-cloud optical depth
     real(wp), dimension(Npoints,Ncolumns,Nlevels) :: icod  !! in-cloud optical depth (ICOD)
     logical  :: octop, ocbtm, oslwc
-
+    integer, dimension(Npoints,Ncolumns,Nlevels) :: fracout_int  !! fracout (decimal to integer)
+    fracout_int(:,:,:) = NINT( fracout(:,:,:) )  !! assign an integer subpixcel ID (0=clear-sky; 1=St; 2=Cu)
 
     !! initialize
     cfodd_ntotal(:,:,:,:)  = 0._wp
@@ -370,17 +373,17 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
           do k = Nlevels, 1, -1  !! scan from cloud-bottom to cloud-top
              if ( dbze(i,j,k) .eq. R_GROUND .or. &
                   dbze(i,j,k) .eq. R_UNDEF       ) cycle
-             if ( ocbtm                          .and. &
-                & fracout(i,j,k) .ne. SGCLD_CLR  .and. &
-                & dbze(i,j,k)    .ge. CFODD_DBZE_MIN   ) then
+             if ( ocbtm                              .and. &
+                & fracout_int(i,j,k) .ne. SGCLD_CLR  .and. &
+                & dbze(i,j,k)        .ge. CFODD_DBZE_MIN   ) then
                 ocbtm = .false.  !! cloud bottom detected
                 kcbtm = k
                 kctop = k
              endif
-             if (       octop                    .and. &  !! scan cloud-top
-                & .not. ocbtm                    .and. &  !! cloud-bottom already detected
-                & fracout(i,j,k) .ne. SGCLD_CLR  .and. &  !! exclude clear sky
-                & dbze(i,j,k)    .ge. CFODD_DBZE_MIN   ) then
+             if (       octop                        .and. &  !! scan cloud-top
+                & .not. ocbtm                        .and. &  !! cloud-bottom already detected
+                & fracout_int(i,j,k) .ne. SGCLD_CLR  .and. &  !! exclude clear sky
+                & dbze(i,j,k)        .ge. CFODD_DBZE_MIN   ) then
                 kctop = k  !! update
              endif
           enddo  !! k loop
@@ -393,9 +396,9 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
           !CDIR NOLOOPCHG
           do k = kcbtm, kctop, -1
              cmxdbz = max( cmxdbz, dbze(i,j,k) )  !! column maximum dBZe update
-             if ( fracout(i,j,k) .eq. SGCLD_CLR  .or.  &
-                & fracout(i,j,k) .eq. SGCLD_CUM  .or.  &
-                & dbze   (i,j,k) .lt. CFODD_DBZE_MIN   ) then
+             if ( fracout_int(i,j,k) .eq. SGCLD_CLR  .or.  &
+                & fracout_int(i,j,k) .eq. SGCLD_CUM  .or.  &
+                & dbze       (i,j,k) .lt. CFODD_DBZE_MIN   ) then
                 oslwc = .false.
              endif
           enddo
