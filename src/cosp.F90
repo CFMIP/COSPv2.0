@@ -351,9 +351,10 @@ CONTAINS
          Lmodis_column,        & ! On/Off switch for column MODIS simulator
          Lrttov_column,        & ! On/Off switch for column RTTOV simulator (not used)
          Lradar_lidar_tcc,     & ! On/Off switch from joint Calipso/Cloudsat product
-         Lcloudsat_tcc,       & !
-         Lcloudsat_tcc2,      & !         
-         Llidar_only_freq_cloud  ! On/Off switch from joint Calipso/Cloudsat product
+         Lcloudsat_tcc,        & !
+         Lcloudsat_tcc2,       & !         
+         Llidar_only_freq_cloud, & ! On/Off switch from joint Calipso/Cloudsat product
+         Lcloudsat_modis_wr      ! On/Off switch from joint CloudSat/MODIS warm rain product
     logical :: &
          ok_lidar_cfad    = .false., &
          ok_lidar_cfad_grLidar532 = .false., & 
@@ -384,7 +385,7 @@ CONTAINS
     real(wp),dimension(:,:,:),allocatable :: &
        betamol_in,betamoli,pnormi,ze_toti,ze_noni
     real(wp),dimension(:,:,:),allocatable :: &
-         t_in,tmpFlip,ze_totFlip
+         t_in,tempI,frac_outI      ! subscript "I": vertical interpolation (use_vgrid=.true.)
     real(wp), allocatable ::     &
          zlev   (:,:),           & ! altitude (used only when use_vgrid=.true.)
          delz   (:,:),           & ! delta Z
@@ -435,6 +436,7 @@ CONTAINS
     Llidar_only_freq_cloud = .false.
     Lcloudsat_tcc       = .false.
     Lcloudsat_tcc2      = .false.
+    Lcloudsat_modis_wr  = .false.
 
     ! CLOUDSAT subcolumn
     if (associated(cospOUT%cloudsat_Ze_tot)) Lcloudsat_subcolumn = .true.
@@ -604,6 +606,7 @@ CONTAINS
        Lmodis_subcolumn    = .true.
        Lcloudsat_column    = .true.
        Lcloudsat_subcolumn = .true.
+       Lcloudsat_modis_wr  = .true. ! WR: warm rain product
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -616,8 +619,8 @@ CONTAINS
          Lcloudsat_subcolumn, Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column,     &
          Latlid_subcolumn, Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column,     &
          Lrttov_subcolumn, Lrttov_column, Lparasol_subcolumn, Lparasol_column,           &
-         Lradar_lidar_tcc, Llidar_only_freq_cloud, Lcloudsat_tcc,Lcloudsat_tcc2, cospOUT,&
-         cosp_simulator, nError)
+         Lradar_lidar_tcc, Llidar_only_freq_cloud, Lcloudsat_tcc,Lcloudsat_tcc2,         &
+         Lcloudsat_modis_wr, cospOUT, cosp_simulator, nError)
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3) Populate instrument simulator inputs
@@ -1597,90 +1600,94 @@ CONTAINS
     endif
 
     ! CloudSat/MODIS joint products (CFODDs and Occurrence Frequency of Warm Clouds)
-    allocate( cfodd_ntotal (cloudsatIN%Npoints, CFODD_NDBZE, CFODD_NICOD, CFODD_NCLASS) )
-    allocate( wr_occfreq_ntotal(cloudsatIN%Npoints, WR_NREGIME) )
+    if (Lcloudsat_modis_wr) then
+       allocate( cfodd_ntotal(cloudsatIN%Npoints, CFODD_NDBZE, CFODD_NICOD, CFODD_NCLASS) )
+       allocate( wr_occfreq_ntotal(cloudsatIN%Npoints, WR_NREGIME) )
 
-    if ( use_vgrid ) then
-       !! interporation for fixed vertical grid:
-       allocate( zlev(cloudsatIN%Npoints,Nlvgrid),                          &
-                 delz(cloudsatIN%Npoints,Nlvgrid),                          &
-                 t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),             &
-                 tmpFlip(cloudsatIN%Npoints,1,Nlvgrid),                     &
-                 Ze_totFlip(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid) )
-       do k = 1, Nlvgrid
-          zlev(:,k) = vgrid_zu(k)
-          delz(:,k) = dz(k)
-       enddo
-       t_in(:,1,:) = cospgridIN%at(:,:)
-       call cosp_change_vertical_grid (                                  &
-            cloudsatIN%Npoints, 1, cloudsatIN%Nlevels,                   &
-            cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),            &
-            cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),       &
-            t_in(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,                  &
-            vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),              &
-            tmpFlip(:,:,Nlvgrid:1:-1)                                    )
-       call cosp_change_vertical_grid (                                  &
-            cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels, &
-            cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),            &
-            cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),       &
-            cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,          &
-            vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),              &
-            Ze_totFlip(:,:,Nlvgrid:1:-1), log_units=.true.               )
-       call cosp_diag_warmrain( cloudsatIN%Npoints, cloudsatIN%Ncolumns,      & !! in
-                                Nlvgrid,                                      & !! in
-                                tmpFlip,                                      & !! in
-                                zlev,                                         & !! in
-                                delz,                                         & !! in
-                                cospOUT%modis_Liquid_Water_Path_Mean,         & !! in
-                                cospOUT%modis_Optical_Thickness_Water_Mean,   & !! in
-                                cospOUT%modis_Cloud_Particle_Size_Water_Mean, & !! in
-                                cospOUT%modis_Cloud_Fraction_Water_Mean,      & !! in
-                                cospOUT%modis_Ice_Water_Path_Mean,            & !! in
-                                cospOUT%modis_Optical_Thickness_Ice_Mean,     & !! in
-                                cospOUT%modis_Cloud_Particle_Size_Ice_Mean,   & !! in
-                                cospOUT%modis_Cloud_Fraction_Ice_Mean,        & !! in
-                                cospIN%frac_out,                              & !! in
-                                Ze_totFlip,                                   & !! in
-                                cfodd_ntotal,                                 & !! inout
-                                wr_occfreq_ntotal                             ) !! inout
-       deallocate( zlev, delz, t_in, tmpFlip, ze_totFlip )
-    else  ! do not use vgrid interporation ---------------------------------------!
-       !! original model grid
-       allocate( delz(cloudsatIN%Npoints,cospIN%Nlevels) )
-       do k = 1, cospIN%Nlevels-1
-          delz(:,k) = cospgridIN%hgt_matrix_half(:,k+1) &
-                      - cospgridIN%hgt_matrix_half(:,k)
-       enddo
-       delz(:,cospIN%Nlevels) = 2.0*( cospgridIN%hgt_matrix(:,cospIN%Nlevels) &
-                               - cospgridIN%hgt_matrix_half(:,cospIN%Nlevels) )
-       call cosp_diag_warmrain( cloudsatIN%Npoints, cloudsatIN%Ncolumns,      & !! in
-                                cospIN%Nlevels,                               & !! in
-                                cospgridIN%at,                                & !! in
-                                cospgridIN%hgt_matrix,                        & !! in
-                                delz,                                         & !! in
-                                cospOUT%modis_Liquid_Water_Path_Mean,         & !! in
-                                cospOUT%modis_Optical_Thickness_Water_Mean,   & !! in
-                                cospOUT%modis_Cloud_Particle_Size_Water_Mean, & !! in
-                                cospOUT%modis_Cloud_Fraction_Water_Mean,      & !! in
-                                cospOUT%modis_Ice_Water_Path_Mean,            & !! in
-                                cospOUT%modis_Optical_Thickness_Ice_Mean,     & !! in
-                                cospOUT%modis_Cloud_Particle_Size_Ice_Mean,   & !! in
-                                cospOUT%modis_Cloud_Fraction_Ice_Mean,        & !! in
-                                cospIN%frac_out,                              & !! in
-                                cospOUT%cloudsat_Ze_tot,                      & !! in
-                                cfodd_ntotal,                                 & !! inout
-                                wr_occfreq_ntotal                             ) !! inout
-       deallocate( delz )
-    endif  !! use_vgrid or not
+       if ( use_vgrid ) then
+          !! interporation for fixed vertical grid:
+          allocate( zlev(cloudsatIN%Npoints,Nlvgrid),                         &
+                    delz(cloudsatIN%Npoints,Nlvgrid),                         &
+                    t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),            &
+                    tempI(cloudsatIN%Npoints,1,Nlvgrid),                      &
+                    Ze_totI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),  &
+                    frac_outI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid) )
+          do k = 1, Nlvgrid
+             zlev(:,k) = vgrid_zu(k)
+             delz(:,k) = dz(k)
+          enddo
+          t_in(:,1,:) = cospgridIN%at(:,:)
+          call cosp_change_vertical_grid (                                    &
+               cloudsatIN%Npoints, 1, cloudsatIN%Nlevels,                     &
+               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
+               t_in(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,                    &
+               vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+               tempI(:,:,Nlvgrid:1:-1)                                        )
+          call cosp_change_vertical_grid (                                    &
+               cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
+               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
+               cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,            &
+               vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+               Ze_totI(:,:,Nlvgrid:1:-1), log_units=.true.                    )
+          call cosp_change_vertical_grid (                                    &
+               cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
+               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
+               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
+               cospIN%frac_out(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,         &
+               vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+               frac_outI(:,:,Nlvgrid:1:-1)                                    )
+          call cosp_diag_warmrain(                                            &
+               cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
+               tempI, zlev, delz,                                             & !! in
+               cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
+               cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
+               cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
+               cospOUT%modis_Cloud_Fraction_Water_Mean,                       & !! in
+               cospOUT%modis_Ice_Water_Path_Mean,                             & !! in
+               cospOUT%modis_Optical_Thickness_Ice_Mean,                      & !! in
+               cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                    & !! in
+               cospOUT%modis_Cloud_Fraction_Ice_Mean,                         & !! in
+               frac_outI,                                                     & !! in
+               Ze_totI,                                                       & !! in
+               cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          deallocate( zlev, delz, t_in, tempI, frac_outI, Ze_totI )
+       else  ! do not use vgrid interporation ---------------------------------------!
+          !! original model grid
+          allocate( delz(cloudsatIN%Npoints,cospIN%Nlevels) )
+          do k = 1, cospIN%Nlevels-1
+             delz(:,k) = cospgridIN%hgt_matrix_half(:,k+1) &
+                         - cospgridIN%hgt_matrix_half(:,k)
+          enddo
+          delz(:,cospIN%Nlevels) = 2.0*( cospgridIN%hgt_matrix(:,cospIN%Nlevels) &
+                                  - cospgridIN%hgt_matrix_half(:,cospIN%Nlevels) )
+          call cosp_diag_warmrain(                                            &
+               cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
+               cospgridIN%at, cospgridIN%hgt_matrix, delz,                    & !! in
+               cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
+               cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
+               cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
+               cospOUT%modis_Cloud_Fraction_Water_Mean,                       & !! in
+               cospOUT%modis_Ice_Water_Path_Mean,                             & !! in
+               cospOUT%modis_Optical_Thickness_Ice_Mean,                      & !! in
+               cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                    & !! in
+               cospOUT%modis_Cloud_Fraction_Ice_Mean,                         & !! in
+               cospIN%frac_out,                                               & !! in
+               cloudsatDBZe,                                                  & !! in
+               cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          deallocate( delz )
+       endif  !! use_vgrid or not
 
-    ! Store, when necessary
-    if ( associated(cospOUT%cfodd_ntotal) ) then
-       cospOUT%cfodd_ntotal(ij:ik,:,:,:) = cfodd_ntotal
+       ! Store, when necessary
+       if ( associated(cospOUT%cfodd_ntotal) ) then
+          cospOUT%cfodd_ntotal(ij:ik,:,:,:) = cfodd_ntotal
+       endif
+       if ( associated(cospOUT%wr_occfreq_ntotal) ) then
+          cospOUT%wr_occfreq_ntotal(ij:ik,:) = wr_occfreq_ntotal
+       endif
     endif
-    if ( associated(cospOUT%wr_occfreq_ntotal) ) then
-       cospOUT%wr_occfreq_ntotal(ij:ik,:) = wr_occfreq_ntotal
-    endif
-
+ 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 7) Cleanup
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1840,9 +1847,10 @@ CONTAINS
   subroutine cosp_errorCheck(cospgridIN, cospIN, Lisccp_subcolumn, Lisccp_column,           &
        Lmisr_subcolumn, Lmisr_column, Lmodis_subcolumn, Lmodis_column, Lcloudsat_subcolumn, &
        Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column, Latlid_subcolumn,             &
-       Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column, Lrttov_subcolumn,        &
+       Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column, Lrttov_subcolumn,          &
        Lrttov_column, Lparasol_subcolumn, Lparasol_column, Lradar_lidar_tcc,                &
-       Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2, cospOUT, errorMessage, nError)
+       Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2, Lcloudsat_modis_wr,           &
+       cospOUT, errorMessage, nError)
     
     ! Inputs
     type(cosp_column_inputs),intent(in) :: &
@@ -1873,7 +1881,8 @@ CONTAINS
          Lcloudsat_tcc,       & !
          Lcloudsat_tcc2,      & !
          Lradar_lidar_tcc,    & ! On/Off switch for joint Calipso/Cloudsat product
-         Llidar_only_freq_cloud ! On/Off switch for joint Calipso/Cloudsat product
+         Llidar_only_freq_cloud, & ! On/Off switch for joint Calipso/Cloudsat product
+         Lcloudsat_modis_wr     ! On/Off switch for joint CloudSat/MODIS warm rain product
     type(cosp_outputs),intent(inout) :: &
          cospOUT                ! COSP Outputs
     character(len=256),dimension(100) :: errorMessage
@@ -2307,6 +2316,11 @@ CONTAINS
              Llidar_only_freq_cloud = .false.
              if (associated(cospOUT%lidar_only_freq_cloud)) cospOUT%lidar_only_freq_cloud(:,:) = R_UNDEF
           endif
+          if (Lcloudsat_modis_wr) then
+             Lcloudsat_modis_wr = .false.
+             if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+             if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
+          endif
        endif
        
        ! Cloudsat column simulator requires additional inputs not required by the subcolumn simulator.
@@ -2336,6 +2350,11 @@ CONTAINS
           if (Llidar_only_freq_cloud) then
              Llidar_only_freq_cloud = .false.
              if (associated(cospOUT%lidar_only_freq_cloud)) cospOUT%lidar_only_freq_cloud(:,:) = R_UNDEF
+          endif
+          if (Lcloudsat_modis_wr) then
+             Lcloudsat_modis_wr = .false.
+             if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+             if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
           endif
        endif
     endif
@@ -2411,6 +2430,12 @@ CONTAINS
                cospOUT%modis_Optical_Thickness_vs_ReffICE(:,:,:)            = R_UNDEF
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ))                       &
                cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF          
+          ! Also, turn-off joint-products 
+          if (Lcloudsat_modis_wr) then
+             Lcloudsat_modis_wr = .false.
+             if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+             if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
+          endif
        endif
     endif
     
@@ -2539,7 +2564,8 @@ CONTAINS
     !         an undefined value (set in cosp_config.f90) and if necessary, that simulator
     !         is turned off.
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if (any([Lisccp_subcolumn, Lisccp_column, Lmisr_subcolumn, Lmisr_column, Lmodis_subcolumn, Lmodis_column])) then
+    if (any([Lisccp_subcolumn, Lisccp_column, Lmisr_subcolumn, Lmisr_column, &
+             Lmodis_subcolumn, Lmodis_column, Lcloudsat_modis_wr])) then
        if (any(cospgridIN%sunlit .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%sunlit contains values out of range (0 or 1)'
@@ -2549,6 +2575,7 @@ CONTAINS
           Lmisr_column     = .false.
           Lmodis_subcolumn = .false.
           Lmodis_column    = .false.
+          Lcloudsat_modis_wr = .false.
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
           if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
@@ -2602,12 +2629,14 @@ CONTAINS
                cospOUT%modis_Optical_Thickness_vs_ReffICE(:,:,:)            = R_UNDEF
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLIQ))                       &
                cospOUT%modis_Optical_Thickness_vs_ReffLIQ(:,:,:)            = R_UNDEF
+          if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
        endif
     endif
 
     if (any([Lisccp_subcolumn, Lisccp_column, Lmisr_subcolumn, Lmisr_column, Lrttov_column,&
          Lcalipso_column, Lcloudsat_column, Lradar_lidar_tcc,Llidar_only_freq_cloud, &
-         Lcloudsat_tcc, Lcloudsat_tcc2])) then
+         Lcloudsat_tcc, Lcloudsat_tcc2, Lcloudsat_modis_wr])) then
        if (any(cospgridIN%at .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%at contains values out of range (at<0), expected units (K)'
@@ -2622,6 +2651,7 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc    = .false.
           Lcloudsat_tcc2   = .false.
+          Lcloudsat_modis_wr = .false.
           if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:)         = R_UNDEF
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
@@ -2653,6 +2683,8 @@ CONTAINS
           if (associated(cospOUT%radar_lidar_tcc))       cospOUT%radar_lidar_tcc(:)           = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF
+          if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
        endif
     endif
     if (any([Lisccp_subcolumn, Lisccp_column, Lrttov_column])) then
@@ -2777,7 +2809,8 @@ CONTAINS
        endif
     endif
     if (any([Lmisr_subcolumn,Lmisr_column,Lcloudsat_subcolumn,Lcloudsat_column,Lcalipso_column,Lradar_lidar_tcc,&
-         Llidar_only_freq_cloud,LgrLidar532_column,Latlid_column,Lcloudsat_tcc, Lcloudsat_tcc2])) then
+         Llidar_only_freq_cloud,LgrLidar532_column,Latlid_column,Lcloudsat_tcc, Lcloudsat_tcc2, &
+         Lcloudsat_modis_wr])) then
        if (any(cospgridIN%hgt_matrix .lt. -300)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%hgt_matrix contains values out of range'
@@ -2792,6 +2825,7 @@ CONTAINS
           Lcloudsat_tcc2      = .false.
           Latlid_column       = .false.
           LgrLidar532_column  = .false.
+          Lcloudsat_modis_wr  = .false.
           if (associated(cospOUT%misr_fq))                   cospOUT%misr_fq(:,:,:)                 = R_UNDEF
           if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(:,:) = R_UNDEF
           if (associated(cospOUT%misr_meanztop))             cospOUT%misr_meanztop(:)               = R_UNDEF
@@ -2820,10 +2854,12 @@ CONTAINS
           if (associated(cospOUT%calipso_cldtypemeanz))      cospOUT%calipso_cldtypemeanz(:,:)      = R_UNDEF 
           if (associated(cospOUT%calipso_cldtypemeanzse))    cospOUT%calipso_cldtypemeanzse(:,:)    = R_UNDEF
           if (associated(cospOUT%calipso_cldthinemis))       cospOUT%calipso_cldthinemis(:)         = R_UNDEF
+          if (associated(cospOUT%cfodd_ntotal))              cospOUT%cfodd_ntotal(:,:,:,:)          = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal))         cospOUT%wr_occfreq_ntotal(:,:)         = R_UNDEF
        endif
     endif
     if (any([Lrttov_column,Lcloudsat_column,Lcalipso_column,Lradar_lidar_tcc,Llidar_only_freq_cloud, &
-             LgrLidar532_column, Latlid_column, Lcloudsat_tcc, Lcloudsat_tcc2])) then
+             LgrLidar532_column, Latlid_column, Lcloudsat_tcc, Lcloudsat_tcc2, Lcloudsat_modis_wr])) then
        if (any(cospgridIN%hgt_matrix_half .lt. -300)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%hgt_matrix_half contains values out of range'
@@ -2836,6 +2872,7 @@ CONTAINS
           Lcloudsat_tcc2   = .false.
           Latlid_column       = .false.
           LgrLidar532_column = .false.
+          Lcloudsat_modis_wr = .false.
           if (associated(cospOUT%rttov_tbs))              cospOUT%rttov_tbs(:,:)               = R_UNDEF
           if (associated(cospOUT%calipso_cfad_sr))        cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
           if (associated(cospOUT%calipso_lidarcld))       cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
@@ -2860,6 +2897,8 @@ CONTAINS
           if (associated(cospOUT%calipso_cldtypemeanz))   cospOUT%calipso_cldtypemeanz(:,:)    = R_UNDEF 
           if (associated(cospOUT%calipso_cldtypemeanzse)) cospOUT%calipso_cldtypemeanzse(:,:)  = R_UNDEF 
           if (associated(cospOUT%calipso_cldthinemis))    cospOUT%calipso_cldthinemis(:)       = R_UNDEF
+          if (associated(cospOUT%cfodd_ntotal))           cospOUT%cfodd_ntotal(:,:,:,:)        = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal))      cospOUT%wr_occfreq_ntotal(:,:)       = R_UNDEF
        endif
     endif
     if (any([Lrttov_column,Lcalipso_column,Lparasol_column])) then
@@ -3443,7 +3482,7 @@ CONTAINS
        endif
     endif
     if (any([Lcloudsat_subcolumn,Lcloudsat_column,Lradar_lidar_tcc,Llidar_only_freq_cloud, &
-        Lcloudsat_tcc, Lcloudsat_tcc2])) then
+        Lcloudsat_tcc, Lcloudsat_tcc2, Lcloudsat_modis_wr])) then
        if (any(cospIN%z_vol_cloudsat .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%z_vol_cloudsat contains values out of range'
@@ -3453,12 +3492,15 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc       = .false.
           Lcloudsat_tcc2      = .false.
+          Lcloudsat_modis_wr  = .false.
           if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
           if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
           if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
           if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF
+          if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
        endif
        if (any(cospIN%kr_vol_cloudsat .lt. 0)) then
           nError=nError+1
@@ -3469,12 +3511,15 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc       = .false.
           Lcloudsat_tcc2      = .false.
+          Lcloudsat_modis_wr  = .false.
           if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
           if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
           if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
           if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF
+          if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
        endif
        if (any(cospIN%g_vol_cloudsat .lt. 0)) then
           nError=nError+1
@@ -3485,12 +3530,15 @@ CONTAINS
           Llidar_only_freq_cloud = .false.
           Lcloudsat_tcc       = .false.
           Lcloudsat_tcc2      = .false.          
+          Lcloudsat_modis_wr  = .false.
           if (associated(cospOUT%cloudsat_cfad_ze))          cospOUT%cloudsat_cfad_ze(:,:,:)        = R_UNDEF
           if (associated(cospOUT%cloudsat_Ze_tot))           cospOUT%cloudsat_Ze_tot(:,:,:)         = R_UNDEF
           if (associated(cospOUT%lidar_only_freq_cloud))     cospOUT%lidar_only_freq_cloud(:,:)     = R_UNDEF
           if (associated(cospOUT%radar_lidar_tcc))           cospOUT%radar_lidar_tcc(:)             = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc)) cospOUT%cloudsat_tcc(:) = R_UNDEF
           if (associated(cospOUT%cloudsat_tcc2)) cospOUT%cloudsat_tcc2(:) = R_UNDEF          
+          if (associated(cospOUT%cfodd_ntotal)) cospOUT%cfodd_ntotal(:,:,:,:) = R_UNDEF
+          if (associated(cospOUT%wr_occfreq_ntotal)) cospOUT%wr_occfreq_ntotal(:,:) = R_UNDEF
        endif
     endif
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
