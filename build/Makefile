@@ -56,11 +56,15 @@ $(LIBRARY): $(COSP_OBJS)
 lib: $(LIBRARY)
 
 clean:
-	rm -f *.optrpt *.mod *.o *.a fort.* cosp2_test
+	rm -f *.optrpt *.mod *.o *.a fort.* cosp2_test cosp2_cesm2_test
 
 driver:
 	make cosp2_test
 	mv cosp2_test ../driver/run
+
+cesm_driver:
+	make cosp2_cesm2_test
+	mv cosp2_cesm2_test ../driver/run
 
 # Dependencies for libary
 cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  cosp_rttov_interfaceSTUB.o \
@@ -110,3 +114,7 @@ mo_rng.o     : cosp_kinds.o
 cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
 cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
+
+cosp2_cesm2_io.o    : cosp_kinds.o cosp_config.o cosp.o
+cosp2_cesm2_test.o  : cosp2_cesm2_io.o libcosp.a libsubcol.a
+cosp2_cesm2_test    : cosp2_cesm2_test.o cosp2_cesm2_io.o
