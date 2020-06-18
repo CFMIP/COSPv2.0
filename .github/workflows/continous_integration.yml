@@ -123,9 +123,9 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           TST=data/outputs/UKMO/cosp2_output.um_global.nc
+          KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
           gunzip ${KGO}.gz
           python compare_to_kgo.py ${KGO} ${TST}
         fi
