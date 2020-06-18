@@ -54,7 +54,7 @@ jobs:
     - name: Install python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install netCDF4 argparse numpy matplotlib cartopy
+        pip install netCDF4 argparse numpy
     # Install FORTRAN compiler
     - name: Install gfortran compiler and NetCDF
       if: ${{ matrix.fortran-compiler != 'ifort' }}
@@ -126,12 +126,13 @@ jobs:
           python compare_to_kgo.py ${KGO} ${TST}
         fi
     # Produce plots if fails during global snapshot test (ifort step)
-    - name: Upload output file if test fails
+    - name: Produce plots for global UM
       if: failure()
       run: |
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          cd driver
-          python plot_test_outputs.py
+          cd driver/data/outputs/UKMO
+          tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc cosp2_output_um.nc *.png
+          ls -lh
         fi
     # Make output file available if the test fails
     - name: Upload output file if test fails
