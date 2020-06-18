@@ -125,11 +125,17 @@ jobs:
           gunzip ${KGO}.gz
           python compare_to_kgo.py ${KGO} ${TST}
         fi
-    # Make output file available if the test fails
+    # Produce plots if fails during global snapshot test (ifort step)
     - name: Upload output file if test fails
       if: failure()
       run: |
-        ls data/outputs/UKMO
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          cd driver
+          python plot_test_outputs.py
+        fi
+    # Make output file available if the test fails
+    - name: Upload output file if test fails
+      if: failure()
       uses: actions/upload-artifact@v1.0.0
       with:
         name: outputs.UKMO
