@@ -94,7 +94,7 @@ jobs:
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           source /opt/intel/inteloneapi/setvars.sh;
           ifort --version
-          export F90FLAGS="-O3"
+          export F90FLAGS="-O2"
         fi
         cd build
         make driver
@@ -104,8 +104,10 @@ jobs:
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
-        gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
-        ./cosp2_test cosp2_input_nl.um_global.txt
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
+          ./cosp2_test cosp2_input_nl.um_global.txt
+        fi
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
       run: |
