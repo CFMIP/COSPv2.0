@@ -104,10 +104,8 @@ jobs:
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
-          ./cosp2_test cosp2_input_nl.um_global.txt
-        fi
+        gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
+        ./cosp2_test cosp2_input_nl.um_global.txt
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
       run: |
@@ -125,7 +123,7 @@ jobs:
           gunzip ${KGO}.gz
           python compare_to_kgo.py ${KGO} ${TST}
         fi
-    # Produce plots if fails during global snapshot test (ifort step)
+    # Produce plots when it fails during global snapshot test (ifort step)
     - name: Produce plots for global UM
       if: failure()
       run: |
@@ -139,5 +137,5 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: outputs.UKMO
-        path: driver/data/outputs/UKMO/*
+        name: outputs.UKMO.tgz
+        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
