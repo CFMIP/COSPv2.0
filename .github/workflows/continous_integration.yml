@@ -94,20 +94,24 @@ jobs:
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           source /opt/intel/inteloneapi/setvars.sh;
           ifort --version
-          export F90FLAGS="-O2"
+          export F90FLAGS="-O3"
         fi
         cd build
         make driver
-    # Run COSP2 tests. Global test only run for intel compiler.
-    - name: Run test
+    # Run COSP2 tests
+    # 1. Basic test, run for all compilers
+    - name: Basic test
       run: |
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
-          ./cosp2_test cosp2_input_nl.um_global.txt
-        fi
+    # 2. UM global snapshot, only for gfortran.
+    - name: Run test
+      if: ${{ matrix.fortran-compiler == 'gfortran' }}
+      run: |
+        cd driver/run
+        gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
+        ./cosp2_test cosp2_input_nl.um_global.txt
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
       run: |
@@ -120,20 +124,19 @@ jobs:
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          KGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.nc
+          KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
           TST=data/outputs/UKMO/cosp2_output.um_global.nc
           gunzip ${KGO}.gz
           python compare_to_kgo.py ${KGO} ${TST}
         fi
-    # Produce plots when it fails during global snapshot test (ifort step)
-    - name: Produce plots for global UM
+    # Produce plots when it fails during global snapshot test,
+    # and create a tarball with outputs.
+    - name: Produce plots and create tarball
       if: failure()
       run: |
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          cd driver/data/outputs/UKMO
-          tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc cosp2_output_um.nc *.png
-          ls -lh
-        fi
+        cd driver/data/outputs/UKMO
+        tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc cosp2_output_um.nc *.png
+        ls -lh
     # Make output file available if the test fails
     - name: Upload output file if test fails
       if: failure()
