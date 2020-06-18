@@ -54,7 +54,7 @@ jobs:
     - name: Install python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install netCDF4 argparse numpy
+        pip install netCDF4 argparse numpy matplotlib cartopy
     # Install FORTRAN compiler
     - name: Install gfortran compiler and NetCDF
       if: ${{ matrix.fortran-compiler != 'ifort' }}
@@ -98,12 +98,16 @@ jobs:
         fi
         cd build
         make driver
-    # Run COSP2 test
+    # Run COSP2 tests. Global test only run for intel compiler.
     - name: Run test
       run: |
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
-        ./cosp2_test
+        ./cosp2_test cosp2_input_nl.txt
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
+          ./cosp2_test cosp2_input_nl.um_global.txt
+        fi
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
       run: |
@@ -115,10 +119,18 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          KGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.nc
+          TST=data/outputs/UKMO/cosp2_output.um_global.nc
+          gunzip ${KGO}.gz
+          python compare_to_kgo.py ${KGO} ${TST}
+        fi
     # Make output file available if the test fails
     - name: Upload output file if test fails
       if: failure()
+      run: |
+        ls data/outputs/UKMO
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: cosp2_output_um.nc
-        path: driver/data/outputs/UKMO/cosp2_output_um.nc
+        name: outputs.UKMO
+        path: driver/data/outputs/UKMO/*
