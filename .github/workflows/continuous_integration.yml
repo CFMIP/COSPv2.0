@@ -113,6 +113,8 @@ jobs:
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
       run: |
+        source '/usr/share/miniconda/etc/profile.d/conda.sh' 
+        conda activate
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
