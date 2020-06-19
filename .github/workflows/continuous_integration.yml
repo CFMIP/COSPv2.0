@@ -137,7 +137,7 @@ jobs:
         source '/usr/share/miniconda/etc/profile.d/conda.sh' 
         conda activate
         cd driver
-        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           python plot_test_outputs.py
         fi
         cd data/outputs/UKMO
