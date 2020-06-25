@@ -378,8 +378,10 @@ contains
        tau_mol(1:npoints,k) = tau_mol(1:npoints,k) + tau_mol(1:npoints,k+zoffset)
     ENDDO    
 
-    betatot    (1:npoints,1:ncolumns,1:nlev) = spread(beta_mol(1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
-    tautot     (1:npoints,1:ncolumns,1:nlev) = spread(tau_mol (1:npoints,1:nlev), dim=2, NCOPIES=ncolumns)
+    do k = 1,ncolumns
+      betatot(1:npoints,k,1:nlev) = beta_mol(1:npoints,1:nlev)
+      tautot (1:npoints,k,1:nlev) = tau_mol (1:npoints,1:nlev)
+    enddo
     if (lphaseoptics) then
        betatot_liq(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
        betatot_ice(1:npoints,1:ncolumns,1:nlev) = betatot(1:npoints,1:ncolumns,1:nlev)
