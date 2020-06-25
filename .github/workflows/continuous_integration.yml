@@ -105,11 +105,12 @@ jobs:
         gunzip ${OUTPATH}
         cd driver/data/inputs/UKMO
         md5sum -c cosp_input.um_global.nc.md5
+        cd ${GITHUB_WORKSPACE}
         GDFILE='https://docs.google.com/uc?export=download&id=10fjcxnmHpt8Go6ipHWUEnN_Siwdtdaqb'
         OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc.gz
         wget --no-check-certificate $GDFILE -O $OUTPATH
         gunzip ${OUTPATH}
-        cd ../../outputs/UKMO
+        cd driver/data/outputs/UKMO
         md5sum -c cosp2_output.um_global.gfortran.kgo.nc.md5
     # Run COSP2 tests. We could run both tests in one step, but 
     # this way the output is easier to interpret.
