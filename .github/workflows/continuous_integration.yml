@@ -96,19 +96,30 @@ jobs:
         fi
         cd build
         make driver
-    # Run COSP2 tests
+    # Retrieve and expand large data files
+    - name: Retrieve data files
+      run: |
+        GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
+        OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        GDFILE='https://docs.google.com/uc?export=download&id=10fjcxnmHpt8Go6ipHWUEnN_Siwdtdaqb'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+    # Run COSP2 tests. We could run both tests in one step, but 
+    # this way the output is easier to interpret.
     # 1. Basic test, run for all compilers
     - name: Basic test
       run: |
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
-    # 2. UM global snapshot, only for gfortran.
-    - name: Run test
-      if: ${{ matrix.fortran-compiler == 'gfortran' }}
+    # 2. UM global snapshot
+    - name: UM global snapshot
       run: |
+        source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
-        gunzip ../data/inputs/UKMO/cosp_input.um_global.nc.gz
         ./cosp2_test cosp2_input_nl.um_global.txt
     # Compare results against known good outputs
     - name: Compare test output against known good output (KGO)
@@ -123,12 +134,14 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
-          TST=data/outputs/UKMO/cosp2_output.um_global.nc
-          KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
-          gunzip ${KGO}.gz
-          python compare_to_kgo.py ${KGO} ${TST}
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          ATOL=1.0e-10
+          RTOL=0.001
         fi
+        TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
+        gunzip ${KGO}.gz
+        python compare_to_kgo.py ${KGO} ${TST}
     # Produce plots when it fails during global snapshot test,
     # and create a tarball with outputs.
     - name: Produce plots and create tarball
@@ -143,7 +156,7 @@ jobs:
         cd data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc cosp2_output_um.nc *.png
         ls -lh
-    # Make output file available if the test fails
+    # Make output files available any test fails
     - name: Upload output file if test fails
       if: failure()
       uses: actions/upload-artifact@v1.0.0
