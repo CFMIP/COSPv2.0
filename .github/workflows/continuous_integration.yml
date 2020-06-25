@@ -103,10 +103,14 @@ jobs:
         OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
         wget --no-check-certificate $GDFILE -O $OUTPATH
         gunzip ${OUTPATH}
+        cd driver/data/inputs/UKMO
+        md5sum -c cosp_input.um_global.nc.md5
         GDFILE='https://docs.google.com/uc?export=download&id=10fjcxnmHpt8Go6ipHWUEnN_Siwdtdaqb'
         OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc.gz
         wget --no-check-certificate $GDFILE -O $OUTPATH
         gunzip ${OUTPATH}
+        cd ../../outputs/UKMO
+        md5sum -c cosp2_output.um_global.gfortran.kgo.nc.md5
     # Run COSP2 tests. We could run both tests in one step, but 
     # this way the output is easier to interpret.
     # 1. Basic test, run for all compilers
@@ -140,7 +144,6 @@ jobs:
         fi
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
         KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
-        gunzip ${KGO}.gz
         python compare_to_kgo.py ${KGO} ${TST}
     # Produce plots when it fails during global snapshot test,
     # and create a tarball with outputs.
