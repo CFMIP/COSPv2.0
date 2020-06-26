@@ -33,7 +33,7 @@ jobs:
   # This workflow contains a single job called "test"
   test:
     # The type of runner that the job will run on
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
@@ -56,10 +56,10 @@ jobs:
     # Update packages URLs. This avoids 404 errors when installing
     # packages, which appear when the Ubuntu version becomes
     # unsupported 
-    - name: Update packages URLs
-      run: |
-        sudo sed -i -e 's/archive.ubuntu.com\|security.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
-        sudo apt-get update
+    #- name: Update packages URLs
+    #  run: |
+    #    sudo sed -i -e 's/archive.ubuntu.com\|security.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
+    #    sudo apt-get update
     # Install FORTRAN compiler
     - name: Install gfortran compiler and NetCDF
       if: ${{ matrix.fortran-compiler != 'ifort' }}
