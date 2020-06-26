@@ -95,13 +95,16 @@ jobs:
         ./configure --prefix=/usr
         make
         sudo make install
-    # Build COSP2 driver
+    # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
+    # by default, whereas GNU Fortran stores them in the heap. This can cause 
+    # segmentation faults with ifort, especially in memory-intensive applications
+    # like COSP. We tell ifort to use heap arrays.
     - name: Build driver
       run: |
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           source /opt/intel/inteloneapi/setvars.sh;
           ifort --version
-          export F90FLAGS="-O3"
+          export F90FLAGS="-O3 -heap-arrays"
         fi
         cd build
         make driver
