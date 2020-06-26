@@ -410,18 +410,6 @@ contains
         enddo    
       enddo    
     enddo    
-    ! do i = 1, npart
-    !    where (rad_part(1:npoints,1:nlev,i) .gt. 0.0)
-    !       kp_part(1:npoints,1:nlev,i) = &
-    !            polpart(i,1)*(rad_part(1:npoints,1:nlev,i)*1e6)**4 &
-    !            + polpart(i,2)*(rad_part(1:npoints,1:nlev,i)*1e6)**3 &
-    !            + polpart(i,3)*(rad_part(1:npoints,1:nlev,i)*1e6)**2 &
-    !            + polpart(i,4)*(rad_part(1:npoints,1:nlev,i)*1e6) &
-    !            + polpart(i,5)
-    !    elsewhere
-    !       kp_part(1:npoints,1:nlev,i) = 0._wp
-    !    endwhere
-    ! enddo    
 
     ! Initialize (if necessary)
     if (lparasol) then
