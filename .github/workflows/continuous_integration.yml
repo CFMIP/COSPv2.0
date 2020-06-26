@@ -33,7 +33,7 @@ jobs:
   # This workflow contains a single job called "test"
   test:
     # The type of runner that the job will run on
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
@@ -167,7 +167,8 @@ jobs:
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         fi
     # Produce plots when it fails during global snapshot test,
-    # and create a tarball with outputs.
+    # and create a tarball with outputs. No need to compress the tarball,
+    # the artifact is compressed by github.
     - name: Produce plots and create tarball
       if: failure()
       run: |
@@ -178,12 +179,12 @@ jobs:
           python plot_test_outputs.py
         fi
         cd data/outputs/UKMO
-        tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc cosp2_output_um.nc *.png
+        tar --ignore-failed-read -cf outputs.UKMO.tar cosp2_output.um_global.nc cosp2_output_um.nc *.png
         ls -lh
     # Make output files available any test fails
     - name: Upload output file if test fails
       if: failure()
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: outputs.UKMO.tgz
-        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
+        name: outputs.UKMO.tar
+        path: driver/data/outputs/UKMO/outputs.UKMO.tar
