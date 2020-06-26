@@ -53,13 +53,6 @@ jobs:
         python-version: '3.x'
     - name: Install python dependencies
       run: conda install cartopy matplotlib netcdf4
-    # Update packages URLs. This avoids 404 errors when installing
-    # packages, which appear when the Ubuntu version becomes
-    # unsupported 
-    #- name: Update packages URLs
-    #  run: |
-    #    sudo sed -i -e 's/archive.ubuntu.com\|security.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
-    #    sudo apt-get update
     # Install FORTRAN compiler
     - name: Install gfortran compiler and NetCDF
       if: ${{ matrix.fortran-compiler != 'ifort' }}
@@ -172,8 +165,7 @@ jobs:
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         fi
     # Produce plots when it fails during global snapshot test,
-    # and create a tarball with outputs. No need to compress the tarball,
-    # the artifact is compressed by github.
+    # and create a tarball with outputs.
     - name: Produce plots and create tarball
       if: failure()
       run: |
@@ -184,12 +176,13 @@ jobs:
           python plot_test_outputs.py
         fi
         cd data/outputs/UKMO
-        tar --ignore-failed-read -cf outputs.UKMO.tar cosp2_output.um_global.nc cosp2_output_um.nc *.png
+        tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc \
+          cosp2_output_um.nc *.png cosp2_output.um_global.out
         ls -lh
     # Make output files available any test fails
     - name: Upload output file if test fails
       if: failure()
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: outputs.UKMO.tar
-        path: driver/data/outputs/UKMO/outputs.UKMO.tar
+        name: outputs.UKMO.tgz
+        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
