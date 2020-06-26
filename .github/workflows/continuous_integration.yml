@@ -27,7 +27,7 @@
 
 # Workflow for continuous integration tests
 name: CI
-on: [push, pull_request]
+on: [push]
 
 jobs:
   # This workflow contains a single job called "test"
@@ -53,6 +53,14 @@ jobs:
         python-version: '3.x'
     - name: Install python dependencies
       run: conda install cartopy matplotlib netcdf4
+    # Update packages URLs. This avoids 404 errors when installing
+    # packages, which appear when the Ubuntu version becomes
+    # unsupported 
+    - name: Update packages URLs
+      run: |
+        sudo sed -i -e 's/archive.ubuntu.com\|security.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
+        grep -E 'archive.ubuntu.com|security.ubuntu.com' /etc/apt/sources.list.d/*
+        sudo apt-get update
     # Install FORTRAN compiler
     - name: Install gfortran compiler and NetCDF
       if: ${{ matrix.fortran-compiler != 'ifort' }}
