@@ -67,7 +67,6 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
     Keyword arguments:
         atol: absolute tolerance threshold. Smaller differences pass the test.
         rtol: relative tolerance threshold. Smaller differences pass the test.
-    
     """
     summary_stats = {'N':0, 'AvgDiff':0.0, 'MinDiff':0.0, 'MaxDiff':0.0, 'StDev':0.0}
     # All differences
@@ -142,6 +141,9 @@ if __name__ == '__main__':
                         help="Relative tolerance.")
     parser.add_argument("--allvar", type=bool, default=False,
                         help="Print summary stats for all variables.")
+    parser.add_argument("--noerror", type=bool, default=False,
+                        help="Exit with no error even if differences are "
+                             "bigger than tolerances.")
     args = parser.parse_args()
 
     # Get list of variables
@@ -178,6 +180,9 @@ if __name__ == '__main__':
         print_stats_table(summary_stats, print_all=args.allvar)
     elif args.allvar:
         print_stats_table(summary_stats, print_all=args.allvar)
+
+    # Check if large differences should be treated as errors
+    if args.noerror: errored = False
 
     # Error if files have different number variables. If the number 
     # of variables is the same but they have different names, it will

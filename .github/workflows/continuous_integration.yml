@@ -156,11 +156,12 @@ jobs:
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
-        OUT=data/outputs/UKMO/cosp2_output.um_global.out
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          ATOL=1.0e-10
-          RTOL=0.001
-          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} > ${OUT}
+          OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
+          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.out
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
+              --noerror=True > ${OUT}
+          diff ${OUTKGO} ${OUTTST}
         else
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         fi
