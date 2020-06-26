@@ -160,7 +160,7 @@ jobs:
           OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
           OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.out
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
-              --noerror=True > ${OUT}
+              --noerror=True > ${OUTTST}
           diff ${OUTKGO} ${OUTTST}
         else
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
