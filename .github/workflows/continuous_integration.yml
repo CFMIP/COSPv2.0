@@ -79,7 +79,9 @@ jobs:
         sudo apt-get install intel-oneapi-ifort
     # Install NetCDF library
     - name: Install NetCDF library
-      run: sudo apt-get install libnetcdf-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install libnetcdf-dev
     # NetCDF FORTRAN library
     - name: Install NetCDF FORTRAN library for standard gfortran
       if: ${{ matrix.fortran-compiler == 'gfortran' }}
