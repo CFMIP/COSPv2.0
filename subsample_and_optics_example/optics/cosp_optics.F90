@@ -261,9 +261,9 @@ contains
     REAL(WP),dimension(npoints,nlev)       :: rhoair,alpha_mol
     REAL(WP),dimension(npoints,nlev+1)     :: zheight          
     REAL(WP),dimension(npoints,nlev,npart) :: rad_part,kp_part,qpart,alpha_part,tau_part
-    real(wp)                               :: Cmol,rdiffm
+    real(wp)                               :: Cmol,rdiffm,x
     logical                                :: lparasol,lphaseoptics
-    INTEGER                                :: i,k,icol,zi,zf,zinc,zoffset
+    INTEGER                                :: i,j,k,icol,zi,zf,zinc,zoffset
     
     ! Local data
     REAL(WP),PARAMETER :: rhoice     = 0.5e+03    ! Density of ice (kg/m3) 
@@ -394,17 +394,34 @@ contains
     ! ##############################################################################
     ! Polynomials kp_lidar derived from Mie theory
     do i = 1, npart
-       where (rad_part(1:npoints,1:nlev,i) .gt. 0.0)
-          kp_part(1:npoints,1:nlev,i) = &
-               polpart(i,1)*(rad_part(1:npoints,1:nlev,i)*1e6)**4 &
-               + polpart(i,2)*(rad_part(1:npoints,1:nlev,i)*1e6)**3 &
-               + polpart(i,3)*(rad_part(1:npoints,1:nlev,i)*1e6)**2 &
-               + polpart(i,4)*(rad_part(1:npoints,1:nlev,i)*1e6) &
+      do j = 1, nlev
+        do k = 1, npoints
+          if (rad_part(k,j,i) .gt. 0._wp) then
+            x = rad_part(k,j,i)*1.0e6_wp
+            kp_part(k,j,i) = &
+               polpart(i,1)*x**4 &
+               + polpart(i,2)*x**3 &
+               + polpart(i,3)*x**2 &
+               + polpart(i,4)*x &
                + polpart(i,5)
-       elsewhere
-          kp_part(1:npoints,1:nlev,i) = 0._wp
-       endwhere
+          else
+            kp_part(k,j,i) = 0._wp
+          endif
+        enddo    
+      enddo    
     enddo    
+    ! do i = 1, npart
+    !    where (rad_part(1:npoints,1:nlev,i) .gt. 0.0)
+    !       kp_part(1:npoints,1:nlev,i) = &
+    !            polpart(i,1)*(rad_part(1:npoints,1:nlev,i)*1e6)**4 &
+    !            + polpart(i,2)*(rad_part(1:npoints,1:nlev,i)*1e6)**3 &
+    !            + polpart(i,3)*(rad_part(1:npoints,1:nlev,i)*1e6)**2 &
+    !            + polpart(i,4)*(rad_part(1:npoints,1:nlev,i)*1e6) &
+    !            + polpart(i,5)
+    !    elsewhere
+    !       kp_part(1:npoints,1:nlev,i) = 0._wp
+    !    endwhere
+    ! enddo    
 
     ! Initialize (if necessary)
     if (lparasol) then

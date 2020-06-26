@@ -113,8 +113,8 @@ jobs:
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output.um_global.gfortran.kgo.nc.md5
     # Run COSP2 tests. We could run both tests in one step, but 
-    # this way the output is easier to interpret.
-    # 1. Basic test, run for all compilers
+    # doing it this way the output is easier to interpret.
+    # 1. Basic test
     - name: Basic test
       run: |
         source /opt/intel/inteloneapi/setvars.sh || true
@@ -126,8 +126,10 @@ jobs:
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.um_global.txt
-    # Compare results against known good outputs
-    - name: Compare test output against known good output (KGO)
+    # Compare results against known good outputs. As above,
+    # we split it in as many steps as tests.
+    # 1. Basic test
+    - name: Basic against known good output (KGO)
       run: |
         source '/usr/share/miniconda/etc/profile.d/conda.sh' 
         conda activate
@@ -139,13 +141,24 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+    # 2. UM global snapshot. The approach used for the basic test would needed
+    # large tolerances for the ifort compiler. We keep tolerances small for ifort,
+    # and then we test against the output table.
+    - name: UM global against known good output (KGO)
+      run: |
+        source '/usr/share/miniconda/etc/profile.d/conda.sh' 
+        conda activate
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
+        TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        OUT=data/outputs/UKMO/cosp2_output.um_global.out
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           ATOL=1.0e-10
           RTOL=0.001
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} > ${OUT}
+        else
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         fi
-        TST=data/outputs/UKMO/cosp2_output.um_global.nc
-        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
-        python compare_to_kgo.py ${KGO} ${TST}
     # Produce plots when it fails during global snapshot test,
     # and create a tarball with outputs.
     - name: Produce plots and create tarball
