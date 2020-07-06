@@ -52,9 +52,7 @@ jobs:
       with:
         python-version: '3.x'
     - name: Install python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install netCDF4 argparse numpy
+      run: conda install cartopy matplotlib netcdf4
     # Install FORTRAN compiler
     - name: Install gfortran compiler and NetCDF
       if: ${{ matrix.fortran-compiler != 'ifort' }}
@@ -74,7 +72,9 @@ jobs:
         sudo apt-get install intel-oneapi-ifort
     # Install NetCDF library
     - name: Install NetCDF library
-      run: sudo apt-get install libnetcdf-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install libnetcdf-dev
     # NetCDF FORTRAN library
     - name: Install NetCDF FORTRAN library for standard gfortran
       if: ${{ matrix.fortran-compiler == 'gfortran' }}
@@ -88,25 +88,56 @@ jobs:
         ./configure --prefix=/usr
         make
         sudo make install
-    # Build COSP2 driver
+    # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
+    # by default, whereas GNU Fortran stores them in the heap. This can cause 
+    # segmentation faults with ifort, especially in memory-intensive applications
+    # like COSP. We tell ifort to use heap arrays.
     - name: Build driver
       run: |
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           source /opt/intel/inteloneapi/setvars.sh;
           ifort --version
-          export F90FLAGS="-O3"
+          export F90FLAGS="-O3 -heap-arrays"
         fi
         cd build
         make driver
-    # Run COSP2 test
-    - name: Run test
+    # Retrieve and expand large data files
+    - name: Retrieve data files
+      run: |
+        GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
+        OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/inputs/UKMO
+        md5sum -c cosp_input.um_global.nc.md5
+        cd ${GITHUB_WORKSPACE}
+        GDFILE='https://docs.google.com/uc?export=download&id=10fjcxnmHpt8Go6ipHWUEnN_Siwdtdaqb'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output.um_global.gfortran.kgo.nc.md5
+    # Run COSP2 tests. We could run both tests in one step, but 
+    # doing it this way the output is easier to interpret.
+    # 1. Basic test
+    - name: Basic test
       run: |
         source /opt/intel/inteloneapi/setvars.sh || true
         cd driver/run
-        ./cosp2_test
-    # Compare results against known good outputs
-    - name: Compare test output against known good output (KGO)
+        ./cosp2_test cosp2_input_nl.txt
+    # 2. UM global snapshot
+    - name: UM global snapshot
       run: |
+        source /opt/intel/inteloneapi/setvars.sh || true
+        cd driver/run
+        ./cosp2_test cosp2_input_nl.um_global.txt
+    # Compare results against known good outputs. As above,
+    # we split it in as many steps as tests.
+    # 1. Basic test
+    - name: Basic against known good output (KGO)
+      run: |
+        source '/usr/share/miniconda/etc/profile.d/conda.sh' 
+        conda activate
         if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
@@ -115,10 +146,46 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-    # Make output file available if the test fails
+    # 2. UM global snapshot. The approach used for the basic test would needed
+    # large tolerances for the ifort compiler. We keep tolerances small for ifort,
+    # and then we test against the output table.
+    - name: UM global against known good output (KGO)
+      run: |
+        source '/usr/share/miniconda/etc/profile.d/conda.sh' 
+        conda activate
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
+        TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+          ATOL=1.0e-20
+          RTOL=0.0006
+          OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
+          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.out
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
+              --noerror=True --stats_file=${OUTTST}
+          diff ${OUTKGO} ${OUTTST}
+        else
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        fi
+    # Produce plots when it fails during global snapshot test,
+    # and create a tarball with outputs.
+    - name: Produce plots and create tarball
+      if: failure()
+      run: |
+        source '/usr/share/miniconda/etc/profile.d/conda.sh' 
+        conda activate
+        cd driver
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
+          python plot_test_outputs.py
+        fi
+        cd data/outputs/UKMO
+        tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc \
+          cosp2_output_um.nc *.png cosp2_output.um_global.out
+        ls -lh
+    # Make output files available any test fails
     - name: Upload output file if test fails
       if: failure()
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: cosp2_output_um.nc
-        path: driver/data/outputs/UKMO/cosp2_output_um.nc
+        name: outputs.UKMO.tgz
+        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
