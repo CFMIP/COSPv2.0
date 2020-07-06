@@ -40,13 +40,17 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
 
  1. Build the drivers.
     1. Edit the files in `model-interface/` if necessary. By default COSP is built using double-precision real variables and printing any error messages to the standard output.
-    1. In `build/` edit `Makefile.conf` to reflect the choice of compiler, compiler flags, and library names and locations. If you intend to build the CMOR driver this includes all libraries necessary for CMOR. Building the CMOR driver also requires a change to the definition of the DRIVER variable in Makefile.
-    1. In build `make driver` will build a COSP library, a separate library with the example mapping from model state to COSP inputs, and the `cosp2_test` executable, which is then copied to `driver/run`.
+    1. In `build/` edit `Makefile.conf` to reflect the choice of compiler, compiler flags, and library names and locations.
+    1. In `build/`, `make driver` will build a COSP library, a separate library with the example mapping from model state to COSP inputs, and the `cosp2_test` executable, which is then copied to `driver/run`.
 
 1. Running the test program
     1. Directory `test/run` contains namelists and other files needed by the test programs. If the executables have been built they should run in this directory using these files as supplied.
-    1. The behavior of COSP can be changed via the input (`driver/src/cosp2_input_nl.txt`) and output (`driver/src/cosp2_output_nl.txt`) namelists. The input namelist controls the COSP setup (i.e. Number of subcolumns to be used, etc...) and
-    simulator specific information (i.e. Radar simulator frequency). The output namelist controls the output diagnostics.
+    1. The behavior of COSP can be changed via the input namelists (e.g. `driver/src/cosp2_input_nl.txt`) and output (`driver/src/cosp2_output_nl.txt`) namelists. The input namelist controls the COSP setup (i.e. Number of subcolumns to be used, etc...) and
+    simulator specific information (i.e. Radar simulator frequency). The output namelist controls the output diagnostics. The test program receives the input namelist as an argument from the command line, i.e.:
+
+      `./cosp2_test cosp2_input_nl.um_global.txt`
+
+Currently, there are 2 input namelists: `cosp2_input_nl.txt` uses a small test input file (`cosp_input.nc`), stored in the github repository; `cosp2_input_nl.um_global.txt` uses a global field (`cosp_input.um_global.nc`). The global input file and its associated known good output (`cosp2_output.um_global.gfortran.kgo.nc`) are stored externally in Google Drive, and they can be retrieved by running `download_test_data.sh` from within the `driver/` directory.
 
 1. Regression testing (comparing to reference data)
    1. Reference data or known good output (KGO) for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`.

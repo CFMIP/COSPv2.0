@@ -67,7 +67,6 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
     Keyword arguments:
         atol: absolute tolerance threshold. Smaller differences pass the test.
         rtol: relative tolerance threshold. Smaller differences pass the test.
-    
     """
     summary_stats = {'N':0, 'AvgDiff':0.0, 'MinDiff':0.0, 'MaxDiff':0.0, 'StDev':0.0}
     # All differences
@@ -100,7 +99,7 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
         
     return summary_stats
 
-def print_stats_table(summary_stats, print_all=False):
+def print_stats_table(summary_stats, print_all=False, stats_file=None):
     """
     Print table of summary statistics.
     
@@ -111,7 +110,13 @@ def print_stats_table(summary_stats, print_all=False):
     Keywords:
       print_all: by default, it only prints lines with differences,
                  unless print_all==True.
+      stats_file: full path to output file.
     """
+    # Open file if required
+    if stats_file is not None: 
+        stdout = sys.stdout
+        f_id = open(stats_file, 'w')
+        sys.stdout = f_id
     # Header and column names
     print(42*'=', ' Summary statistics ', 42*'=')
     line = ('{:>40s} {:>10s} {:>12s} {:>12s} {:>12s} {:>12s}').format('Variable',
@@ -126,6 +131,10 @@ def print_stats_table(summary_stats, print_all=False):
         else:
             if print_all: print(line)
     print(106*'=')
+    # Close file and restore stdout
+    if stats_file is not None:
+        f_id.close()
+        sys.stdout = stdout
 
 #######################
 # Main
@@ -142,6 +151,11 @@ if __name__ == '__main__':
                         help="Relative tolerance.")
     parser.add_argument("--allvar", type=bool, default=False,
                         help="Print summary stats for all variables.")
+    parser.add_argument("--noerror", type=bool, default=False,
+                        help="Exit with no error even if differences are "
+                             "bigger than tolerances.")
+    parser.add_argument("--stats_file", default=None,
+                        help="Output file for summary statistics.")
     args = parser.parse_args()
 
     # Get list of variables
@@ -175,9 +189,11 @@ if __name__ == '__main__':
     if errored:
         print(red_colour + "===== ERROR: some of the differences are larger "
               "than the tolerances." + std_colour)
-        print_stats_table(summary_stats, print_all=args.allvar)
-    elif args.allvar:
-        print_stats_table(summary_stats, print_all=args.allvar)
+    print_stats_table(summary_stats, print_all=args.allvar,
+                      stats_file=args.stats_file)
+
+    # Check if large differences should be treated as errors
+    if args.noerror: errored = False
 
     # Error if files have different number variables. If the number 
     # of variables is the same but they have different names, it will

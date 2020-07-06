@@ -71,9 +71,8 @@ program cosp2_test
   implicit none
 
   ! Input/Output driver file control
-  character(len=64),parameter :: &
-       cosp_input_namelist  = 'cosp2_input_nl.txt', &
-       cosp_output_namelist = 'cosp2_output_nl.txt'
+  character(len=64) :: cosp_input_namelist
+  character(len=64),parameter :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
   integer :: &
@@ -291,6 +290,7 @@ program cosp2_test
   ! Read in namelists
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Input namelist (cosp setup)
+  call get_command_argument(1, cosp_input_namelist)
   open(10,file=cosp_input_namelist,status='unknown')
   read(10,nml=cosp_input)
   close(10)
