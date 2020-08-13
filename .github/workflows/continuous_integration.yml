@@ -69,6 +69,7 @@ jobs:
         sudo apt-get install intel-oneapi-common-licensing
         sudo apt-get install intel-oneapi-common-vars
         sudo apt-get install intel-oneapi-dev-utilities
+        sudo apt-get install intel-oneapi-icc
         sudo apt-get install intel-oneapi-ifort
     # Install NetCDF library
     - name: Install NetCDF library
@@ -82,10 +83,14 @@ jobs:
     - name: Build NetCDF FORTRAN library
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
-        source /opt/intel/inteloneapi/setvars.sh || true
+        source /opt/intel/oneapi/setvars.sh || true
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
-        ./configure --prefix=/usr
+        if [ -f /opt/intel/oneapi/setvars.sh ]; then
+          ./configure --prefix=/usr CC=icc
+        else
+          ./configure --prefix=/usr
+        fi        
         make
         sudo make install
     # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
@@ -94,8 +99,8 @@ jobs:
     # like COSP. We tell ifort to use heap arrays.
     - name: Build driver
       run: |
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
-          source /opt/intel/inteloneapi/setvars.sh;
+        source /opt/intel/oneapi/setvars.sh || true
+        if [ -f /opt/intel/oneapi/setvars.sh ]; then
           ifort --version
           export F90FLAGS="-O3 -heap-arrays"
         fi
@@ -122,13 +127,13 @@ jobs:
     # 1. Basic test
     - name: Basic test
       run: |
-        source /opt/intel/inteloneapi/setvars.sh || true
+        source /opt/intel/oneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
     # 2. UM global snapshot
     - name: UM global snapshot
       run: |
-        source /opt/intel/inteloneapi/setvars.sh || true
+        source /opt/intel/oneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.um_global.txt
     # Compare results against known good outputs. As above,
@@ -138,7 +143,7 @@ jobs:
       run: |
         source '/usr/share/miniconda/etc/profile.d/conda.sh' 
         conda activate
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+        if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
         fi
@@ -156,7 +161,7 @@ jobs:
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
-        if [[ -e /opt/intel/inteloneapi/setvars.sh ]]; then
+        if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
           OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
