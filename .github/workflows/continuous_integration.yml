@@ -83,10 +83,10 @@ jobs:
     - name: Build NetCDF FORTRAN library
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
+        source /opt/intel/oneapi/setvars.sh || true
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
         if [ -f /opt/intel/oneapi/setvars.sh ]; then
-          source /opt/intel/oneapi/setvars.sh
           ./configure --prefix=/usr CC=icc
         else
           ./configure --prefix=/usr
