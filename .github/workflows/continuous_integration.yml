@@ -99,8 +99,8 @@ jobs:
     # like COSP. We tell ifort to use heap arrays.
     - name: Build driver
       run: |
-        if [ -e /opt/intel/oneapi/setvars.sh ]; then
-          source /opt/intel/oneapi/setvars.sh
+        source /opt/intel/oneapi/setvars.sh || true
+        if [ -f /opt/intel/oneapi/setvars.sh ]; then
           ifort --version
           export F90FLAGS="-O3 -heap-arrays"
         fi
