@@ -69,6 +69,7 @@ jobs:
         sudo apt-get install intel-oneapi-common-licensing
         sudo apt-get install intel-oneapi-common-vars
         sudo apt-get install intel-oneapi-dev-utilities
+        sudo apt-get install intel-oneapi-icc
         sudo apt-get install intel-oneapi-ifort
     # Install NetCDF library
     - name: Install NetCDF library
@@ -82,16 +83,14 @@ jobs:
     - name: Build NetCDF FORTRAN library
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
-        source /opt/intel/oneapi/setvars.sh || true
-        if [ -f /opt/intel/oneapi/setvars.sh ]; then
-          echo $CC
-          more /opt/intel/oneapi/setvars.sh
-        else
-          echo $CC
-        fi        
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
-        ./configure --prefix=/usr CC=icc
+        if [ -f /opt/intel/oneapi/setvars.sh ]; then
+          source /opt/intel/oneapi/setvars.sh
+          ./configure --prefix=/usr CC=icc
+        else
+          ./configure --prefix=/usr
+        fi        
         make
         sudo make install
     # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
