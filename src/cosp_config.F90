@@ -142,7 +142,7 @@ MODULE MOD_COSP_CONFIG
                                     shape = (/2,nReffICE/)) 
     real(wp),parameter,dimension(2,nReffLIQ) :: &
          reffLIQ_binEdges = reshape(source=(/reffLIQ_binBounds(1),((reffLIQ_binBounds(k),  &
-                                    l=1,2),k=2,nReffLIQ),reffLIQ_binBounds(nReffICE+1)/),  &
+                                    l=1,2),k=2,nReffLIQ),reffLIQ_binBounds(nReffLIQ+1)/),  &
                                     shape = (/2,nReffLIQ/))             
     real(wp),parameter,dimension(nReffICE) :: &
          reffICE_binCenters = (reffICE_binEdges(1,:)+reffICE_binEdges(2,:))/2._wp
@@ -265,8 +265,8 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter,dimension(nReffLiq+1) :: &
          modis_histReffLiq = reffLIQ_binBounds         ! Effective radius bin boundaries 
     real(wp),parameter,dimension(nReffLiq) :: &
-         modis_histReffLiqCenters = reffICE_binCenters ! Effective radius bin centers
-    real(wp),parameter,dimension(2,nReffICE) :: &
+         modis_histReffLiqCenters = reffLIQ_binCenters ! Effective radius bin centers
+    real(wp),parameter,dimension(2,nReffLiq) :: &
          modis_histReffLiqEdges = reffLIQ_binEdges     ! Effective radius bin edges
 
     ! ####################################################################################
