@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9]
+        fortran-compiler: [ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
@@ -83,9 +83,15 @@ jobs:
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
         source /opt/intel/oneapi/setvars.sh || true
+        if [ -f /opt/intel/oneapi/setvars.sh ]; then
+          echo $CC
+          more /opt/intel/oneapi/setvars.sh
+        else
+          echo $CC
+        fi        
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
-        ./configure --prefix=/usr
+        ./configure --prefix=/usr CC=icc
         make
         sudo make install
     # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
