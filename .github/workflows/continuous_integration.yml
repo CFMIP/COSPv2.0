@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
+        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort, nvfortran]
     env:
       F90: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
@@ -71,7 +71,24 @@ jobs:
         sudo apt-get install intel-oneapi-dev-utilities
         sudo apt-get install intel-oneapi-icc
         sudo apt-get install intel-oneapi-ifort
-    # Install NetCDF library
+    # Nvidia compilers
+    - name: Nvidia setup compilers
+      env:
+        NVCOMPILERS: /opt/nvidia/hpc_sdk
+      if: contains(matrix.fortran-compiler, 'nvfortran') && steps.cache-nvidia-compilers.outputs.cache-hit != 'true'
+      run: |
+        wget -q https://developer.download.nvidia.com/hpc-sdk/nvhpc-20-7_20.7_amd64.deb https://developer.download.nvidia.com/hpc-sdk/nvhpc-2020_20.7_amd64.deb
+        sudo apt-get install ./nvhpc-20-7_20.7_amd64.deb ./nvhpc-2020_20.7_amd64.deb
+    - name: Nvidia environment
+      env:
+        NVCOMPILERS: /opt/nvidia/hpc_sdk
+      if: contains(matrix.fortran-compiler, 'nvfortran')
+      run: |
+        echo "::set-env name=FC::nvfortran"
+        echo "::set-env name=CC::nvc"
+        echo "::set-env name=FCFLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
+        echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"    # Install NetCDF library
+    # NetCDF C library
     - name: Install NetCDF library
       run: |
         sudo apt-get update
@@ -84,6 +101,7 @@ jobs:
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
         source /opt/intel/oneapi/setvars.sh || true
+        ${F90} --version
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
         if [ -f /opt/intel/oneapi/setvars.sh ]; then
@@ -101,7 +119,7 @@ jobs:
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         if [ -f /opt/intel/oneapi/setvars.sh ]; then
-          ifort --version
+          ${F90} --version
           export F90FLAGS="-O3 -heap-arrays"
         fi
         cd build
