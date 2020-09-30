@@ -99,6 +99,8 @@ jobs:
       if: ${{ matrix.fortran-compiler == 'gfortran' }}
       run: sudo apt-get install libnetcdff-dev
     - name: Build NetCDF FORTRAN library
+      env:
+        FCFLAGS: -fPIC 
       if: ${{ matrix.fortran-compiler != 'gfortran' }}
       run: |
         source /opt/intel/oneapi/setvars.sh || true
