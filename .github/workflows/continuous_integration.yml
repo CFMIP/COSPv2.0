@@ -86,6 +86,7 @@ jobs:
     # Environments for ifort and nvidia compilers
     - name: Environment for ifort compiler
       if: ${{ matrix.fortran-compiler == 'ifort' }}
+      run: |
         echo "::set-env name=CC::icc"
         echo "::set-env name=FC::ifort"
         echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
