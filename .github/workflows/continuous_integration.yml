@@ -39,6 +39,7 @@ jobs:
         fortran-compiler: [gfortran, gfortran-8, gfortran-9, nvfortran]
     env:
       F90: ${{ matrix.fortran-compiler }}
+      FC: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
       ATOL: 0.0
       RTOL: 0.0
@@ -82,15 +83,21 @@ jobs:
       run: |
         wget -q https://developer.download.nvidia.com/hpc-sdk/nvhpc-20-7_20.7_amd64.deb https://developer.download.nvidia.com/hpc-sdk/nvhpc-2020_20.7_amd64.deb
         sudo apt-get install ./nvhpc-20-7_20.7_amd64.deb ./nvhpc-2020_20.7_amd64.deb
-    - name: Nvidia environment
+    # Environments for ifort and nvidia compilers
+    - name: Environment for ifort compiler
+      if: ${{ matrix.fortran-compiler == 'ifort' }}
+        echo "::set-env name=CC::icc"
+        echo "::set-env name=FC::ifort"
+        echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
+    - name: Environment for nvfortran compiler
       env:
         NVCOMPILERS: /opt/nvidia/hpc_sdk
       if: contains(matrix.fortran-compiler, 'nvfortran')
       run: |
-        echo "::set-env name=FC::nvfortran"
         echo "::set-env name=CC::nvc"
-        echo "::set-env name=FCFLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
-        echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"    # Install NetCDF library
+        echo "::set-env name=FC::nvfortran"
+        echo "::set-env name=F90FLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
+        echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"
     # NetCDF C library
     - name: Install NetCDF library
       run: sudo apt-get install libnetcdf-dev
@@ -107,11 +114,7 @@ jobs:
         ${F90} --version
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
-        if [ -f /opt/intel/oneapi/setvars.sh ]; then
-          ./configure --prefix=/usr CC=icc
-        else
-          ./configure --prefix=/usr
-        fi        
+        ./configure --prefix=/usr
         make
         sudo make install
     # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
@@ -121,10 +124,7 @@ jobs:
     - name: Build driver
       run: |
         source /opt/intel/oneapi/setvars.sh || true
-        if [ -f /opt/intel/oneapi/setvars.sh ]; then
-          ${F90} --version
-          export F90FLAGS="-O3 -heap-arrays"
-        fi
+        ${F90} --version
         cd build
         make driver
     # Retrieve and expand large data files
