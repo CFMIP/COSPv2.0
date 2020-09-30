@@ -53,9 +53,12 @@ jobs:
         python-version: '3.x'
     - name: Install python dependencies
       run: conda install cartopy matplotlib netcdf4
-    # Install FORTRAN compiler
-    - name: Install gfortran compiler and NetCDF
-      if: ${{ matrix.fortran-compiler != 'ifort' }}
+    # Update system packages
+    - name: Update system packages
+      run: sudo apt-get update
+    # Install gfortran compiler
+    - name: Install gfortran compiler
+      if: contains(matrix.fortran-compiler, 'gfortran')
       run: sudo apt-get install ${{ matrix.fortran-compiler }}
     # Intel compilers and libraries if needed
     #   https://software.intel.com/content/www/us/en/develop/articles/oneapi-repo-instructions.html#aptpkg
@@ -90,9 +93,7 @@ jobs:
         echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"    # Install NetCDF library
     # NetCDF C library
     - name: Install NetCDF library
-      run: |
-        sudo apt-get update
-        sudo apt-get install libnetcdf-dev
+      run: sudo apt-get install libnetcdf-dev
     # NetCDF FORTRAN library
     - name: Install NetCDF FORTRAN library for standard gfortran
       if: ${{ matrix.fortran-compiler == 'gfortran' }}
