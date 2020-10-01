@@ -97,7 +97,7 @@ jobs:
       run: |
         echo "::set-env name=CC::nvc"
         echo "::set-env name=FC::nvfortran"
-        echo "::set-env name=F90FLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
+        echo "::set-env name=F90FLAGS::"
         echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"
     # NetCDF C library
     - name: Install NetCDF library
