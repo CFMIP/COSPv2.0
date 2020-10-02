@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        fortran-compiler: [ifort]
+        fortran-compiler: [gfortran, gfortran-8]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
@@ -47,6 +47,9 @@ jobs:
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
     - uses: actions/checkout@v2
+    ###############################################################################
+    # Initial steps 
+    ###############################################################################
     # Set up Python and install dependencies
     - name: Set up Python
       uses: actions/setup-python@v1
@@ -57,6 +60,9 @@ jobs:
     # Update system packages
     - name: Update system packages
       run: sudo apt-get update
+    ###############################################################################
+    # FORTRAN compilers
+    ###############################################################################
     # Install gfortran compiler
     - name: Install gfortran compiler
       if: contains(matrix.fortran-compiler, 'gfortran')
@@ -80,6 +86,9 @@ jobs:
       run: |
         wget -q https://developer.download.nvidia.com/hpc-sdk/nvhpc-20-7_20.7_amd64.deb https://developer.download.nvidia.com/hpc-sdk/nvhpc-2020_20.7_amd64.deb
         sudo apt-get install ./nvhpc-20-7_20.7_amd64.deb ./nvhpc-2020_20.7_amd64.deb
+    ###############################################################################
+    # Compiler-specific environment
+    ###############################################################################
     # Environments for ifort and nvidia compilers
     - name: Environment for ifort compiler
       if: ${{ matrix.fortran-compiler == 'ifort' }}
@@ -96,17 +105,28 @@ jobs:
         echo "::set-env name=FC::nvfortran"
         echo "::set-env name=F90FLAGS::"
         echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"
+    ###############################################################################
+    # NetCDF C and FORTRAN libraries
+    ###############################################################################
     # NetCDF C library
     - name: Install NetCDF library
       run: sudo apt-get install libnetcdf-dev
-    # NetCDF FORTRAN library
+    # NetCDF FORTRAN library from package repository
     - name: Install NetCDF FORTRAN library for standard gfortran
       if: ${{ matrix.fortran-compiler == 'gfortran' }}
       run: sudo apt-get install libnetcdff-dev
+    # Cache netcdf FORTRAN library
+    - name: cache-netcdf-fortran
+      id: cache-netcdf-fortran
+      uses: actions/cache@v2
+      with:
+        path: /home/runner/netcdf-fortran
+        key: netcdf-fortran-4.4.4-${{ runner.os }}-${{ matrix.fortran-compiler }}
+    # Build NetCDF FORTRAN library for all compilers but gfortran
     - name: Build NetCDF FORTRAN library
       env:
-        FCFLAGS: -fPIC 
-      if: ${{ matrix.fortran-compiler != 'gfortran' }}
+        FCFLAGS: -fPIC
+      if: ${{ matrix.fortran-compiler != 'gfortran' }} && steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
@@ -115,6 +135,9 @@ jobs:
         ./configure --prefix=/usr
         make
         sudo make install
+    ###############################################################################
+    # Build COSP and retrieve input and test files
+    ###############################################################################
     # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
     # by default, whereas GNU Fortran stores them in the heap. This can cause 
     # segmentation faults with ifort, especially in memory-intensive applications
@@ -141,8 +164,10 @@ jobs:
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output.um_global.gfortran.kgo.nc.md5
+    ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but 
     # doing it this way the output is easier to interpret.
+    ###############################################################################
     # 1. Basic test
     - name: Basic test
       run: |
@@ -155,8 +180,10 @@ jobs:
         source /opt/intel/oneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.um_global.txt
+    ###############################################################################
     # Compare results against known good outputs. As above,
     # we split it in as many steps as tests.
+    ###############################################################################
     # 1. Basic test
     - name: Basic against known good output (KGO)
       run: |
@@ -191,8 +218,10 @@ jobs:
         else
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         fi
+    ###############################################################################
     # Produce plots when it fails during global snapshot test,
     # and create a tarball with outputs.
+    ###############################################################################
     - name: Produce plots and create tarball
       if: failure()
       run: |
@@ -206,7 +235,9 @@ jobs:
         tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc \
           cosp2_output_um.nc *.png cosp2_output.um_global.out
         ls -lh
+    ###############################################################################
     # Make output files available any test fails
+    ###############################################################################
     - name: Upload output file if test fails
       if: failure()
       uses: actions/upload-artifact@v1.0.0
