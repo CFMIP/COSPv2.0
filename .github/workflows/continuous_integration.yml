@@ -116,13 +116,6 @@ jobs:
     # NetCDF C library
     - name: Install NetCDF library
       run: sudo apt-get install libnetcdf-dev
-    # Cache netcdf FORTRAN library
-    - name: cache-netcdf-fortran
-      id: cache-netcdf-fortran
-      uses: actions/cache@v2.1.1
-      with:
-        path: /home/runner/netcdf-fortran
-        key: netcdf-fortran-4.4.4-${{ runner.os }}-${{ matrix.fortran-compiler }}
     # Build NetCDF FORTRAN library for all compilers
     - name: Build NetCDF FORTRAN library
       env:
@@ -136,6 +129,13 @@ jobs:
         ./configure --prefix=${NFHOME}
         make
         sudo make install
+    # Cache netcdf FORTRAN library
+    - name: cache-netcdf-fortran
+      id: cache-netcdf-fortran
+      uses: actions/cache@v2.1.1
+      with:
+        path: /home/runner/netcdf-fortran
+        key: netcdf-fortran-4.4.4-${{ runner.os }}-${{ matrix.fortran-compiler }}
     ###############################################################################
     # Build COSP and retrieve input and test files
     ###############################################################################
