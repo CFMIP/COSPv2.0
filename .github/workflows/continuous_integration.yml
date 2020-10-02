@@ -36,13 +36,14 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9]
+        fortran-compiler: [gfortran, gfortran-8]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
       ATOL: 0.0
       RTOL: 0.0
+      NFHOME: /home/runner/netcdf-fortran
     # Sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -120,7 +121,7 @@ jobs:
       id: cache-netcdf-fortran
       uses: actions/cache@v2
       with:
-        path: /home/runner/netcdf-fortran
+        path: ${NFHOME}
         key: netcdf-fortran-4.4.4-${{ runner.os }}-${{ matrix.fortran-compiler }}
     # Build NetCDF FORTRAN library for all compilers but gfortran
     - name: Build NetCDF FORTRAN library
@@ -132,7 +133,7 @@ jobs:
         ${F90} --version
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
-        ./configure --prefix=/usr
+        ./configure --prefix=${NFHOME}
         make
         sudo make install
     ###############################################################################
