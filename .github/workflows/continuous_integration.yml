@@ -92,6 +92,7 @@ jobs:
         sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         sudo apt-get update
+        sudo -E apt-cache pkgnames intel | grep oneapi | sort | grep -v beta 
         sudo apt-get install intel-oneapi-common-licensing
         sudo apt-get install intel-oneapi-common-vars
         sudo apt-get install intel-oneapi-dev-utilities
@@ -123,7 +124,7 @@ jobs:
     - name: Environment for ifort compiler
       if: contains(matrix.fortran-compiler, 'ifort')
       run: |
-        echo "::set-env name=CC::icc"
+        echo "::set-env name=CC::icx"
         echo "::set-env name=FC::ifort"
         echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
     - name: Environment for nvfortran compiler
