@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
+        fortran-compiler: [ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
@@ -62,7 +62,7 @@ jobs:
       if: contains(matrix.fortran-compiler, 'gfortran')
       run: sudo apt-get install ${{ matrix.fortran-compiler }}
     # Intel compilers and libraries if needed
-    #   https://software.intel.com/content/www/us/en/develop/articles/oneapi-repo-instructions.html#aptpkg
+    # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html
     - name: Install Intel compilers and libraries
       if: ${{ matrix.fortran-compiler == 'ifort' }}
       run: |
@@ -70,11 +70,8 @@ jobs:
         sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         sudo apt-get update
-        sudo apt-get install intel-oneapi-common-licensing
-        sudo apt-get install intel-oneapi-common-vars
-        sudo apt-get install intel-oneapi-dev-utilities
-        sudo apt-get install intel-oneapi-icc
-        sudo apt-get install intel-oneapi-ifort
+        sudo apt-get install intel-basekit
+        sudo apt-get install intel-hpckit
     # Nvidia compilers
     - name: Nvidia setup compilers
       env:
@@ -87,7 +84,7 @@ jobs:
     - name: Environment for ifort compiler
       if: ${{ matrix.fortran-compiler == 'ifort' }}
       run: |
-        echo "::set-env name=CC::icc"
+        echo "::set-env name=CC::icx"
         echo "::set-env name=FC::ifort"
         echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
     - name: Environment for nvfortran compiler
