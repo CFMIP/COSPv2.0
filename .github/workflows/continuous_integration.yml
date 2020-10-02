@@ -44,7 +44,6 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       NFHOME: /home/runner/netcdf-fortran
-      LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}:${NFHOME}/lib
     # Sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -62,6 +61,9 @@ jobs:
     # Update system packages
     - name: Update system packages
       run: sudo apt-get update
+    # Non compiler-specific environment
+    - name: Non compiler-specific environment
+      run: export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${NFHOME}/lib
     ###############################################################################
     # FORTRAN compilers
     ###############################################################################
@@ -172,6 +174,7 @@ jobs:
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         cd driver/run
+        echo ${LD_LIBRARY_PATH}
         ./cosp2_test cosp2_input_nl.txt
     # 2. UM global snapshot
     - name: UM global snapshot
