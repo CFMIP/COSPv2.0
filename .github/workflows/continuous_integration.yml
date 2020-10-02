@@ -44,6 +44,7 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       NFHOME: /home/runner/netcdf-fortran
+      LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}:${NFHOME}/lib
     # Sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
