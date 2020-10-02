@@ -86,14 +86,19 @@ jobs:
 
     # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html
     - name: Install Intel compilers and libraries
-      if: ${{ matrix.fortran-compiler == 'ifort' }} && steps.cache-intel-compilers.outputs.cache-hit != 'true'
+      if: contains(matrix.fortran-compiler, 'ifort') && steps.cache-intel-compilers.outputs.cache-hit != 'true'
       run: |
         wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         sudo apt-get update
-        sudo apt-get install intel-basekit
-        sudo apt-get install intel-hpckit
+#        sudo apt-get install intel-basekit
+#        sudo apt-get install intel-hpckit
+        sudo apt-get install intel-oneapi-common-licensing
+        sudo apt-get install intel-oneapi-common-vars
+        sudo apt-get install intel-oneapi-dev-utilities
+        sudo apt-get install intel-oneapi-icc
+        sudo apt-get install intel-oneapi-ifort
 
     #
     # Nvidia compilers
