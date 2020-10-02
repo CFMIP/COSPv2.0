@@ -118,7 +118,7 @@ jobs:
       run: sudo apt-get install libnetcdf-dev
     # Cache netcdf FORTRAN library
     - name: cache-netcdf-fortran
-      id: cache-netcdf-fortran
+      id: cache-netcdff
       uses: actions/cache@v2
       with:
         path: /home/runner/netcdf-fortran
@@ -127,7 +127,7 @@ jobs:
     - name: Build NetCDF FORTRAN library
       env:
         FCFLAGS: -fPIC
-      if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
+      if: steps.cache-netcdff.outputs.cache-hit != 'true'
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
