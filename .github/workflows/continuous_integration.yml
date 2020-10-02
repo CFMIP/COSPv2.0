@@ -119,7 +119,7 @@ jobs:
     # Cache netcdf FORTRAN library
     - name: cache-netcdf-fortran
       id: cache-netcdf-fortran
-      uses: actions/cache@v2.1.1
+      uses: actions/cache@v2
       with:
         path: /home/runner/netcdf-fortran
         key: netcdf-fortran-4.4.4-${{ runner.os }}-${{ matrix.fortran-compiler }}
