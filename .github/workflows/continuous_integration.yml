@@ -96,7 +96,7 @@ jobs:
         sudo apt-get install intel-hpckit
 
     #
-    # Nvidia compilers 
+    # Nvidia compilers
     #
     - name: cache-nvidia-compilers
       id: cache-nvidia-compilers
@@ -110,7 +110,6 @@ jobs:
       if: contains(matrix.fortran-compiler, 'nvfortran') && steps.cache-nvidia-compilers.outputs.cache-hit != 'true'
       env:
         NVCOMPILERS: /opt/nvidia/hpc_sdk
-      if: contains(matrix.fortran-compiler, 'nvfortran') && steps.cache-nvidia-compilers.outputs.cache-hit != 'true'
       run: |
         wget -q https://developer.download.nvidia.com/hpc-sdk/nvhpc-20-7_20.7_amd64.deb https://developer.download.nvidia.com/hpc-sdk/nvhpc-2020_20.7_amd64.deb
         sudo apt-get install ./nvhpc-20-7_20.7_amd64.deb ./nvhpc-2020_20.7_amd64.deb
