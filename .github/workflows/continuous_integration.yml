@@ -126,7 +126,7 @@ jobs:
     - name: Build NetCDF FORTRAN library
       env:
         FCFLAGS: -fPIC
-      if: ${{ matrix.fortran-compiler != 'gfortran' }} && steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
+      if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
