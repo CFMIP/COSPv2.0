@@ -113,10 +113,6 @@ jobs:
     # NetCDF C library
     - name: Install NetCDF library
       run: sudo apt-get install libnetcdf-dev
-    # NetCDF FORTRAN library from package repository
-    - name: Install NetCDF FORTRAN library for standard gfortran
-      if: ${{ matrix.fortran-compiler == 'gfortran' }}
-      run: sudo apt-get install libnetcdff-dev
     # Cache netcdf FORTRAN library
     - name: cache-netcdf-fortran
       id: cache-netcdf-fortran
@@ -124,7 +120,7 @@ jobs:
       with:
         path: ${NFHOME}
         key: netcdf-fortran-4.4.4-${{ runner.os }}-${{ matrix.fortran-compiler }}
-    # Build NetCDF FORTRAN library for all compilers but gfortran
+    # Build NetCDF FORTRAN library for all compilers
     - name: Build NetCDF FORTRAN library
       env:
         FCFLAGS: -fPIC
