@@ -54,11 +54,15 @@ jobs:
     ###############################################################################
     # Set up Python and install dependencies
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
-        python-version: '3.x'
-    - name: Install python dependencies
-      run: conda install cartopy matplotlib netcdf4
+        python-version: 3.7
+    - name: Setup conda
+      uses: s-weigand/setup-conda@v1
+      with:
+        python-version: 3.7
+    - name: Install python packages
+      run: conda install --yes cartopy matplotlib netcdf4
     # Update system packages
     - name: Update system packages
       run: sudo apt-get update
@@ -214,8 +218,6 @@ jobs:
     # 1. Basic test
     - name: Basic against known good output (KGO)
       run: |
-        source '/usr/share/miniconda/etc/profile.d/conda.sh'
-        conda activate
         if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
@@ -229,8 +231,6 @@ jobs:
     # and then we test against the output table.
     - name: UM global against known good output (KGO)
       run: |
-        source '/usr/share/miniconda/etc/profile.d/conda.sh'
-        conda activate
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
@@ -252,8 +252,6 @@ jobs:
     - name: Produce plots and create tarball
       if: failure()
       run: |
-        source '/usr/share/miniconda/etc/profile.d/conda.sh'
-        conda activate
         cd driver
         if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           python plot_test_outputs.py
