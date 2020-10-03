@@ -72,7 +72,9 @@ jobs:
     ###############################################################################
     # FORTRAN compilers
     ###############################################################################
+    #
     # Install gfortran compiler
+    #
     - name: Install gfortran compiler
       if: contains(matrix.fortran-compiler, 'gfortran')
       run: sudo apt-get install ${{ matrix.fortran-compiler }}
