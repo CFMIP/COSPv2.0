@@ -146,7 +146,6 @@ jobs:
 
     # Cache netcdf FORTRAN library
     - name: cache-netcdf-fortran
-      if: False
       id: cache-netcdf-fortran
       uses: actions/cache@v2
       with:
@@ -164,7 +163,7 @@ jobs:
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
         ./configure --prefix=${NFHOME}
-        make
+        make -j
         sudo make install
     ###############################################################################
     # Build COSP and retrieve input and test files
@@ -178,7 +177,7 @@ jobs:
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
         cd build
-        make driver
+        make -j driver
     # Retrieve and expand large data files
     - name: Retrieve data files
       run: |
