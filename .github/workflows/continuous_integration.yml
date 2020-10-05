@@ -88,9 +88,11 @@ jobs:
       uses: actions/cache@v2
       with:
         path: /opt/intel
-        key: intel-${{ runner.os }}-compilers-a
+        key: intel-${{ runner.os }}-compilers-b
 
     # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html
+    # List of packages from Docler file at
+    #    https://github.com/intel/oneapi-containers/blob/master/images/docker/hpckit-devel-ubuntu18.04/Dockerfile
     - name: Install Intel compilers and libraries
       if: contains(matrix.fortran-compiler, 'ifort') && steps.cache-intel-compilers.outputs.cache-hit != 'true'
       run: |
@@ -98,9 +100,8 @@ jobs:
         sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         sudo apt-get update
-        sudo -E apt-cache pkgnames intel | grep oneapi | sort | grep -v beta
         sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
-        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-dpcpp-cpp-compiler-pro intel-oneapi-ifort intel-oneapi-inspector intel-oneapi-itac
+        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-dpcpp-cpp-compiler-pro intel-oneapi-ifort intel-oneapi-itac
 
     #
     # Nvidia compilers
