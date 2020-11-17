@@ -1282,7 +1282,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(54),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(15)/),varID(89))
+       status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(16)/),varID(89))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(89),"long_name","MODIS Joint-PDF ice particle size bin centers")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
