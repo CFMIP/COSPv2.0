@@ -128,17 +128,17 @@ jobs:
     - name: Environment for ifort compiler
       if: contains(matrix.fortran-compiler, 'ifort')
       run: |
-        echo "::set-env name=CC::icx"
-        echo "::set-env name=FC::ifort"
-        echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
+        echo "CC::icx" > $GITHUB_ENV
+        echo "FC::ifort" > $GITHUB_ENV
+        echo "F90FLAGS::-O3 -heap-arrays" > $GITHUB_ENV
     - name: Environment for nvfortran compiler
       env:
         NVCOMPILERS: /opt/nvidia/hpc_sdk
       if: contains(matrix.fortran-compiler, 'nvfortran')
       run: |
-        echo "::set-env name=CC::nvc"
-        echo "::set-env name=FC::nvfortran"
-        echo "::set-env name=F90FLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
+        echo "CC::nvc" > $GITHUB_ENV
+        echo "FC::nvfortran" > $GITHUB_ENV
+        echo "F90FLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk" $GITHUB_ENV
         echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"
     ###############################################################################
     # NetCDF C and FORTRAN libraries
