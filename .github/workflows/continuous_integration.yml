@@ -101,7 +101,9 @@ jobs:
         sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         sudo apt-get update
         sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
-        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-dpcpp-cpp-compiler-pro intel-oneapi-ifort intel-oneapi-itac
+        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic intel-oneapi-compiler-fortran intel-oneapi-itac
+        # Ubunu 18.04.3 has an issue that causes ifort to fail invoking ld. packages below avoid the problem
+        sudo apt-get install libc6-dev=2.27-3ubuntu1.2 libc6=2.27-3ubuntu1.2 libc-bin=2.27-3ubuntu1.2
 
     #
     # Nvidia compilers
@@ -128,18 +130,18 @@ jobs:
     - name: Environment for ifort compiler
       if: contains(matrix.fortran-compiler, 'ifort')
       run: |
-        echo "::set-env name=CC::icx"
-        echo "::set-env name=FC::ifort"
-        echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
+        echo "CC=icx" > $GITHUB_ENV
+        echo "FC=ifort" > $GITHUB_ENV
+        echo "F90FLAGS=-O3 -heap-arrays" > $GITHUB_ENV
     - name: Environment for nvfortran compiler
       env:
         NVCOMPILERS: /opt/nvidia/hpc_sdk
       if: contains(matrix.fortran-compiler, 'nvfortran')
       run: |
-        echo "::set-env name=CC::nvc"
-        echo "::set-env name=FC::nvfortran"
-        echo "::set-env name=F90FLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
-        echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"
+        echo "CC=nvc" > $GITHUB_ENV
+        echo "FC=nvfortran" > $GITHUB_ENV
+        echo "F90FLAGS=-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk" > $GITHUB_ENV
+        echo "${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin" >> $GITHUB_PATH
     ###############################################################################
     # NetCDF C and FORTRAN libraries
     ###############################################################################
