@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9]
+        fortran-compiler: [gfortran]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
@@ -103,7 +103,7 @@ jobs:
         sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
         sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic intel-oneapi-compiler-fortran intel-oneapi-itac
         # Ubunu 18.04.3 has an issue that causes ifort to fail invoking ld. packages below avoid the problem
-        sudo apt-get install libc6-dev=2.27-3ubuntu1.2 libc6=2.27-3ubuntu1.2 libc-bin=2.27-3ubuntu1.2
+        #sudo apt-get install libc6-dev=2.27-3ubuntu1.2 libc6=2.27-3ubuntu1.2 libc-bin=2.27-3ubuntu1.2
 
     #
     # Nvidia compilers
@@ -161,7 +161,7 @@ jobs:
     - name: Build NetCDF FORTRAN library
       env:
         FCFLAGS: -fPIC
-      if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
+      #if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
