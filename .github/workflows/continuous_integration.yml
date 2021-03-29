@@ -155,7 +155,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: /home/runner/netcdf-fortran
-        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.fortran-compiler }}
+        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.fortran-compiler }}-v02
 
     # Build NetCDF FORTRAN library for current compiler
     - name: Build NetCDF FORTRAN library
