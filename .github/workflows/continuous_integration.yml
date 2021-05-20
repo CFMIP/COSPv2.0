@@ -41,8 +41,8 @@ jobs:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
-      ATOL: 0.0
-      RTOL: 0.0
+      ATOL: 1.0e-20
+      RTOL: 0.0006
       KGO_VERSION: v001
       NFHOME: /home/runner/netcdf-fortran
       LD_LIBRARY_PATH: /home/runner/netcdf-fortran/lib
