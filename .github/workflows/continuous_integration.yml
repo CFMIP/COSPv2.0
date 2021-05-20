@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, ifort]
+        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
@@ -162,7 +162,7 @@ jobs:
     - name: Build NetCDF FORTRAN library
       env:
         FCFLAGS: -fPIC
-      #if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
+      if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
