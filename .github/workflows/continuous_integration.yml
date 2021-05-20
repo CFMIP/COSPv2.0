@@ -41,8 +41,8 @@ jobs:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
-      ATOL: 1.0e-20
-      RTOL: 0.0006
+      ATOL: 0.0
+      RTOL: 0.0
       KGO_VERSION: v001
       NFHOME: /home/runner/netcdf-fortran
       LD_LIBRARY_PATH: /home/runner/netcdf-fortran/lib
@@ -229,7 +229,7 @@ jobs:
     # 1. Basic test
     - name: Basic against known good output (KGO)
       run: |
-        if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
+        if [[ "${F90}" != 'gfortran' ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
         fi
@@ -254,7 +254,17 @@ jobs:
               --noerror=True --stats_file=${OUTTST}
           diff ${OUTKGO} ${OUTTST}
         else
-          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+          if [[ "${F90}" = 'gfortran' ]]; then
+            python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+          else
+            ATOL=1.0e-20
+            RTOL=0.0006
+            OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
+            OUTKGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.out
+            python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
+              --noerror=True --stats_file=${OUTTST}
+            diff ${OUTKGO} ${OUTTST}
+          fi
         fi
     ###############################################################################
     # Produce plots when it fails during global snapshot test,
