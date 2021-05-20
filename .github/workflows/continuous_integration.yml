@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
+        fortran-compiler: [gfortran, gfortran-8, gfortran-7, ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
@@ -78,9 +78,7 @@ jobs:
     #
     - name: Install gfortran compiler
       if: contains(matrix.fortran-compiler, 'gfortran')
-      run: |
-        sudo apt-get install ${{ matrix.fortran-compiler }}
-        gfortran --version
+      run: sudo apt-get install ${{ matrix.fortran-compiler }}
     #
     # Intel compilers
     #
