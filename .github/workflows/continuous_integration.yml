@@ -249,10 +249,7 @@ jobs:
           ATOL=1.0e-20
           RTOL=0.0006
           OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
-          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.${KGO_VERSION}.out
-          if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
-            OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.${KGO_VERSION}.out
-          fi
+          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.${KGO_VERSION}.out
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
             --noerror=True --stats_file=${OUTTST}
           diff ${OUTKGO} ${OUTTST}
