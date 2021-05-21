@@ -102,8 +102,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
         sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic intel-oneapi-compiler-fortran intel-oneapi-itac
-        # Ubunu 18.04.3 has an issue that causes ifort to fail invoking ld. packages below avoid the problem
-        #sudo apt-get install libc6-dev=2.27-3ubuntu1.2 libc6=2.27-3ubuntu1.2 libc-bin=2.27-3ubuntu1.2
 
     #
     # Nvidia compilers
@@ -245,26 +243,19 @@ jobs:
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
-        if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
+        if [[ "${F90}" = 'gfortran' ]]; then
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        else
           ATOL=1.0e-20
           RTOL=0.0006
           OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
-          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.$KGO_VERSION.out
-          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
-              --noerror=True --stats_file=${OUTTST}
-          diff ${OUTKGO} ${OUTTST}
-        else
-          if [[ "${F90}" = 'gfortran' ]]; then
-            python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-          else
-            ATOL=1.0e-20
-            RTOL=0.0006
-            OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
-            OUTKGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.out
-            python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
-              --noerror=True --stats_file=${OUTTST}
-            diff ${OUTKGO} ${OUTTST}
+          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.${KGO_VERSION}.out
+          if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
+            OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.${KGO_VERSION}.out
           fi
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
+            --noerror=True --stats_file=${OUTTST}
+          diff ${OUTKGO} ${OUTTST}
         fi
     ###############################################################################
     # Produce plots when it fails during global snapshot test,
