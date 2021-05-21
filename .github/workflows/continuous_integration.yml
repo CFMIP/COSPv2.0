@@ -33,16 +33,17 @@ jobs:
   # This workflow contains a single job called "test"
   test:
     # The type of runner that the job will run on
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-9, ifort]
+        fortran-compiler: [gfortran, gfortran-8, gfortran-7, ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
       ATOL: 0.0
       RTOL: 0.0
+      KGO_VERSION: v001
       NFHOME: /home/runner/netcdf-fortran
       LD_LIBRARY_PATH: /home/runner/netcdf-fortran/lib
     # Sequence of tasks that will be executed as part of the job
@@ -78,7 +79,6 @@ jobs:
     - name: Install gfortran compiler
       if: contains(matrix.fortran-compiler, 'gfortran')
       run: sudo apt-get install ${{ matrix.fortran-compiler }}
-
     #
     # Intel compilers
     #
@@ -101,7 +101,7 @@ jobs:
         sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
         sudo apt-get update
         sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
-        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-dpcpp-cpp-compiler-pro intel-oneapi-ifort intel-oneapi-itac
+        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic intel-oneapi-compiler-fortran intel-oneapi-itac
 
     #
     # Nvidia compilers
@@ -128,18 +128,18 @@ jobs:
     - name: Environment for ifort compiler
       if: contains(matrix.fortran-compiler, 'ifort')
       run: |
-        echo "::set-env name=CC::icx"
-        echo "::set-env name=FC::ifort"
-        echo "::set-env name=F90FLAGS::-O3 -heap-arrays"
+        echo "CC=icx" > $GITHUB_ENV
+        echo "FC=ifort" > $GITHUB_ENV
+        echo "F90FLAGS=-O3 -heap-arrays" > $GITHUB_ENV
     - name: Environment for nvfortran compiler
       env:
         NVCOMPILERS: /opt/nvidia/hpc_sdk
       if: contains(matrix.fortran-compiler, 'nvfortran')
       run: |
-        echo "::set-env name=CC::nvc"
-        echo "::set-env name=FC::nvfortran"
-        echo "::set-env name=F90FLAGS::-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk"
-        echo "::add-path::${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin"
+        echo "CC=nvc" > $GITHUB_ENV
+        echo "FC=nvfortran" > $GITHUB_ENV
+        echo "F90FLAGS=-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk" > $GITHUB_ENV
+        echo "${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin" >> $GITHUB_PATH
     ###############################################################################
     # NetCDF C and FORTRAN libraries
     ###############################################################################
@@ -153,7 +153,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: /home/runner/netcdf-fortran
-        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.fortran-compiler }}
+        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.fortran-compiler }}-v02
 
     # Build NetCDF FORTRAN library for current compiler
     - name: Build NetCDF FORTRAN library
@@ -191,12 +191,19 @@ jobs:
         cd driver/data/inputs/UKMO
         md5sum -c cosp_input.um_global.nc.md5
         cd ${GITHUB_WORKSPACE}
-        GDFILE='https://docs.google.com/uc?export=download&id=10fjcxnmHpt8Go6ipHWUEnN_Siwdtdaqb'
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc.gz
+        GDFILE='https://docs.google.com/uc?export=download&id=1uQBPUEXlniQWEp2nU3iC6d8CO3GM9cvP'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.gz
         wget --no-check-certificate $GDFILE -O $OUTPATH
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global.gfortran.kgo.nc.md5
+        md5sum -c cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.md5
+        cd ${GITHUB_WORKSPACE}
+        GDFILE='https://docs.google.com/uc?export=download&id=1gSEdJJpqhfElsFNcTF_r4A_0vIMEWGla'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.
@@ -220,12 +227,12 @@ jobs:
     # 1. Basic test
     - name: Basic against known good output (KGO)
       run: |
-        if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
+        if [[ "${F90}" != 'gfortran' ]]; then
           ATOL=1.0e-20
           RTOL=0.0006
         fi
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.nc
+        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # 2. UM global snapshot. The approach used for the basic test would needed
@@ -234,18 +241,18 @@ jobs:
     - name: UM global against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
-        if [[ -e /opt/intel/oneapi/setvars.sh ]]; then
+        if [[ "${F90}" = 'gfortran' ]]; then
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        else
           ATOL=1.0e-20
           RTOL=0.0006
           OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
-          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.ifort.kgo.out
+          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.${KGO_VERSION}.out
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
-              --noerror=True --stats_file=${OUTTST}
+            --noerror=True --stats_file=${OUTTST}
           diff ${OUTKGO} ${OUTTST}
-        else
-          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         fi
     ###############################################################################
     # Produce plots when it fails during global snapshot test,
