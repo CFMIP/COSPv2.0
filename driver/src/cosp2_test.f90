@@ -481,7 +481,9 @@ program cosp2_test
      ! Pressure at interface (nlevels+1). Set uppermost interface to 0.
      cospstateIN%phalf(:,2:Nlevels+1) = ph(start_idx:end_idx,Nlevels:1:-1)   ! Pa  
      cospstateIN%phalf(:,1)           = 0._wp
-     ! Height at interface (nlevels+1). Set lowermost interface to 0.
+     ! Height of bottom interfaces of model layers (nlevels).
+     ! cospstateIN%hgt_matrix_half(:,1) contains the bottom of the top layer.
+     ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
      
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
