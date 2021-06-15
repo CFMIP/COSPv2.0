@@ -90,8 +90,10 @@ MODULE MOD_COSP
           pfull,               & ! Pressure                               (Pa)
           phalf,               & ! Pressure at half-levels                (Pa)
           qv,                  & ! Specific humidity                      (kg/kg)
-          hgt_matrix,          & ! Height of hydrometeors                 (km)
-          hgt_matrix_half        ! Height of hydrometeors at half levels  (km)
+          hgt_matrix,          & ! Height of atmosphere layer             (km)
+          hgt_matrix_half        ! Height of bottom interface of atm layer(km)
+                                 ! First level contains the bottom of the top layer.
+                                 ! Last level contains the bottom of the surface layer.
 
      real(wp),allocatable,dimension(:) :: &
           land,                & ! Land/Sea mask                          (0-1)
