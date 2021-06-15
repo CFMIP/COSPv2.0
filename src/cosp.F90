@@ -388,7 +388,6 @@ CONTAINS
          t_in,tempI,frac_outI      ! subscript "I": vertical interpolation (use_vgrid=.true.)
     real(wp), allocatable ::     &
          zlev   (:,:),           & ! altitude (used only when use_vgrid=.true.)
-         delz   (:,:),           & ! delta Z
          cfodd_ntotal (:,:,:,:), & ! # of total samples for CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
          wr_occfreq_ntotal(:,:)    ! # of warm-rain (nonprecip/drizzle/precip) (Npoints,WR_NREGIME)
 
@@ -1607,14 +1606,12 @@ CONTAINS
        if ( use_vgrid ) then
           !! interporation for fixed vertical grid:
           allocate( zlev(cloudsatIN%Npoints,Nlvgrid),                         &
-                    delz(cloudsatIN%Npoints,Nlvgrid),                         &
                     t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),            &
                     tempI(cloudsatIN%Npoints,1,Nlvgrid),                      &
                     Ze_totI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),  &
                     frac_outI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid) )
           do k = 1, Nlvgrid
              zlev(:,k) = vgrid_zu(k)
-             delz(:,k) = dz(k)
           enddo
           t_in(:,1,:) = cospgridIN%at(:,:)
           call cosp_change_vertical_grid (                                    &
@@ -1640,7 +1637,7 @@ CONTAINS
                frac_outI(:,:,Nlvgrid:1:-1)                                    )
           call cosp_diag_warmrain(                                            &
                cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
-               tempI, zlev, delz,                                             & !! in
+               tempI, zlev,                                                   & !! in
                cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
                cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
                cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
@@ -1652,7 +1649,7 @@ CONTAINS
                frac_outI,                                                     & !! in
                Ze_totI,                                                       & !! in
                cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
-          deallocate( zlev, delz, t_in, tempI, frac_outI, Ze_totI )
+          deallocate( zlev, t_in, tempI, frac_outI, Ze_totI )
        else  ! do not use vgrid interporation ---------------------------------------!
           !! original model grid
           call cosp_diag_warmrain(                                            &
