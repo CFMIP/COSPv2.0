@@ -283,7 +283,7 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   !               E-mail: michibata@riam.kyushu-u.ac.jp
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_DIAG_WARMRAIN( Npoints, Ncolumns, Nlevels,           & !! in
-                                 temp,    zlev,     delz,              & !! in
+                                 temp,    zlev,                        & !! in
                                  lwp,     liqcot,   liqreff, liqcfrc,  & !! in
                                  iwp,     icecot,   icereff, icecfrc,  & !! in
                                  fracout, dbze,                        & !! in
@@ -306,8 +306,7 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
          icereff,          & ! MODIS ice Reff [m]
          icecfrc             ! MODIS ice cloud fraction
     real(wp), dimension(Npoints,Nlevels), intent(in) :: &
-         zlev,             & ! altitude [m] for model level
-         delz                ! delta Z [m] (= zlevm(k+1)-zlemv(k))
+         zlev                ! altitude [m] for model level
     real(wp), dimension(Npoints,1,Nlevels),intent(in) :: &
          temp                ! temperature [K]
     real(wp), dimension(Npoints,Ncolumns,Nlevels),intent(in) :: &

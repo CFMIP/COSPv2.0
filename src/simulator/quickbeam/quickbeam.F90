@@ -255,7 +255,7 @@ contains
          Ze_tot_non    ! Effective reflectivity factor w/o attenuation (dBZ)
     real(wp),intent(in),dimension(npoints,Nlevels) :: &
          zlev          ! Model full levels
-    real(wp),intent(in),dimension(npoints,Nlevels+1) :: &
+    real(wp),intent(in),dimension(npoints,Nlevels) :: &
          zlev_half     ! Model half levels
          
     ! Outputs

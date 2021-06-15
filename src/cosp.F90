@@ -735,7 +735,7 @@ CONTAINS
        rttovIN%n2o        => cospgridIN%n2o
        rttovIN%co         => cospgridIN%co
        rttovIN%surfem     => cospgridIN%emis_sfc
-       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels+1)
+       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels)
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
@@ -1655,16 +1655,9 @@ CONTAINS
           deallocate( zlev, delz, t_in, tempI, frac_outI, Ze_totI )
        else  ! do not use vgrid interporation ---------------------------------------!
           !! original model grid
-          allocate( delz(cloudsatIN%Npoints,cospIN%Nlevels) )
-          do k = 1, cospIN%Nlevels-1
-             delz(:,k) = cospgridIN%hgt_matrix_half(:,k+1) &
-                         - cospgridIN%hgt_matrix_half(:,k)
-          enddo
-          delz(:,cospIN%Nlevels) = 2.0*( cospgridIN%hgt_matrix(:,cospIN%Nlevels) &
-                                  - cospgridIN%hgt_matrix_half(:,cospIN%Nlevels) )
           call cosp_diag_warmrain(                                            &
                cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
-               cospgridIN%at, cospgridIN%hgt_matrix, delz,                    & !! in
+               cospgridIN%at, cospgridIN%hgt_matrix,                          & !! in
                cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
                cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
                cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
@@ -1676,7 +1669,6 @@ CONTAINS
                cospIN%frac_out,                                               & !! in
                cloudsatDBZe,                                                  & !! in
                cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
-          deallocate( delz )
        endif  !! use_vgrid or not
 
        ! Store, when necessary
@@ -3808,7 +3800,7 @@ CONTAINS
        if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%qv,2)              .ne. cospIN%Nlevels   .OR. &
-           size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels+1 .OR. &
+           size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1 .OR. &
            size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
           Lrttov_column    = .false.
