@@ -90,8 +90,10 @@ MODULE MOD_COSP
           pfull,               & ! Pressure                               (Pa)
           phalf,               & ! Pressure at half-levels                (Pa)
           qv,                  & ! Specific humidity                      (kg/kg)
-          hgt_matrix,          & ! Height of hydrometeors                 (km)
-          hgt_matrix_half        ! Height of hydrometeors at half levels  (km)
+          hgt_matrix,          & ! Height of atmosphere layer             (km)
+          hgt_matrix_half        ! Height of bottom interface of atm layer(km)
+                                 ! First level contains the bottom of the top layer.
+                                 ! Last level contains the bottom of the surface layer.
 
      real(wp),allocatable,dimension(:) :: &
           land,                & ! Land/Sea mask                          (0-1)
@@ -388,7 +390,6 @@ CONTAINS
          t_in,tempI,frac_outI      ! subscript "I": vertical interpolation (use_vgrid=.true.)
     real(wp), allocatable ::     &
          zlev   (:,:),           & ! altitude (used only when use_vgrid=.true.)
-         delz   (:,:),           & ! delta Z
          cfodd_ntotal (:,:,:,:), & ! # of total samples for CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
          wr_occfreq_ntotal(:,:)    ! # of warm-rain (nonprecip/drizzle/precip) (Npoints,WR_NREGIME)
 
@@ -735,7 +736,7 @@ CONTAINS
        rttovIN%n2o        => cospgridIN%n2o
        rttovIN%co         => cospgridIN%co
        rttovIN%surfem     => cospgridIN%emis_sfc
-       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels+1)
+       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels)
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
@@ -1607,14 +1608,12 @@ CONTAINS
        if ( use_vgrid ) then
           !! interporation for fixed vertical grid:
           allocate( zlev(cloudsatIN%Npoints,Nlvgrid),                         &
-                    delz(cloudsatIN%Npoints,Nlvgrid),                         &
                     t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),            &
                     tempI(cloudsatIN%Npoints,1,Nlvgrid),                      &
                     Ze_totI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),  &
                     frac_outI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid) )
           do k = 1, Nlvgrid
              zlev(:,k) = vgrid_zu(k)
-             delz(:,k) = dz(k)
           enddo
           t_in(:,1,:) = cospgridIN%at(:,:)
           call cosp_change_vertical_grid (                                    &
@@ -1640,7 +1639,7 @@ CONTAINS
                frac_outI(:,:,Nlvgrid:1:-1)                                    )
           call cosp_diag_warmrain(                                            &
                cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
-               tempI, zlev, delz,                                             & !! in
+               tempI, zlev,                                                   & !! in
                cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
                cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
                cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
@@ -1652,19 +1651,12 @@ CONTAINS
                frac_outI,                                                     & !! in
                Ze_totI,                                                       & !! in
                cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
-          deallocate( zlev, delz, t_in, tempI, frac_outI, Ze_totI )
+          deallocate( zlev, t_in, tempI, frac_outI, Ze_totI )
        else  ! do not use vgrid interporation ---------------------------------------!
           !! original model grid
-          allocate( delz(cloudsatIN%Npoints,cospIN%Nlevels) )
-          do k = 1, cospIN%Nlevels-1
-             delz(:,k) = cospgridIN%hgt_matrix_half(:,k+1) &
-                         - cospgridIN%hgt_matrix_half(:,k)
-          enddo
-          delz(:,cospIN%Nlevels) = 2.0*( cospgridIN%hgt_matrix(:,cospIN%Nlevels) &
-                                  - cospgridIN%hgt_matrix_half(:,cospIN%Nlevels) )
           call cosp_diag_warmrain(                                            &
                cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
-               cospgridIN%at, cospgridIN%hgt_matrix, delz,                    & !! in
+               cospgridIN%at, cospgridIN%hgt_matrix,                          & !! in
                cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
                cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
                cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
@@ -1676,7 +1668,6 @@ CONTAINS
                cospIN%frac_out,                                               & !! in
                cloudsatDBZe,                                                  & !! in
                cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
-          deallocate( delz )
        endif  !! use_vgrid or not
 
        ! Store, when necessary
@@ -3808,7 +3799,7 @@ CONTAINS
        if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%qv,2)              .ne. cospIN%Nlevels   .OR. &
-           size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels+1 .OR. &
+           size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1 .OR. &
            size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
           Lrttov_column    = .false.

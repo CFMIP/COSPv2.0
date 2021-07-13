@@ -301,7 +301,7 @@ contains
          ok_lidar_cfad ! True if lidar CFAD diagnostics need to be computed
     real(wp),intent(in),dimension(npoints,nlevels) :: &
          zlev        ! Model full levels
-    real(wp),intent(in),dimension(npoints,nlevels+1) :: &
+    real(wp),intent(in),dimension(npoints,nlevels) :: &
          zlev_half   ! Model half levels
     real(wp),intent(in),dimension(llm) :: & 
          vgrid_z     ! mid-level altitude of the output vertical grid

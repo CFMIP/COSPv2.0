@@ -481,9 +481,10 @@ program cosp2_test
      ! Pressure at interface (nlevels+1). Set uppermost interface to 0.
      cospstateIN%phalf(:,2:Nlevels+1) = ph(start_idx:end_idx,Nlevels:1:-1)   ! Pa  
      cospstateIN%phalf(:,1)           = 0._wp
-     ! Height at interface (nlevels+1). Set lowermost interface to 0.
+     ! Height of bottom interfaces of model layers (nlevels).
+     ! cospstateIN%hgt_matrix_half(:,1) contains the bottom of the top layer.
+     ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
-     cospstateIN%hgt_matrix_half(:,Nlevels+1) = 0._wp
      
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
@@ -1011,7 +1012,7 @@ contains
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),           &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
-             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels+1))
+             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
 
   end subroutine construct_cospstateIN
 
