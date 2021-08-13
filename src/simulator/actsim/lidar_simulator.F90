@@ -967,7 +967,8 @@ contains
                 ! Find the level of the highest cloud with SR>30
                 if(x(i,ncol,nlev) .gt. S_cld_att) then ! SR > 30.
                     toplvlsat = nlev+1
-                    goto 99
+                    !goto 99
+                    exit ! nlev altitude loop
                 endif
              endif ! end of cloud condition
           enddo ! end of altitude loop
