@@ -2192,6 +2192,11 @@ CONTAINS
           errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%at has not been allocated'
           alloc_status = .false.
        endif
+       if (.not. allocated(cospgridIN%surfelev)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%surfelev has not been allocated'
+          alloc_status = .false.
+       endif
        if (.not. allocated(cospgridIN%phalf)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (Calipso Lidar simulator): cospgridIN%phalf has not been allocated'
@@ -2283,6 +2288,12 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
                ' cospgridIN%hgt_matrix has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%surfelev)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (Cloudsat radar simulator):'//&
+               ' cospgridIN%surfelev has not been allocated'
           alloc_status = .false.
        endif
        if (.not. alloc_status) then
