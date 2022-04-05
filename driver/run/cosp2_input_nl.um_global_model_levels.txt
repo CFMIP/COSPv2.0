@@ -1,4 +1,4 @@
-! (c) British Crown Copyright 2008, the Met Office.
+! (c) British Crown Copyright 2022, the Met Office.
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without modification, are permitted
@@ -29,14 +29,14 @@
   NPOINTS_IT=1000,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=54,   ! Number of model levels
-  USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
+  USE_VGRID=.false., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
   NLVGRID=40,       ! Number of levels in statistical outputs (only used if USE_VGRID=.true.)
   CSAT_VGRID=.true., ! CloudSat vertical grid? (if .true. then the CloudSat standard grid is used for the outputs.
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
   FINPUT='../data/inputs/UKMO/cosp_input.um_global.nc', ! List input NetCDF files
-  FOUTPUT='../data/outputs/UKMO/cosp2_output.um_global.nc',
+  FOUTPUT='../data/outputs/UKMO/cosp2_output.um_global_model_levels.nc',
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------

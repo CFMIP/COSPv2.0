@@ -886,6 +886,8 @@ contains
          do i=1,nPoints
            cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i))
          enddo
+         deallocate(cloudsat_preclvl_index)
+         deallocate(fracPrecipIce_statGrid)
        endif
 
     endif
