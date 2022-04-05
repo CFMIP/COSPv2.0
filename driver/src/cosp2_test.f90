@@ -490,7 +490,7 @@ program cosp2_test
      ! Generate subcolumns and compute optical inputs.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      call subsample_and_optics(nPtsPerIt,nLevels,nColumns,N_HYDRO,overlap,                     &
-          use_precipitation_fluxes,lidar_ice_type,sd,                                          &
+          use_vgrid,use_precipitation_fluxes,lidar_ice_type,sd,                                &
           tca(start_idx:end_idx,Nlevels:1:-1),cca(start_idx:end_idx,Nlevels:1:-1),             &
           fl_lsrain(start_idx:end_idx,Nlevels:1:-1),fl_lssnow(start_idx:end_idx,Nlevels:1:-1), &
           fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1),fl_ccrain(start_idx:end_idx,Nlevels:1:-1), &
@@ -539,7 +539,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   ! SUBROUTINE subsample_and_optics
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine subsample_and_optics(nPoints, nLevels, nColumns, nHydro, overlap,              &
+  subroutine subsample_and_optics(nPoints, nLevels, nColumns, nHydro, overlap, use_vgrid,   &
        use_precipitation_fluxes, lidar_ice_type, sd, tca, cca, fl_lsrainIN, fl_lssnowIN,    &
        fl_lsgrplIN, fl_ccrainIN, fl_ccsnowIN, mr_lsliq, mr_lsice, mr_ccliq, mr_ccice,       &
        reffIN, dtau_c, dtau_s, dem_c, dem_s, cospstateIN, cospIN)
@@ -549,7 +549,7 @@ contains
          mr_ccice,dtau_c,dtau_s,dem_c,dem_s,fl_lsrainIN,fl_lssnowIN,fl_lsgrplIN,fl_ccrainIN,&
          fl_ccsnowIN
     real(wp),intent(in),dimension(nPoints,nLevels,nHydro) :: reffIN
-    logical,intent(in) :: use_precipitation_fluxes
+    logical,intent(in) :: use_vgrid, use_precipitation_fluxes
     type(size_distribution),intent(inout) :: sd
     
     ! Outputs
@@ -867,24 +867,26 @@ contains
        enddo
          
        ! Regrid frozen fraction to Cloudsat/Calipso statistical grid
-       allocate(fracPrecipIce_statGrid(nPoints,nColumns,Nlvgrid_local))
-       fracPrecipIce_statGrid(:,:,:) = 0._wp
-       call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
-            cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
-            vgrid_zl(Nlvgrid_local:1:-1), vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid(:,:,Nlvgrid_local:1:-1))
+       if (use_vgrid) then
+         allocate(fracPrecipIce_statGrid(nPoints,nColumns,Nlvgrid_local))
+         fracPrecipIce_statGrid(:,:,:) = 0._wp
+         call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
+              cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
+              vgrid_zl(Nlvgrid_local:1:-1), vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid(:,:,Nlvgrid_local:1:-1))
 
-       ! Find proper layer above de surface elevation to compute precip flags in Cloudsat/Calipso statistical grid
-       allocate(cloudsat_preclvl_index(nPoints))
-       cloudsat_preclvl_index(:) = 0._wp
-       ! Compute the zstep distance between two atmopsheric layers
-       zstep = vgrid_zl(1)-vgrid_zl(2)
-       ! Computing altitude index for precip flags calculation (one layer above surfelev layer)
-       cloudsat_preclvl_index(:) = cloudsat_preclvl - floor( cospstateIN%surfelev(:)/zstep )
+         ! Find proper layer above de surface elevation to compute precip flags in Cloudsat/Calipso statistical grid
+         allocate(cloudsat_preclvl_index(nPoints))
+         cloudsat_preclvl_index(:) = 0._wp
+         ! Compute the zstep distance between two atmopsheric layers
+         zstep = vgrid_zl(1)-vgrid_zl(2)
+         ! Computing altitude index for precip flags calculation (one layer above surfelev layer)
+         cloudsat_preclvl_index(:) = cloudsat_preclvl - floor( cospstateIN%surfelev(:)/zstep )
 
-       ! For near-surface diagnostics, we only need the frozen fraction at one layer.
-        do i=1,nPoints
-          cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i))
-        enddo
+         ! For near-surface diagnostics, we only need the frozen fraction at one layer.
+         do i=1,nPoints
+           cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i))
+         enddo
+       endif
 
     endif
    
