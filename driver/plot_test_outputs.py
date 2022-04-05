@@ -120,10 +120,14 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks = y
             ylabel = 'Liquid particle size (micron)'
         if vd['yaxis_type'] == 'levStat':
-            y = 480*np.arange(41)
+            y = np.arange(vx.shape[0]+1)
+            if vx.shape[0] == 40:
+                y = 480*y
+                ylabel = 'Altitude (m)'
+            else:
+                ylabel = 'Model level'
             yticks = y[0::4]
             yticks_labels = None
-            ylabel = 'Altitude (m)'
             yflip = True
         if vd['yaxis_type'] == 'lev':
             yticks = y[0::4]

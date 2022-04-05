@@ -204,6 +204,13 @@ jobs:
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.md5
+        cd ${GITHUB_WORKSPACE}
+        GDFILE='https://docs.google.com/uc?export=download&id=1rJ7Zba2Fs8xRcJIFMu2RJoWAzNxDG0ke'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.
@@ -220,6 +227,15 @@ jobs:
         source /opt/intel/oneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.um_global.txt
+    # 3. UM global snapshot. Diagnostics on model levels.
+    - name: UM global snapshot. Diagnostics on model levels.
+      run: |
+        if [[ "${F90}" = 'gfortran' ]]; then
+          cd driver/run
+          ./cosp2_test cosp2_input_nl.um_global_model_levels.txt
+        else
+          echo "Test only run for gfortran compiler."
+        fi
     ###############################################################################
     # Compare results against known good outputs. As above,
     # we split it in as many steps as tests.
@@ -254,23 +270,39 @@ jobs:
             --noerror=True --stats_file=${OUTTST}
           diff ${OUTKGO} ${OUTTST}
         fi
+    # 3. UM global snapshot. Diagnostics on model levels. Only gfortran.
+    - name: UM global on model levels against known good output (KGO)
+      run: |
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        if [[ "${F90}" = 'gfortran' ]]; then
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        else
+          echo "Test only run for gfortran compiler."
+        fi
     ###############################################################################
-    # Produce plots when it fails during global snapshot test,
+    # Produce plots when it fails during global snapshot tests,
     # and create a tarball with outputs.
     ###############################################################################
     - name: Produce plots and create tarball
       if: failure()
       run: |
+        TST_MLEV=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
         cd driver
         if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           python plot_test_outputs.py
         fi
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global_model_levels.nc ]]; then
+          python plot_test_outputs.py --tst_file=$TST_MLEV
+        fi
         cd data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc \
-          cosp2_output_um.nc *.png cosp2_output.um_global.out
+          cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
+          cosp2_output.um_global.out
         ls -lh
     ###############################################################################
-    # Make output files available any test fails
+    # Make output files available if any test fails
     ###############################################################################
     - name: Upload output file if test fails
       if: failure()
