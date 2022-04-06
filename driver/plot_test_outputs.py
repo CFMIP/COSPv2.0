@@ -302,20 +302,23 @@ def variable2D_metadata(var_list, fname):
     f_id = netCDF4.Dataset(fname, 'r')
     vmeta = {}
     for vname in var_list:
-        x = f_id.variables[vname]
-        # Standard map
-        if x.dimensions in map_dims:
-            vmeta[vname] = {'plot_type':'map', 'reshape':True}
-        # 2D histograms
-        if x.dimensions in hist2D_dims:
-            vmeta[vname] = {'plot_type':'2Dhist', 'reshape':False,
-                            'xaxis_type': x.dimensions[1],
-                            'yaxis_type': x.dimensions[0]}
-        # Zonal cross section
-        if x.dimensions in zcs_dims:
-            vmeta[vname] = {'plot_type':'zonal_cross_section', 'reshape':True,
-                            'xaxis_type': 'latitude',
-                            'yaxis_type': x.dimensions[0]}
+        try:
+            x = f_id.variables[vname]
+            # Standard map
+            if x.dimensions in map_dims:
+                vmeta[vname] = {'plot_type':'map', 'reshape':True}
+            # 2D histograms
+            if x.dimensions in hist2D_dims:
+                vmeta[vname] = {'plot_type':'2Dhist', 'reshape':False,
+                                'xaxis_type': x.dimensions[1],
+                                'yaxis_type': x.dimensions[0]}
+            # Zonal cross section
+            if x.dimensions in zcs_dims:
+                vmeta[vname] = {'plot_type':'zonal_cross_section', 'reshape':True,
+                                'xaxis_type': 'latitude',
+                                'yaxis_type': x.dimensions[0]}
+        except:
+            print("Variable not processed: {}".format(vname))
     f_id.close()
     return vmeta
 
