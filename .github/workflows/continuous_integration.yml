@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-7, ifort]
+        fortran-compiler: [gfortran-8, gfortran-7, ifort, gfortran]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
