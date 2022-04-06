@@ -52,7 +52,7 @@ program cosp2_test
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
                                  grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
                                  Nlvgrid_local  => Nlvgrid,                               &
-                                 vgrid_z_local  => vgrid_z,cloudsat_preclvl
+                                 vgrid_z,cloudsat_preclvl
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -72,7 +72,7 @@ program cosp2_test
 
   ! Input/Output driver file control
   character(len=64) :: cosp_input_namelist
-  character(len=64),parameter :: cosp_output_namelist = 'cosp2_output_nl.txt'
+  character(len=64) :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
   integer :: &
@@ -137,8 +137,6 @@ program cosp2_test
        rttov_satellite,           & ! RTTOV: Satellite
        rttov_instrument,          & ! RTTOV: Instrument
        rttov_Nchannels              ! RTTOV: Number of channels to be computed
-  real(wp),dimension(:),allocatable :: & 
-       vgrid_z                      ! mid-level altitude of the vertical grid
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
@@ -296,6 +294,7 @@ program cosp2_test
   close(10)
 
   ! Output namelist (logical flags to turn on/off outputs)
+  if (command_argument_count() == 2) call get_command_argument(2, cosp_output_namelist)
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
@@ -411,7 +410,7 @@ program cosp2_test
        LcfadLidarsr532, LcfadLidarsr532gr, LcfadLidarsr355, Lclcalipso2,                 & 
        Lclcalipso, LclgrLidar532, Lclatlid, Lclhcalipso, Lcllcalipso, Lclmcalipso,       & 
        Lcltcalipso, LclhgrLidar532, LcllgrLidar532, LclmgrLidar532, LcltgrLidar532,      & 
-       Lclhatlid, Lcllatlid, Lclmatlid, Lcltatlid, Lcltlidarradar,  Lcloudsat_tcc,             &
+       Lclhatlid, Lcllatlid, Lclmatlid, Lcltatlid, Lcltlidarradar,  Lcloudsat_tcc,       &
        Lcloudsat_tcc2, Lclcalipsoliq,        & 
        Lclcalipsoice, Lclcalipsoun, Lclcalipsotmp, Lclcalipsotmpliq, Lclcalipsotmpice,   &
        Lclcalipsotmpun, Lcltcalipsoliq, Lcltcalipsoice, Lcltcalipsoun, Lclhcalipsoliq,   &
