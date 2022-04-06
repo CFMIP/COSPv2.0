@@ -232,9 +232,9 @@ jobs:
       run: |
         if [[ "${F90}" = 'gfortran' ]]; then
           cd driver/run
-          ./cosp2_test cosp2_input_nl.um_global_model_levels.txt
+          ./cosp2_test cosp2_input_nl.um_global_model_levels.txt cosp2_output_nl.um_global_model_levels.txt
         else
-          echo "Test only run for gfortran compiler."
+          echo "Test is only run for gfortran compiler."
         fi
     ###############################################################################
     # Compare results against known good outputs. As above,
