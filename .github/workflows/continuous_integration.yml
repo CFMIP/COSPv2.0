@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran-8, gfortran-7, ifort, gfortran]
+        fortran-compiler: [gfortran, gfortran-8, gfortran-7, ifort]
     env:
       F90: ${{ matrix.fortran-compiler }}
       FC: ${{ matrix.fortran-compiler }}
@@ -205,7 +205,7 @@ jobs:
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.md5
         cd ${GITHUB_WORKSPACE}
-        GDFILE='https://docs.google.com/uc?export=download&id=1rJ7Zba2Fs8xRcJIFMu2RJoWAzNxDG0ke'
+        GDFILE='https://docs.google.com/uc?export=download&id=1z7WtSWRNVKHPe09KXtiUmKUAGPDMQbgh'
         OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.gz
         wget --no-check-certificate $GDFILE -O $OUTPATH
         gunzip ${OUTPATH}
