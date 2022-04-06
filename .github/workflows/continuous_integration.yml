@@ -274,8 +274,8 @@ jobs:
     - name: UM global on model levels against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
-        TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
         if [[ "${F90}" = 'gfortran' ]]; then
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
         else
