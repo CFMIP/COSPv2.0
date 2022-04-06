@@ -61,7 +61,7 @@
   ! CALIPSO OPAQ diagnostics
   Lclopaquecalipso=.true.,
   Lclthincalipso=.true., 
-  Lclzopaquecalipso=.false.,
+  Lclzopaquecalipso=.true.,
   Lclcalipsoopaque=.true., 
   Lclcalipsothin=.true.,  
   Lclcalipsozopaque=.true.,
