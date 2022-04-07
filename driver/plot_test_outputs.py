@@ -301,6 +301,7 @@ def variable2D_metadata(var_list, fname):
     zcs_dims = (('levStat','loc'), ('lev','loc'))
     f_id = netCDF4.Dataset(fname, 'r')
     vmeta = {}
+    print("=== Processing variables in output file:\n {}".format(fname))
     for vname in var_list:
         try:
             x = f_id.variables[vname]
@@ -318,7 +319,7 @@ def variable2D_metadata(var_list, fname):
                                 'xaxis_type': 'latitude',
                                 'yaxis_type': x.dimensions[0]}
         except:
-            print("Variable not processed: {}".format(vname))
+            print("Skipping {}, not found in output file.".format(vname))
     f_id.close()
     return vmeta
 
