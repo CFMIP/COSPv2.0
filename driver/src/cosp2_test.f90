@@ -548,7 +548,9 @@ contains
          mr_ccice,dtau_c,dtau_s,dem_c,dem_s,fl_lsrainIN,fl_lssnowIN,fl_lsgrplIN,fl_ccrainIN,&
          fl_ccsnowIN
     real(wp),intent(in),dimension(nPoints,nLevels,nHydro) :: reffIN
-    logical,intent(in) :: use_vgrid, use_precipitation_fluxes
+    logical,intent(in) :: use_vgrid ! .false.: outputs on model levels
+                                    ! .true.:  outputs on evenly-spaced vertical levels.
+    logical,intent(in) :: use_precipitation_fluxes
     type(size_distribution),intent(inout) :: sd
     
     ! Outputs
