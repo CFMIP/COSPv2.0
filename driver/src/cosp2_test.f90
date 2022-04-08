@@ -52,7 +52,7 @@ program cosp2_test
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
                                  grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
                                  Nlvgrid_local  => Nlvgrid,                               &
-                                 vgrid_z_local  => vgrid_z,cloudsat_preclvl
+                                 vgrid_z,cloudsat_preclvl
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -72,7 +72,7 @@ program cosp2_test
 
   ! Input/Output driver file control
   character(len=64) :: cosp_input_namelist
-  character(len=64),parameter :: cosp_output_namelist = 'cosp2_output_nl.txt'
+  character(len=64) :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
   integer :: &
@@ -137,8 +137,6 @@ program cosp2_test
        rttov_satellite,           & ! RTTOV: Satellite
        rttov_instrument,          & ! RTTOV: Instrument
        rttov_Nchannels              ! RTTOV: Number of channels to be computed
-  real(wp),dimension(:),allocatable :: & 
-       vgrid_z                      ! mid-level altitude of the vertical grid
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
@@ -296,6 +294,7 @@ program cosp2_test
   close(10)
 
   ! Output namelist (logical flags to turn on/off outputs)
+  if (command_argument_count() == 2) call get_command_argument(2, cosp_output_namelist)
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
@@ -411,7 +410,7 @@ program cosp2_test
        LcfadLidarsr532, LcfadLidarsr532gr, LcfadLidarsr355, Lclcalipso2,                 & 
        Lclcalipso, LclgrLidar532, Lclatlid, Lclhcalipso, Lcllcalipso, Lclmcalipso,       & 
        Lcltcalipso, LclhgrLidar532, LcllgrLidar532, LclmgrLidar532, LcltgrLidar532,      & 
-       Lclhatlid, Lcllatlid, Lclmatlid, Lcltatlid, Lcltlidarradar,  Lcloudsat_tcc,             &
+       Lclhatlid, Lcllatlid, Lclmatlid, Lcltatlid, Lcltlidarradar,  Lcloudsat_tcc,       &
        Lcloudsat_tcc2, Lclcalipsoliq,        & 
        Lclcalipsoice, Lclcalipsoun, Lclcalipsotmp, Lclcalipsotmpliq, Lclcalipsotmpice,   &
        Lclcalipsotmpun, Lcltcalipsoliq, Lcltcalipsoice, Lcltcalipsoun, Lclhcalipsoliq,   &
@@ -490,7 +489,7 @@ program cosp2_test
      ! Generate subcolumns and compute optical inputs.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      call subsample_and_optics(nPtsPerIt,nLevels,nColumns,N_HYDRO,overlap,                     &
-          use_precipitation_fluxes,lidar_ice_type,sd,                                          &
+          use_vgrid,use_precipitation_fluxes,lidar_ice_type,sd,                                &
           tca(start_idx:end_idx,Nlevels:1:-1),cca(start_idx:end_idx,Nlevels:1:-1),             &
           fl_lsrain(start_idx:end_idx,Nlevels:1:-1),fl_lssnow(start_idx:end_idx,Nlevels:1:-1), &
           fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1),fl_ccrain(start_idx:end_idx,Nlevels:1:-1), &
@@ -539,7 +538,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   ! SUBROUTINE subsample_and_optics
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine subsample_and_optics(nPoints, nLevels, nColumns, nHydro, overlap,              &
+  subroutine subsample_and_optics(nPoints, nLevels, nColumns, nHydro, overlap, use_vgrid,   &
        use_precipitation_fluxes, lidar_ice_type, sd, tca, cca, fl_lsrainIN, fl_lssnowIN,    &
        fl_lsgrplIN, fl_ccrainIN, fl_ccsnowIN, mr_lsliq, mr_lsice, mr_ccliq, mr_ccice,       &
        reffIN, dtau_c, dtau_s, dem_c, dem_s, cospstateIN, cospIN)
@@ -549,6 +548,8 @@ contains
          mr_ccice,dtau_c,dtau_s,dem_c,dem_s,fl_lsrainIN,fl_lssnowIN,fl_lsgrplIN,fl_ccrainIN,&
          fl_ccsnowIN
     real(wp),intent(in),dimension(nPoints,nLevels,nHydro) :: reffIN
+    logical,intent(in) :: use_vgrid ! .false.: outputs on model levels
+                                    ! .true.:  outputs on evenly-spaced vertical levels.
     logical,intent(in) :: use_precipitation_fluxes
     type(size_distribution),intent(inout) :: sd
     
@@ -867,24 +868,28 @@ contains
        enddo
          
        ! Regrid frozen fraction to Cloudsat/Calipso statistical grid
-       allocate(fracPrecipIce_statGrid(nPoints,nColumns,Nlvgrid_local))
-       fracPrecipIce_statGrid(:,:,:) = 0._wp
-       call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
-            cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
-            vgrid_zl(Nlvgrid_local:1:-1), vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid(:,:,Nlvgrid_local:1:-1))
+       if (use_vgrid) then
+         allocate(fracPrecipIce_statGrid(nPoints,nColumns,Nlvgrid_local))
+         fracPrecipIce_statGrid(:,:,:) = 0._wp
+         call cosp_change_vertical_grid(Npoints, Ncolumns, Nlevels, cospstateIN%hgt_matrix(:,Nlevels:1:-1), &
+              cospstateIN%hgt_matrix_half(:,Nlevels:1:-1), fracPrecipIce(:,:,Nlevels:1:-1), Nlvgrid_local,  &
+              vgrid_zl(Nlvgrid_local:1:-1), vgrid_zu(Nlvgrid_local:1:-1), fracPrecipIce_statGrid(:,:,Nlvgrid_local:1:-1))
 
-       ! Find proper layer above de surface elevation to compute precip flags in Cloudsat/Calipso statistical grid
-       allocate(cloudsat_preclvl_index(nPoints))
-       cloudsat_preclvl_index(:) = 0._wp
-       ! Compute the zstep distance between two atmopsheric layers
-       zstep = vgrid_zl(1)-vgrid_zl(2)
-       ! Computing altitude index for precip flags calculation (one layer above surfelev layer)
-       cloudsat_preclvl_index(:) = cloudsat_preclvl - floor( cospstateIN%surfelev(:)/zstep )
+         ! Find proper layer above de surface elevation to compute precip flags in Cloudsat/Calipso statistical grid
+         allocate(cloudsat_preclvl_index(nPoints))
+         cloudsat_preclvl_index(:) = 0._wp
+         ! Compute the zstep distance between two atmopsheric layers
+         zstep = vgrid_zl(1)-vgrid_zl(2)
+         ! Computing altitude index for precip flags calculation (one layer above surfelev layer)
+         cloudsat_preclvl_index(:) = cloudsat_preclvl - floor( cospstateIN%surfelev(:)/zstep )
 
-       ! For near-surface diagnostics, we only need the frozen fraction at one layer.
-        do i=1,nPoints
-          cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i))
-        enddo
+         ! For near-surface diagnostics, we only need the frozen fraction at one layer.
+         do i=1,nPoints
+           cospIN%fracPrecipIce(i,:) = fracPrecipIce_statGrid(i,:,cloudsat_preclvl_index(i))
+         enddo
+         deallocate(cloudsat_preclvl_index)
+         deallocate(fracPrecipIce_statGrid)
+       endif
 
     endif
    
