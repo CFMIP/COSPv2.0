@@ -120,10 +120,15 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks = y
             ylabel = 'Liquid particle size (micron)'
         if vd['yaxis_type'] == 'levStat':
-            y = 480*np.arange(41)
+            if not dims['levStat'].any():
+                # For diagnostics on model levels, all elements in levStat
+                # are set to zero. Keep vertical coordinate as level index.
+                ylabel = 'Model level'
+            else:
+                y = np.concatenate(([0.0], dims['levStat'][::-1] + dims['levStat'][-1]))
+                ylabel = 'Altitude (m)'
             yticks = y[0::4]
             yticks_labels = None
-            ylabel = 'Altitude (m)'
             yflip = True
         if vd['yaxis_type'] == 'lev':
             yticks = y[0::4]
@@ -297,21 +302,25 @@ def variable2D_metadata(var_list, fname):
     zcs_dims = (('levStat','loc'), ('lev','loc'))
     f_id = netCDF4.Dataset(fname, 'r')
     vmeta = {}
+    print("=== Processing variables in output file:\n {}".format(fname))
     for vname in var_list:
-        x = f_id.variables[vname]
-        # Standard map
-        if x.dimensions in map_dims:
-            vmeta[vname] = {'plot_type':'map', 'reshape':True}
-        # 2D histograms
-        if x.dimensions in hist2D_dims:
-            vmeta[vname] = {'plot_type':'2Dhist', 'reshape':False,
-                            'xaxis_type': x.dimensions[1],
-                            'yaxis_type': x.dimensions[0]}
-        # Zonal cross section
-        if x.dimensions in zcs_dims:
-            vmeta[vname] = {'plot_type':'zonal_cross_section', 'reshape':True,
-                            'xaxis_type': 'latitude',
-                            'yaxis_type': x.dimensions[0]}
+        try:
+            x = f_id.variables[vname]
+            # Standard map
+            if x.dimensions in map_dims:
+                vmeta[vname] = {'plot_type':'map', 'reshape':True}
+            # 2D histograms
+            if x.dimensions in hist2D_dims:
+                vmeta[vname] = {'plot_type':'2Dhist', 'reshape':False,
+                                'xaxis_type': x.dimensions[1],
+                                'yaxis_type': x.dimensions[0]}
+            # Zonal cross section
+            if x.dimensions in zcs_dims:
+                vmeta[vname] = {'plot_type':'zonal_cross_section', 'reshape':True,
+                                'xaxis_type': 'latitude',
+                                'yaxis_type': x.dimensions[0]}
+        except:
+            print("Skipping {}, not found in output file.".format(vname))
     f_id.close()
     return vmeta
 
