@@ -269,11 +269,12 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
   !                  from CloudSat Radar and MODIS retrievals.
   !               2) Diagnose Warm-Rain Occurrence Frequency (nonprecip/drizzle/rain)
   !                  from CloudSat Radar.
-  ! * History:    2018.01.25 (T.Michibata): Test run
-  !               2018.05.17 (T.Michibata): update for COSP2
-  !               2018.09.19 (T.Michibata): modified I/O
-  !               2018.11.22 (T.Michibata): minor revisions
-  !               2020.05.27 (T.Michibata and X.Jing): bug-fix for frac_out dimsize
+  ! * History:    Jan 2018 (T.Michibata): Test run
+  !               May 2018 (T.Michibata): update for COSP2
+  !               Sep 2018 (T.Michibata): modified I/O
+  !               Nov 2018 (T.Michibata): minor revisions
+  !               May 2020 (T.Michibata and X.Jing): bug-fix for frac_out dimsize
+  !               Apr 2022 (T.Michibata): bug-fix for non-sunlit columns
   ! * References: Michibata et al. (GMD'19, doi:10.5194/gmd-12-4297-2019)
   !               Michibata et al. (GRL'20, doi:10.1029/2020GL088340)
   !               Suzuki et al. (JAS'10, doi:10.1175/2010JAS3463.1)
@@ -336,13 +337,21 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     fracout_int(:,:,:) = NINT( fracout(:,:,:) )  !! assign an integer subpixcel ID (0=clear-sky; 1=St; 2=Cu)
 
     !! initialize
-    cfodd_ntotal(:,:,:,:)  = 0._wp
-    wr_occfreq_ntotal(:,:) = 0._wp
-    icod(:,:,:) = 0._wp
+    do i = 1, Npoints
+       if ( lwp(i) .eq. R_UNDEF ) then  ! for non-sunlit columns
+          cfodd_ntotal(i,:,:,:) = R_UNDEF
+          wr_occfreq_ntotal(i,:) = R_UNDEF
+          icod(i,:,:) = R_UNDEF
+       else
+          cfodd_ntotal(i,:,:,:)  = 0._wp
+          wr_occfreq_ntotal(i,:) = 0._wp
+          icod(i,:,:) = 0._wp
+       endif
+    enddo
 
     do i = 1, Npoints
        !! check by MODIS retrieval
-       if ( lwp(i)     .le.  CWP_THRESHOLD  .or.  &
+       if ( ( lwp(i)   .le.  CWP_THRESHOLD  .and. lwp(i) .ne. R_UNDEF  ) .or.  &
           & liqcot(i)  .le.  COT_THRESHOLD  .or.  &
           & liqreff(i) .lt.  CFODD_BNDRE(1) .or.  &
           & liqreff(i) .gt.  CFODD_BNDRE(4) .or.  &
