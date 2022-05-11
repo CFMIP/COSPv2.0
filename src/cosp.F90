@@ -1807,6 +1807,10 @@ CONTAINS
     else
        Nlvgrid = Nlevels
        allocate(vgrid_zl(Nlvgrid),vgrid_zu(Nlvgrid),vgrid_z(Nlvgrid),dz(Nlvgrid))
+       vgrid_zl = 0._wp
+       vgrid_zu = 0._wp
+       vgrid_z  = 0._wp
+       dz       = 0._wp
     endif
 
     ! Initialize simulators
