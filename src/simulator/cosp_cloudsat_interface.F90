@@ -118,7 +118,7 @@ CONTAINS
     ! Set up Re bin "structure" for z_scaling
     rcfg%base_list(1)=0
     do j=1,Re_MAX_BIN
-       rcfg%step_list(j)=0.1_wp+0.1_wp*((j-1)**1.5)
+       rcfg%step_list(j)=0.1_wp+0.1_wp*((j-1)**1.5_wp)
        if(rcfg%step_list(j)>Re_BIN_LENGTH) then
           rcfg%step_list(j)=Re_BIN_LENGTH
        endif
