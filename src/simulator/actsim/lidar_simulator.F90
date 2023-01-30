@@ -301,7 +301,7 @@ contains
          ok_lidar_cfad ! True if lidar CFAD diagnostics need to be computed
     real(wp),intent(in),dimension(npoints,nlevels) :: &
          zlev        ! Model full levels
-    real(wp),intent(in),dimension(npoints,nlevels+1) :: &
+    real(wp),intent(in),dimension(npoints,nlevels) :: &
          zlev_half   ! Model half levels
     real(wp),intent(in),dimension(llm) :: & 
          vgrid_z     ! mid-level altitude of the output vertical grid
@@ -967,11 +967,10 @@ contains
                 ! Find the level of the highest cloud with SR>30
                 if(x(i,ncol,nlev) .gt. S_cld_att) then ! SR > 30.
                     toplvlsat = nlev+1
-                    goto 99
+                    exit
                 endif
              endif ! end of cloud condition
           enddo ! end of altitude loop
-99        continue
           
           ! ##############################################################################
           ! Undefined phase: For a cloud located below another cloud with SR>30

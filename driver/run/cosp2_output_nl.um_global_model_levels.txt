@@ -1,0 +1,152 @@
+! (c) British Crown Copyright 2008, the Met Office.
+! All rights reserved.
+! 
+! Redistribution and use in source and binary forms, with or without modification, are permitted 
+! provided that the following conditions are met:
+! 
+!     * Redistributions of source code must retain the above copyright notice, this list 
+!       of conditions and the following disclaimer.
+!     * Redistributions in binary form must reproduce the above copyright notice, this list
+!       of conditions and the following disclaimer in the documentation and/or other materials 
+!       provided with the distribution.
+!     * Neither the name of the Met Office nor the names of its contributors may be used 
+!       to endorse or promote products derived from this software without specific prior written 
+!       permission.
+! 
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR 
+! IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+! FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+! CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+! DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+! DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER 
+! IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT 
+! OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+! Namelist that sets up output-related variables. It controls 
+! the instrument simulators to run and the list of variables 
+! to be written to file
+&COSP_OUTPUT
+  !- CloudSat
+  Lcfaddbze94=.true.,
+  Ldbze94=.true.,
+  !- CALIPSO
+  Latb532=.true.,
+  LcfadLidarsr532=.true.,
+  Lclcalipso=.true.,
+  Lclhcalipso=.true.,
+  Lcllcalipso=.true.,
+  Lclmcalipso=.true.,
+  Lcltcalipso=.true.,
+  LparasolRefl=.true.,
+  ! CALIPSO phase diagnostics
+  Lclcalipsoliq=.true.,
+  Lclcalipsoice=.true.,
+  Lclcalipsoun=.true.,
+  Lclcalipsotmp=.true.,
+  Lclcalipsotmpliq=.true.,
+  Lclcalipsotmpice=.true.,
+  Lclcalipsotmpun=.true.,
+  Lclhcalipsoliq=.true.,
+  Lcllcalipsoliq=.true.,
+  Lclmcalipsoliq=.true.,
+  Lcltcalipsoliq=.true.,
+  Lclhcalipsoice=.true.,
+  Lcllcalipsoice=.true.,
+  Lclmcalipsoice=.true.,
+  Lcltcalipsoice=.true.,
+  Lclhcalipsoun=.true.,
+  Lcllcalipsoun=.true.,
+  Lclmcalipsoun=.true.,
+  Lcltcalipsoun=.true.,
+  ! CALIPSO OPAQ diagnostics
+  Lclopaquecalipso=.true.,
+  Lclthincalipso=.true., 
+  Lclzopaquecalipso=.false.,
+  Lclcalipsoopaque=.true., 
+  Lclcalipsothin=.true.,  
+  Lclcalipsozopaque=.true.,
+  Lclcalipsoopacity=.true., 
+  Lclopaquetemp=.true., 
+  Lclthintemp=.true., 
+  Lclzopaquetemp=.true., 
+  Lclopaquemeanz=.false., 
+  Lclthinmeanz=.false., 
+  Lclthinemis=.true., 
+  Lclopaquemeanzse=.false.,
+  Lclthinmeanzse=.false., 
+  Lclzopaquecalipsose=.false.,
+  ! GROUND LIDAR diagnostics  
+  LlidarBetaMol532gr=.true.,  
+  LcfadLidarsr532gr=.true.,  
+  Latb532gr=.true.,  
+  LclgrLidar532=.true.,
+  LclhgrLidar532=.true.,  
+  LcllgrLidar532=.true., 
+  LclmgrLidar532=.true.,
+  LcltgrLidar532=.true.,
+  ! ATLID diagnostics
+  LlidarBetaMol355=.true.,
+  LcfadLidarsr355=.true., 
+  Latb355=.true., 
+  Lclatlid=.true., 
+  Lclhatlid=.true., 
+  Lcllatlid=.true.,
+  Lclmatlid=.true.,
+  Lcltatlid=.true.,
+  !- ISCCP
+  Lalbisccp=.true.,
+  Lboxptopisccp=.true.,
+  Lboxtauisccp=.true.,
+  Lpctisccp=.true.,
+  Lclisccp=.true.,
+  Ltauisccp=.true.,
+  Lcltisccp=.true.,
+  Lmeantbisccp=.true.,
+  Lmeantbclrisccp=.true.,
+  !- MISR
+  LclMISR=.true.,
+  !- Use lidar and radar
+  Lclcalipso2=.true.,
+  Lcltlidarradar=.true.,
+  Lcloudsat_tcc=.true.,
+  Lcloudsat_tcc2=.true.,
+  !- These are provided for debugging or special purposes
+  Lfracout=.true.,
+  LlidarBetaMol532=.true.,  
+  !- MODIS
+  Lcltmodis=.true.,
+  Lclwmodis=.true.,
+  Lclimodis=.true.,
+  Lclhmodis=.true.,
+  Lclmmodis=.true.,
+  Lcllmodis=.true.,
+  Ltautmodis=.true.,
+  Ltauwmodis=.true.,
+  Ltauimodis=.true.,
+  Ltautlogmodis=.true.,
+  Ltauwlogmodis=.true.,
+  Ltauilogmodis=.true.,
+  Lreffclwmodis=.true.,
+  Lreffclimodis=.true.,
+  Lpctmodis=.true.,
+  Llwpmodis=.true.,
+  Liwpmodis=.true.,
+  Lclmodis=.true.,
+  !- RTTOV
+  Ltbrttov=.false.,
+  ! -CLOUDSAT precipitation frequency/occurence diagnostics
+  Lptradarflag0=.true.,
+  Lptradarflag1=.true.,
+  Lptradarflag2=.true.,
+  Lptradarflag3=.true.,
+  Lptradarflag4=.true.,
+  Lptradarflag5=.true.,
+  Lptradarflag6=.true.,
+  Lptradarflag7=.true.,
+  Lptradarflag8=.true.,
+  Lptradarflag9=.true.,
+  Lradarpia=.true.,
+  !- CloudSat+MODIS joint diagnostics
+  Lwr_occfreq=.true.,
+  Lcfodd=.true.
+/

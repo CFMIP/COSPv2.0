@@ -1,0 +1,313 @@
+# (c) British Crown Copyright 2020, the Met Office.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright notice,
+#     this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#   * Neither the name of the Met Office nor the names of its contributors may
+#     be used to endorse or promote products derived from this softwarewithout
+#     specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
+
+# Workflow for continuous integration tests
+name: CI
+on: [push, pull_request]
+
+jobs:
+  # This workflow contains a single job called "test"
+  test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        fortran-compiler: [gfortran, gfortran-8, gfortran-7, ifort]
+    env:
+      F90: ${{ matrix.fortran-compiler }}
+      FC: ${{ matrix.fortran-compiler }}
+      F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
+      ATOL: 0.0
+      RTOL: 0.0
+      #KGO_VERSION: v001
+      KGO_VERSION: v002
+      NFHOME: /home/runner/netcdf-fortran
+      LD_LIBRARY_PATH: /home/runner/netcdf-fortran/lib
+    # Sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out repository under $GITHUB_WORKSPACE
+    - uses: actions/checkout@v2
+    ###############################################################################
+    # Initial steps
+    ###############################################################################
+    # Set up Python and install dependencies
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+    - name: Setup conda
+      uses: s-weigand/setup-conda@v1
+      with:
+        python-version: 3.7
+    - name: Install python packages
+      run: conda install --yes cartopy matplotlib netcdf4
+    # Update system packages
+    - name: Update system packages
+      run: sudo apt-get update
+    # Non compiler-specific environment
+    - name: Non compiler-specific environment
+      run: export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${NFHOME}/lib
+    ###############################################################################
+    # FORTRAN compilers
+    ###############################################################################
+    #
+    # Install gfortran compiler
+    #
+    - name: Install gfortran compiler
+      if: contains(matrix.fortran-compiler, 'gfortran')
+      run: sudo apt-get install ${{ matrix.fortran-compiler }}
+    #
+    # Intel compilers
+    #
+    - name: cache-intel-compilers
+      id: cache-intel-compilers
+      if: contains(matrix.fortran-compiler, 'ifort')
+      uses: actions/cache@v2
+      with:
+        path: /opt/intel
+        key: intel-${{ runner.os }}-compilers-b
+
+    # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-oneapi-toolkits-via-apt.html
+    # List of packages from Docler file at
+    #    https://github.com/intel/oneapi-containers/blob/master/images/docker/hpckit-devel-ubuntu18.04/Dockerfile
+    - name: Install Intel compilers and libraries
+      if: contains(matrix.fortran-compiler, 'ifort') && steps.cache-intel-compilers.outputs.cache-hit != 'true'
+      run: |
+        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
+        sudo apt-get update
+        sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
+        sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic intel-oneapi-compiler-fortran intel-oneapi-itac
+
+    #
+    # Nvidia compilers
+    #
+    - name: cache-nvidia-compilers
+      id: cache-nvidia-compilers
+      if: contains(matrix.fortran-compiler, 'nvfortran')
+      uses: actions/cache@v2
+      with:
+        path: /opt/nvidia/hpc_sdk/
+        key: nvhpc-${{ runner.os }}-2020-20.7
+
+    - name: Nvidia setup compilers
+      if: contains(matrix.fortran-compiler, 'nvfortran') && steps.cache-nvidia-compilers.outputs.cache-hit != 'true'
+      env:
+        NVCOMPILERS: /opt/nvidia/hpc_sdk
+      run: |
+        wget -q https://developer.download.nvidia.com/hpc-sdk/nvhpc-20-7_20.7_amd64.deb https://developer.download.nvidia.com/hpc-sdk/nvhpc-2020_20.7_amd64.deb
+        sudo apt-get install ./nvhpc-20-7_20.7_amd64.deb ./nvhpc-2020_20.7_amd64.deb
+    ###############################################################################
+    # Compiler-specific environment
+    ###############################################################################
+    # Environments for ifort and nvidia compilers
+    - name: Environment for ifort compiler
+      if: contains(matrix.fortran-compiler, 'ifort')
+      run: |
+        echo "CC=icx" > $GITHUB_ENV
+        echo "FC=ifort" > $GITHUB_ENV
+        echo "F90FLAGS=-O3 -heap-arrays" > $GITHUB_ENV
+    - name: Environment for nvfortran compiler
+      env:
+        NVCOMPILERS: /opt/nvidia/hpc_sdk
+      if: contains(matrix.fortran-compiler, 'nvfortran')
+      run: |
+        echo "CC=nvc" > $GITHUB_ENV
+        echo "FC=nvfortran" > $GITHUB_ENV
+        echo "F90FLAGS=-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk" > $GITHUB_ENV
+        echo "${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin" >> $GITHUB_PATH
+    ###############################################################################
+    # NetCDF C and FORTRAN libraries
+    ###############################################################################
+    # NetCDF C library
+    - name: Install NetCDF library
+      run: sudo apt-get install libnetcdf-dev
+
+    # Cache netcdf FORTRAN library
+    - name: cache-netcdf-fortran
+      id: cache-netcdf-fortran
+      uses: actions/cache@v2
+      with:
+        path: /home/runner/netcdf-fortran
+        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.fortran-compiler }}-v02
+
+    # Build NetCDF FORTRAN library for current compiler
+    - name: Build NetCDF FORTRAN library
+      env:
+        FCFLAGS: -fPIC
+      if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
+      run: |
+        source /opt/intel/oneapi/setvars.sh || true
+        ${F90} --version
+        git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
+        cd netcdf-fortran
+        ./configure --prefix=${NFHOME}
+        make -j
+        sudo make install
+    ###############################################################################
+    # Build COSP and retrieve input and test files
+    ###############################################################################
+    # Build COSP2 driver. Intel Fortran stores automatic arrays in the stack
+    # by default, whereas GNU Fortran stores them in the heap. This can cause
+    # segmentation faults with ifort, especially in memory-intensive applications
+    # like COSP. We tell ifort to use heap arrays.
+    - name: Build driver
+      run: |
+        source /opt/intel/oneapi/setvars.sh || true
+        ${F90} --version
+        cd build
+        make -j driver
+    # Retrieve and expand large data files
+    - name: Retrieve data files
+      run: |
+        GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
+        OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/inputs/UKMO
+        md5sum -c cosp_input.um_global.nc.md5
+        cd ${GITHUB_WORKSPACE}
+        GDFILE='https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.md5
+        cd ${GITHUB_WORKSPACE}
+        GDFILE='https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.md5
+        cd ${GITHUB_WORKSPACE}
+        GDFILE='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.gz
+        wget --no-check-certificate $GDFILE -O $OUTPATH
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.md5
+    ###############################################################################
+    # Run COSP2 tests. We could run both tests in one step, but
+    # doing it this way the output is easier to interpret.
+    ###############################################################################
+    # 1. Basic test
+    - name: Basic test
+      run: |
+        source /opt/intel/oneapi/setvars.sh || true
+        cd driver/run
+        ./cosp2_test cosp2_input_nl.txt
+    # 2. UM global snapshot
+    - name: UM global snapshot
+      run: |
+        source /opt/intel/oneapi/setvars.sh || true
+        cd driver/run
+        ./cosp2_test cosp2_input_nl.um_global.txt
+    # 3. UM global snapshot. Diagnostics on model levels.
+    - name: UM global snapshot. Diagnostics on model levels.
+      run: |
+        if [[ "${F90}" = 'gfortran' ]]; then
+          cd driver/run
+          ./cosp2_test cosp2_input_nl.um_global_model_levels.txt cosp2_output_nl.um_global_model_levels.txt
+        else
+          echo "Test is only run for gfortran compiler."
+        fi
+    ###############################################################################
+    # Compare results against known good outputs. As above,
+    # we split it in as many steps as tests.
+    ###############################################################################
+    # 1. Basic test
+    - name: Basic against known good output (KGO)
+      run: |
+        if [[ "${F90}" != 'gfortran' ]]; then
+          ATOL=1.0e-20
+          RTOL=0.0006
+        fi
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_output_um.nc
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+    # 2. UM global snapshot. The approach used for the basic test would needed
+    # large tolerances for the ifort compiler. We keep tolerances small for ifort,
+    # and then we test against the output table.
+    - name: UM global against known good output (KGO)
+      run: |
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        if [[ "${F90}" = 'gfortran' ]]; then
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        else
+          ATOL=1.0e-20
+          RTOL=0.0006
+          OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
+          OUTKGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.${KGO_VERSION}.out
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
+            --noerror=True --stats_file=${OUTTST}
+          diff ${OUTKGO} ${OUTTST}
+        fi
+    # 3. UM global snapshot. Diagnostics on model levels. Only gfortran.
+    - name: UM global on model levels against known good output (KGO)
+      run: |
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
+        if [[ "${F90}" = 'gfortran' ]]; then
+          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        else
+          echo "Test only run for gfortran compiler."
+        fi
+    ###############################################################################
+    # Produce plots when it fails during global snapshot tests,
+    # and create a tarball with outputs.
+    ###############################################################################
+    - name: Produce plots and create tarball
+      if: failure()
+      run: |
+        TST_MLEV=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
+        cd driver
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
+          python plot_test_outputs.py
+        fi
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global_model_levels.nc ]]; then
+          python plot_test_outputs.py --tst_file=$TST_MLEV
+        fi
+        cd data/outputs/UKMO
+        tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc \
+          cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
+          cosp2_output.um_global.out
+        ls -lh
+    ###############################################################################
+    # Make output files available if any test fails
+    ###############################################################################
+    - name: Upload output file if test fails
+      if: failure()
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: outputs.UKMO.tgz
+        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
