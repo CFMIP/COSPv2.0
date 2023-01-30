@@ -5,7 +5,7 @@ module mod_cosp_io
   USE MOD_COSP_CONFIG, ONLY:  Nlvgrid, LIDAR_NCAT, SR_BINS, PARASOL_NREFL, cloudsat_DBZE_BINS, &
        numMODISReffIceBins, numMODISReffLiqBins, ntau, tau_binBounds, tau_binCenters, &
        tau_binEdges,npres, pres_binBounds, pres_binCenters, pres_binEdges, nhgt,      &
-       hgt_binBounds, hgt_binCenters, hgt_binEdges, reffLIQ_binCenters,vgrid_z,       &
+       hgt_binBounds, hgt_binCenters, hgt_binEdges, vgrid_z,                          &
        reffICE_binCenters, reffLIQ_binCenters, cloudsat_binCenters, PARASOL_SZA,      &
        calipso_binCenters, grLidar532_binCenters, atlid_binCenters,                   &
        CFODD_NDBZE,  CFODD_HISTDBZE, CFODD_HISTDBZEcenters,                           &
@@ -1282,7 +1282,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(54),"units",        "%")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(15)/),varID(89))
+       status = nf90_def_var(fileID,"REICE_MODIS",nf90_float, (/dimID(16)/),varID(89))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(89),"long_name","MODIS Joint-PDF ice particle size bin centers")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
