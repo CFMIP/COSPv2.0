@@ -1,0 +1,7 @@
+# Ignore .o files, these are built when running
+*.o
+*.mod
+*.a
+
+# Build testing file
+driver/run/cosp2_test
