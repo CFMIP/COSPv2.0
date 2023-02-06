@@ -44,7 +44,7 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
     1. In `build/`, `make driver` will build a COSP library, a separate library with the example mapping from model state to COSP inputs, and the `cosp2_test` executable, which is then copied to `driver/run`.
 
 1. Running the test program
-    1. Directory `test/run` contains namelists and other files needed by the test programs. If the executables have been built they should run in this directory using these files as supplied.
+    1. Directory `driver/run` contains namelists and other files needed by the test programs. If the executables have been built they should run in this directory using these files as supplied.
     1. The behavior of COSP can be changed via the input namelists (e.g. `driver/src/cosp2_input_nl.txt`) and output (`driver/src/cosp2_output_nl.txt`) namelists. The input namelist controls the COSP setup (i.e. Number of subcolumns to be used, etc...) and
     simulator specific information (i.e. Radar simulator frequency). The output namelist controls the output diagnostics. The test program receives the input namelist as an argument from the command line, i.e.:
 
