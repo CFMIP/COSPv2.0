@@ -43,7 +43,8 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
             cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
             cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
             cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
-            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+            cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+#            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 
 LIBRARY = libcosp.a
 
@@ -63,12 +64,17 @@ driver:
 	mv cosp2_test ../driver/run
 
 # Dependencies for libary
-cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  cosp_rttov_interfaceSTUB.o \
+cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  \
 	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
 	cosp_cloudsat_interface.o  cosp_stats.o                                           \
-	cosp_parasol_interface.o cosp_rttovSTUB.o \
-        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
+	cosp_parasol_interface.o cosp_rttov_v13.o \
+        cosp_rttov_interface_v13.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
         parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
+#	cosp_parasol_interface.o cosp_rttovSTUB.o \
+#        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
+#        parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+        
 cosp_constants.o            : cosp_kinds.o
 cosp_config.o               : cosp_kinds.o
 cosp_errorHandling.o        : cosp_kinds.o
@@ -87,8 +93,11 @@ cosp_grLidar532_interface.o : cosp_kinds.o
 cosp_atlid_interface.o      : cosp_kinds.o
 cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
-cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
-cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
+cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+
+# cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
+# cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
 SUBCOL_OBJS = mo_rng.o scops.o prec_scops.o cosp_utils.o cosp_optics.o quickbeam_optics.o array_lib.o math_lib.o mrgrnk.o optics_lib.o cosp_errorHandling.o
