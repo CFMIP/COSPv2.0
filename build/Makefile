@@ -9,6 +9,13 @@ ISCCP_PATH   = $(SIM_PATH)/icarus
 MISR_PATH    = $(SIM_PATH)/MISR_simulator
 MODIS_PATH   = $(SIM_PATH)/MODIS_simulator
 PARASOL_PATH = $(SIM_PATH)/parasol
+
+# RTTOV variables. You may need to change this. JKS
+RTTOV_PATH     = /glade/u/home/jonahshaw/w/RTTOV
+RTTOV_LIB_PATH = $(RTTOV_PATH)/lib 
+RTTOV_INC_PATH = $(RTTOV_PATH)/include 
+RTTOV_MOD_PATH = $(RTTOV_PATH)/mod
+
 VPATH = $(SRC_PATH):$(HOOKS):$(SIM_PATH):$(RT_PATH):$(RS_PATH):$(CS_PATH):$(ISCCP_PATH):$(MISR_PATH):$(MODIS_PATH):$(PARASOL_PATH)
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
@@ -43,8 +50,7 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
             cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
             cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
             cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
-            cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_grLidar532_interface.o cosp_atlid_interface.o
-#            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 
 LIBRARY = libcosp.a
 
@@ -56,6 +62,18 @@ $(LIBRARY): $(COSP_OBJS)
 #
 lib: $(LIBRARY)
 
+### Library for COSP-RTTOV build
+COSP_RTTOV_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandling.o cosp_kinds.o \
+                  cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
+                  cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
+                  cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
+                  cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
+LIBRARY_RTTOV = libcosp_rttov.a
+
+$(LIBRARY_RTTOV): $(COSP_RTTOV_OBJS)
+	ar -rvs $(LIBRARY_RTTOV) $(COSP_RTTOV_OBJS)
+
 clean:
 	rm -f *.optrpt *.mod *.o *.a fort.* cosp2_test
 
@@ -63,18 +81,26 @@ driver:
 	make cosp2_test
 	mv cosp2_test ../driver/run
 
-# Dependencies for libary
-cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  \
+driver_rttov:
+	make cosp2_rttov_test
+	mv cosp2_rttov_test ../driver/run
+
+# Dependencies for normal COSP libary
+cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  cosp_rttov_interfaceSTUB.o \
+	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
+	cosp_cloudsat_interface.o  cosp_stats.o                                           \
+	cosp_parasol_interface.o cosp_rttovSTUB.o \
+        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
+        parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
+# Dependencies for COSP-RTTOV libary
+cosp_rttov.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
 	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
 	cosp_cloudsat_interface.o  cosp_stats.o                                           \
 	cosp_parasol_interface.o cosp_rttov_v13.o \
         cosp_rttov_interface_v13.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
         parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 
-#	cosp_parasol_interface.o cosp_rttovSTUB.o \
-#        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
-#        parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
-        
 cosp_constants.o            : cosp_kinds.o
 cosp_config.o               : cosp_kinds.o
 cosp_errorHandling.o        : cosp_kinds.o
@@ -93,16 +119,21 @@ cosp_grLidar532_interface.o : cosp_kinds.o
 cosp_atlid_interface.o      : cosp_kinds.o
 cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
+cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
+cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+
+# Will need to be updated
 cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
 cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
-
-# cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
-# cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
 SUBCOL_OBJS = mo_rng.o scops.o prec_scops.o cosp_utils.o cosp_optics.o quickbeam_optics.o array_lib.o math_lib.o mrgrnk.o optics_lib.o cosp_errorHandling.o
 libsubcol.a: $(SUBCOL_OBJS) libcosp.a
 	ar -rvs libsubcol.a $(SUBCOL_OBJS)
+
+# Is this right?
+libsubcol_rttov.a: $(SUBCOL_OBJS) libcosp_rttov.a
+	ar -rvs libsubcol_rttov.a $(SUBCOL_OBJS)
 
 array_lib.o       : cosp_kinds.o
 mrgrnk.o          : cosp_kinds.o
@@ -119,3 +150,8 @@ mo_rng.o     : cosp_kinds.o
 cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
 cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
+
+# Offline driver with RTTOV
+cosp2_rttov_io.o    : cosp_kinds.o cosp_config.o cosp_rttov.o
+cosp2_rttov_test.o  : cosp2_rttov_io.o libcosp_rttov.a libsubcol_rttov.a
+cosp2_rttov_test    : cosp2_rttov_test.o cosp2_rttov_io.o
