@@ -33,13 +33,18 @@
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
   USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
+! JKS
+#ifdef RTTOV
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
                               coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
                               construct_rttov_scatfilename
+#endif
   IMPLICIT NONE
+! JKS
+#ifdef RTTOV
 #include "rttov_read_coefs.interface"
 #include "rttov_read_scattcoeffs.interface"
-
+#endif
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -109,6 +114,8 @@ CONTAINS
     sensor     = instrumentIN 
     iChannel   = channelsIN
 
+! JKS
+#ifdef RTTOV
     ! Options common to RTTOV clear-sky Tb calculation
     opts%interpolation%addinterp  = .true.  ! allow interpolation of input profile
     opts%rt_all%use_q2m           = .true.
@@ -135,6 +142,7 @@ CONTAINS
     !     trim(construct_rttov_scatfilename(platform,satellite,sensor))
     ! Can't pass filename to rttov_read_scattcoeffs!!!!!
     !call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt,)
+#endif
  
   END SUBROUTINE COSP_RTTOV_INIT
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
