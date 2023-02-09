@@ -43,6 +43,10 @@ LDFLAGS += -L. -lcosp -lsubcol
 %: %.o
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
+# Special rule for the RTTOV file.
+cosp_rttov_v13.o : cosp_rttov_v13.F90 
+	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+
 #
 # The COSP library
 #
@@ -50,7 +54,10 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
             cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
             cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
             cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
-            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+            cosp_rttov_interface_v13.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
+#            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
 
 LIBRARY = libcosp.a
 
@@ -86,12 +93,14 @@ driver_rttov:
 	mv cosp2_rttov_test ../driver/run
 
 # Dependencies for normal COSP libary
-cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o  cosp_rttov_interfaceSTUB.o \
+cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
 	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
 	cosp_cloudsat_interface.o  cosp_stats.o                                           \
 	cosp_parasol_interface.o cosp_rttovSTUB.o \
-        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
+        cosp_rttov_interface_v13.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
         parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
+#        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
 
 # Dependencies for COSP-RTTOV libary
 cosp_rttov.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
@@ -122,8 +131,9 @@ quickbeam.o                 : cosp_kinds.o cosp_stats.o
 cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
 cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 
-# Will need to be updated
-cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
+# Will need to be updated. Conditionally removed rttov_interface dependence on cosp_rttov_v13
+cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o
+# cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
 cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
