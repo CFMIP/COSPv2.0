@@ -106,7 +106,9 @@ CONTAINS
     ! Local variables
     character(len=256) :: coef_file,scat_file
     integer :: errorstatus
-    
+
+! JKS
+#ifdef RTTOV
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     nChannels  = NchanIN
     platform   = platformIN 
@@ -114,8 +116,7 @@ CONTAINS
     sensor     = instrumentIN 
     iChannel   = channelsIN
 
-! JKS
-#ifdef RTTOV
+
     ! Options common to RTTOV clear-sky Tb calculation
     opts%interpolation%addinterp  = .true.  ! allow interpolation of input profile
     opts%rt_all%use_q2m           = .true.
