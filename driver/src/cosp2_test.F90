@@ -1019,6 +1019,18 @@ contains
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
 
+!    allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
+!             y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
+!             y%hgt_matrix(npoints,nlevels),y%hgt_matrix_half(npoints,nlevels),           &
+!             y%surfelev(npoints))
+!#ifdef RTTOV
+!    allocate(y%o3(npoints,nlevels),y%u_sfc(npoints),y%v_sfc(npoints),                    &
+!             y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),                            &
+!             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),                    &
+!             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
+!             y%tca(nPoints,nLevels))
+!#endif
+
   end subroutine construct_cospstateIN
 
   ! ######################################################################################
@@ -1385,8 +1397,10 @@ contains
     if (allocated(y%pfull))           deallocate(y%pfull)
     if (allocated(y%phalf))           deallocate(y%phalf)
     if (allocated(y%qv))              deallocate(y%qv)
-    if (allocated(y%o3))              deallocate(y%o3)
     if (allocated(y%hgt_matrix))      deallocate(y%hgt_matrix)
+    if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
+    if (allocated(y%surfelev))        deallocate(y%surfelev)
+    if (allocated(y%o3))              deallocate(y%o3)
     if (allocated(y%u_sfc))           deallocate(y%u_sfc)
     if (allocated(y%v_sfc))           deallocate(y%v_sfc)
     if (allocated(y%lat))             deallocate(y%lat)
@@ -1398,8 +1412,6 @@ contains
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
-    if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
-    if (allocated(y%surfelev))        deallocate(y%surfelev)
     
   end subroutine destroy_cospstateIN
   
