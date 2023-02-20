@@ -33,8 +33,6 @@ LDFLAGS  += $(NC_LIB) -lnetcdff
 
 LDFLAGS += -L. -lcosp -lsubcol
 
-
-# This is triggering later, which is actually great!
 ifdef RTTOV
 LDFLAGS += -L${RTTOV_LIB_PATH} -lrttov13
 endif
@@ -50,7 +48,7 @@ endif
 %: %.o
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
-# Special rule for the RTTOV file.
+# Special rule for the RTTOV file. Had an ifdef line but it wasn't necessary.
 cosp_rttov_v13.o : cosp_rttov_v13.F90 
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
@@ -61,10 +59,14 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
             cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
             cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
             cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
-            cosp_rttov_interface_v13.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+            cosp_grLidar532_interface.o cosp_atlid_interface.o
 
-#            cosp_rttov_interface_v13.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
-#            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+# Add RTTOV files appropriately
+ifdef RTTOV
+COSP_OBJS += cosp_rttov_interface_v13.o cosp_rttov_v13.o
+else
+COSP_OBJS += cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o
+endif
 
 
 LIBRARY = libcosp.a
@@ -80,49 +82,37 @@ lib: $(LIBRARY)
 clean:
 	rm -f *.optrpt *.mod *.o *.a fort.* cosp2_test
 
-## I am not sure if this "unset" is working. I might need to specify the SHELL so export works everywhere.
 driver:
 	make cosp2_test
 	mv cosp2_test ../driver/run
 
-#	export RTTOV=TRUE
-#	unset RTTOV
-
+# I would like to set the env variable here, but it won't work.
 driver_rttov:
 	make driver
 
 
-#driver_rttov:
-#	export RTTOV=TRUE
-#	make cosp2_rttov_test
-#	mv cosp2_rttov_test ../driver/run
-
-
 # Dependencies for normal COSP libary
-cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
-	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
-	cosp_cloudsat_interface.o  cosp_stats.o                                           \
-	cosp_parasol_interface.o \
-        cosp_rttov_interface_v13.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
-        parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o                              \
+         cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
+         cosp_cloudsat_interface.o  cosp_stats.o                                           \
+         cosp_parasol_interface.o                                                          \
+         quickbeam.o MISR_simulator.o lidar_simulator.o                                    \
+         parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 
-#	cosp_parasol_interface.o cosp_rttovSTUB.o \
-#        cosp_rttov_interfaceSTUB.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
+# Conditionally add dependencies on the Stub or actual RTTOV simulator.
+ifdef RTTOV
+cosp.o: cosp_rttov_interface_v13.o cosp_rttov_v13.o
+else
+cosp.o: cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o
+endif
 
-# Dependencies for COSP-RTTOV libary
-cosp_rttov.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
-	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
-	cosp_cloudsat_interface.o  cosp_stats.o                                           \
-	cosp_parasol_interface.o cosp_rttov_v13.o \
-        cosp_rttov_interface_v13.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
-        parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 
 cosp_constants.o            : cosp_kinds.o
 cosp_config.o               : cosp_kinds.o
 cosp_errorHandling.o        : cosp_kinds.o
 cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o
 cosp_isccp_interface.o      : cosp_kinds.o icarus.o
-icarus.o	            : cosp_kinds.o cosp_constants.o  cosp_stats.o
+icarus.o                    : cosp_kinds.o cosp_constants.o  cosp_stats.o
 cosp_misr_interface.o       : cosp_kinds.o
 MISR_simulator.o            : cosp_kinds.o cosp_config.o cosp_stats.o
 cosp_modis_interface.o      : cosp_kinds.o cosp_config.o modis_simulator.o
@@ -135,20 +125,12 @@ cosp_grLidar532_interface.o : cosp_kinds.o
 cosp_atlid_interface.o      : cosp_kinds.o
 cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
-# cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
-cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 
-# Will need to be updated. Conditionally removed rttov_interface dependence on cosp_rttov_v13
-#cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o
-
-ifdef RTTOV
+# RTTOV Simulator code dependencies (only one interface and one RTTOV simulator oare used at a time)
 cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
-else
-cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
-endif
-
-# cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
 cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
+cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
@@ -173,13 +155,14 @@ cosp2_io.o    : cosp_kinds.o cosp_config.o cosp.o
 cosp2_test.o  : cosp2_io.o libcosp.a libsubcol.a
 cosp2_test    : cosp2_test.o cosp2_io.o
 
-# Offline driver with RTTOV is just adding the COSP-RTTOV file and the RTTOV library.
-cosp2_rttov_test : cosp2_test.o cosp2_io.o cosp_rttov_v13.o
-
 
 ###############
 ### OLD
 ###############
+
+# Offline driver with RTTOV is just adding the COSP-RTTOV file and the RTTOV library.
+#cosp2_rttov_test : cosp2_test.o cosp2_io.o cosp_rttov_v13.o
+
 
 # OLD Offline driver with RTTOV
 #cosp2_rttov_io.o    : cosp_kinds.o cosp_config.o cosp_rttov.o
@@ -187,19 +170,56 @@ cosp2_rttov_test : cosp2_test.o cosp2_io.o cosp_rttov_v13.o
 #cosp2_rttov_test    : cosp2_rttov_test.o cosp2_rttov_io.o
 
 
+# Dependencies for COSP-RTTOV libary
+#cosp_rttov.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o \
+#	cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
+#	cosp_cloudsat_interface.o  cosp_stats.o                                           \
+#	cosp_parasol_interface.o cosp_rttov_v13.o \
+#        cosp_rttov_interface_v13.o quickbeam.o MISR_simulator.o lidar_simulator.o         \
+#        parasol.o icarus.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+
+
 ### Library for COSP-RTTOV build
-COSP_RTTOV_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandling.o cosp_kinds.o \
-                  cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
-                  cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
-                  cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
-                  cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_grLidar532_interface.o cosp_atlid_interface.o
+#COSP_RTTOV_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandling.o cosp_kinds.o \
+#                  cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
+#                  cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
+#                  cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
+#                  cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_grLidar532_interface.o cosp_atlid_interface.o
 
-LIBRARY_RTTOV = libcosp_rttov.a
+#LIBRARY_RTTOV = libcosp_rttov.a
 
-$(LIBRARY_RTTOV): $(COSP_RTTOV_OBJS)
-	ar -rvs $(LIBRARY_RTTOV) $(COSP_RTTOV_OBJS)
+#$(LIBRARY_RTTOV): $(COSP_RTTOV_OBJS)
+#	ar -rvs $(LIBRARY_RTTOV) $(COSP_RTTOV_OBJS)
 
 
-	# Is this right?
-libsubcol_rttov.a: $(SUBCOL_OBJS) libcosp_rttov.a
-	ar -rvs libsubcol_rttov.a $(SUBCOL_OBJS)
+# Is this right?
+#libsubcol_rttov.a: $(SUBCOL_OBJS) libcosp_rttov.a
+#	ar -rvs libsubcol_rttov.a $(SUBCOL_OBJS)
+
+# Will need to be updated. Conditionally removed rttov_interface dependence on cosp_rttov_v13
+#cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o
+
+#ifdef RTTOV
+#cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
+#else
+#cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
+#endif
+
+#cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
+#cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+
+#ifdef RTTOV
+#COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandling.o cosp_kinds.o \
+#            cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
+#            cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
+#            cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
+#            cosp_grLidar532_interface.o cosp_atlid_interface.o                                   \
+#            cosp_rttov_interface_v13.o cosp_rttov_v13.o
+#else
+#COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandling.o cosp_kinds.o \
+#            cosp_isccp_interface.o icarus.o cosp_misr_interface.o MISR_simulator.o               \
+#            cosp_modis_interface.o  modis_simulator.o cosp_parasol_interface.o  parasol.o        \
+#            cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
+#            cosp_grLidar532_interface.o cosp_atlid_interface.o                                   \
+#            cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o
+#endif
