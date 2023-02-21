@@ -33,18 +33,14 @@
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
   USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
-! JKS
-#ifdef RTTOV
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
                               coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
                               construct_rttov_scatfilename
-#endif
   IMPLICIT NONE
-! JKS
-#ifdef RTTOV
+
 #include "rttov_read_coefs.interface"
 #include "rttov_read_scattcoeffs.interface"
-#endif
+
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
