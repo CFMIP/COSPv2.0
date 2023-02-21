@@ -107,8 +107,6 @@ CONTAINS
     character(len=256) :: coef_file,scat_file
     integer :: errorstatus
 
-! JKS
-#ifdef RTTOV
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     nChannels  = NchanIN
     platform   = platformIN 
@@ -143,7 +141,6 @@ CONTAINS
     !     trim(construct_rttov_scatfilename(platform,satellite,sensor))
     ! Can't pass filename to rttov_read_scattcoeffs!!!!!
     !call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt,)
-#endif
  
   END SUBROUTINE COSP_RTTOV_INIT
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
