@@ -999,7 +999,7 @@ contains
     endif
     ! JKS add RTTOV arguments when constructing the cospIN object
     if (Lrttov) then
-       y%NchanIN_rttov      = rttov_Nchannels
+       y%nChannels_rttov    = rttov_Nchannels
        y%platformIN_rttov   = rttov_platform
        y%satelliteIN_rttov  = rttov_satellite
        y%instrumentIN_rttov = rttov_Instrument
