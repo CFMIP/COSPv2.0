@@ -393,7 +393,9 @@ program cosp2_test
        Lparasol, Lrttov,                                                                 &
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
-       rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
+       rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
+       rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               & ! JKS added RTTOV inputs here
+       rttov_Channels)
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -995,7 +997,15 @@ contains
                 y%asym(npoints,           ncolumns,nlevels),&
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
-    
+    ! JKS add RTTOV arguments when constructing the cospIN object
+    if (Lrttov) then
+       y%NchanIN_rttov      = rttov_Nchannels
+       y%platformIN_rttov   = rttov_platform
+       y%satelliteIN_rttov  = rttov_satellite
+       y%instrumentIN_rttov = rttov_Instrument
+       y%channelsIN_rttov   = rttov_Channels
+       ! ^I could allocate this if I added "RTTOV_MAX_CHANNELS" at the beginning, but I don't think I need to.
+    endif
 
   end subroutine construct_cospIN
   
