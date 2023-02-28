@@ -32,6 +32,7 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS, ONLY: wp
+  USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   IMPLICIT NONE
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
@@ -41,6 +42,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols,     & ! Number of subcolumns
+          nChannels,    & ! Number of channels to simulate
           month           ! Month (needed for surface emissivity calculation)
      real(wp),pointer :: &
           zenang,       & ! Satellite zenith angle
@@ -82,9 +84,35 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT()
-
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN)
+    integer,intent(in) :: & 
+         NchanIN,     & ! Number of channels
+         platformIN,  & ! Satellite platform
+         satelliteIN, & ! Satellite
+         instrumentIN   ! Instrument
+    integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
+         channelsIN     ! RTTOV channels
   END SUBROUTINE COSP_RTTOV_INIT
+  
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_rttov_simulate
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,                   & ! Inputs
+                                 Tb,error)                    ! Outputs
+  
+      type(rttov_in),intent(in) :: &
+          rttovIN
+      real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+           Tb        ! RTTOV brightness temperature.
+      character(len=128) :: &
+           error     ! Error messages (only populated if error encountered)  
+  
+  
+  ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
+  
+  END SUBROUTINE COSP_RTTOV_SIMULATE
+  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
