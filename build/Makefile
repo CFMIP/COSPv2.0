@@ -49,6 +49,11 @@ endif
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 # Special rule for the RTTOV file. Had an ifdef line but it wasn't necessary.
+
+# JKS is this needed because of the load_coefficient calls? Can I remove this by restructuring?
+cosp_rttov_interface_v13.o : cosp_rttov_interface_v13.F90 
+	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+
 cosp_rttov_v13.o : cosp_rttov_v13.F90 
 	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
@@ -126,7 +131,7 @@ cosp_atlid_interface.o      : cosp_kinds.o
 cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
 
-# RTTOV Simulator code dependencies (only one interface and one RTTOV simulator oare used at a time)
+# RTTOV Simulator code dependencies (only one interface and one RTTOV simulator are used at a time)
 cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
 cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
