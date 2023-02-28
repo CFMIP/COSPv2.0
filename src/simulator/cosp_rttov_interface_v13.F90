@@ -34,21 +34,85 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
   USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
-                              coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
+                              opts,construct_rttov_coeffilename,   &
                               construct_rttov_scatfilename
+!                              coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
+                              
+  ! rttov_const contains useful RTTOV constants
+  USE rttov_const, ONLY :     &
+         errorstatus_success, &
+         errorstatus_fatal,   &
+         platform_name,       &
+         inst_name
+
+  ! rttov_types contains definitions of all RTTOV data types
+  USE rttov_types, ONLY :     &
+         rttov_options,       &
+         rttov_coefs,         &
+         rttov_profile,       &
+         rttov_transmission,  &
+         rttov_radiance,      &
+         rttov_chanprof,      &
+         rttov_emissivity,    &
+         rttov_reflectance
+
+  ! jpim, jprb and jplm are the RTTOV integer, real and logical KINDs
+  USE parkind1, ONLY : jpim, jprb, jplm
+  
+  USE rttov_unix_env, ONLY : rttov_exit
+                              
   IMPLICIT NONE
 
+#include "rttov_direct.interface"
+#include "rttov_parallel_direct.interface"
 #include "rttov_read_coefs.interface"
-#include "rttov_read_scattcoeffs.interface"
+#include "rttov_dealloc_coefs.interface"
+#include "rttov_alloc_direct.interface"
+#include "rttov_init_emis_refl.interface"
+#include "rttov_user_options_checkinput.interface"
+#include "rttov_print_opts.interface"
+#include "rttov_print_profile.interface"
+#include "rttov_skipcommentline.interface"
+
+  !--------------------------
+  !
+  INTEGER(KIND=jpim), PARAMETER :: iup   = 20   ! unit for input profile file
+  INTEGER(KIND=jpim), PARAMETER :: ioout = 21   ! unit for output
+
+  ! RTTOV variables/structures
+  !====================
+! JKS these are already imported from "mod_cosp_rttov"
+!  TYPE(rttov_options)              :: opts                     ! Options structure
+!  TYPE(rttov_coefs)                :: coefs                    ! Coefficients structure
+
+  TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
+  LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
+  TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
+  LOGICAL(KIND=jplm),      POINTER :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
+  TYPE(rttov_reflectance), POINTER :: reflectance(:) => NULL() ! Input/output surface BRDF
+  TYPE(rttov_profile),     POINTER :: profiles(:)    => NULL() ! Input profiles
+  TYPE(rttov_transmission)         :: transmission             ! Output transmittances
+  TYPE(rttov_radiance)             :: radiance                 ! Output radiances
+
+  INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
+
+  INTEGER(KIND=jpim) :: alloc_status
+
+! Old
+!#include "rttov_read_coefs.interface"
+!#include "rttov_read_scattcoeffs.interface"
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+  ! JKS - add additional COSP inputs here.
   type rttov_in
      integer,pointer :: &
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols,     & ! Number of subcolumns
+          nChannels,    & ! Number of channels to simulate
           month           ! Month (needed for surface emissivity calculation)
      real(wp),pointer :: &
           zenang,       & ! Satellite zenith angle
@@ -85,23 +149,34 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
           fl_snow         ! Precipitation flux (stratiform+convective snow)
   end type rttov_in
+
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN)
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,nlevels)
     integer,intent(in) :: & 
          NchanIN,     & ! Number of channels
          platformIN,  & ! Satellite platform
          satelliteIN, & ! Satellite
-         instrumentIN   ! Instrument
+         instrumentIN, & ! Instrument
+         nlevels
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          channelsIN     ! RTTOV channels
 
     ! Local variables
-    character(len=256) :: coef_file,scat_file
-    integer :: errorstatus
+    character(len=256) :: &
+        coef_file, &
+        scat_file, &
+        rttov_coefDir, &
+        rttov_predDir, &
+        rttov_cldaerDir, &
+        OD_coef_filepath, &
+        aer_coef_file, &
+        cld_coef_file, &
+        aer_coef_filepath, &
+        cld_coef_filepath
 
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     nChannels  = NchanIN
@@ -110,27 +185,194 @@ CONTAINS
     sensor     = instrumentIN 
     iChannel   = channelsIN
 
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 1. Initialise RTTOV options structure
+    ! ------------------------------------------------------
+    ! See page 157 of RTTOV v13 user guide for documentation
+    ! Initializing all options to defaults for consistency
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    ! General configuration options
+    opts%config%do_checkinput    = .true.
+    opts%config%apply_reg_limits = .false. ! True in v11
+    opts%config%verbose          = .true.
+    opts%config%opdep13_gas_clip = .true.
+    
+    ! General Radiative Transfer Options
+    ! Gas profiles
+    opts%rt_all%ozone_data        = .true.
+    opts%rt_all%so2_data          = .true.
+    
+    ! Well-mixed gases
+    opts%rt_all%co2_data          = .true.
+    opts%rt_all%n2o_data          = .true.
+    opts%rt_all%co_data           = .true.
+    opts%rt_all%ch4_data          = .true.
+    
+    ! Other general RT options (initializing to defaults for completeness)
+    opts%rt_all%do_lambertian       = .false.
+    opts%rt_all%switchrad           = .false.
+    opts%rt_all%rad_down_lin_tau    = .true.
+    opts%rt_all%use_t2m_opdep       = .true.
+    opts%rt_all%use_q2m             = .true.
+    opts%rt_all%use_tskin_eff       = .false.
+    opts%rt_all%addrefrac           = .true.
+    opts%rt_all%plane_parallel      = .false.
+    opts%rt_all%transmittances_only = .false.
+    
+    ! MW-only radiative transfer options:
+    ! JKS make this optional?
+    opts%rt_mw%clw_data             = .false.
+    opts%rt_mw%clw_scheme           = 2       ! Default = 2/Rosenkranz
+    opts%rt_mw%clw_cloud_top        = 322     ! Default is 322 hPa
+    opts%rt_mw%fastem_version       = 6       ! Default FASTEM-6
+    opts%rt_mw%supply_foam_fraction = .false.
+
+    ! UV/visible/IR-only radiative transfer options
+    opts%rt_ir%addsolar                = .false.
+    opts%rt_ir%rayleigh_max_wavelength = 2._wp ! 2um 
+    opts%rt_ir%rayleigh_min_pressure   = 0._wp ! 0 hPa
+    opts%rt_ir%rayleigh_single_scatt   = .true.
+    opts%rt_ir%rayleigh_depol          = .true. ! Default false, recommended true
+    opts%rt_ir%do_nlte_correction      = .false.
+    opts%rt_ir%solar_sea_brdf_model    = 2
+    opts%rt_ir%ir_sea_emis_model       = 2
+    opts%rt_ir%addaerosl               = .false.
+    opts%rt_ir%addclouds               = .false.
+    opts%rt_ir%user_aer_opt_param      = .false. ! User specifies the aerosol scattering optical parameters 
+    opts%rt_ir%user_cld_opt_param      = .false. ! User specifies the cloud scattering optical parameters 
+    opts%rt_ir%grid_box_avg_cloud      = .true.
+    opts%rt_ir%cldcol_threshold        = -1._wp
+    opts%rt_ir%cloud_overlap           = 1 ! Maximum-random overlap
+    opts%rt_ir%cc_low_cloud_top        = 750_wp ! 750 hPa. Only applies when cloud_overlap=2.
+    opts%rt_ir%ir_scatt_model          = 2
+    opts%rt_ir%vis_scatt_model         = 1
+    opts%rt_ir%dom_nstreams            = 8
+    opts%rt_ir%dom_accuracy            = 0._wp ! only applies when addclouds or addaerosl is true and DOM is selected as a scattering solver.
+    opts%rt_ir%dom_opdep_threshold     = 0._wp
+    opts%rt_ir%dom_rayleigh            = .false.
+    
+    ! Principal Components-only radiative transfer options:
+    opts%rt_ir%pc%addpc     = .false.
+    opts%rt_ir%pc%npcscores = -1
+    opts%rt_ir%pc%addradrec = .false.
+    opts%rt_ir%pc%ipcbnd    = 1
+    opts%rt_ir%pc%ipcreg    = 1 ! The index of the required set of PC predictors
+    
+    ! Options related to interpolation and the vertical grid:
+    opts%interpolation%addinterp         = .true.
+    opts%interpolation%interp_mode       = 1
+!    opts%interpolation%reg_limit_extrap = .true. ! Depreciated
+    opts%interpolation%lgradp            = .false.
+!    opts%interpolation%spacetop         = .true. ! Depreciated
+
+    ! Options related to HTFRTC:
+    opts%htfrtc_opts%htfrtc       = .false.
+    opts%htfrtc_opts%n_pc_in      = -1
+    opts%htfrtc_opts%reconstruct  = .false.
+    opts%htfrtc_opts%simple_cloud = .false.
+    opts%htfrtc_opts%overcast     = .false.
+    
+    ! Developer options that may be useful:
+    opts%dev%do_opdep_calc = .true.
+    
+    ! JKS To-do: include opts_scatt settings (user guide pg 161)
+
+
+    ! Old configured options
 
     ! Options common to RTTOV clear-sky Tb calculation
-    opts%interpolation%addinterp  = .true.  ! allow interpolation of input profile
-    opts%rt_all%use_q2m           = .true.
-    opts%config%do_checkinput     = .false.
-    opts%config%verbose           = .false.
-    opts%rt_all%addrefrac         = .true.  ! include refraction in path calc
-    opts%interpolation%reg_limit_extrap = .true.
+!    opts%interpolation%addinterp  = .true.  ! allow interpolation of input profile
+!    opts%rt_all%use_q2m           = .true.
+!    opts%config%do_checkinput     = .false.
+!    opts%config%verbose           = .false.
+!    opts%rt_all%addrefrac         = .true.  ! include refraction in path calc
+!    opts%interpolation%reg_limit_extrap = .true.
+    
+!    opts%rt_mw%clw_data                = .true. 
     ! Options common to RTTOV clear-sky Tb calculation
-    opts_scatt%config%do_checkinput    = .false.
-    opts_scatt%config%verbose          = .false.
-    opts_scatt%config%apply_reg_limits = .true.
-    opts_scatt%interp_mode             = 1
-    opts_scatt%reg_limit_extrap        = .true.
-    opts_scatt%use_q2m                 = .true.
-    opts%rt_mw%clw_data                = .true. 
-        
+    
+    ! These scattering options are depreciated in v13
+!    opts_scatt%config%do_checkinput    = .false.
+!    opts_scatt%config%verbose          = .false.
+!    opts_scatt%config%apply_reg_limits = .true.
+!    opts_scatt%interp_mode             = 1
+!    opts_scatt%reg_limit_extrap        = .true.
+!    opts_scatt%use_q2m                 = .true.
+
+
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 2. Read coefficients (from RTTOV example files)
+    ! ------------------------------------------------------
+    ! Using the GUI to figure out files that work together could be helpful here.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Construct optical depth and cloud coefficient files
+    
+    ! rttovDir should be "/glade/u/home/jonahshaw/w/RTTOV/" passed from namelist
+    
+    ! Hardcoding these other paths for now, they should be input later.
+    rttov_coefDir   = "rtcoef_rttov13/" ! directory for coefficient in RTTOV v13
+    rttov_predDir   = "rttov13pred54L/" ! example directory for predictors. This should be input
+    rttov_cldaerDir = "cldaer_visir/" ! This should be input. Also "cldaer_ir".
+    
+    ! Optical depth file
+    OD_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_predDir)// &
+                       trim(construct_rttov_coeffilename(platform,satellite,sensor))
+
+    ! Example coefficient files (hardcoded)
+    aer_coef_file = "scaercoef_eos_2_airs_cams_chou-only.H5"
+    cld_coef_file = "sccldcoef_eos_2_airs_chou-only.H5"
+    
+    ! Coefficient files from the "construct_rttov_scatfilename" function. Not sure if working.
+!    aer_coef_file = construct_rttov_scatfilename(platform,satellite,sensor)
+!    cld_coef_file = construct_rttov_scatfilename(platform,satellite,sensor)
+    
+    ! Cloud and Aerosol scattering (and absorption?) file(s)
+    aer_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_cldaerDir)// &
+                        trim(aer_coef_file)
+    cld_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_cldaerDir)// &
+                        trim(cld_coef_file)
+         
+    ! Read optical depth and cloud coefficient files together
+    call rttov_read_coefs(errorstatus, coef_rttov, opts,         &
+                          file_coef=OD_coef_filepath,       &
+                          file_scaer=aer_coef_filepath,     &
+                          file_sccld=cld_coef_filepath)
+                          
+    if (errorstatus /= errorstatus_success) then
+        write(*,*) 'fatal error reading coefficients'
+        call rttov_exit(errorstatus)
+    endif
+    
+    ! Ensure input number of channels is not higher than number stored in coefficient file
+    if (nchannels > coef_rttov % coef % fmv_chn) then
+        nchannels = coef_rttov % coef % fmv_chn
+    endif
+
+    ! Ensure the options and coefficients are consistent
+    call rttov_user_options_checkinput(errorstatus, opts, coef_rttov)
+    if (errorstatus /= errorstatus_success) then
+        write(*,*) 'error in rttov options'
+        call rttov_exit(errorstatus)
+    endif
+    
+    ! Old code
+    !    coef_file = trim(rttovDir)//"rtcoef_rttov11/rttov7pred54L/"// &
+    !         trim(construct_rttov_coeffilename(platform,satellite,sensor))
+    
+        ! Read in scattering (clouds+aerosol) coefficient file. *ONLY NEEDED IF DOING RTTOV ALL-SKY.*
+    !scat_file = trim(rttovDir)//"rtcoef_rttov11/cldaer/"//&
+    !     trim(construct_rttov_scatfilename(platform,satellite,sensor))
+    ! Can't pass filename to rttov_read_scattcoeffs!!!!!
+    !call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt,)
+
+!!!! Old version 
+
     ! Read in scattering coefficient file.
-    coef_file = trim(rttovDir)//"rtcoef_rttov11/rttov7pred54L/"// &
-         trim(construct_rttov_coeffilename(platform,satellite,sensor))
-    call rttov_read_coefs(errorstatus,coef_rttov, opts, file_coef=trim(coef_file))
+!    coef_file = trim(rttovDir)//"rtcoef_rttov11/rttov7pred54L/"// &
+!         trim(construct_rttov_coeffilename(platform,satellite,sensor))
+!    call rttov_read_coefs(errorstatus,coef_rttov, opts, file_coef=trim(coef_file))
 
     ! Read in scattering (clouds+aerosol) coefficient file. *ONLY NEEDED IF DOING RTTOV ALL-SKY.*
     !scat_file = trim(rttovDir)//"rtcoef_rttov11/cldaer/"//&
@@ -139,6 +381,66 @@ CONTAINS
     !call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt,)
  
   END SUBROUTINE COSP_RTTOV_INIT
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_rttov_simulate
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,                   & ! Inputs
+                                 Tb,error)                    ! Outputs
+  
+      type(rttov_in),intent(in) :: &
+          rttovIN
+      real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+           Tb        ! RTTOV brightness temperature.
+      character(len=128) :: &
+           error     ! Error messages (only populated if error encountered)  
+  
+      integer(kind=jpim) :: nchanprof ! JKS - jpim is RTTOV integer type
+    
+      integer :: errorstatus
+  ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
+
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 3. Allocate RTTOV input and output structures
+    ! ------------------------------------------------------
+    ! Largely from RTTOV documentation.
+    ! This only needs to be performed once if all chunks are the same size, right? <-- We don't know chunk sizes at init, so this must be in the main loop.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+      ! Determine the total number of radiances to simulate (nchanprof).
+      ! We aren't doing subcolumn sampling (RTTOV already does this and it would be slow)
+!      nchanprof = nchannels * nprof
+      nchanprof = rttovIN%nChannels * rttovIN%nPoints
+
+      ! Allocate structures for rttov_direct
+      CALL rttov_alloc_direct( &
+            errorstatus,             &
+            1_jpim,                  &  ! 1 => allocate
+!            nprof,                   &
+            rttovIN%nPoints,         &
+            nchanprof,               &
+!            nlevels,                 &
+            rttovIN%nLevels,         &
+            chanprof,                &
+            opts,                    &
+            profiles,                &
+            coef_rttov,              &
+!            coefs,                   &
+            transmission,            &
+            radiance,                &
+            calcemis=calcemis,       &
+            emissivity=emissivity,   &
+            calcrefl=calcrefl,       &
+            reflectance=reflectance, &
+            init=.TRUE._jplm)
+      IF (errorstatus /= errorstatus_success) THEN
+        WRITE(*,*) 'allocation error for rttov_direct structures'
+        CALL rttov_exit(errorstatus)
+      ENDIF
+
+  
+  END SUBROUTINE COSP_RTTOV_SIMULATE
+  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
