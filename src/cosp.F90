@@ -49,7 +49,8 @@ MODULE MOD_COSP
                                          ntau,modis_histTau,tau_binBounds,               &
                                          modis_histTauEdges,tau_binEdges,nCloudsatPrecipClass,&
                                          modis_histTauCenters,tau_binCenters,            &
-                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct
+                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct,&
+                                         RTTOV_MAX_CHANNELS ! JKS needed for RTTOV to be in cosp_optical_inputs
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       rttov_IN
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
@@ -67,7 +68,8 @@ MODULE MOD_COSP
   USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
   USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID, &
                                            COSP_DIAG_WARMRAIN
-  use mod_cosp_rttov,                ONLY: rttov_column
+  use mod_cosp_rttov,                ONLY: rttov_simulate ! JKS new function
+!  use mod_cosp_rttov,                ONLY: rttov_column,rttov_simulate ! JKS new function
 
   IMPLICIT NONE
 
@@ -133,7 +135,15 @@ MODULE MOD_COSP
           Ncolumns,            & ! Number of columns.
           Nlevels,             & ! Number of levels.
           Npart,               & ! Number of cloud meteors for LIDAR simulators.
-          Nrefl                  ! Number of reflectances for PARASOL simulator
+          Nrefl,               & ! Number of reflectances for PARASOL simulator
+! RTTOV inputs JKS
+          NchanIN_rttov,       & ! Number of RTTOV channels
+          platformIN_rttov,    & ! RTTOV platform integer
+          satelliteIN_rttov,   & ! RTTOV satellite integer
+          instrumentIN_rttov     ! RTTOV instrument integer
+!     integer,allocatable,dimension(RTTOV_MAX_CHANNELS) :: &
+     integer,dimension(RTTOV_MAX_CHANNELS) :: & ! JKS
+          channelsIN_rttov       ! RTTOV channels for the specified instrument
      real(wp) :: &
           emsfc_lw               ! Surface emissivity @ 11micron
      real(wp),allocatable,dimension(:,:,:) :: &
@@ -290,7 +300,7 @@ MODULE MOD_COSP
           modis_Optical_Thickness_vs_ReffICE => null(),            & ! Tau/ReffICE joint histogram
           modis_Optical_Thickness_vs_ReffLIQ => null()               ! Tau/ReffLIQ joint histogram
 
-     ! RTTOV outputs
+     ! RTTOV outputs - JKS consider clear-sky and cloudy-sky values here
      real(wp),pointer :: &
           rttov_tbs(:,:) => null() ! Brightness Temperature
 
@@ -726,6 +736,7 @@ CONTAINS
        endif
     endif
 
+    ! JKS: Will need to add cloud liquid and ice parameter (r_eff)
     if (Lrttov_column) then
        rttovIN%nPoints    => Npoints
        rttovIN%nLevels    => cospIN%nLevels
@@ -1518,18 +1529,40 @@ CONTAINS
 
     ! RTTOV
     if (lrttov_column) then
-       call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
-                         rttovIN%p,rttovIN%t,rttovIN%o3,rttovIN%ph,rttovIN%h_surf,      &
-                         rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
-                         rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
-                         rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
-                         rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
-                         cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1),           &
-                         ! Optional arguments for surface emissivity calculation
-                         month=rttovIN%month)
-                         ! Optional arguments to rttov for all-sky calculation
-                         ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
-                         ! rttovIN%fl_rain,rttovIN%fl_snow)
+
+! JKS building new call
+!       call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
+!                         rttovIN%p,rttovIN%t,rttovIN%o3,rttovIN%ph,rttovIN%h_surf,      &
+!                         rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
+!                         rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
+!                         rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
+!                         rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
+!                         cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1),           &
+!                         ! Optional arguments for surface emissivity calculation
+!                         month=rttovIN%month)
+!                         ! Optional arguments to rttov for all-sky calculation
+!                         ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
+!                         ! rttovIN%fl_rain,rttovIN%fl_snow)
+                         
+        ! JKS new RTTOV subroutine for v13
+        !call rttov_simulate(rttovIN,cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1)) !,&
+
+       call rttov_simulate(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
+                           rttovIN%p,rttovIN%t,rttovIN%o3,rttovIN%ph,rttovIN%h_surf,      &
+                           rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
+                           rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
+                           rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
+                           rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
+! Previously optional emissivity arguments                           
+                           rttovIN%surfem,rttovIN%month,                                  &
+! Previously optional cloud arguments                           
+                           rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,                     &
+                           rttovIN%fl_rain,rttovIN%fl_snow,                               &
+! Outputs                           
+                           cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
+                           
+!                           month=rttovIN%month)
+                         
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1750,7 +1783,8 @@ CONTAINS
   SUBROUTINE COSP_INIT(Lisccp, Lmodis, Lmisr, Lcloudsat, Lcalipso, LgrLidar532, Latlid, Lparasol, Lrttov,     &
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
-       luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme)
+       luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
+       NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
@@ -1761,7 +1795,13 @@ CONTAINS
          isccp_top_height_direction, & !
          Nlevels,                    & !
          Nvgrid,                     & ! Number of levels for new L3 grid
-         surface_radar                 !
+         surface_radar,              & !
+         NchanIN,                    & ! RTTOV arguments here and below JKS
+         platformIN,                 &
+         satelliteIN,                &
+         instrumentIN
+    integer,dimension(RTTOV_MAX_CHANNELS) :: &
+         channelsIN               ! RTTOV: Channel numbers
     real(wp),intent(in) :: &
          cloudsat_radar_freq,        & !
          cloudsat_k2                   !
@@ -1817,7 +1857,9 @@ CONTAINS
     if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
-    if (Lrttov) call cosp_rttov_init()
+    if (Lrttov) call cosp_rttov_init(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN) ! JKS arguments must be available
+!    if (Lrttov) call cosp_rttov_init() ! JKS arguments must be available
+    
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
          rcfg,cloudsat_micro_scheme)
