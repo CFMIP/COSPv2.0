@@ -119,7 +119,7 @@ MODULE MOD_COSP
           lon                    ! Longitude                              (deg)
      real(wp),allocatable,dimension(:,:) :: &
           o3,                  & ! Ozone                                  (kg/kg)
-          tca,                 & ! Total column cloud fraction            (0-1)
+          tca,                 & ! Total layer cloud fraction             (0-1)
           cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
           cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
