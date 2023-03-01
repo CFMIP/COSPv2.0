@@ -769,8 +769,8 @@ CONTAINS
        rttovIN%tca        => cospgridIN%tca
        rttovIN%cldIce     => cospgridIN%cloudIce
        rttovIN%cldLiq     => cospgridIN%cloudLiq
-       rttovIN%fl_rain    => cospgridIN%fl_rain
-       rttovIN%fl_snow    => cospgridIN%fl_snow
+       rttovIN%fl_rain    => cospgridIN%fl_rain ! JKS remove?
+       rttovIN%fl_snow    => cospgridIN%fl_snow ! JKS remove?
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

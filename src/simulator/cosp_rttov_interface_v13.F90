@@ -43,8 +43,10 @@ MODULE MOD_COSP_RTTOV_INTERFACE
          errorstatus_success, &
          errorstatus_fatal,   &
          platform_name,       &
-         inst_name
-
+         inst_name,           &
+         surftype_sea,        &
+         surftype_land,       &
+         surftype_seaice
   ! rttov_types contains definitions of all RTTOV data types
   USE rttov_types, ONLY :     &
          rttov_options,       &
@@ -383,7 +385,7 @@ CONTAINS
   END SUBROUTINE COSP_RTTOV_INIT
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_simulate
+  ! SUBROUTINE cosp_rttov_simulate - JKS should this move to cosp_rttov_v13?
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,                   & ! Inputs
                                  Tb,error)                    ! Outputs
@@ -391,11 +393,28 @@ CONTAINS
       type(rttov_in),intent(in) :: &
           rttovIN
       real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
-           Tb        ! RTTOV brightness temperature.
+          Tb        ! RTTOV brightness temperature.
       character(len=128) :: &
-           error     ! Error messages (only populated if error encountered)  
-  
+          error     ! Error messages (only populated if error encountered)  
+
+      ! Internal variables. Trace gas columns in units of (kg/kg)
+      real(wp),dimension(rttovIN%nLevels) :: & ! wp or jprb?
+          co2_column,   &
+          ch4_column,   &
+          n2o_column,   &
+          co_column
+!      array ( : , : , : ) = 0.0d0
+
+      ! variables for input
+      !====================
+      integer(kind=jpim) :: nthreads
+      integer(kind=jpim) :: dosolar
       integer(kind=jpim) :: nchanprof ! JKS - jpim is RTTOV integer type
+      integer(kind=jpim), allocatable :: channel_list(:)
+      
+      ! Loop variables
+      integer(kind=jpim) :: i, j, jch
+      integer(kind=jpim) :: nch
     
       integer :: errorstatus
   ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
@@ -413,7 +432,7 @@ CONTAINS
       nchanprof = rttovIN%nChannels * rttovIN%nPoints
 
       ! Allocate structures for rttov_direct
-      CALL rttov_alloc_direct( &
+      call rttov_alloc_direct( &
             errorstatus,             &
             1_jpim,                  &  ! 1 => allocate
 !            nprof,                   &
@@ -433,12 +452,155 @@ CONTAINS
             calcrefl=calcrefl,       &
             reflectance=reflectance, &
             init=.TRUE._jplm)
-      IF (errorstatus /= errorstatus_success) THEN
-        WRITE(*,*) 'allocation error for rttov_direct structures'
-        CALL rttov_exit(errorstatus)
-      ENDIF
+      if (errorstatus /= errorstatus_success) then
+        write(*,*) 'allocation error for rttov_direct structures'
+        call rttov_exit(errorstatus)
+      endif
 
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 4. Build the list of profile/channel indices in chanprof
+    ! ------------------------------------------------------
+    ! Largely from RTTOV documentation.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
+      nch = 0_jpim
+      do j = 1, rttovIN%nPoints
+        do jch = 1, rttovIN%nChannels
+          nch = nch + 1_jpim
+          chanprof(nch)%prof = j
+          chanprof(nch)%chan = channel_list(jch)
+        end do
+      end do
+      
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 5. Read profile data
+    ! ------------------------------------------------------
+    ! Largely from cosp_rttov_v11.F90 file.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    ! Create a new subroutine in cosp_rttov_v13 and call it to return the profiles
+    
+    !call rttov_profile_setup(rttovIN,profiles)
+    
+    ! Store profile data from rttovIN in profile type.
+    ! See RTTOV user guide pg 163 for description of "profiles" type
+    
+! "The rttov_profile structure is composed of the atmospheric part 
+! and two other structures for 2 meter air and skin surface. 
+! If you are not able to provide ozone, CO2, etc profiles the flags
+! ozone_data, co2_data and so on in the options structure should be 
+! set to false."
+
+    ! Want to set these up as arrays of size (nLevels,nPoints) with
+    ! constant values. Not sure how to do it efficiently. i.e. no loops
+
+    ! Set-up trace gas columns do implied do statements (not working)
+!    co2_column = (rttovIN%co2, i=1,rttovIN%nLevels)
+!    ch4_column = (rttovIN%ch4, i=1,rttovIN%nLevels)
+!    n2o_column = (rttovIN%n2o, i=1,rttovIN%nLevels)
+!    co_column  = (rttovIN%co,  i=1,rttovIN%nLevels)
+    
+    ! Trace gas concentrations (constant in input, go outside loop)
+    ! This won't work because the columns should be 2D.
+!    profiles(:)%co2        =  co2_column
+!    profiles(:)%n2o        =  n2o_column
+!    profiles(:)%co         =  co_column
+!    profiles(:)%ch4        =  ch4_column
+
+    profiles%gas_units  =  1 ! kg/kg over moist air (default)
+    profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
+    
+    profiles%clw_scheme   = 2. ! Deff scheme avoids cloud types
+!    profiles%clwde_scheme = 1. ! Not implemented?
+    profiles%ice_scheme   = 1. ! Baum or Baran
+    profiles%icede_param  = 2. ! Wyser
+    
+    do i = 1, rttovIN%nPoints
+       profiles(i)%p(:) =  rttovIN%p(i, :)
+       profiles(i)%t(:) =  rttovIN%t(i, :)
+       profiles(i)%q(:) =  rttovIN%q(i, :)
+
+       ! JKS not sure if I should keep this
+       where(profiles(i)%q(:) < 1e-4)
+          profiles(i)%q(:) = 1e-4
+       end where
+
+       ! Old code for simple cloud schemes only
+!       profiles(i)%cfraction  =  0.
+!       profiles(i)%ctp        =  500.
+
+       ! Add handling of more complex cloud schemes
+
+       ! Gas profiles
+       profiles(i)%o3         =  rttovIN%o3(i, :)
+!       profiles(i)%so2        =  ?
+       
+       ! Other stuff implementation not clear
+!       profiles(i)%clw        = ! Cloud liquid water (kg/kg) – MW only,
+!       profiles(i)%aerosols(naertyp,nlayers) = ! Aerosols in different modes
+
+       ! Cloud scheme stuff
+       profiles(i)%cloud(1,:) = rttovIN%cldLiq ! Cloud water mixing ratio (all in the first type for Deff)
+       profiles(i)%cloud(6,:) = rttovIN%cldIce ! Cloud ice mixing ratio (1 type). See pg 74.
+
+!       profiles(i)%cloud(ncldtyp,nlayers) = ! Cloud types
+!       profiles(i)%cfrac = ! Cloud fraction for each layer
+!       profiles(i)%clwde = ! Cloud water effective diameter
+!       profiles(i)%icede = ! Cloud ice effective diameter
+
+
+
+       ! 2m parameters
+       profiles(i)%s2m%p      =  rttovIN%p_surf(i)
+       profiles(i)%s2m%t      =  rttovIN%t2m(i) ! JKS or rttovIN%t_skin
+       profiles(i)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
+       profiles(i)%s2m%u      =  rttovIN%u_surf(i)
+       profiles(i)%s2m%v      =  rttovIN%v_surf(i)
+       profiles(i)%s2m%wfetc  =  10000. ! only used by sea surface solar BRDF model.
+
+       ! skin variables for emissivity calculations
+       profiles(i)%skin%t          =  rttovIN%t_skin(i)
+
+       ! fastem coefficients - for mw calculations
+       profiles(i)%skin%fastem(1)  =  3.0
+       profiles(i)%skin%fastem(2)  =  5.0
+       profiles(i)%skin%fastem(3)  =  15.0
+       profiles(i)%skin%fastem(4)  =  0.1
+       profiles(i)%skin%fastem(5)  =  0.3
+
+       ! Viewing angles
+       profiles(i)%zenangle      = rttovIN%zenang ! pass in from cosp
+       profiles(i)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
+
+       profiles(i)%latitude      = rttovIN%latitude(i)
+       profiles(i)%longitude     = rttovIN%longitude(i)
+       profiles(i)%elevation     = rttovIN%h_surf(i)
+
+       ! Solar angles. JKS - get this from COSP? Doesn't seem to be passed in.
+       profiles(i)%sunzenangle   = 0. ! hard-coded in rttov9 int
+       profiles(i)%sunazangle    = 0. ! hard-coded in rttov9 int
+
+       ! surface type
+       ! land-sea mask (lsmask) indicates proportion of land in grid
+       if (rttovIN%lsmask(i) < 0.5) then
+          profiles(i)%skin%surftype  = surftype_sea
+       else
+          profiles(i)%skin%surftype  = surftype_land
+       endif
+       ! sea-ice fraction
+       if (rttovIN%seaice(i) >= 0.5) then
+          profiles(i)%skin%surftype  = surftype_seaice
+       endif
+
+       ! dar: hard-coded to 1 (=ocean water) in rttov 9 int
+       profiles(i)%skin%watertype = 1
+       !profiles(i) %idg         = 0. ! Depreciated?
+       !profiles(i) %ish         = 0. ! Depreciated?
+    end do
+    
+    
+    ! JKS To-do: set up scattering profiles (MW only) (rttov_profile_cloud)
+
   END SUBROUTINE COSP_RTTOV_SIMULATE
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
