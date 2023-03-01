@@ -84,12 +84,13 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN)
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,nlevels)
     integer,intent(in) :: & 
-         NchanIN,     & ! Number of channels
-         platformIN,  & ! Satellite platform
-         satelliteIN, & ! Satellite
-         instrumentIN   ! Instrument
+         NchanIN,      & ! Number of channels
+         platformIN,   & ! Satellite platform
+         satelliteIN,  & ! Satellite
+         instrumentIN, & ! Instrument
+         nlevels
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          channelsIN     ! RTTOV channels
   END SUBROUTINE COSP_RTTOV_INIT
