@@ -52,7 +52,7 @@ MODULE MOD_COSP
                                          cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct,&
                                          RTTOV_MAX_CHANNELS ! JKS needed for RTTOV to be in cosp_optical_inputs
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
-  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init, cosp_rttov_simulate, rttov_IN
+  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init, cosp_rttov_simulate
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
   USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN
   USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN
@@ -66,6 +66,7 @@ MODULE MOD_COSP
   USE MOD_LIDAR_SIMULATOR,           ONLY: lidar_subcolumn,       lidar_column
   USE MOD_MODIS_SIM,                 ONLY: modis_subcolumn,       modis_column
   USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
+  USE MOD_COSP_RTTOV,                ONLY: rttov_IN
   USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID, &
                                            COSP_DIAG_WARMRAIN
 !  use mod_cosp_rttov,                ONLY: rttov_simulate ! JKS new function
