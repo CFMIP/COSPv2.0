@@ -379,13 +379,6 @@ CONTAINS
         Tb        ! RTTOV brightness temperature.
     character(len=128) :: &
         error     ! Error messages (only populated if error encountered)  
-
-    ! Internal variables. Trace gas columns in units of (kg/kg)
-    real(wp),dimension(rttovIN%nLevels) :: & ! wp or jprb?
-        co2_column,   &
-        ch4_column,   &
-        n2o_column,   &
-        co_column
     logical                             :: &
         rttov_simulate_cld,                &
         rttov_simulate_aer
@@ -460,7 +453,7 @@ CONTAINS
       do jch = 1, rttovIN%nChannels
         nch = nch + 1_jpim
         chanprof(nch)%prof = j
-        chanprof(nch)%chan = channel_list(jch)
+        chanprof(nch)%chan = channel_list(jch) ! channel_list should be specified
       end do
     end do
       
@@ -485,19 +478,14 @@ CONTAINS
 
     ! Want to set these up as arrays of size (nLevels,nPoints) with
     ! constant values. Not sure how to do it efficiently. i.e. no loops
-
-    ! Set-up trace gas columns do implied do statements (not working)
-!    co2_column = (rttovIN%co2, i=1,rttovIN%nLevels)
-!    ch4_column = (rttovIN%ch4, i=1,rttovIN%nLevels)
-!    n2o_column = (rttovIN%n2o, i=1,rttovIN%nLevels)
-!    co_column  = (rttovIN%co,  i=1,rttovIN%nLevels)
     
-    ! Trace gas concentrations (constant in input, go outside loop)
-    ! This won't work because the columns should be 2D.
-!    profiles(:)%co2        =  co2_column
-!    profiles(:)%n2o        =  n2o_column
-!    profiles(:)%co         =  co_column
-!    profiles(:)%ch4        =  ch4_column
+    ! Initialize trace gas column concentrations (well-mixed so constant in input)
+    do j = 1, rttovIN%nlevels
+      profiles(:)%co2(j)        =  rttovIN%co2
+      profiles(:)%n2o(j)        =  rttovIN%n2o
+      profiles(:)%co(j)         =  rttovIN%n2o
+      profiles(:)%ch4(j)        =  rttovIN%ch4
+    end do
 
     profiles%gas_units  =  1 ! kg/kg over moist air (default)
     
