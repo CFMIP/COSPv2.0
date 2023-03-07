@@ -36,27 +36,16 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
                               opts,construct_rttov_coeffilename,rttov_in,                &
                               construct_rttov_scatfilename
-!                              coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
                               
   ! rttov_const contains useful RTTOV constants
   USE rttov_const, ONLY :     &
          errorstatus_success, &
-         errorstatus_fatal,   &
-         platform_name,       &
-         inst_name,           &
-         surftype_sea,        &
-         surftype_land,       &
-         surftype_seaice
+         errorstatus_fatal
+
   ! rttov_types contains definitions of all RTTOV data types
   USE rttov_types, ONLY :     &
          rttov_options,       &
-         rttov_coefs,         &
-         rttov_profile,       &
-         rttov_transmission,  &
-         rttov_radiance,      &
-         rttov_chanprof,      &
-         rttov_emissivity,    &
-         rttov_reflectance
+         rttov_coefs
 
   ! jpim, jprb and jplm are the RTTOV integer, real and logical KINDs
   USE parkind1, ONLY : jpim, jprb, jplm
@@ -65,47 +54,20 @@ MODULE MOD_COSP_RTTOV_INTERFACE
                               
   IMPLICIT NONE
 
-#include "rttov_direct.interface"
-#include "rttov_parallel_direct.interface"
 #include "rttov_read_coefs.interface"
-#include "rttov_dealloc_coefs.interface"
-#include "rttov_alloc_direct.interface"
-#include "rttov_init_emis_refl.interface"
 #include "rttov_user_options_checkinput.interface"
 #include "rttov_print_opts.interface"
-#include "rttov_print_profile.interface"
-#include "rttov_skipcommentline.interface"
 
   !--------------------------
-  !
-  INTEGER(KIND=jpim), PARAMETER :: iup   = 20   ! unit for input profile file
-  INTEGER(KIND=jpim), PARAMETER :: ioout = 21   ! unit for output
-
+  
   ! RTTOV variables/structures
   !====================
-! JKS these are already imported from "mod_cosp_rttov"
-!  TYPE(rttov_options)              :: opts                     ! Options structure
-!  TYPE(rttov_coefs)                :: coefs                    ! Coefficients structure
-
-  TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
   LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
-  TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
   LOGICAL(KIND=jplm),      POINTER :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
-  TYPE(rttov_reflectance), POINTER :: reflectance(:) => NULL() ! Input/output surface BRDF
-  TYPE(rttov_profile),     POINTER :: profiles(:)    => NULL() ! Input profiles
-  TYPE(rttov_transmission)         :: transmission             ! Output transmittances
-  TYPE(rttov_radiance)             :: radiance                 ! Output radiances
-
   INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
 
   INTEGER(KIND=jpim) :: alloc_status(60)
-!  integer :: alloc_status_cosp(60)
   
-
-! Old
-!#include "rttov_read_coefs.interface"
-!#include "rttov_read_scattcoeffs.interface"
-
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -298,11 +260,7 @@ CONTAINS
                           
     ! We aren't checking an allocation steps so this seems more appropriate.
     call rttov_error('fatal error reading coefficients' , lalloc = .false.)
-     ! Old error check
-!    if (errorstatus /= errorstatus_success) then
-!        write(*,*) 'fatal error reading coefficients'
-!        call rttov_exit(errorstatus)
-!    endif
+
     
     ! Ensure input number of channels is not higher than number stored in coefficient file
     if (nchannels > coef_rttov % coef % fmv_chn) then
@@ -314,11 +272,6 @@ CONTAINS
     
     ! We aren't checking an allocation steps so this seems more appropriate.
     call rttov_error('error in rttov options' , lalloc = .false.) 
-    ! Old error check
-!    if (errorstatus /= errorstatus_success) then
-!        write(*,*) 'error in rttov options'
-!        call rttov_exit(errorstatus)
-!    endif
     
     ! Old code
     !    coef_file = trim(rttovDir)//"rtcoef_rttov11/rttov7pred54L/"// &
