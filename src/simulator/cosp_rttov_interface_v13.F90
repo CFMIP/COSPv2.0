@@ -34,7 +34,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
   USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
-                              opts,construct_rttov_coeffilename,   &
+                              opts,construct_rttov_coeffilename,rttov_in,                &
                               construct_rttov_scatfilename
 !                              coef_scatt,opts,opts_scatt,construct_rttov_coeffilename,   &
                               
@@ -105,54 +105,6 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 ! Old
 !#include "rttov_read_coefs.interface"
 !#include "rttov_read_scattcoeffs.interface"
-
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE rttov_in
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
-  ! JKS - add additional COSP inputs here.
-  type rttov_in
-     integer,pointer :: &
-          nPoints,      & ! Number of profiles to simulate
-          nLevels,      & ! Number of levels
-          nSubCols,     & ! Number of subcolumns
-          nChannels,    & ! Number of channels to simulate
-          month           ! Month (needed for surface emissivity calculation)
-     real(wp),pointer :: &
-          zenang,       & ! Satellite zenith angle
-          co2,          & ! Carbon dioxide 
-          ch4,          & ! Methane 
-          n2o,          & ! n2o 
-          co              ! Carbon monoxide
-     real(wp),dimension(:),pointer :: &
-          surfem          ! Surface emissivities for the channels
-     real(wp),dimension(:),pointer :: &
-          h_surf,       & ! Surface height
-          u_surf,       & ! U component of surface wind
-          v_surf,       & ! V component of surface wind
-          t_skin,       & ! Surface skin temperature
-          p_surf,       & ! Surface pressure
-          t2m,          & ! 2 m Temperature
-          q2m,          & ! 2 m Specific humidity
-          lsmask,       & ! land-sea mask
-          latitude,     & ! Latitude
-          longitude,    & ! Longitude
-          seaice          ! Sea-ice? 
-     real(wp),dimension(:,:),pointer :: &
-          p,            & ! Pressure @ model levels
-          ph,           & ! Pressure @ model half levels
-          t,            & ! Temperature 
-          q,            & ! Specific humidity
-          o3              ! Ozone
-     
-     ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
-     real(wp),dimension(:,:),pointer :: &
-          tca,          & ! Cloud fraction
-          cldIce,       & ! Cloud ice
-          cldLiq,       & ! Cloud liquid
-          fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
-          fl_snow         ! Precipitation flux (stratiform+convective snow)
-  end type rttov_in
 
 CONTAINS
 
@@ -339,15 +291,18 @@ CONTAINS
                         trim(cld_coef_file)
          
     ! Read optical depth and cloud coefficient files together
-    call rttov_read_coefs(errorstatus, coef_rttov, opts,         &
+    call rttov_read_coefs(errorstatus, coef_rttov, opts,    &
                           file_coef=OD_coef_filepath,       &
                           file_scaer=aer_coef_filepath,     &
                           file_sccld=cld_coef_filepath)
                           
-    if (errorstatus /= errorstatus_success) then
-        write(*,*) 'fatal error reading coefficients'
-        call rttov_exit(errorstatus)
-    endif
+    ! We aren't checking an allocation steps so this seems more appropriate.
+    call rttov_error('fatal error reading coefficients' , lalloc = .false.)
+     ! Old error check
+!    if (errorstatus /= errorstatus_success) then
+!        write(*,*) 'fatal error reading coefficients'
+!        call rttov_exit(errorstatus)
+!    endif
     
     ! Ensure input number of channels is not higher than number stored in coefficient file
     if (nchannels > coef_rttov % coef % fmv_chn) then
@@ -356,10 +311,14 @@ CONTAINS
 
     ! Ensure the options and coefficients are consistent
     call rttov_user_options_checkinput(errorstatus, opts, coef_rttov)
-    if (errorstatus /= errorstatus_success) then
-        write(*,*) 'error in rttov options'
-        call rttov_exit(errorstatus)
-    endif
+    
+    ! We aren't checking an allocation steps so this seems more appropriate.
+    call rttov_error('error in rttov options' , lalloc = .false.) 
+    ! Old error check
+!    if (errorstatus /= errorstatus_success) then
+!        write(*,*) 'error in rttov options'
+!        call rttov_exit(errorstatus)
+!    endif
     
     ! Old code
     !    coef_file = trim(rttovDir)//"rtcoef_rttov11/rttov7pred54L/"// &
@@ -383,6 +342,28 @@ CONTAINS
     !     trim(construct_rttov_scatfilename(platform,satellite,sensor))
     ! Can't pass filename to rttov_read_scattcoeffs!!!!!
     !call rttov_read_scattcoeffs (errorstatus, coef_rttov%coef, coef_scatt,)
+    
+    
+    ! subsub routines
+    contains
+      ! Wrapper function for exiting RTTOV and reporting the error
+      subroutine rttov_error(msg, lalloc)
+        character(*) :: msg
+        logical  :: lalloc
+
+        if(lalloc) then
+          if (any(alloc_status /= 0)) then
+            write(*,*) msg
+            errorstatus = 1
+            call rttov_exit(errorstatus)
+          endif
+        else
+          if (errorstatus /= errorstatus_success) then
+            write(*,*) msg
+            call rttov_exit(errorstatus)
+          endif
+        endif
+      end subroutine rttov_error
  
   END SUBROUTINE COSP_RTTOV_INIT
   
@@ -464,7 +445,7 @@ CONTAINS
         calcrefl=calcrefl,       &
         reflectance=reflectance, &
         init=.TRUE._jplm)
-    call rttov_error('allocation error for rttov_direct structures' , lalloc = .true.)
+    call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4. Build the list of profile/channel indices in chanprof
@@ -589,7 +570,9 @@ CONTAINS
       !profiles(i) %idg         = 0. ! Depreciated?
       !profiles(i) %ish         = 0. ! Depreciated?
     end do
-    call rttov_error('error in profile initialization' , lalloc = .true.)
+    
+    ! JKS - nothing to check here, this will never trigger.
+    call rttov_error('error in profile initialization' , lalloc = .false.)
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the cloud fields if simulating cloud.
@@ -626,7 +609,9 @@ CONTAINS
 !        profiles(i)%clw        = ! Cloud liquid water (kg/kg) – MW only,
         end do
     endif
-    call rttov_error('error in cloud profile initialization' , lalloc = .true.)
+    
+    ! JKS - nothing to check here, this will never trigger.
+    call rttov_error('error in cloud profile initialization' , lalloc = .false.)
     
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -643,6 +628,8 @@ CONTAINS
 !
 !      end do
     endif
+    
+    ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in aerosol profile initialization' , lalloc = .true.)
     
     ! JKS To-do: set up scattering profiles (MW only) (rttov_profile_cloud)

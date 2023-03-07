@@ -54,7 +54,6 @@ module mod_cosp_rttov
   use cosp_phys_constants, only : mdry=>amd,mO3=>amO3,mco2=>amCO2,mCH4=>amCH4,           &
                                   mn2o=>amN2O,mco=>amCO
 
-
   ! The rttov_emis_atlas_data type must be imported separately
   use mod_rttov_emis_atlas, ONLY : &
         rttov_emis_atlas_data, &
@@ -129,6 +128,56 @@ module mod_cosp_rttov
 ! JKS - KISS
 !  type(rttov_options_scatt) :: &
 !       opts_scatt
+
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! TYPE rttov_in
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+  ! JKS - add additional COSP inputs here.
+  type rttov_IN
+     integer,pointer :: &
+          nPoints,      & ! Number of profiles to simulate
+          nLevels,      & ! Number of levels
+          nSubCols,     & ! Number of subcolumns
+          nChannels,    & ! Number of channels to simulate
+          month           ! Month (needed for surface emissivity calculation)
+     real(wp),pointer :: &
+          zenang,       & ! Satellite zenith angle
+          co2,          & ! Carbon dioxide 
+          ch4,          & ! Methane 
+          n2o,          & ! n2o 
+          co              ! Carbon monoxide
+     real(wp),dimension(:),pointer :: &
+          surfem          ! Surface emissivities for the channels
+     real(wp),dimension(:),pointer :: &
+          h_surf,       & ! Surface height
+          u_surf,       & ! U component of surface wind
+          v_surf,       & ! V component of surface wind
+          t_skin,       & ! Surface skin temperature
+          p_surf,       & ! Surface pressure
+          t2m,          & ! 2 m Temperature
+          q2m,          & ! 2 m Specific humidity
+          lsmask,       & ! land-sea mask
+          latitude,     & ! Latitude
+          longitude,    & ! Longitude
+          seaice          ! Sea-ice? 
+     real(wp),dimension(:,:),pointer :: &
+          p,            & ! Pressure @ model levels
+          ph,           & ! Pressure @ model half levels
+          t,            & ! Temperature 
+          q,            & ! Specific humidity
+          o3              ! Ozone
+     
+     ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
+     real(wp),dimension(:,:),pointer :: &
+          tca,          & ! Cloud fraction
+          cldIce,       & ! Cloud ice
+          cldLiq,       & ! Cloud liquid
+          fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
+          fl_snow         ! Precipitation flux (stratiform+convective snow)
+  end type rttov_IN
+
 contains
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
