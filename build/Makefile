@@ -11,10 +11,18 @@ MODIS_PATH   = $(SIM_PATH)/MODIS_simulator
 PARASOL_PATH = $(SIM_PATH)/parasol
 
 # RTTOV variables. You may need to change this. JKS
-RTTOV_PATH     = /glade/u/home/jonahshaw/w/RTTOV
-RTTOV_LIB_PATH = $(RTTOV_PATH)/lib 
-RTTOV_INC_PATH = $(RTTOV_PATH)/include 
-RTTOV_MOD_PATH = $(RTTOV_PATH)/mod
+# RTTOV_PATH     = /glade/u/home/jonahshaw/w/RTTOV
+# RTTOV_LIB_PATH = $(RTTOV_PATH)/lib 
+# RTTOV_INC_PATH = $(RTTOV_PATH)/include 
+# RTTOV_MOD_PATH = $(RTTOV_PATH)/mod
+
+# Makefile.rttov needs to define: RTTOVDIR, FFLAGS, LIBDIR, LIBS, LLIBS
+include Makefile.rttov
+# RTTOV_LIB_PATH = $(RTTOVDIR)/lib  # JKS - this became LIBDIR in Makefile.rttov
+# RTTOV_INC_PATH = $(RTTOVDIR)/include # JKS - this gets folded into FFLAGS
+# RTTOV_MOD_PATH = $(RTTOVDIR)/mod     # JKS - this gets folded into FFLAGS
+
+
 
 VPATH = $(SRC_PATH):$(HOOKS):$(SIM_PATH):$(RT_PATH):$(RS_PATH):$(CS_PATH):$(ISCCP_PATH):$(MISR_PATH):$(MODIS_PATH):$(PARASOL_PATH)
 
@@ -34,7 +42,11 @@ LDFLAGS  += $(NC_LIB) -lnetcdff
 LDFLAGS += -L. -lcosp -lsubcol
 
 ifdef RTTOV
-LDFLAGS += -L${RTTOV_LIB_PATH} -lrttov13
+# LDFLAGS += -L${RTTOV_LIB_PATH} -lrttov13
+#LDFLAGS += -L${RTTOV_LIB_PATH} -lrttov_main
+#LDFLAGS += -L${LIBDIR} -lrttov_main
+#LDFLAGS += $(LIBS) $(LLIBS)
+LDFLAGS += $(LIBS) $(LLIBS) $(LDFLAGS_NETCDF) $(LDFLAGS_HDF5) $(LDFLAGS_ARCH) $(LDFLAGS_LAPACK)
 endif
 
 
@@ -46,16 +58,19 @@ endif
 	$(F90) $(F90FLAGS) -c $<
 
 %: %.o
-	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+#	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 # Special rule for the RTTOV file. Had an ifdef line but it wasn't necessary.
 
 # JKS is this needed because of the load_coefficient calls? Can I remove this by restructuring?
 cosp_rttov_interface_v13.o : cosp_rttov_interface_v13.F90 
-	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+	$(F90) $(F90FLAGS) $(FFLAGS) -c $<
+#	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
 cosp_rttov_v13.o : cosp_rttov_v13.F90 
-	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
+	$(F90) $(F90FLAGS) $(FFLAGS) -c $<
+#	$(F90) $(F90FLAGS) -c -I $(RTTOV_INC_PATH) -I $(RTTOV_MOD_PATH) $<
 
 #
 # The COSP library
@@ -66,7 +81,7 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
             cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
             cosp_grLidar532_interface.o cosp_atlid_interface.o
 
-# Add RTTOV files appropriately
+# Add RTTOV files appropriately. JKS: cosp should only need to depend on the interface, not the simulator.
 ifdef RTTOV
 COSP_OBJS += cosp_rttov_interface_v13.o cosp_rttov_v13.o
 else
