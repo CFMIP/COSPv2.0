@@ -92,5 +92,8 @@
   CO2=5.241e-04, ! Mixing ratios of trace gases
   CH4=9.139e-07,
   N2O=4.665e-07,
-  CO=2.098e-07
+  CO=2.098e-07,
+  rttov_Nlocaltime=2,
+  rttov_localtime=10.0,13.0,      ! To implement local time 
+  rttov_localtimewindow=1.0,1.0  ! To implement local time width 
 /
