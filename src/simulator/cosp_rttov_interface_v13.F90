@@ -57,8 +57,6 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 #include "rttov_read_coefs.interface"
 #include "rttov_user_options_checkinput.interface"
 #include "rttov_print_opts.interface"
-
-  !--------------------------
   
   ! RTTOV variables/structures
   !====================
@@ -323,7 +321,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,         & ! Inputs
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup           & ! Inputs
                                  Tb,error)                    ! Outputs
   
     use mod_cosp_rttov,             only:   &
@@ -335,7 +333,9 @@ CONTAINS
   
     type(rttov_in),intent(in) :: &
         rttovIN
-    real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+    logical,intent(in) :: &
+         lCleanup   ! Flag to determine whether to deallocate RTTOV types
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
         Tb        ! RTTOV brightness temperature.
     character(len=128) :: &
         error     ! Error messages (only populated if error encountered)  
@@ -345,11 +345,16 @@ CONTAINS
     integer(kind=jpim) :: nthreads ! Parallelization, should become an input
 
     ! Run each step for running RTTOV from mod_cosp_rttov
-    call rttov_allocate(rttovIN)
-    call rttov_construct_profiles(rttovIN)
-    call rttov_setup_emissivity_reflectance()
-    call rttov_call_direct(nthreads)
-    call rttov_save_and_deallocate(rttovIN,Tb)
+    call cosp_rttov_allocate(rttovIN)
+    call cosp_rttov_construct_profiles(rttovIN)
+    call cosp_rttov_setup_emissivity_reflectance()
+    call cosp_rttov_call_direct(nthreads)
+    call cosp_rttov_save_and_deallocate_profiles(rttovIN,Tb)
+    
+    ! Deallocate the coefficient files if directed
+    if (lCleanup) then
+        call cosp_rttov_deallocate_coefs()
+    endif
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
   
