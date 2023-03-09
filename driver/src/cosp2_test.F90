@@ -52,7 +52,8 @@ program cosp2_test
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
                                  grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
                                  Nlvgrid_local  => Nlvgrid,                               &
-                                 vgrid_z,cloudsat_preclvl
+                                 vgrid_z,cloudsat_preclvl,                                &
+                                 RTTOV_MAX_LOCALTIMES
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -136,7 +137,8 @@ program cosp2_test
        rttov_platform,            & ! RTTOV: Satellite platform
        rttov_satellite,           & ! RTTOV: Satellite
        rttov_instrument,          & ! RTTOV: Instrument
-       rttov_Nchannels              ! RTTOV: Number of channels to be computed
+       rttov_Nchannels,           & ! RTTOV: Number of channels to be computed
+       rttov_Nlocaltime             ! RTTOV: Number of local times to be computed
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
@@ -150,11 +152,13 @@ program cosp2_test
        csat_vgrid,                & ! CloudSat vertical grid? 
        use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
                                     ! algorithm 
-
   integer,dimension(RTTOV_MAX_CHANNELS) :: &
        rttov_Channels               ! RTTOV: Channel numbers
   real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
        rttov_Surfem                 ! RTTOV: Surface emissivity
+  real(wp),dimension(RTTOV_MAX_LOCALTIMES) ::  & ! JKS This is not allowed in a main program
+       rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
+       rttov_localtimewindow        ! Width of local time window (hrs).
   character(len=64) :: &
        cloudsat_micro_scheme        ! Microphysical scheme used in cloudsat radar simulator
   character(len=64) :: &
@@ -164,13 +168,14 @@ program cosp2_test
   character(len=512) :: &
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
-       fileIN                       ! dinput+finput
+       fileIN                       ! dinput+finput       
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
        rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               &
-       rttov_Channels, rttov_Surfem, rttov_ZenAng, co2, ch4, n2o, co
+       rttov_Channels, rttov_Surfem, rttov_ZenAng, co2, ch4, n2o, co,                    &
+       rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow !JKS
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -194,7 +199,8 @@ program cosp2_test
              Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lwr_occfreq, Lcfodd
+             Lwr_occfreq, Lcfodd,                                                        &
+             Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_localtime
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -220,7 +226,8 @@ program cosp2_test
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
-                       Lwr_occfreq, Lcfodd
+                       Lwr_occfreq, Lcfodd,                                              &
+                       Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_localtime              ! JKS
 
   ! Local variables
   logical :: &
@@ -528,6 +535,14 @@ program cosp2_test
 
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
+  
+  ! JKS test new namelist options
+  print*,'rttov_localtime:  ',rttov_localtime
+  print*,'rttov_localtimewindow:  ',rttov_localtimewindow
+  print*,'Lrttov_cld:  ',Lrttov_cld
+  print*,'Lrttov_aer:  ',Lrttov_aer
+  print*,'Lrttov_rad:  ',Lrttov_rad
+  print*,'Lrttov_localtime:  ',Lrttov_localtime
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
