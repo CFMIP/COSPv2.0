@@ -229,7 +229,7 @@ contains
   ! 3. Allocate RTTOV input and output structures
   ! 4. Build the list of profile/channel indices in chanprof
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine rttov_allocate(rttovIN &
+  subroutine cosp_rttov_allocate(rttovIN &
                            )
                            
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
@@ -288,7 +288,7 @@ contains
       end do
     end do
 
-  end subroutine rttov_allocate
+  end subroutine cosp_rttov_allocate
   
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -296,7 +296,7 @@ contains
   ! ------------------------------------------------------
   ! Largely from cosp_rttov_v11.F90 file.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine rttov_construct_profiles(rttovIN &
+  subroutine cosp_rttov_construct_profiles(rttovIN &
                            )
 
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
@@ -455,7 +455,7 @@ contains
     
     ! JKS To-do: set up scattering profiles (MW only) (rttov_profile_cloud)
 
-  end subroutine rttov_construct_profiles
+  end subroutine cosp_rttov_construct_profiles
   
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -463,7 +463,7 @@ contains
   ! ------------------------------------------------------
   ! From RTTOV example files. Will need to be expanded on to pass in values.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine rttov_setup_emissivity_reflectance()
+  subroutine cosp_rttov_setup_emissivity_reflectance()
     
     ! In this example we have no values for input emissivities or reflectances
     ! so we initialise all inputs to zero
@@ -478,7 +478,7 @@ contains
     ! less (all channels in this case)
     calcrefl(:) = (reflectance(:) % refl_in <= 0._jprb)  
   
-  end subroutine rttov_setup_emissivity_reflectance
+  end subroutine cosp_rttov_setup_emissivity_reflectance
   
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -486,7 +486,7 @@ contains
   ! ------------------------------------------------------
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-  subroutine rttov_call_direct(nthreads)
+  subroutine cosp_rttov_call_direct(nthreads)
     
     integer(kind=jpim) :: nthreads
 
@@ -522,14 +522,14 @@ contains
     endif
     call rttov_error('rttov_direct error', lalloc = .true.)
   
-  end subroutine rttov_call_direct
+  end subroutine cosp_rttov_call_direct
   
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! rttov_save_and_deallocate - 8. Save output data, 9. Deallocate all RTTOV arrays and structures
   ! ------------------------------------------------------
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine rttov_save_and_deallocate(rttovIN,Tb)
+  subroutine cosp_rttov_save_and_deallocate_profiles(rttovIN,Tb)
 
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -580,7 +580,16 @@ contains
     call rttov_dealloc_coefs(errorstatus, coef_rttov)
     call rttov_error('coefs deallocation error', lalloc = .true.)
 
-  end subroutine rttov_save_and_deallocate
+  end subroutine cosp_rttov_save_and_deallocate_profiles
+  
+  subroutine cosp_rttov_deallocate_coefs()
+  
+    call rttov_dealloc_coefs(errorstatus, coef_rttov)
+    if (errorstatus /= errorstatus_success) then
+      write(*,*) 'coefs deallocation error'
+    endif
+
+  end subroutine cosp_rttov_deallocate_coefs
 
 
   function construct_rttov_coeffilename(platform,satellite,instrument)
