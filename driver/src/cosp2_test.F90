@@ -200,7 +200,8 @@ program cosp2_test
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
              Lwr_occfreq, Lcfodd,                                                        &
-             Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_localtime
+             Lrttov_cld, Lrttov_cldparam, Lrttov_aer, Lrttov_aerparam,                   &
+             Lrttov_rad, Lrttov_localtime
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -227,7 +228,8 @@ program cosp2_test
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
                        Lwr_occfreq, Lcfodd,                                              &
-                       Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_localtime              ! JKS
+                       Lrttov_cld, Lrttov_cldparam, Lrttov_aer, Lrttov_aerparam,         &
+                       Lrttov_rad, Lrttov_localtime              ! JKS
 
   ! Local variables
   logical :: &
@@ -402,7 +404,8 @@ program cosp2_test
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
        rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               & ! JKS added RTTOV inputs here
-       rttov_Channels)
+       rttov_Channels,Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam,               &
+       Lrttov_aerparam)
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

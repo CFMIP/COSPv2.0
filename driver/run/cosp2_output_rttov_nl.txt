@@ -135,9 +135,11 @@
   !- RTTOV
   Ltbrttov=.false.,
   Lrttov_cld=.false.,
-  Lrttov_aer=.true.,
+  Lrttov_cldparam=.false.,
+  Lrttov_aer=.false.,
+  Lrttov_aerparam=.false.,
   Lrttov_rad=.false.,
-  Lrttov_localtime=.true.,
+  Lrttov_localtime=.false.,
   ! -CLOUDSAT precipitation frequency/occurence diagnostics
   Lptradarflag0=.true.,
   Lptradarflag1=.true.,
