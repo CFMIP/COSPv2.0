@@ -124,6 +124,12 @@ module mod_cosp_rttov
   ! RTTOV setup and options (set during initialization)
   type(rttov_options) :: &
        opts     ! defaults to everything optional switched off
+  logical             :: &
+      do_rttov_cld,        & ! Include clouds in RTTOV calculations
+      do_rttov_aer,        & ! Include aerosols in RTTOV calculations
+      do_rttov_rad,        & ! Return radiances in RTTOV calculations
+      rttov_cld_optparam,  & ! Use user-supplied optical cloud parameters
+      rttov_aer_optparam     ! Use user-supplied optical aerosol parameters
        
   ! JKS should this be module-wide?
 !  type(rttov_IN)      :: &

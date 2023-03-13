@@ -43,6 +43,8 @@ include $(RTTOVDIR)/build/Makefile.local
 
 LIBDIR=$(RTTOVDIR)/lib
 
+# JKS this if statement depends on the contents of Makefile.local
+# but it doesn't seem to do anything.
 ifdef LDFLAGS_HDF5
 	LIBS=\
 	  $(LIBDIR)/librttov$(RTTOV_VERSION)_brdf_atlas$(EXT_LIB) \

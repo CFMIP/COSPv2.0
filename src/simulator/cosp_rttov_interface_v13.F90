@@ -35,7 +35,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
                               opts,construct_rttov_coeffilename,rttov_in,                &
-                              construct_rttov_scatfilename
+                              construct_rttov_scatfilename,do_rttov_cld,do_rttov_aer,    &
+                              do_rttov_rad,rttov_cld_optparam,rttov_aer_optparam
                               
   ! rttov_const contains useful RTTOV constants
   USE rttov_const, ONLY :     &
@@ -71,15 +72,23 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,nlevels)
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
+                             nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
+                             Lrttov_aerparam)
     integer,intent(in) :: & 
-         NchanIN,     & ! Number of channels
-         platformIN,  & ! Satellite platform
-         satelliteIN, & ! Satellite
+         NchanIN,      & ! Number of channels
+         platformIN,   & ! Satellite platform
+         satelliteIN,  & ! Satellite
          instrumentIN, & ! Instrument
          nlevels
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          channelsIN     ! RTTOV channels
+    logical,intent(in)   :: &
+         Lrttov_cld,       &
+         Lrttov_aer,       &
+         Lrttov_rad,       &
+         Lrttov_cldparam,  &
+         Lrttov_aerparam
 
     ! Local variables
     character(len=256) :: &
@@ -100,6 +109,13 @@ CONTAINS
     satellite  = satelliteIN 
     sensor     = instrumentIN 
     iChannel   = channelsIN
+    
+    ! Logicals for RTTOV options
+    do_rttov_cld       = Lrttov_cld
+    do_rttov_aer       = Lrttov_aer
+    do_rttov_rad       = Lrttov_rad       ! to be used in output
+    rttov_cld_optparam = Lrttov_cldparam
+    rttov_aer_optparam = Lrttov_aerparam
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1. Initialise RTTOV options structure
@@ -153,10 +169,13 @@ CONTAINS
     opts%rt_ir%do_nlte_correction      = .false.
     opts%rt_ir%solar_sea_brdf_model    = 2
     opts%rt_ir%ir_sea_emis_model       = 2
-    opts%rt_ir%addaerosl               = .false.
-    opts%rt_ir%addclouds               = .false.
-    opts%rt_ir%user_aer_opt_param      = .false. ! User specifies the aerosol scattering optical parameters 
-    opts%rt_ir%user_cld_opt_param      = .false. ! User specifies the cloud scattering optical parameters 
+    
+    ! User options - JKS
+    opts%rt_ir%addaerosl               = do_rttov_aer
+    opts%rt_ir%addclouds               = do_rttov_cld
+    opts%rt_ir%user_aer_opt_param      = rttov_aer_optparam ! User specifies the aerosol scattering optical parameters 
+    opts%rt_ir%user_cld_opt_param      = rttov_cld_optparam ! User specifies the cloud scattering optical parameters 
+    
     opts%rt_ir%grid_box_avg_cloud      = .true.
     opts%rt_ir%cldcol_threshold        = -1._wp
     opts%rt_ir%cloud_overlap           = 1 ! Maximum-random overlap
@@ -321,15 +340,16 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup           & ! Inputs
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,          & ! Inputs
                                  Tb,error)                    ! Outputs
   
-    use mod_cosp_rttov,             only:   &
-        rttov_allocate,                     &
-        rttov_construct_profiles,           &
-        rttov_setup_emissivity_reflectance, &
-        rttov_call_direct,                  &
-        rttov_save_and_deallocate
+    use mod_cosp_rttov,             only:        &
+        cosp_rttov_allocate,                     &
+        cosp_rttov_construct_profiles,           &
+        cosp_rttov_setup_emissivity_reflectance, &
+        cosp_rttov_call_direct,                  &
+        cosp_rttov_save_and_deallocate_profiles, &
+        cosp_rttov_deallocate_coefs
   
     type(rttov_in),intent(in) :: &
         rttovIN

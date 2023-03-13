@@ -1533,7 +1533,7 @@ CONTAINS
     if (lrttov_column) then
 
        ! JKS new RTTOV subroutine for v13 called from the RTTOV interface.
-       call cosp_rttov_simulate(rttovIN,cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
+       call cosp_rttov_simulate(rttovIN,lrttov_cleanUp,cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
 
 ! JKS building new call
 !       call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
@@ -1784,10 +1784,14 @@ CONTAINS
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
-       NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN)
+       NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
+       Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
+    logical,intent(in) :: Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam
+    ! JKS to-do
+!    type(rttov_init_in),intent(in)   :: rttov_init_IN 
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & !
          cloudsat_do_ray,            & !
@@ -1857,7 +1861,9 @@ CONTAINS
     if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
-    if (Lrttov) call cosp_rttov_init(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,Nlevels) ! JKS arguments must be available
+    if (Lrttov) call cosp_rttov_init(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
+                                     Nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
+                                     Lrttov_aerparam) ! JKS arguments must be available
 !    if (Lrttov) call cosp_rttov_init() ! JKS arguments must be available
     
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &

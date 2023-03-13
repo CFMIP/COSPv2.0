@@ -41,7 +41,9 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,nlevels)
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
+                             nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
+                             Lrttov_aerparam)
     integer,intent(in) :: & 
          NchanIN,      & ! Number of channels
          platformIN,   & ! Satellite platform
@@ -50,13 +52,19 @@ CONTAINS
          nlevels
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          channelsIN     ! RTTOV channels
+    logical,intent(in)   :: &
+         Lrttov_cld,       &
+         Lrttov_aer,       &
+         Lrttov_rad,       &
+         Lrttov_cldparam,  &
+         Lrttov_aerparam         
   END SUBROUTINE COSP_RTTOV_INIT
   
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,                   & ! Inputs
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,          & ! Inputs
                                  Tb,error)                    ! Outputs
   
       type(rttov_in),intent(in) :: &
