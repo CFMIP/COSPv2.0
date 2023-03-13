@@ -389,18 +389,36 @@ CONTAINS
         rttov_simulate_cld,                &
         rttov_simulate_aer
     integer(kind=jpim) :: nthreads ! Parallelization, should become an input
+    real(wp),dimension(10) :: driver_time
 
-    ! Run each step for running RTTOV from mod_cosp_rttov
+    ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
+    call cpu_time(driver_time(1))
     call cosp_rttov_allocate(rttovIN)
+    call cpu_time(driver_time(2))
     call cosp_rttov_construct_profiles(rttovIN)
+    call cpu_time(driver_time(3))
     call cosp_rttov_setup_emissivity_reflectance()
+    call cpu_time(driver_time(4))
     call cosp_rttov_call_direct(nthreads)
+    call cpu_time(driver_time(5))
     call cosp_rttov_save_and_deallocate_profiles(rttovIN,Tb)
+    call cpu_time(driver_time(6))
+    
+    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
+    print*,'Time to run "cosp_rttov_construct_profiles":     ',          driver_time(3)-driver_time(2)
+    print*,'Time to run "cosp_rttov_setup_emissivity_reflectance":     ',driver_time(4)-driver_time(3)
+    print*,'Time to run "cosp_rttov_call_direct":     ',                 driver_time(5)-driver_time(4)
+    print*,'Time to run "cosp_rttov_save_and_deallocate_profiles":     ',driver_time(6)-driver_time(5)
     
     ! Deallocate the coefficient files if directed
     if (lCleanup) then
+        call cpu_time(driver_time(7))
         call cosp_rttov_deallocate_coefs()
+        call cpu_time(driver_time(8))
+        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(8)-driver_time(7)
     endif
+
+    print*,'Total RTTOV run time:     ',driver_time(8)-driver_time(1)
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
   

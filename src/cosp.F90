@@ -373,6 +373,7 @@ CONTAINS
          ok_lidar_cfad_grLidar532 = .false., & 
          ok_lidar_cfad_atlid = .false., &
          lrttov_cleanUp   = .false.
+    real(wp),dimension(10) :: driver_time
 
     integer, dimension(:,:),allocatable  :: &
          modisRetrievedPhase,isccpLEVMATCH
@@ -1530,39 +1531,14 @@ CONTAINS
     endif
 
     ! RTTOV
-    if (lrttov_column) then
+    if (Lrttov_column) then
 
        ! JKS new RTTOV subroutine for v13 called from the RTTOV interface.
-       call cosp_rttov_simulate(rttovIN,lrttov_cleanUp,cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
-
-! JKS building new call
-!       call rttov_column(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
-!                         rttovIN%p,rttovIN%t,rttovIN%o3,rttovIN%ph,rttovIN%h_surf,      &
-!                         rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
-!                         rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
-!                         rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
-!                         rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
-!                         cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1),           &
-!                         ! Optional arguments for surface emissivity calculation
-!                         month=rttovIN%month)
-!                         ! Optional arguments to rttov for all-sky calculation
-!                         ! rttovIN%month, rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,     &
-!                         ! rttovIN%fl_rain,rttovIN%fl_snow)
-                         
-!       call rttov_simulate(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%q,    &
-!                           rttovIN%p,rttovIN%t,rttovIN%o3,rttovIN%ph,rttovIN%h_surf,      &
-!                           rttovIN%u_surf,rttovIN%v_surf,rttovIN%p_surf,rttovIN%t_skin,   &
-!                           rttovIN%t2m,rttovIN%q2m,rttovIN%lsmask,rttovIN%longitude,      &
-!                           rttovIN%latitude,rttovIN%seaice,rttovIN%co2,rttovIN%ch4,       &
-!                           rttovIN%n2o,rttovIN%co,rttovIN%zenang,lrttov_cleanUp,          &
-!! Previously optional emissivity arguments                           
-!                           rttovIN%surfem,rttovIN%month,                                  &
-!! Previously optional cloud arguments                           
-!                           rttovIN%tca,rttovIN%cldIce,rttovIN%cldLiq,                     &
-!                           rttovIN%fl_rain,rttovIN%fl_snow,                               &
-!! Outputs                           
-!                           cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
-                                                    
+       call cpu_time(driver_time(3))
+       call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
+       call cpu_time(driver_time(4))
+       print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
+                                                           
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1815,6 +1791,7 @@ CONTAINS
                                        ! vertical grid
     character(len=64),intent(in) :: &
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
+    real(wp),dimension(10) :: driver_time
 
     ! OUTPUTS
     type(radar_cfg) :: rcfg
@@ -1861,9 +1838,16 @@ CONTAINS
     if (Lisccp) call cosp_isccp_init(isccp_top_height,isccp_top_height_direction)
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
+    
+    ! Could print diagnostic on timing here.
+    call cpu_time(driver_time(1))
     if (Lrttov) call cosp_rttov_init(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
                                      Nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
                                      Lrttov_aerparam) ! JKS arguments must be available
+    call cpu_time(driver_time(2))
+    if (Lrttov) then
+        print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
+    endif
     
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
