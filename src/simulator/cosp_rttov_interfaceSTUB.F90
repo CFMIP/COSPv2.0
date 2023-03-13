@@ -36,6 +36,32 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   USE MOD_COSP_RTTOV,   ONLY: rttov_IN
   IMPLICIT NONE
   
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! TYPE rttov_init_IN (RTTOV init DDT to be passed to cosp_init)
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+! I may remove this because it will require an additional dependency between
+! cosp2_test and the RTTOV interface.
+
+! Integers: NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
+! Logicals: Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam
+  
+  type rttov_init_IN
+     logical,pointer :: &
+          Lrttov_cld,      &
+          Lrttov_aer,      &
+          Lrttov_rad,      &
+          Lrttov_cldparam, &
+          Lrttov_aerparam
+     integer,pointer :: &
+          NchanIN,         & ! Number of spectral channels to simulate
+          platformIN,      & ! Index of the platform
+          satelliteIN,     & ! Index of the satellite
+          instrumentIN       ! Index of the instrument
+     integer,dimension(RTTOV_MAX_CHANNELS) :: &
+         channelsIN          ! Indices of spectral channels
+  end type rttov_init_IN
+  
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,7 +86,6 @@ CONTAINS
          Lrttov_aerparam         
   END SUBROUTINE COSP_RTTOV_INIT
   
-  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,6 +94,8 @@ CONTAINS
   
       type(rttov_in),intent(in) :: &
           rttovIN
+      logical,intent(in) :: &
+          lCleanup   ! Flag to determine whether to deallocate RTTOV types          
       real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
            Tb        ! RTTOV brightness temperature.
       character(len=128) :: &

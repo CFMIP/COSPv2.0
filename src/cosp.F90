@@ -52,7 +52,7 @@ MODULE MOD_COSP
                                          cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct,&
                                          RTTOV_MAX_CHANNELS ! JKS needed for RTTOV to be in cosp_optical_inputs
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
-  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init, cosp_rttov_simulate
+  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       rttov_init_IN, cosp_rttov_simulate ! JKS
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
   USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN
   USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN
@@ -1864,7 +1864,6 @@ CONTAINS
     if (Lrttov) call cosp_rttov_init(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
                                      Nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
                                      Lrttov_aerparam) ! JKS arguments must be available
-!    if (Lrttov) call cosp_rttov_init() ! JKS arguments must be available
     
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
