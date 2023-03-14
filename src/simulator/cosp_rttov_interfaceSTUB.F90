@@ -69,7 +69,8 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
                              nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
-                             Lrttov_aerparam)
+                             Lrttov_aerparam,                                          &
+                             rttov_input_namelist)
     integer,intent(in) :: & 
          NchanIN,      & ! Number of channels
          platformIN,   & ! Satellite platform
@@ -84,6 +85,10 @@ CONTAINS
          Lrttov_rad,       &
          Lrttov_cldparam,  &
          Lrttov_aerparam         
+         
+     ! JKS testing using a RTTOV input namelist here
+     character(len=64),optional :: rttov_input_namelist
+    
   END SUBROUTINE COSP_RTTOV_INIT
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
