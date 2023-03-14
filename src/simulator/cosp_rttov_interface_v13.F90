@@ -100,7 +100,8 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
                              nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
-                             Lrttov_aerparam)
+                             Lrttov_aerparam,                                          &
+                             rttov_input_namelist)
     integer,intent(in) :: & 
          NchanIN,      & ! Number of channels
          platformIN,   & ! Satellite platform
@@ -115,19 +116,42 @@ CONTAINS
          Lrttov_rad,       &
          Lrttov_cldparam,  &
          Lrttov_aerparam
-
+    
+    ! JKS testing using a RTTOV input namelist here 
+    ! (default cosp_rttov namelist is set in cosp.F90)
+    character(len=64),optional :: rttov_input_namelist ! = 'cosp2_rttov_nl.txt'
+    
     ! Local variables
     character(len=256) :: &
-        coef_file, &
-        scat_file, &
-        rttov_coefDir, &
-        rttov_predDir, &
-        rttov_cldaerDir, &
-        OD_coef_filepath, &
-        aer_coef_file, &
-        cld_coef_file, &
+        coef_file,         &
+        scat_file,         &
+        rttov_coefDir,     &
+        rttov_predDir,     &
+        rttov_cldaerDir,   &
+        OD_coef_file,      &
+        aer_coef_file,     &
+        cld_coef_file,     &
+        OD_coef_filepath,  &
         aer_coef_filepath, &
         cld_coef_filepath
+
+    ! Declare RTTOV namelist fields
+    logical :: so2_data,n2o_data,co_data,ch4_data
+    character(len=256) :: cosp_status
+
+    ! Read RTTOV namelist fields
+    namelist/RTTOV_INPUT/OD_coef_file,aer_coef_file,cld_coef_file,OD_coef_filepath,  &
+                         aer_coef_filepath,cld_coef_filepath
+!        rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow !JKS
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Read in namelists
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    !if (command_argument_count() == 2) call get_command_argument(2, cosp_output_namelist)
+    ! Use a different if statement because this subroutine doesn't interface with the command line
+    open(10,file=rttov_input_namelist,status='unknown')
+    read(10,nml=RTTOV_INPUT)
+    close(10)
 
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     nChannels  = NchanIN
@@ -159,13 +183,17 @@ CONTAINS
     ! General Radiative Transfer Options
     ! Gas profiles
     opts%rt_all%ozone_data        = .true.
-    opts%rt_all%so2_data          = .true.
+!    opts%rt_all%so2_data          = .true.
+    opts%rt_all%so2_data          = .false.
     
     ! Well-mixed gases
     opts%rt_all%co2_data          = .true.
-    opts%rt_all%n2o_data          = .true.
-    opts%rt_all%co_data           = .true.
-    opts%rt_all%ch4_data          = .true.
+!    opts%rt_all%n2o_data          = .true.
+    opts%rt_all%n2o_data          = .false.
+!    opts%rt_all%co_data           = .true.
+    opts%rt_all%co_data           = .false.
+!    opts%rt_all%ch4_data          = .true.
+    opts%rt_all%ch4_data          = .false.
     
     ! Other general RT options (initializing to defaults for completeness)
     opts%rt_all%do_lambertian       = .false.
@@ -278,12 +306,18 @@ CONTAINS
     rttov_cldaerDir = "cldaer_visir/" ! This should be input. Also "cldaer_ir".
     
     ! Optical depth file
+    OD_coef_file = "rtcoef_ticfire_1_mbfiri_o3co2.dat"
     OD_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_predDir)// &
-                       trim(construct_rttov_coeffilename(platform,satellite,sensor))
+                       trim(OD_coef_file)
+                       
+!    OD_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_predDir)// &
+!                       trim(construct_rttov_coeffilename(platform,satellite,sensor))
 
     ! Example coefficient files (hardcoded)
-    aer_coef_file = "scaercoef_eos_2_airs_cams_chou-only.H5"
-    cld_coef_file = "sccldcoef_eos_2_airs_chou-only.H5"
+    aer_coef_file = "scaercoef_ticfire_1_mbfiri_cams.dat"
+    cld_coef_file = "sccldcoef_ticfire_1_mbfiri.dat"
+!    aer_coef_file = "scaercoef_eos_2_airs_cams_chou-only.H5"
+!    cld_coef_file = "sccldcoef_eos_2_airs_chou-only.H5"
     
     ! Coefficient files from the "construct_rttov_scatfilename" function. Not sure if working.
 !    aer_coef_file = construct_rttov_scatfilename(platform,satellite,sensor)
@@ -294,6 +328,10 @@ CONTAINS
                         trim(aer_coef_file)
     cld_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_cldaerDir)// &
                         trim(cld_coef_file)
+         
+    print*,'OD_coef_filepath:    ',OD_coef_filepath
+    print*,'aer_coef_filepath:   ',aer_coef_filepath
+    print*,'cld_coef_filepath:   ',cld_coef_filepath
          
     ! Read optical depth and cloud coefficient files together
     call rttov_read_coefs(errorstatus, coef_rttov, opts,    &

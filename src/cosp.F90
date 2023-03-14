@@ -1761,7 +1761,8 @@ CONTAINS
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
        NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
-       Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam)
+       Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam,             &
+       rttov_input_namelist)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
@@ -1792,7 +1793,10 @@ CONTAINS
     character(len=64),intent(in) :: &
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
     real(wp),dimension(10) :: driver_time
-
+    
+    ! JKS testing using a RTTOV input namelist here
+    character(len=64),intent(in),optional :: rttov_input_namelist ! = 'cosp2_rttov_nl.txt'
+    
     ! OUTPUTS
     type(radar_cfg) :: rcfg
 
@@ -1841,11 +1845,21 @@ CONTAINS
     
     ! Could print diagnostic on timing here.
     call cpu_time(driver_time(1))
-    if (Lrttov) call cosp_rttov_init(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
-                                     Nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
-                                     Lrttov_aerparam) ! JKS arguments must be available
-    call cpu_time(driver_time(2))
     if (Lrttov) then
+        if (rttov_input_namelist=='false') then
+            print*,'Lrttov is true but no RTTOV namelist is provided. Will not run RTTOV.'
+        else
+            call cosp_rttov_init(NchanIN,platformIN,satelliteIN,  &
+                                 instrumentIN,channelsIN,Nlevels, &
+                                 Lrttov_cld,Lrttov_aer,           &
+                                 Lrttov_rad,Lrttov_cldparam,      &
+                                 Lrttov_aerparam,                 &
+                                 rttov_input_namelist=rttov_input_namelist)
+        endif 
+    endif
+    
+    call cpu_time(driver_time(2))
+    if ((Lrttov) .and. (rttov_input_namelist/='false')) then
         print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif
     

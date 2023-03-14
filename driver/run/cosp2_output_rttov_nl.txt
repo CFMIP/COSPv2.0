@@ -133,7 +133,7 @@
   Liwpmodis=.true.,
   Lclmodis=.true.,
   !- RTTOV
-  Ltbrttov=.false.,
+  Ltbrttov=.true.,
   Lrttov_cld=.false.,
   Lrttov_cldparam=.false.,
   Lrttov_aer=.false.,

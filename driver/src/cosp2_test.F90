@@ -72,7 +72,7 @@ program cosp2_test
   implicit none
 
   ! Input/Output driver file control
-  character(len=64) :: cosp_input_namelist
+  character(len=64) :: cosp_input_namelist,rttov_input_namelist
   character(len=64) :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
@@ -307,7 +307,16 @@ program cosp2_test
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
-
+  
+  ! Save the path for the RTTOV input namelist to read later
+  ! Because cosp2_test is an outer program, rttov_input_name cannot be optional.
+  ! I use this solution, which isn't great but works.
+  if (command_argument_count() == 3) then 
+      call get_command_argument(3, rttov_input_namelist)
+  else
+      rttov_input_namelist = 'false'
+  endif
+    
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -405,7 +414,8 @@ program cosp2_test
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
        rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               & ! JKS added RTTOV inputs here
        rttov_Channels,Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam,               &
-       Lrttov_aerparam)
+       Lrttov_aerparam,                                                                  &
+       rttov_input_namelist=rttov_input_namelist) ! options RTTOV argument
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -540,8 +550,8 @@ program cosp2_test
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
   
   ! JKS test new namelist options
-  print*,'rttov_localtime:  ',rttov_localtime
-  print*,'rttov_localtimewindow:  ',rttov_localtimewindow
+!  print*,'rttov_localtime:  ',rttov_localtime
+!  print*,'rttov_localtimewindow:  ',rttov_localtimewindow
   print*,'Lrttov_cld:  ',Lrttov_cld
   print*,'Lrttov_aer:  ',Lrttov_aer
   print*,'Lrttov_rad:  ',Lrttov_rad
