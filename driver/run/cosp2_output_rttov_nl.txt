@@ -134,9 +134,9 @@
   Lclmodis=.true.,
   !- RTTOV
   Ltbrttov=.true.,
-  Lrttov_cld=.false.,
+  Lrttov_cld=.true.,
   Lrttov_cldparam=.false.,
-  Lrttov_aer=.false.,
+  Lrttov_aer=.true.,
   Lrttov_aerparam=.false.,
   Lrttov_rad=.false.,
   Lrttov_localtime=.false.,

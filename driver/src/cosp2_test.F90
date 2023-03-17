@@ -72,8 +72,8 @@ program cosp2_test
   implicit none
 
   ! Input/Output driver file control
-  character(len=64) :: cosp_input_namelist,rttov_input_namelist
-  character(len=64) :: cosp_output_namelist = 'cosp2_output_nl.txt'
+  character(len=256) :: cosp_input_namelist,rttov_input_namelist
+  character(len=64)  :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
   integer :: &
@@ -199,9 +199,9 @@ program cosp2_test
              Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lwr_occfreq, Lcfodd,                                                        &
-             Lrttov_cld, Lrttov_cldparam, Lrttov_aer, Lrttov_aerparam,                   &
-             Lrttov_rad, Lrttov_localtime
+             Lwr_occfreq,Lcfodd,                                                        &
+             Lrttov_cld,Lrttov_cldparam,Lrttov_aer,Lrttov_aerparam,                      &
+             Lrttov_rad,Lrttov_localtime
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -224,13 +224,12 @@ program cosp2_test
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov,    &
+                       Lrttov_cld, Lrttov_cldparam, Lrttov_aer, Lrttov_aerparam,         & ! JKS
+                       Lrttov_rad, Lrttov_localtime,                                     & ! JKS
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
-                       Lwr_occfreq, Lcfodd,                                              &
-                       Lrttov_cld, Lrttov_cldparam, Lrttov_aer, Lrttov_aerparam,         &
-                       Lrttov_rad, Lrttov_localtime              ! JKS
-
+                       Lwr_occfreq, Lcfodd
   ! Local variables
   logical :: &
        lsingle     = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
@@ -303,7 +302,7 @@ program cosp2_test
   close(10)
 
   ! Output namelist (logical flags to turn on/off outputs)
-  if (command_argument_count() == 2) call get_command_argument(2, cosp_output_namelist)
+  if (command_argument_count() .ge. 2) call get_command_argument(2, cosp_output_namelist)
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
@@ -311,7 +310,7 @@ program cosp2_test
   ! Save the path for the RTTOV input namelist to read later
   ! Because cosp2_test is an outer program, rttov_input_name cannot be optional.
   ! I use this solution, which isn't great but works.
-  if (command_argument_count() == 3) then 
+  if (command_argument_count() .ge. 3) then 
       call get_command_argument(3, rttov_input_namelist)
   else
       rttov_input_namelist = 'false'
@@ -379,7 +378,12 @@ program cosp2_test
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
-  if (Ltbrttov) Lrttov = .true.
+  if ((Ltbrttov) .and. (rttov_input_namelist /= 'false')) Lrttov = .true.   
+  if ((Ltbrttov) .and. (rttov_input_namelist .eq. 'false')) then 
+      print*,'Ltbrttov must be true and a RTTOV namelist must be provided to run RTTOV.'
+      Lrttov = .false.
+      Ltbrttov = .false.
+  endif
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -414,8 +418,7 @@ program cosp2_test
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
        rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               & ! JKS added RTTOV inputs here
        rttov_Channels,Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam,               &
-       Lrttov_aerparam,                                                                  &
-       rttov_input_namelist=rttov_input_namelist) ! options RTTOV argument
+       Lrttov_aerparam,rttov_input_namelist) ! options RTTOV argument
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -507,6 +510,40 @@ program cosp2_test
      ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
      
+     ! Assign RTTOV values (JKS)
+     ! From namelist file
+     cospstateIN%emis_sfc = rttov_Surfem(1:rttov_Nchannels)
+     cospstateIN%zenang   = rttov_ZenAng
+     ! Well-mixed gases
+     cospstateIN%co2      = co2
+     cospstateIN%ch4      = ch4
+     cospstateIN%n2o      = n2o
+     cospstateIN%co       = co
+     
+     ! From the data input file
+     cospstateIN%u_sfc  = u_wind
+     cospstateIN%v_sfc  = v_wind
+     cospstateIN%lat    = lat
+     cospstateIN%lon    = lon
+     
+     cospstateIN%o3  = mr_ozone(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%tca = tca(start_idx:end_idx,Nlevels:1:-1)
+     
+     ! Combine large-scale and convective cloud mixing ratios for RTTOV
+     cospstateIN%cloudIce = mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%cloudLiq = mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)     
+          
+     ! RTTOV doesn't consider precip flux, but I think it was used previously.
+     ! Graupel goes in the snow category, arbitrarily
+     cospstateIN%fl_rain = fl_lsrain(start_idx:end_idx,Nlevels:1:-1) + fl_ccrain(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%fl_snow = fl_lssnow(start_idx:end_idx,Nlevels:1:-1) + fl_ccsnow(start_idx:end_idx,Nlevels:1:-1) + &
+                           fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1)
+               
+     ! Inputs not supplied in the UKMO test data
+     cospstateIN%seaice(1:nPoints) = 0._wp
+     cospstateIN%month             = 0
+     
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -548,14 +585,6 @@ program cosp2_test
 
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
-  
-  ! JKS test new namelist options
-!  print*,'rttov_localtime:  ',rttov_localtime
-!  print*,'rttov_localtimewindow:  ',rttov_localtimewindow
-  print*,'Lrttov_cld:  ',Lrttov_cld
-  print*,'Lrttov_aer:  ',Lrttov_aer
-  print*,'Lrttov_rad:  ',Lrttov_rad
-  print*,'Lrttov_localtime:  ',Lrttov_localtime
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
@@ -1056,18 +1085,7 @@ contains
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
-
-!    allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
-!             y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
-!             y%hgt_matrix(npoints,nlevels),y%hgt_matrix_half(npoints,nlevels),           &
-!             y%surfelev(npoints))
-!#ifdef RTTOV
-!    allocate(y%o3(npoints,nlevels),y%u_sfc(npoints),y%v_sfc(npoints),                    &
-!             y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),                            &
-!             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),                    &
-!             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
-!             y%tca(nPoints,nLevels))
-!#endif
+! JKS is everything RTTOV needs being allocated? Perhaps not.
 
   end subroutine construct_cospstateIN
 
