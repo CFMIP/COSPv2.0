@@ -119,7 +119,7 @@ CONTAINS
     
     ! JKS testing using a RTTOV input namelist here 
     ! (default cosp_rttov namelist is set in cosp.F90)
-    character(len=64),optional :: rttov_input_namelist ! = 'cosp2_rttov_nl.txt'
+    character(len=256),intent(in) :: rttov_input_namelist
     
     ! Local variables
     character(len=256) :: &
@@ -136,22 +136,27 @@ CONTAINS
         cld_coef_filepath
 
     ! Declare RTTOV namelist fields
-    logical :: so2_data,n2o_data,co_data,ch4_data
+    logical :: so2_data,n2o_data,co_data,ch4_data,co2_data,ozone_data
     character(len=256) :: cosp_status
 
     ! Read RTTOV namelist fields
-    namelist/RTTOV_INPUT/OD_coef_file,aer_coef_file,cld_coef_file,OD_coef_filepath,  &
-                         aer_coef_filepath,cld_coef_filepath
+    namelist/RTTOV_INPUT/rttov_coefDir,    &
+                         OD_coef_filepath,  &
+                         aer_coef_filepath,cld_coef_filepath,so2_data,n2o_data,      &
+                         co_data,ch4_data,co2_data,ozone_data
 !        rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow !JKS
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    !if (command_argument_count() == 2) call get_command_argument(2, cosp_output_namelist)
-    ! Use a different if statement because this subroutine doesn't interface with the command line
     open(10,file=rttov_input_namelist,status='unknown')
     read(10,nml=RTTOV_INPUT)
     close(10)
+    
+    !print*,'OD_coef_file:    ',OD_coef_file
+    !print*,'aer_coef_file:    ',aer_coef_file
+    !print*,'cld_coef_file:    ',cld_coef_file
+    !print*,'OD_coef_filepath:    ',OD_coef_filepath
 
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     nChannels  = NchanIN
@@ -160,7 +165,7 @@ CONTAINS
     sensor     = instrumentIN 
     iChannel   = channelsIN
     
-    ! Logicals for RTTOV options
+    ! Set logicals for RTTOV options
     do_rttov_cld       = Lrttov_cld
     do_rttov_aer       = Lrttov_aer
     do_rttov_rad       = Lrttov_rad       ! to be used in output
@@ -181,19 +186,13 @@ CONTAINS
     opts%config%opdep13_gas_clip = .true.
     
     ! General Radiative Transfer Options
-    ! Gas profiles
-    opts%rt_all%ozone_data        = .true.
-!    opts%rt_all%so2_data          = .true.
-    opts%rt_all%so2_data          = .false.
-    
-    ! Well-mixed gases
-    opts%rt_all%co2_data          = .true.
-!    opts%rt_all%n2o_data          = .true.
-    opts%rt_all%n2o_data          = .false.
-!    opts%rt_all%co_data           = .true.
-    opts%rt_all%co_data           = .false.
-!    opts%rt_all%ch4_data          = .true.
-    opts%rt_all%ch4_data          = .false.
+    ! Gas profile logicals
+    opts%rt_all%ozone_data        = ozone_data
+    opts%rt_all%so2_data          = so2_data    
+    opts%rt_all%co2_data          = co2_data
+    opts%rt_all%n2o_data          = n2o_data
+    opts%rt_all%co_data           = co_data
+    opts%rt_all%ch4_data          = ch4_data
     
     ! Other general RT options (initializing to defaults for completeness)
     opts%rt_all%do_lambertian       = .false.
@@ -298,36 +297,10 @@ CONTAINS
 
     ! Construct optical depth and cloud coefficient files
     
-    ! rttovDir should be "/glade/u/home/jonahshaw/w/RTTOV/" passed from namelist
-    
-    ! Hardcoding these other paths for now, they should be input later.
-    rttov_coefDir   = "rtcoef_rttov13/" ! directory for coefficient in RTTOV v13
-    rttov_predDir   = "rttov13pred54L/" ! example directory for predictors. This should be input
-    rttov_cldaerDir = "cldaer_visir/" ! This should be input. Also "cldaer_ir".
-    
-    ! Optical depth file
-    OD_coef_file = "rtcoef_ticfire_1_mbfiri_o3co2.dat"
-    OD_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_predDir)// &
-                       trim(OD_coef_file)
-                       
-!    OD_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_predDir)// &
-!                       trim(construct_rttov_coeffilename(platform,satellite,sensor))
-
-    ! Example coefficient files (hardcoded)
-    aer_coef_file = "scaercoef_ticfire_1_mbfiri_cams.dat"
-    cld_coef_file = "sccldcoef_ticfire_1_mbfiri.dat"
-!    aer_coef_file = "scaercoef_eos_2_airs_cams_chou-only.H5"
-!    cld_coef_file = "sccldcoef_eos_2_airs_chou-only.H5"
-    
-    ! Coefficient files from the "construct_rttov_scatfilename" function. Not sure if working.
-!    aer_coef_file = construct_rttov_scatfilename(platform,satellite,sensor)
-!    cld_coef_file = construct_rttov_scatfilename(platform,satellite,sensor)
-    
-    ! Cloud and Aerosol scattering (and absorption?) file(s)
-    aer_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_cldaerDir)// &
-                        trim(aer_coef_file)
-    cld_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(rttov_cldaerDir)// &
-                        trim(cld_coef_file)
+    ! rttovDir should be "/glade/u/home/jonahshaw/w/RTTOV/" and is defined in cosp_config.F90    
+    OD_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(OD_coef_filepath)
+    aer_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(aer_coef_filepath)
+    cld_coef_filepath = trim(rttovDir)//trim(rttov_coefDir)//trim(cld_coef_filepath)
          
     print*,'OD_coef_filepath:    ',OD_coef_filepath
     print*,'aer_coef_filepath:   ',aer_coef_filepath

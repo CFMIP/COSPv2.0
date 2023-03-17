@@ -87,7 +87,10 @@ CONTAINS
          Lrttov_aerparam         
          
      ! JKS testing using a RTTOV input namelist here
-     character(len=64),optional :: rttov_input_namelist
+     character(len=256),intent(in) :: rttov_input_namelist
+     
+     print*,'Running COSP_RTTOV_INIT from STUB files.', &
+         'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
     
   END SUBROUTINE COSP_RTTOV_INIT
   
@@ -107,6 +110,8 @@ CONTAINS
            error     ! Error messages (only populated if error encountered)  
   
   
+      print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
+             'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
   ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
   
   END SUBROUTINE COSP_RTTOV_SIMULATE

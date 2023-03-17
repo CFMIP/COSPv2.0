@@ -69,8 +69,6 @@ MODULE MOD_COSP
   USE MOD_COSP_RTTOV,                ONLY: rttov_IN
   USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID, &
                                            COSP_DIAG_WARMRAIN
-!  use mod_cosp_rttov,                ONLY: rttov_simulate ! JKS new function
-!  use mod_cosp_rttov,                ONLY: rttov_column,rttov_simulate ! JKS new function
 
   IMPLICIT NONE
 
@@ -1795,7 +1793,7 @@ CONTAINS
     real(wp),dimension(10) :: driver_time
     
     ! JKS testing using a RTTOV input namelist here
-    character(len=64),intent(in),optional :: rttov_input_namelist ! = 'cosp2_rttov_nl.txt'
+    character(len=256),intent(in) :: rttov_input_namelist
     
     ! OUTPUTS
     type(radar_cfg) :: rcfg
@@ -1844,25 +1842,18 @@ CONTAINS
     if (Lmisr)  call cosp_misr_init()
     
     ! Could print diagnostic on timing here.
-    call cpu_time(driver_time(1))
     if (Lrttov) then
-        if (rttov_input_namelist=='false') then
-            print*,'Lrttov is true but no RTTOV namelist is provided. Will not run RTTOV.'
-        else
-            call cosp_rttov_init(NchanIN,platformIN,satelliteIN,  &
-                                 instrumentIN,channelsIN,Nlevels, &
-                                 Lrttov_cld,Lrttov_aer,           &
-                                 Lrttov_rad,Lrttov_cldparam,      &
-                                 Lrttov_aerparam,                 &
-                                 rttov_input_namelist=rttov_input_namelist)
-        endif 
-    endif
-    
-    call cpu_time(driver_time(2))
-    if ((Lrttov) .and. (rttov_input_namelist/='false')) then
+        call cpu_time(driver_time(1))
+        call cosp_rttov_init(NchanIN,platformIN,satelliteIN,  &
+                             instrumentIN,channelsIN,Nlevels, &
+                             Lrttov_cld,Lrttov_aer,           &
+                             Lrttov_rad,Lrttov_cldparam,      &
+                             Lrttov_aerparam,                 &
+                             rttov_input_namelist)
+        call cpu_time(driver_time(2))
         print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif
-    
+
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
          rcfg,cloudsat_micro_scheme)
