@@ -403,17 +403,25 @@ CONTAINS
     real(wp),dimension(10) :: driver_time
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
+    print*,'cosp_rttov_allocate begin' ! jks
     call cpu_time(driver_time(1))
     call cosp_rttov_allocate(rttovIN)
+    print*,'cosp_rttov_allocate successful' ! jks
     call cpu_time(driver_time(2))
     call cosp_rttov_construct_profiles(rttovIN)
+    print*,'cosp_rttov_construct_profiles successful' ! jks
     call cpu_time(driver_time(3))
     call cosp_rttov_setup_emissivity_reflectance()
+    print*,'cosp_rttov_setup_emissivity_reflectance successful' ! jks
     call cpu_time(driver_time(4))
     call cosp_rttov_call_direct(nthreads)
+    print*,'cosp_rttov_call_direct successful' ! jks
     call cpu_time(driver_time(5))
     call cosp_rttov_save_and_deallocate_profiles(rttovIN,Tb)
+    print*,'cosp_rttov_save_and_deallocate_profiles successful' ! jks
     call cpu_time(driver_time(6))
+    
+    print*,'RTTOV Tb output:  ',Tb
     
     print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
     print*,'Time to run "cosp_rttov_construct_profiles":     ',          driver_time(3)-driver_time(2)

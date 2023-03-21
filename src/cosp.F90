@@ -405,6 +405,7 @@ CONTAINS
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
+        
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1) Determine if using full inputs or subset
@@ -742,6 +743,7 @@ CONTAINS
        rttovIN%nLevels    => cospIN%nLevels
        rttovIN%nSubCols   => cospIN%nColumns
        rttovIN%nChannels  => cospIN%nChannels_rttov
+       rttovIN%channels   => cospIN%channelsIN_rttov
        rttovIN%zenang     => cospgridIN%zenang
        rttovIN%co2        => cospgridIN%co2
        rttovIN%ch4        => cospgridIN%ch4
@@ -770,7 +772,7 @@ CONTAINS
        rttovIN%cldIce     => cospgridIN%cloudIce
        rttovIN%cldLiq     => cospgridIN%cloudLiq
        rttovIN%fl_rain    => cospgridIN%fl_rain ! JKS remove?
-       rttovIN%fl_snow    => cospgridIN%fl_snow ! JKS remove?
+       rttovIN%fl_snow    => cospgridIN%fl_snow ! JKS remove?       
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1528,6 +1530,8 @@ CONTAINS
        if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
     endif
 
+    print*,'Lrttov_column start' ! jks
+
     ! RTTOV
     if (Lrttov_column) then
 
@@ -1538,6 +1542,7 @@ CONTAINS
        print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
                                                            
     endif
+    print*,'Lrttov_column successful' ! jks
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
@@ -1792,7 +1797,6 @@ CONTAINS
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
     real(wp),dimension(10) :: driver_time
     
-    ! JKS testing using a RTTOV input namelist here
     character(len=256),intent(in) :: rttov_input_namelist
     
     ! OUTPUTS

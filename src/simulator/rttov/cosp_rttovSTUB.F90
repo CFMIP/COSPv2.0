@@ -69,6 +69,9 @@ MODULE MOD_COSP_RTTOV
           co              ! Carbon monoxide
      real(wp),dimension(:),pointer :: &
           surfem          ! Surface emissivities for the channels
+!          refl,         & ! Surface reflectances for the channels
+     integer,dimension(:),pointer :: &
+          channels        ! Surface reflectances for the channels
      real(wp),dimension(:),pointer :: &
           h_surf,       & ! Surface height
           u_surf,       & ! U component of surface wind
