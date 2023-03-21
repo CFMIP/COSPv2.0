@@ -144,7 +144,7 @@ module mod_cosp_rttov
   integer(kind=jpim) :: nthreads
   integer(kind=jpim) :: dosolar
   integer(kind=jpim) :: nchanprof ! JKS - jpim is RTTOV integer type
-  integer(kind=jpim), allocatable :: channel_list(:) ! JKS this needs to be specified
+!  integer(kind=jpim), allocatable :: channel_list(:) ! JKS this needs to be specified
   
   TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
   LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
@@ -165,7 +165,7 @@ module mod_cosp_rttov
   
   ! JKS - add additional COSP inputs here.
   type rttov_IN
-     integer,pointer :: &
+     integer(kind=jpim),pointer :: & ! JKS trying this
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols,     & ! Number of subcolumns
@@ -178,7 +178,10 @@ module mod_cosp_rttov
           n2o,          & ! n2o 
           co              ! Carbon monoxide
      real(wp),dimension(:),pointer :: &
-          surfem          ! Surface emissivities for the channels
+          surfem           ! Surface emissivities for the channels
+!          refl,         & ! Surface reflectances for the channels
+     integer(kind=jpim),dimension(:),pointer :: &
+          channels        ! Surface reflectances for the channels
      real(wp),dimension(:),pointer :: &
           h_surf,       & ! Surface height
           u_surf,       & ! U component of surface wind
@@ -243,8 +246,7 @@ contains
         
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch
-!    integer(kind=jpim) :: nch
-        
+    
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3. Allocate RTTOV input and output structures
     ! ------------------------------------------------------
@@ -254,6 +256,14 @@ contains
     ! Determine the total number of radiances to simulate (nchanprof).
     ! We aren't doing subcolumn sampling (RTTOV already does this and it would be slow)
 !      nchanprof = nchannels * nprof
+
+    ! Allocate and fill in channel_list
+!    allocate(channel_list(rttovIN%nChannels)) 
+!    channel_list(1:nChannels) = rttovIN%channels(1:nChannels)
+    
+!    print*,'rttovIN%channels: ',rttovIN%channels
+!    print*,'channel_list:  ',channel_list
+    
     nchanprof = rttovIN%nChannels * rttovIN%nPoints
 
     ! Allocate structures for rttov_direct
@@ -290,10 +300,10 @@ contains
       do jch = 1, rttovIN%nChannels
         nch = nch + 1_jpim
         chanprof(nch)%prof = j
-        chanprof(nch)%chan = channel_list(jch) ! channel_list should be specified
+        chanprof(nch)%chan = rttovIN%channels(jch) ! Example code used channel_list
       end do
     end do
-
+        
   end subroutine cosp_rttov_allocate
   
   
@@ -323,35 +333,39 @@ contains
     ! If you are not able to provide ozone, CO2, etc profiles the flags
     ! ozone_data, co2_data and so on in the options structure should be 
     ! set to false."
-    
-    ! Initialize trace gas column concentrations (well-mixed so constant in input)
-    do j = 1, rttovIN%nlevels
-      profiles(:)%co2(j)        =  rttovIN%co2
-      profiles(:)%n2o(j)        =  rttovIN%n2o
-      profiles(:)%co(j)         =  rttovIN%n2o
-      profiles(:)%ch4(j)        =  rttovIN%ch4
-    end do
 
-    profiles%gas_units  =  1 ! kg/kg over moist air (default)
+    profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
     
     do i = 1, rttovIN%nPoints
-      profiles(i)%p(:) =  rttovIN%p(i, :)
+        
+      ! Initialize trace gas concentrations
+      profiles(i)%co2(:)        =  rttovIN%co2
+      profiles(i)%n2o(:)        =  rttovIN%n2o
+      profiles(i)%co(:)         =  rttovIN%n2o
+      profiles(i)%ch4(:)        =  rttovIN%ch4
+      
+      ! Initialize column pressure, temperature, and humidity
+      profiles(i)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
       profiles(i)%t(:) =  rttovIN%t(i, :)
       profiles(i)%q(:) =  rttovIN%q(i, :)
 
-      ! JKS not sure if I should keep this limiting of water vapor
-      where(profiles(i)%q(:) < 1e-4)
-        profiles(i)%q(:) = 1e-4
+      ! q coefficient limit is 09=.1e-10
+      where(profiles(i)%q(:) < 0.1e-10)
+         profiles(i)%q(:) = 0.11e-10
       end where
+      
+!      if (any(profiles%q < 0.1e-10)) then
+!        write(*,*) 'q profile less than RTTOV minimum. Rewritten to 1e-11'
+!        errorstatus = 1
+!        call rttov_exit(errorstatus)
+!      endif
 
       ! Gas profiles
       profiles(i)%o3         =  rttovIN%o3(i, :)
 !      profiles(i)%so2        =  ! Sulfate not in COSP input files
        
-!      profiles(i)%aerosols(naertyp,nlayers) = ! Aerosols in different modes (see User Guide pg 80)
-
       ! 2m parameters
-      profiles(i)%s2m%p      =  rttovIN%p_surf(i)
+      profiles(i)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
       profiles(i)%s2m%t      =  rttovIN%t2m(i) ! JKS or rttovIN%t_skin
       profiles(i)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
       profiles(i)%s2m%u      =  rttovIN%u_surf(i)
@@ -374,7 +388,7 @@ contains
 
       profiles(i)%latitude      = rttovIN%latitude(i)
       profiles(i)%longitude     = rttovIN%longitude(i)
-      profiles(i)%elevation     = rttovIN%h_surf(i)
+      profiles(i)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
 
       ! Solar angles. JKS - get this from COSP? Doesn't seem to be passed in.
       profiles(i)%sunzenangle   = 0. ! hard-coded in rttov9 int
@@ -397,23 +411,29 @@ contains
       !profiles(i) %idg         = 0. ! Depreciated?
       !profiles(i) %ish         = 0. ! Depreciated?
     end do
-    
+        
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in profile initialization' , lalloc = .false.)
+    
+!    print*,'profiles(90)%p(:):  ',profiles(90)%p(:)
+!    print*,'profiles(90)%q(:):  ',profiles(90)%q(:)
+!    print*,'profiles(90)%t(:):  ',profiles(90)%t(:)
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the cloud fields if simulating cloud.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    rttov_simulate_cld = .false.
-    if (rttov_simulate_cld) then
+!    rttov_simulate_cld = .false.
+!    if (rttov_simulate_cld) then
+    
+    if (do_rttov_cld) then
 
       ! Set cloud mass mixing ratio units
-      profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
+      profiles(:)%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
 
-      profiles%clw_scheme   = 2. ! Deff scheme avoids cloud types
+      profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types
     !    profiles%clwde_scheme = 1. ! Not implemented?
-      profiles%ice_scheme   = 1. !1:Baum 2:Baran(2014) 3:Baran(2018)
-      profiles%icede_param  = 2. ! 2:Wyser(recommended). Only used if ice effective diameter not input
+      profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
+      profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
         
       do i = 1, rttovIN%nPoints        
         ! Cloud scheme stuff
@@ -434,7 +454,7 @@ contains
 
         ! Other options not implemented
 !        profiles(i)%clw        = ! Cloud liquid water (kg/kg) – MW only,
-        end do
+      end do
     endif
     
     ! JKS - nothing to check here, this will never trigger.
@@ -444,14 +464,17 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the aerosol fields if simulating aerosol.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    rttov_simulate_aer = .false.
-    if (rttov_simulate_aer) then
+!    rttov_simulate_aer = .false.
+!    if (rttov_simulate_aer) then
+    
+    if (do_rttov_aer) then
     
       ! Set aerosol mass mixing ratio units
       profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
         
       ! Read in aerosol profiles
 !      do i = 1, rttovIN%nPoints
+!      profiles(i)%aerosols(naertyp,nlayers) = ! Aerosols in different modes (see User Guide pg 80)
 !
 !      end do
     endif
@@ -497,6 +520,7 @@ contains
     integer(kind=jpim) :: nthreads
 
     nthreads = 1 ! Default not parallel for now. Can be optimized later. - JKS
+    print*,'Calling rttov_direct'
     
     if (nthreads <= 1) then
       call rttov_direct(                &
@@ -557,10 +581,11 @@ contains
     ! From RTTOV example files.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    deallocate (channel_list, stat=alloc_status(1))
-    if (alloc_status(1) /= 0) then
-      write(*,*) 'mem dellocation error'
-    endif
+    ! JKS no longer using channel_list
+    !deallocate (channel_list, stat=alloc_status(1))
+    !if (alloc_status(1) /= 0) then
+    !  write(*,*) 'mem dellocation error'
+    !endif
 
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &

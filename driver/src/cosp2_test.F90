@@ -156,7 +156,7 @@ program cosp2_test
        rttov_Channels               ! RTTOV: Channel numbers
   real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
        rttov_Surfem                 ! RTTOV: Surface emissivity
-  real(wp),dimension(RTTOV_MAX_LOCALTIMES) ::  & ! JKS This is not allowed in a main program
+  real(wp),dimension(RTTOV_MAX_LOCALTIMES) ::  &
        rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
        rttov_localtimewindow        ! Width of local time window (hrs).
   character(len=64) :: &
@@ -541,8 +541,7 @@ program cosp2_test
                
      ! Inputs not supplied in the UKMO test data
      cospstateIN%seaice(1:nPoints) = 0._wp
-     cospstateIN%month             = 0
-     
+     cospstateIN%month             = 0     
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
@@ -568,6 +567,7 @@ program cosp2_test
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
      end do
+     print*,'COSP_SIMULATOR successful' ! jks
      
      call cpu_time(driver_time(7))
   enddo
@@ -1085,7 +1085,6 @@ contains
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
-! JKS is everything RTTOV needs being allocated? Perhaps not.
 
   end subroutine construct_cospstateIN
 
