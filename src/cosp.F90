@@ -386,7 +386,8 @@ CONTAINS
          modisRetrievedCloudTopPressure,modisRetrievedTau,modisRetrievedSize,   &
          misr_boxtau,misr_boxztop,misr_dist_model_layertops,isccp_boxtau,       &
          isccp_boxttop,isccp_boxptop,calipso_beta_mol,lidar_only_freq_cloud,    &
-         grLidar532_beta_mol,atlid_beta_mol 
+         grLidar532_beta_mol,atlid_beta_mol,                                    &
+         rttovTb ! JKS RTTOV
     REAL(WP), dimension(:,:,:),allocatable :: &
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq,     &
          calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl,   &
@@ -1535,11 +1536,22 @@ CONTAINS
     ! RTTOV
     if (Lrttov_column) then
 
+       ! Allocate memory for the outputs
+       allocate(rttovTb(rttovIN%Npoints,rttovIN%Nchannels))
+
        ! JKS new RTTOV subroutine for v13 called from the RTTOV interface.
        call cpu_time(driver_time(3))
-       call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,cospOUT%rttov_tbs(ij:ik,:),cosp_simulator(nError+1))
+       ! Run simulator
+       call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,rttovTb,cosp_simulator(nError+1))
        call cpu_time(driver_time(4))
        print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
+       
+       ! Write to cospOUT
+       if (associated(cospOUT%rttov_tbs))                    &
+          cospOUT%rttov_tbs(ij:ik,:) = rttovTb
+
+       ! Free up memory from output (if necessary)
+       if (allocated(rttovTb))               deallocate(rttovTb)          
                                                            
     endif
     print*,'Lrttov_column successful' ! jks
