@@ -17,8 +17,8 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE write_cosp2_output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, lev, lon, lat, cospOUT, outFileName)
-    integer,intent(in) :: Npoints, Ncolumns, Nlevels
+  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, Nchannels, lev, lon, lat, cospOUT, outFileName)
+    integer,intent(in) :: Npoints, Ncolumns, Nlevels, Nchannels
     real(wp),dimension(Npoints),intent(in) :: lon,lat
     real(wp),dimension(Nlevels),intent(in) :: lev
     type(cosp_outputs),intent(in) :: cospOUT
@@ -79,9 +79,10 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"CFODD_NICOD",CFODD_NICOD,dimID(18))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
+    status = nf90_def_dim(fileID,"RTTOV_CHAN",Nchannels,dimID(19))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! ---------------------------------------------------------------------------------------
-    ! Define varaibles
+    ! Define variables
     ! ---------------------------------------------------------------------------------------
     ! Longitude
     status = nf90_def_var(fileID,"longitude",  nf90_float, (/dimID(1)/),varID(1))
@@ -192,6 +193,7 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_att(fileID,varID(83),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
     
     ! CALIPSO simulator output
     if (associated(cospOUT%calipso_betaperp_tot)) then
@@ -1417,6 +1419,23 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif 
     
+    
+    ! ---------------------------------------------------------------------------------------
+    ! RTTOV - JKS
+    ! ---------------------------------------------------------------------------------------
+    
+    ! Brightness Temperature 
+    if (associated(cospOUT%rttov_tbs)) then
+       status = nf90_def_var(fileID,"rttov_tb",nf90_float, (/dimID(1),dimID(19)/),varID(148))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(148),"long_name","RTTOV Brightness Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(148),"units",        "Degrees Kelvin")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(148),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
     ! ---------------------------------------------------------------------------------------
@@ -1894,7 +1913,12 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
-    
+    ! RTTOV outputs
+    if (associated(cospOUT%rttov_tbs)) then
+       status = nf90_put_var(fileID,varID(148),cospOUT%rttov_tbs)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+        
     ! Close file
     status = nf90_close(fileID)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))

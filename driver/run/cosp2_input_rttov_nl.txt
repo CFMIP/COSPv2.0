@@ -85,9 +85,9 @@
   rttov_Platform=1,    ! satellite platform
   rttov_Satellite=15,  ! satellite
   rttov_Instrument=5,  ! instrument
-  rttov_Nchannels=3,   ! Number of channels to be computed
-  rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
-  rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
+  rttov_Nchannels=15,   ! Number of channels to be computed
+  rttov_Channels=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,        ! Channel numbers (please be sure that you supply Nchannels)
+  rttov_Surfem=0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
   rttov_ZenAng=50.0, ! Satellite Zenith Angle
   CO2=5.241e-04, ! Mixing ratios of trace gases
   CH4=9.139e-07,
