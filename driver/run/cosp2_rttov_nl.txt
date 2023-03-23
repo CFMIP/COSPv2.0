@@ -46,6 +46,7 @@
   co2_data=.false.,
   ch4_data=.false.,
   ozone_data=.false.,
+  rttov_nthreads=1,                ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------

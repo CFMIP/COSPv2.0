@@ -37,7 +37,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
                               opts,construct_rttov_coeffilename,rttov_in,                &
                               construct_rttov_scatfilename,                              &
                               do_rttov_bt,do_rttov_rad,do_rttov_refl,                    &
-                              do_rttov_cld,do_rttov_aer,rttov_cld_optparam,rttov_aer_optparam
+                              do_rttov_cld,do_rttov_aer,rttov_cld_optparam,              &
+                              rttov_aer_optparam,rttov_direct_nthreads
                               
                               
   ! rttov_const contains useful RTTOV constants
@@ -144,12 +145,13 @@ CONTAINS
     ! Declare RTTOV namelist fields
     logical :: so2_data,n2o_data,co_data,ch4_data,co2_data,ozone_data
     character(len=256) :: cosp_status
-
+    integer :: rttov_nthreads
+    
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/rttov_coefDir,    &
                          OD_coef_filepath,  &
                          aer_coef_filepath,cld_coef_filepath,so2_data,n2o_data,      &
-                         co_data,ch4_data,co2_data,ozone_data
+                         co_data,ch4_data,co2_data,ozone_data,rttov_nthreads
 !        rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow !JKS
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -179,6 +181,9 @@ CONTAINS
     do_rttov_aer       = Lrttov_aer
     rttov_cld_optparam = Lrttov_cldparam
     rttov_aer_optparam = Lrttov_aerparam
+    
+    ! Set degree of parallelization
+    rttov_direct_nthreads = rttov_nthreads
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1. Initialise RTTOV options structure
@@ -373,7 +378,8 @@ CONTAINS
         cosp_rttov_setup_emissivity_reflectance, &
         cosp_rttov_call_direct,                  &
         cosp_rttov_save_and_deallocate_profiles, &
-        cosp_rttov_deallocate_coefs
+        cosp_rttov_deallocate_coefs,             &
+        rttov_direct_nthreads
   
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -390,7 +396,6 @@ CONTAINS
     character(len=128) :: &
         error     ! Error messages (only populated if error encountered)  
 
-    integer(kind=jpim) :: nthreads ! Parallelization, should become an input
     real(wp),dimension(10) :: driver_time
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
@@ -405,7 +410,7 @@ CONTAINS
     call cosp_rttov_setup_emissivity_reflectance()
 !    print*,'cosp_rttov_setup_emissivity_reflectance successful' ! jks
     call cpu_time(driver_time(4))
-    call cosp_rttov_call_direct(nthreads)
+    call cosp_rttov_call_direct()
 !    print*,'cosp_rttov_call_direct successful' ! jks
     call cpu_time(driver_time(5))
     
