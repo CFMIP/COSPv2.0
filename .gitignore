@@ -8,3 +8,6 @@ driver/run/cosp2_test
 
 # Ignore changes to the testing files for data
 *.nc
+
+# Ignore anything in a .ipynb_checkpoint directory
+**/.ipynb_checkpoints/*
