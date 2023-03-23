@@ -112,6 +112,8 @@ module mod_cosp_rttov
        sensor,     & ! RTTOV instrument
        satellite,  & ! RTTOV satellite
        nChannels     ! Number of channels
+  integer(kind=jpim) ::  & ! Parallelization is default off
+       rttov_direct_nthreads = 1_jpim
   integer,dimension(RTTOV_MAX_CHANNELS) :: &
        iChannel      ! RTTOV channel numbers
 
@@ -143,7 +145,6 @@ module mod_cosp_rttov
 
   ! module-wides variables for input
   !====================
-  integer(kind=jpim) :: nthreads
   integer(kind=jpim) :: dosolar
   integer(kind=jpim) :: nchanprof ! JKS - jpim is RTTOV integer type
 !  integer(kind=jpim), allocatable :: channel_list(:) ! JKS this needs to be specified
@@ -517,14 +518,10 @@ contains
   ! ------------------------------------------------------
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-  subroutine cosp_rttov_call_direct(nthreads)
+  subroutine cosp_rttov_call_direct()
     
-    integer(kind=jpim) :: nthreads
-
-    nthreads = 1 ! Default not parallel for now. Can be optimized later. - JKS
-    print*,'Calling rttov_direct'
-    
-    if (nthreads <= 1) then
+    if (rttov_direct_nthreads <= 1) then
+      print*,'Calling rttov_direct'
       call rttov_direct(                &
               errorstatus,              &! out   error flag
               chanprof,                 &! in    channel and profile index structure
@@ -538,6 +535,7 @@ contains
               calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
               reflectance = reflectance) ! inout input/output BRDFs per channel
     else
+      print*,'Calling rttov_parallel_direct'
       call rttov_parallel_direct(       &
               errorstatus,              &! out   error flag
               chanprof,                 &! in    channel and profile index structure
@@ -550,7 +548,7 @@ contains
               emissivity  = emissivity, &! inout input/output emissivities per channel
               calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
               reflectance = reflectance,&! inout input/output BRDFs per channel
-              nthreads    = nthreads)    ! in    number of threads to use
+              nthreads    = rttov_direct_nthreads)    ! in    number of threads to use
     endif
     call rttov_error('rttov_direct error', lalloc = .true.)
   
