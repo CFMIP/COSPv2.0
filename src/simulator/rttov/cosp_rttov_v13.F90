@@ -127,7 +127,9 @@ module mod_cosp_rttov
   logical             :: &
       do_rttov_cld,        & ! Include clouds in RTTOV calculations
       do_rttov_aer,        & ! Include aerosols in RTTOV calculations
+      do_rttov_bt,         & ! Return brightness temps in RTTOV calculations
       do_rttov_rad,        & ! Return radiances in RTTOV calculations
+      do_rttov_refl,       & ! Return reflectances in RTTOV calculations
       rttov_cld_optparam,  & ! Use user-supplied optical cloud parameters
       rttov_aer_optparam     ! Use user-supplied optical aerosol parameters
        
@@ -559,29 +561,67 @@ contains
   ! rttov_save_and_deallocate - 8. Save output data, 9. Deallocate all RTTOV arrays and structures
   ! ------------------------------------------------------
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_rttov_save_and_deallocate_profiles(rttovIN,Tb)
-
+  subroutine cosp_rttov_save_and_deallocate_profiles(rttovIN,                        &
+                                                     bt_total,bt_clear,              &
+                                                     rad_total,rad_clear,rad_cloudy, &
+                                                     refl_total,refl_clear)
     type(rttov_in),intent(in) :: &
         rttovIN
     real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels),intent(inout) :: & ! Can I do this? I guess so!
-        Tb        ! RTTOV brightness temperature.
-        
+        bt_total,       &        ! RTTOV brightness temperature.
+        bt_clear,       &
+        rad_total,      &
+        rad_clear,      &
+        rad_cloudy,     &
+        refl_total,     &
+        refl_clear
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 8. Save output data
     ! ------------------------------------------------------
     ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    Tb(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
-        transpose(reshape(radiance%bt(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))    
+!    print *,"present check: ",present(four),present(five)
+
+    ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
+
+    ! Only save output if appropriate
+    if (do_rttov_bt) then
+        bt_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%bt(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
+    if (do_rttov_bt .and. (do_rttov_cld .or. do_rttov_aer)) then
+        bt_clear(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%bt_clear(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
     
+    if (do_rttov_rad) then
+        rad_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%total(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
+    if (do_rttov_rad .and. (do_rttov_cld .or. do_rttov_aer)) then
+        rad_clear(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%clear(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) )) 
+        rad_cloudy(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%cloudy(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))   
+    endif
+
+    if (do_rttov_refl) then
+        refl_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%refl(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
+    if (do_rttov_refl .and. (do_rttov_cld .or. do_rttov_aer)) then
+        bt_clear(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(radiance%refl_clear(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
+          
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 9. Deallocate all RTTOV arrays and structures
     ! ------------------------------------------------------
     ! From RTTOV example files.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    ! JKS no longer using channel_list
+    ! JKS no longer using channel_list, rttovIN%channels instead
     !deallocate (channel_list, stat=alloc_status(1))
     !if (alloc_status(1) /= 0) then
     !  write(*,*) 'mem dellocation error'

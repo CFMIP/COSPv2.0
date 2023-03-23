@@ -196,12 +196,18 @@ program cosp2_test
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
-             Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
+             Lclmodis,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,           &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lwr_occfreq,Lcfodd,                                                        &
-             Lrttov_cld,Lrttov_cldparam,Lrttov_aer,Lrttov_aerparam,                      &
-             Lrttov_rad,Lrttov_localtime
+             Lwr_occfreq,Lcfodd
+  logical :: Lrttov_bt         = .false.        
+  logical :: Lrttov_rad        = .false.
+  logical :: Lrttov_refl       = .false.
+  logical :: Lrttov_cld        = .false.         
+  logical :: Lrttov_cldparam   = .false.         
+  logical :: Lrttov_aer        = .false.         
+  logical :: Lrttov_aerparam   = .false.         
+  logical :: Lrttov_localtime  = .false.         
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -223,9 +229,10 @@ program cosp2_test
                        LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,         &
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
-                       Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov,    &
-                       Lrttov_cld, Lrttov_cldparam, Lrttov_aer, Lrttov_aerparam,         & ! JKS
-                       Lrttov_rad, Lrttov_localtime,                                     & ! JKS
+                       Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,             &
+                       Lrttov_bt, Lrttov_rad, Lrttov_refl,                               & ! RTTOV output fields
+                       Lrttov_cld, Lrttov_cldparam,Lrttov_aer, Lrttov_aerparam,          & ! RTTOV cld/aero
+                       Lrttov_localtime,                                                 & ! RTTOV other
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
@@ -378,11 +385,13 @@ program cosp2_test
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
-  if ((Ltbrttov) .and. (rttov_input_namelist /= 'false')) Lrttov = .true.   
-  if ((Ltbrttov) .and. (rttov_input_namelist .eq. 'false')) then 
-      print*,'Ltbrttov must be true and a RTTOV namelist must be provided to run RTTOV.'
-      Lrttov = .false.
-      Ltbrttov = .false.
+  if ((Lrttov_bt .or. Lrttov_rad .or. Lrttov_refl) .and. (rttov_input_namelist /= 'false')) Lrttov = .true.   
+  if ((Lrttov_bt .or. Lrttov_rad .or. Lrttov_refl) .and. (rttov_input_namelist .eq. 'false')) then 
+      print*,'An RTTOV output must be true and a RTTOV namelist must be provided to run RTTOV.'
+      Lrttov      = .false.
+      Lrttov_bt   = .false.
+      Lrttov_rad  = .false.
+      Lrttov_refl = .false.
   endif
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -417,8 +426,8 @@ program cosp2_test
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
        rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               & ! JKS added RTTOV inputs here
-       rttov_Channels,Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam,               &
-       Lrttov_aerparam,rttov_input_namelist) ! options RTTOV argument
+       rttov_Channels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,       &
+       Lrttov_cldparam, Lrttov_aerparam,rttov_input_namelist) ! options RTTOV argument
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -445,9 +454,10 @@ program cosp2_test
        Lclcalipsoopacity, Lclopaquetemp, Lclthintemp, Lclzopaquetemp, Lclopaquemeanz,    & 
        Lclthinmeanz, Lclthinemis, Lclopaquemeanzse, Lclthinmeanzse, Lclzopaquecalipsose, &
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
-       Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,  &
+       Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,            &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
        Lwr_occfreq, Lcfodd,                                                              &
+       Lrttov_bt, Lrttov_rad, Lrttov_refl,                                               &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1121,10 +1131,11 @@ contains
                                     Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,          & 
                                     Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,         &
                                     Lclzopaquecalipsose,LcfadDbze94,Ldbze94,Lparasolrefl,&
-                                    Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2, &
+                                    Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
+                                    Lrttov_bt,Lrttov_rad,Lrttov_refl,                    &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
      ! Inputs
      logical,intent(in) :: &
@@ -1222,7 +1233,9 @@ contains
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
-         Ltbrttov,         & ! RTTOV mean clear-sky brightness temperature
+         Lrttov_bt,        & ! RTTOV mean clear-sky brightness temperature
+         Lrttov_rad,       & ! RTTOV mean clear-sky radiances
+         Lrttov_refl,      & ! RTTOV mean clear-sky radiances
          Lptradarflag0,    & ! CLOUDSAT 
          Lptradarflag1,    & ! CLOUDSAT 
          Lptradarflag2,    & ! CLOUDSAT 
@@ -1396,8 +1409,20 @@ contains
     if (Lcloudsat_tcc) allocate(x%cloudsat_tcc(Npoints))
     if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
             
-    ! RTTOV
-    if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
+    ! RTTOV - Only add non-total fields if clouds or aerosols are simulated
+    if (Lrttov_bt) then                              ! Brightness temp
+        allocate(x%rttov_bt_total(Npoints,Nchan))
+        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
+    endif
+    if (Lrttov_rad) then                             ! Radiance
+        allocate(x%rttov_rad_total(Npoints,Nchan))
+        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
+        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
+    endif
+    if (Lrttov_refl) then                            ! Reflectance
+        allocate(x%rttov_refl_total(Npoints,Nchan))
+        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_refl_clear(Npoints,Nchan))
+    endif
 
     ! Joint MODIS/CloudSat Statistics
     if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
@@ -1697,10 +1722,6 @@ contains
         deallocate(y%misr_cldarea)
         nullify(y%misr_cldarea)      
      endif
-     if (associated(y%rttov_tbs))                 then
-        deallocate(y%rttov_tbs)
-        nullify(y%rttov_tbs)     
-     endif
      if (associated(y%modis_Cloud_Fraction_Total_Mean))                      then
         deallocate(y%modis_Cloud_Fraction_Total_Mean)       
         nullify(y%modis_Cloud_Fraction_Total_Mean)       
@@ -1789,7 +1810,36 @@ contains
         deallocate(y%wr_occfreq_ntotal)
         nullify(y%wr_occfreq_ntotal)
      endif
-
+     
+     ! RTTOV
+     if (associated(y%rttov_bt_total)) then
+        deallocate(y%rttov_bt_total)
+        nullify(y%rttov_bt_total)
+     endif
+     if (associated(y%rttov_bt_clear)) then
+        deallocate(y%rttov_bt_clear)
+        nullify(y%rttov_bt_clear)
+     endif
+     if (associated(y%rttov_rad_total)) then
+        deallocate(y%rttov_rad_total)
+        nullify(y%rttov_rad_total)
+     endif
+     if (associated(y%rttov_rad_clear)) then
+        deallocate(y%rttov_rad_clear)
+        nullify(y%rttov_rad_clear)
+     endif
+     if (associated(y%rttov_rad_cloudy)) then
+        deallocate(y%rttov_rad_cloudy)
+        nullify(y%rttov_rad_cloudy)
+     endif
+     if (associated(y%rttov_refl_total)) then
+        deallocate(y%rttov_refl_total)
+        nullify(y%rttov_refl_total)
+     endif
+     if (associated(y%rttov_refl_clear)) then
+        deallocate(y%rttov_refl_clear)
+        nullify(y%rttov_refl_clear)
+     endif         
    end subroutine destroy_cosp_outputs
   
  end program cosp2_test

@@ -1425,16 +1425,77 @@ contains
     ! ---------------------------------------------------------------------------------------
     
     ! Brightness Temperature 
-    if (associated(cospOUT%rttov_tbs)) then
-       status = nf90_def_var(fileID,"rttov_tb",nf90_float, (/dimID(1),dimID(19)/),varID(148))
+    if (associated(cospOUT%rttov_bt_total)) then
+       status = nf90_def_var(fileID,"rttov_bt_total",nf90_float, (/dimID(1),dimID(19)/),varID(148))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(148),"long_name","RTTOV Brightness Temperature")
+       status = nf90_put_att(fileID,varID(148),"long_name","RTTOV All-sky Brightness Temperature")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(148),"units",        "Degrees Kelvin")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
        status = nf90_put_att(fileID,varID(148),"standard_name", "bleh")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
+    if (associated(cospOUT%rttov_bt_clear)) then
+       status = nf90_def_var(fileID,"rttov_bt_clear",nf90_float, (/dimID(1),dimID(19)/),varID(149))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(149),"long_name","RTTOV Clear-sky Brightness Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(149),"units",        "Degrees Kelvin")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(149),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%rttov_rad_total)) then
+       status = nf90_def_var(fileID,"rttov_rad_total",nf90_float, (/dimID(1),dimID(19)/),varID(150))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(150),"long_name","RTTOV All-sky Radiance")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(150),"units",        "mW/cm-1/sr/m2")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(150),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif    
+    if (associated(cospOUT%rttov_rad_clear)) then
+       status = nf90_def_var(fileID,"rttov_rad_clear",nf90_float, (/dimID(1),dimID(19)/),varID(151))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(151),"long_name","RTTOV Clear-sky Radiance")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(151),"units",        "mW/cm-1/sr/m2")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(151),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif    
+    if (associated(cospOUT%rttov_rad_cloudy)) then
+       status = nf90_def_var(fileID,"rttov_rad_cloudy",nf90_float, (/dimID(1),dimID(19)/),varID(152))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(152),"long_name","RTTOV Cloudy-sky Radiance")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(152),"units",        "mW/cm-1/sr/m2")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(152),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif    
+    if (associated(cospOUT%rttov_refl_total)) then
+       status = nf90_def_var(fileID,"rttov_refl_total",nf90_float, (/dimID(1),dimID(19)/),varID(153))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(153),"long_name","RTTOV All-sky Reflectance")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(153),"units",        "unitless")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(153),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%rttov_refl_clear)) then
+       status = nf90_def_var(fileID,"rttov_refl_clear",nf90_float, (/dimID(1),dimID(19)/),varID(154))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(154),"long_name","RTTOV Clear-sky Reflectance")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(154),"units",        "unitless")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+       status = nf90_put_att(fileID,varID(154),"standard_name", "bleh")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif    
+    
     
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
@@ -1914,11 +1975,36 @@ contains
     endif
 
     ! RTTOV outputs
-    if (associated(cospOUT%rttov_tbs)) then
-       status = nf90_put_var(fileID,varID(148),cospOUT%rttov_tbs)
+    if (associated(cospOUT%rttov_bt_total)) then
+       status = nf90_put_var(fileID,varID(148),cospOUT%rttov_bt_total)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-        
+    if (associated(cospOUT%rttov_bt_clear)) then
+       status = nf90_put_var(fileID,varID(149),cospOUT%rttov_bt_clear)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%rttov_rad_total)) then
+       status = nf90_put_var(fileID,varID(150),cospOUT%rttov_rad_total)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%rttov_rad_clear)) then
+       status = nf90_put_var(fileID,varID(151),cospOUT%rttov_rad_clear)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif    
+    if (associated(cospOUT%rttov_rad_cloudy)) then
+       status = nf90_put_var(fileID,varID(152),cospOUT%rttov_rad_cloudy)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%rttov_refl_total)) then
+       status = nf90_put_var(fileID,varID(153),cospOUT%rttov_refl_total)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+    if (associated(cospOUT%rttov_refl_clear)) then
+       status = nf90_put_var(fileID,varID(154),cospOUT%rttov_refl_clear)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
+
+
     ! Close file
     status = nf90_close(fileID)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
