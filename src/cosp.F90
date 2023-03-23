@@ -301,7 +301,13 @@ MODULE MOD_COSP
 
      ! RTTOV outputs - JKS consider clear-sky and cloudy-sky values here
      real(wp),pointer :: &
-          rttov_tbs(:,:) => null() ! Brightness Temperature
+          rttov_bt_total(:,:)        => null(),         & ! Brightness Temperature
+          rttov_bt_clear(:,:)        => null(),         & ! Brightness Temperature
+          rttov_rad_total(:,:)       => null(),         & ! Brightness Temperature
+          rttov_rad_clear(:,:)       => null(),         & ! Brightness Temperature
+          rttov_rad_cloudy(:,:)      => null(),         & ! Brightness Temperature
+          rttov_refl_total(:,:)      => null(),         & ! Brightness Temperature
+          rttov_refl_clear(:,:)      => null()            ! Brightness Temperature
 
      ! Joint CloudSat+MODIS simulators outputs
      real(wp),dimension(:,:,:,:),pointer :: &
@@ -387,7 +393,9 @@ CONTAINS
          misr_boxtau,misr_boxztop,misr_dist_model_layertops,isccp_boxtau,       &
          isccp_boxttop,isccp_boxptop,calipso_beta_mol,lidar_only_freq_cloud,    &
          grLidar532_beta_mol,atlid_beta_mol,                                    &
-         rttovTb ! JKS RTTOV
+         rttov_bt_total,rttov_bt_clear,                                         & ! RTTOV brightness temps
+         rttov_rad_total,rttov_rad_clear,rttov_rad_cloudy,                      & ! RTTOV radiances
+         rttov_refl_total,rttov_refl_clear                                        ! RTTOV reflectances
     REAL(WP), dimension(:,:,:),allocatable :: &
          modisJointHistogram,modisJointHistogramIce,modisJointHistogramLiq,     &
          calipso_beta_tot,calipso_betaperp_tot, cloudsatDBZe,parasolPix_refl,   &
@@ -507,7 +515,13 @@ CONTAINS
        Lparasol_subcolumn  = .true.
 
     ! RTTOV column
-    if (associated(cospOUT%rttov_tbs))                                                   &
+    if (associated(cospOUT%rttov_bt_total)                                 .or.          &
+        associated(cospOUT%rttov_bt_clear)                                 .or.          &
+        associated(cospOUT%rttov_rad_total)                                .or.          &
+        associated(cospOUT%rttov_rad_clear)                                .or.          &
+        associated(cospOUT%rttov_rad_cloudy)                               .or.          &
+        associated(cospOUT%rttov_refl_total)                               .or.          &
+        associated(cospOUT%rttov_refl_clear))                                            &
        Lrttov_column    = .true.
 
     ! Set flag to deallocate rttov types (only done on final call to simulator)
@@ -1536,22 +1550,50 @@ CONTAINS
     ! RTTOV
     if (Lrttov_column) then
 
-       ! Allocate memory for the outputs
-       allocate(rttovTb(rttovIN%Npoints,rttovIN%Nchannels))
+       ! Allocate memory for the outputs - I won't need all of these in every situation
+       allocate(rttov_bt_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky brightness temp
+       allocate(rttov_bt_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
+       allocate(rttov_rad_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky brightness temp
+       allocate(rttov_rad_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
+       allocate(rttov_rad_cloudy(rttovIN%Npoints,rttovIN%Nchannels)) ! cloudy-sky brightness temp
+       allocate(rttov_refl_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky Bi-directional reflectance factor
+       allocate(rttov_refl_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky Bi-directional reflectance factor
 
        ! JKS new RTTOV subroutine for v13 called from the RTTOV interface.
        call cpu_time(driver_time(3))
        ! Run simulator
-       call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,rttovTb,cosp_simulator(nError+1))
+       call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,                             & ! Inputs
+                                rttov_bt_total,rttov_bt_clear,                      & ! Brightness Temp Outputs
+                                rttov_rad_total,rttov_rad_clear,rttov_rad_cloudy,   & ! Radiance Outputs
+                                rttov_refl_total,rttov_refl_clear,                  & ! Reflectance Outputs
+                                cosp_simulator(nError+1))
        call cpu_time(driver_time(4))
        print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
        
        ! Write to cospOUT
-       if (associated(cospOUT%rttov_tbs))                    &
-          cospOUT%rttov_tbs(ij:ik,:) = rttovTb
-
+       if (associated(cospOUT%rttov_bt_total))                    &
+          cospOUT%rttov_bt_total(ij:ik,:) = rttov_bt_total
+       if (associated(cospOUT%rttov_bt_clear))                    &
+          cospOUT%rttov_bt_clear(ij:ik,:) = rttov_bt_clear
+       if (associated(cospOUT%rttov_rad_total))                    &
+          cospOUT%rttov_rad_total(ij:ik,:) = rttov_rad_total 
+       if (associated(cospOUT%rttov_rad_clear))                   &
+          cospOUT%rttov_rad_clear(ij:ik,:) = rttov_rad_clear
+       if (associated(cospOUT%rttov_rad_cloudy))                  &
+          cospOUT%rttov_rad_cloudy(ij:ik,:) = rttov_rad_cloudy
+       if (associated(cospOUT%rttov_refl_total))                  &
+          cospOUT%rttov_refl_total(ij:ik,:) = rttov_refl_total
+       if (associated(cospOUT%rttov_refl_clear))                  &
+          cospOUT%rttov_refl_clear(ij:ik,:) = rttov_refl_clear
+          
        ! Free up memory from output (if necessary)
-       if (allocated(rttovTb))               deallocate(rttovTb)          
+       if (allocated(rttov_bt_total))               deallocate(rttov_bt_total)          
+       if (allocated(rttov_bt_clear))               deallocate(rttov_bt_clear)          
+       if (allocated(rttov_rad_total))              deallocate(rttov_rad_total)          
+       if (allocated(rttov_rad_clear))              deallocate(rttov_rad_clear)          
+       if (allocated(rttov_rad_cloudy))             deallocate(rttov_rad_cloudy)          
+       if (allocated(rttov_refl_total))             deallocate(rttov_refl_total)          
+       if (allocated(rttov_refl_clear))             deallocate(rttov_refl_clear)          
                                                            
     endif
     print*,'Lrttov_column successful' ! jks
@@ -1776,12 +1818,15 @@ CONTAINS
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
        NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
-       Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam,             &
+       Lrttov_bt, Lrttov_rad, Lrttov_refl,                                               &
+       Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam,                         &
        rttov_input_namelist)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
-    logical,intent(in) :: Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam
+    logical,intent(in) ::                                           &
+         Lrttov_bt, Lrttov_rad, Lrttov_refl,                        &
+         Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam
     ! JKS to-do
 !    type(rttov_init_in),intent(in)   :: rttov_init_IN 
     integer,intent(in)  :: &
@@ -1860,11 +1905,11 @@ CONTAINS
     ! Could print diagnostic on timing here.
     if (Lrttov) then
         call cpu_time(driver_time(1))
-        call cosp_rttov_init(NchanIN,platformIN,satelliteIN,  &
-                             instrumentIN,channelsIN,Nlevels, &
-                             Lrttov_cld,Lrttov_aer,           &
-                             Lrttov_rad,Lrttov_cldparam,      &
-                             Lrttov_aerparam,                 &
+        call cosp_rttov_init(NchanIN,platformIN,satelliteIN,   &
+                             instrumentIN,channelsIN,Nlevels,  &
+                             Lrttov_bt,Lrttov_rad,Lrttov_refl, &
+                             Lrttov_cld,Lrttov_aer,            &
+                             Lrttov_cldparam,Lrttov_aerparam,  &
                              rttov_input_namelist)
         call cpu_time(driver_time(2))
         print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
@@ -2612,7 +2657,13 @@ CONTAINS
        endif
        if (.not. alloc_status) then
           Lrttov_column     = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_bt_total))   cospOUT%rttov_bt_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_bt_clear))   cospOUT%rttov_bt_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))  cospOUT%rttov_rad_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))  cospOUT%rttov_rad_clear(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy)) cospOUT%rttov_rad_cloudy(:,:)       = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total)) cospOUT%rttov_refl_total(:,:)       = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear)) cospOUT%rttov_refl_clear(:,:)       = R_UNDEF          
        endif
     endif
 
@@ -2710,7 +2761,13 @@ CONTAINS
           Lcloudsat_tcc    = .false.
           Lcloudsat_tcc2   = .false.
           Lcloudsat_modis_wr = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:)         = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))      cospOUT%rttov_bt_total(:,:)    = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))      cospOUT%rttov_bt_clear(:,:)    = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))     cospOUT%rttov_rad_total(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))     cospOUT%rttov_rad_clear(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))    cospOUT%rttov_rad_cloudy(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))    cospOUT%rttov_refl_total(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))    cospOUT%rttov_refl_clear(:,:)  = R_UNDEF              
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
           if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
@@ -2752,7 +2809,13 @@ CONTAINS
           Lisccp_subcolumn = .false.
           Lisccp_column    = .false.
           Lrttov_column    = .false.
-          if (associated(cospOUT%rttov_tbs))           cospOUT%rttov_tbs(:,:)         = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))      cospOUT%rttov_bt_total(:,:)    = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))      cospOUT%rttov_bt_clear(:,:)    = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))     cospOUT%rttov_rad_total(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))     cospOUT%rttov_rad_clear(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))    cospOUT%rttov_rad_cloudy(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))    cospOUT%rttov_refl_total(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))    cospOUT%rttov_refl_clear(:,:)  = R_UNDEF           
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
           if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
@@ -2777,7 +2840,7 @@ CONTAINS
           Lrttov_column    = .false.
           Latlid_column    = .false.
           LgrLidar532_column = .false.
-          if (associated(cospOUT%rttov_tbs))           cospOUT%rttov_tbs(:,:)         = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))      cospOUT%rttov_bt_total(:,:)    = R_UNDEF
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
           if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
@@ -2854,7 +2917,13 @@ CONTAINS
           Lisccp_subcolumn = .false.
           Lisccp_column    = .false.
           Lrttov_column    = .false.
-          if (associated(cospOUT%rttov_tbs))           cospOUT%rttov_tbs(:,:)         = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))      cospOUT%rttov_bt_total(:,:)    = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))      cospOUT%rttov_bt_clear(:,:)    = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))     cospOUT%rttov_rad_total(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))     cospOUT%rttov_rad_clear(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))    cospOUT%rttov_rad_cloudy(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))    cospOUT%rttov_refl_total(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))    cospOUT%rttov_refl_clear(:,:)  = R_UNDEF            
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
           if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
@@ -2931,7 +3000,13 @@ CONTAINS
           Latlid_column       = .false.
           LgrLidar532_column = .false.
           Lcloudsat_modis_wr = .false.
-          if (associated(cospOUT%rttov_tbs))              cospOUT%rttov_tbs(:,:)               = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF           
           if (associated(cospOUT%calipso_cfad_sr))        cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
           if (associated(cospOUT%calipso_lidarcld))       cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldphase))  cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
@@ -2966,7 +3041,13 @@ CONTAINS
           Lrttov_column    = .false.
           Lcalipso_column  = .false.
           Lparasol_column  = .false.
-          if (associated(cospOUT%rttov_tbs))             cospOUT%rttov_tbs(:,:)               = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))        cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))        cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))       cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))       cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))      cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))      cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))      cospOUT%rttov_refl_clear(:,:)        = R_UNDEF           
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
           if (associated(cospOUT%calipso_lidarcld))      cospOUT%calipso_lidarcld(:,:)        = R_UNDEF
           if (associated(cospOUT%calipso_lidarcldphase)) cospOUT%calipso_lidarcldphase(:,:,:) = R_UNDEF
@@ -2989,7 +3070,13 @@ CONTAINS
           Lisccp_subcolumn = .false.
           Lisccp_column    = .false.
           Lrttov_column    = .false.
-          if (associated(cospOUT%rttov_tbs))           cospOUT%rttov_tbs(:,:)         = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))      cospOUT%rttov_bt_total(:,:)    = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))      cospOUT%rttov_bt_clear(:,:)    = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))     cospOUT%rttov_rad_total(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))     cospOUT%rttov_rad_clear(:,:)   = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))    cospOUT%rttov_rad_cloudy(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))    cospOUT%rttov_refl_total(:,:)  = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))    cospOUT%rttov_refl_clear(:,:)  = R_UNDEF           
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
           if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(:)        = R_UNDEF
           if (associated(cospOUT%isccp_meantbclr))     cospOUT%isccp_meantbclr(:)     = R_UNDEF
@@ -3008,61 +3095,121 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%zenang contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (cospgridIN%co2 .lt. 0) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (cospgridIN%ch4 .lt. 0) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%ch4 contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (cospgridIN%n2o .lt. 0) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%n2o contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (cospgridIN%co.lt. 0) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (any(cospgridIN%o3 .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%o3 contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (any(cospgridIN%emis_sfc .lt. 0. .OR. cospgridIN%emis_sfc .gt. 1)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
        endif
        if (any(cospgridIN%u_sfc .lt. -100. .OR. cospgridIN%u_sfc .gt. 100.)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%u_sfc contains values out of range'
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
           Lrttov_column = .false.
        endif
        if (any(cospgridIN%v_sfc .lt. -100. .OR. cospgridIN%v_sfc .gt. 100.)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%v_sfc contains values out of range'
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
        endif
        if (any(cospgridIN%lat .lt. -90 .OR. cospgridIN%lat .gt. 90)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%lat contains values out of range'
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF           
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_tbs)) cospOUT%rttov_tbs(:,:) = R_UNDEF
        endif
     endif
 

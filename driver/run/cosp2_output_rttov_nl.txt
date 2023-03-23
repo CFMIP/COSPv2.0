@@ -133,12 +133,14 @@
   Liwpmodis=.true.,
   Lclmodis=.true.,
   !- RTTOV
-  Ltbrttov=.true.,
+!  Ltbrttov=.true.,
+  Lrttov_bt=.true.,
+  Lrttov_rad=.true.,
+  Lrttov_refl=.true.,
   Lrttov_cld=.true.,
   Lrttov_cldparam=.false.,
   Lrttov_aer=.true.,
   Lrttov_aerparam=.false.,
-  Lrttov_rad=.false.,
   Lrttov_localtime=.false.,
   ! -CLOUDSAT precipitation frequency/occurence diagnostics
   Lptradarflag0=.true.,

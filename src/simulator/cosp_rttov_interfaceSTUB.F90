@@ -68,8 +68,8 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
-                             nlevels,Lrttov_cld,Lrttov_aer,Lrttov_rad,Lrttov_cldparam, &
-                             Lrttov_aerparam,                                          &
+                             nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
+                             Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
                              rttov_input_namelist)
     integer,intent(in) :: & 
          NchanIN,      & ! Number of channels
@@ -80,11 +80,13 @@ CONTAINS
     integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
          channelsIN     ! RTTOV channels
     logical,intent(in)   :: &
+         Lrttov_bt,        &
+         Lrttov_rad,       &
+         Lrttov_refl,      &
          Lrttov_cld,       &
          Lrttov_aer,       &
-         Lrttov_rad,       &
          Lrttov_cldparam,  &
-         Lrttov_aerparam         
+         Lrttov_aerparam       
          
      ! JKS testing using a RTTOV input namelist here
      character(len=256),intent(in) :: rttov_input_namelist
@@ -97,17 +99,26 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,          & ! Inputs
-                                 Tb,error)                    ! Outputs
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
+                                 bt_total,bt_clear,                                & ! Brightness Temp Outputs
+                                 rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
+                                 refl_total,refl_clear,                            & ! Reflectance Outputs
+                                 error)        
   
       type(rttov_in),intent(in) :: &
           rttovIN
       logical,intent(in) :: &
           lCleanup   ! Flag to determine whether to deallocate RTTOV types          
       real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
-           Tb        ! RTTOV brightness temperature.
+          bt_total,                          &        ! All-sky
+          bt_clear,                          &        ! Clear-sky
+          rad_total,                         &        ! All-sky
+          rad_clear,                         &        ! Clear-sky
+          rad_cloudy,                        &        ! Cloudy-sky
+          refl_total,                        &        ! All-sky
+          refl_clear                                  ! Clear-sky
       character(len=128) :: &
-           error     ! Error messages (only populated if error encountered)  
+          error     ! Error messages (only populated if error encountered)  
   
   
       print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
