@@ -38,7 +38,7 @@
 MODULE MOD_COSP
   USE COSP_KINDS,                  ONLY: wp
   USE MOD_COSP_CONFIG,             ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE, SR_BINS,&
-                                         N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,      &
+                                         N_HYDRO,numMISRHgtBins,      &
                                          cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,&
                                          use_vgrid,Nlvgrid,vgrid_zu,vgrid_zl,vgrid_z,dz, &
                                          WR_NREGIME, CFODD_NCLASS,                       &
@@ -49,10 +49,9 @@ MODULE MOD_COSP
                                          ntau,modis_histTau,tau_binBounds,               &
                                          modis_histTauEdges,tau_binEdges,nCloudsatPrecipClass,&
                                          modis_histTauCenters,tau_binCenters,            &
-                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct,&
-                                         RTTOV_MAX_CHANNELS ! JKS needed for RTTOV to be in cosp_optical_inputs
+                                         cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
-  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       rttov_init_IN, cosp_rttov_simulate ! JKS
+  USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       cosp_rttov_simulate ! JKS
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
   USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN
   USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN
@@ -104,19 +103,19 @@ MODULE MOD_COSP
      integer :: &
           month                  ! Month for surface emissivty atlas      (1-12)
      real(wp) :: &
-          zenang,              & ! Satellite zenith angle for RTTOV       (deg)
           co2,                 & ! CO2                                    (kg/kg)
           ch4,                 & ! Methane                                (kg/kg)
           n2o,                 & ! N2O                                    (kg/kg)
           co                     ! CO                                     (kg/kg)
      real(wp),allocatable,dimension(:) :: &
-          emis_sfc,            & ! Surface emissivity                     (1)
           u_sfc,               & ! Surface u-wind                         (m/s)
           v_sfc,               & ! Surface v-wind                         (m/s)
           seaice,              & ! Sea-ice fraction                       (0-1)
           lat,                 & ! Latitude                              (deg)
           lon                    ! Longitude                              (deg)
      real(wp),allocatable,dimension(:,:) :: &
+          emis_sfc,            & ! Surface emissivity                     (1)
+          refl_sfc,            & ! Surface reflectance                    (1)
           o3,                  & ! Ozone                                  (kg/kg)
           tca,                 & ! Total layer cloud fraction             (0-1)
           cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
@@ -135,14 +134,7 @@ MODULE MOD_COSP
           Nlevels,             & ! Number of levels.
           Npart,               & ! Number of cloud meteors for LIDAR simulators.
           Nrefl,               & ! Number of reflectances for PARASOL simulator
-! RTTOV inputs JKS
-          nChannels_rttov,     & ! Number of RTTOV channels
-          platformIN_rttov,    & ! RTTOV platform integer
-          satelliteIN_rttov,   & ! RTTOV satellite integer
-          instrumentIN_rttov     ! RTTOV instrument integer
-!     integer,allocatable,dimension(RTTOV_MAX_CHANNELS) :: &
-     integer,dimension(RTTOV_MAX_CHANNELS) :: & ! JKS
-          channelsIN_rttov       ! RTTOV channels for the specified instrument
+          nChannels_rttov        ! Number of RTTOV channels
      real(wp) :: &
           emsfc_lw               ! Surface emissivity @ 11micron
      real(wp),allocatable,dimension(:,:,:) :: &
@@ -758,13 +750,12 @@ CONTAINS
        rttovIN%nLevels    => cospIN%nLevels
        rttovIN%nSubCols   => cospIN%nColumns
        rttovIN%nChannels  => cospIN%nChannels_rttov
-       rttovIN%channels   => cospIN%channelsIN_rttov
-       rttovIN%zenang     => cospgridIN%zenang
        rttovIN%co2        => cospgridIN%co2
        rttovIN%ch4        => cospgridIN%ch4
        rttovIN%n2o        => cospgridIN%n2o
        rttovIN%co         => cospgridIN%co
-       rttovIN%surfem     => cospgridIN%emis_sfc
+!       rttovIN%surfem     => cospgridIN%emis_sfc
+!       rttovIN%refl_sfc     => cospgridIN%refl_sfc
        rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels)
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
@@ -1817,8 +1808,7 @@ CONTAINS
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
-       NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
-       Lrttov_bt, Lrttov_rad, Lrttov_refl,                                               &
+       NchanIN, Lrttov_bt, Lrttov_rad, Lrttov_refl,                                      &
        Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam,                         &
        rttov_input_namelist)
 
@@ -1828,7 +1818,6 @@ CONTAINS
          Lrttov_bt, Lrttov_rad, Lrttov_refl,                        &
          Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam
     ! JKS to-do
-!    type(rttov_init_in),intent(in)   :: rttov_init_IN 
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & !
          cloudsat_do_ray,            & !
@@ -1837,12 +1826,7 @@ CONTAINS
          Nlevels,                    & !
          Nvgrid,                     & ! Number of levels for new L3 grid
          surface_radar,              & !
-         NchanIN,                    & ! RTTOV arguments here and below JKS
-         platformIN,                 &
-         satelliteIN,                &
-         instrumentIN
-    integer,dimension(RTTOV_MAX_CHANNELS) :: &
-         channelsIN               ! RTTOV: Channel numbers
+         NchanIN                       ! RTTOV arguments here and below JKS
     real(wp),intent(in) :: &
          cloudsat_radar_freq,        & !
          cloudsat_k2                   !
@@ -1905,12 +1889,11 @@ CONTAINS
     ! Could print diagnostic on timing here.
     if (Lrttov) then
         call cpu_time(driver_time(1))
-        call cosp_rttov_init(NchanIN,platformIN,satelliteIN,   &
-                             instrumentIN,channelsIN,Nlevels,  &
+        call cosp_rttov_init(NchanIN, Nlevels,                 &
                              Lrttov_bt,Lrttov_rad,Lrttov_refl, &
                              Lrttov_cld,Lrttov_aer,            &
                              Lrttov_cldparam,Lrttov_aerparam,  &
-                             rttov_input_namelist)
+                             rttov_input_namelist)        
         call cpu_time(driver_time(2))
         print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif
@@ -2550,9 +2533,14 @@ CONTAINS
           errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%emis_sfc has not been allocated'
           alloc_status = .false.
        endif
+       if (.not. allocated(cospgridIN%refl_sfc)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%refl_sfc has not been allocated'
+          alloc_status = .false.
+       endif
        if (.not. allocated(cospgridIN%hgt_matrix_half)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%emis_sfc has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%hgt_matrix_half has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%u_sfc)) then
@@ -3091,18 +3079,6 @@ CONTAINS
     
     ! RTTOV Inputs
     if (Lrttov_column) then
-       if (cospgridIN%zenang .lt. -90. .OR. cospgridIN%zenang .gt. 90) then
-          nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%zenang contains values out of range'
-          Lrttov_column = .false.
-          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
-          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
-          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
-          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
-          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
-          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
-          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
-       endif
        if (cospgridIN%co2 .lt. 0) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
@@ -3166,6 +3142,18 @@ CONTAINS
        if (any(cospgridIN%emis_sfc .lt. 0. .OR. cospgridIN%emis_sfc .gt. 1)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
+          Lrttov_column = .false.
+          if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
+          if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_total))        cospOUT%rttov_rad_total(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_clear))        cospOUT%rttov_rad_clear(:,:)         = R_UNDEF          
+          if (associated(cospOUT%rttov_rad_cloudy))       cospOUT%rttov_rad_cloudy(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_total))       cospOUT%rttov_refl_total(:,:)        = R_UNDEF          
+          if (associated(cospOUT%rttov_refl_clear))       cospOUT%rttov_refl_clear(:,:)        = R_UNDEF 
+       endif
+       if (any(cospgridIN%refl_sfc .lt. 0. .OR. cospgridIN%refl_sfc .gt. 1)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%refl_sfc contains values out of range'
           Lrttov_column = .false.
           if (associated(cospOUT%rttov_bt_total))         cospOUT%rttov_bt_total(:,:)          = R_UNDEF
           if (associated(cospOUT%rttov_bt_clear))         cospOUT%rttov_bt_clear(:,:)          = R_UNDEF          

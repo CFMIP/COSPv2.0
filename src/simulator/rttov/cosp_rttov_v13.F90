@@ -40,17 +40,13 @@ module mod_cosp_rttov
   use rttov_types,         only : rttov_options,rttov_coefs,rttov_profile,                &
                                   rttov_transmission,rttov_radiance,rttov_chanprof,       &
                                   rttov_emissivity,rttov_reflectance,rttov_opt_param
-!  use rttov_types,         only : rttov_options,rttov_coefs,profile_type,                &
-!                                  transmission_type,radiance_type,rttov_chanprof,        &
-!                                  rttov_emissivity,profile_cloud_type,rttov_scatt_coef,  &
-!                                  rttov_options_scatt
   use rttov_const,         only : surftype_sea, surftype_land, surftype_seaice,           &
                                   errorstatus_success,errorstatus_fatal,                  &
                                   platform_name,inst_name,                                &
                                   sensor_id_mw,sensor_id_po
   use rttov_unix_env,      only : rttov_exit
   use cosp_kinds,          only : wp
-  use mod_cosp_config,     only : RTTOV_MAX_CHANNELS,N_HYDRO,rttovDir
+  use mod_cosp_config,     only : N_HYDRO
   use cosp_phys_constants, only : mdry=>amd,mO3=>amO3,mco2=>amCO2,mCH4=>amCH4,           &
                                   mn2o=>amN2O,mco=>amCO
 
@@ -107,15 +103,13 @@ module mod_cosp_rttov
   real(wp),parameter :: eps    =  0.622
 
   ! Initialization parameters
-  integer :: &
-       platform,   & ! RTTOV platform
-       sensor,     & ! RTTOV instrument
-       satellite,  & ! RTTOV satellite
+  integer(kind=jpim) :: &
        nChannels     ! Number of channels
   integer(kind=jpim) ::  & ! Parallelization is default off
        rttov_direct_nthreads = 1_jpim
-  integer,dimension(RTTOV_MAX_CHANNELS) :: &
-       iChannel      ! RTTOV channel numbers
+!  integer,dimension(nChannels) :: &
+  integer(kind=jpim),allocatable :: &
+       iChannel(:)      ! RTTOV channel numbers
 
   ! Scattering coefficients (read in once during initialization)
   type(rttov_coefs) :: &
@@ -134,10 +128,17 @@ module mod_cosp_rttov
       do_rttov_refl,       & ! Return reflectances in RTTOV calculations
       rttov_cld_optparam,  & ! Use user-supplied optical cloud parameters
       rttov_aer_optparam     ! Use user-supplied optical aerosol parameters
+      
+  ! --- Well-mixed trace gas mixing ratios from user via RTTOV namelist
+  real(wp)  :: so2 = 0._wp
+  real(wp)  :: ch4 = 0._wp
+  real(wp)  :: co  = 0._wp
+  real(wp)  :: co2 = 0._wp
+  real(wp)  :: n2o = 0._wp
+  real(wp)  :: zenang = 0._wp ! NADIR default
        
-  ! JKS should this be module-wide?
-!  type(rttov_IN)      :: &
-!       rttovIN
+  character(len=256) :: &
+      rttovDir             ! Directory for the RTTOV source code
 
 ! JKS - KISS
 !  type(rttov_options_scatt) :: &
@@ -174,17 +175,16 @@ module mod_cosp_rttov
           nSubCols,     & ! Number of subcolumns
           nChannels,    & ! Number of channels to simulate
           month           ! Month (needed for surface emissivity calculation)
-     real(wp),pointer :: &
-          zenang,       & ! Satellite zenith angle
+     real(wp),pointer :: & ! Could change the dimensionality of these in the future
           co2,          & ! Carbon dioxide 
           ch4,          & ! Methane 
           n2o,          & ! n2o 
           co              ! Carbon monoxide
-     real(wp),dimension(:),pointer :: &
-          surfem           ! Surface emissivities for the channels
+!     real(wp),dimension(:),pointer :: &
+!          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
-     integer(kind=jpim),dimension(:),pointer :: &
-          channels        ! Surface reflectances for the channels
+!     integer(kind=jpim),dimension(:),pointer :: &
+!          channels        ! 
      real(wp),dimension(:),pointer :: &
           h_surf,       & ! Surface height
           u_surf,       & ! U component of surface wind
@@ -203,7 +203,6 @@ module mod_cosp_rttov
           t,            & ! Temperature 
           q,            & ! Specific humidity
           o3              ! Ozone
-     
      ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
      real(wp),dimension(:,:),pointer :: &
           tca,          & ! Cloud fraction
@@ -303,7 +302,8 @@ contains
       do jch = 1, rttovIN%nChannels
         nch = nch + 1_jpim
         chanprof(nch)%prof = j
-        chanprof(nch)%chan = rttovIN%channels(jch) ! Example code used channel_list
+        chanprof(nch)%chan = iChannel(jch) ! Example code used channel_list
+!        chanprof(nch)%chan = rttovIN%channels(jch) ! Example code used channel_list
       end do
     end do
         
@@ -323,10 +323,6 @@ contains
         
     ! Loop variables
     integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for levels.
-    
-    logical                             :: &
-        rttov_simulate_cld,                &
-        rttov_simulate_aer
         
     ! Store profile data from rttovIN in profile type.
     ! See RTTOV user guide pg 163 for description of "profiles" type
@@ -337,15 +333,29 @@ contains
     ! ozone_data, co2_data and so on in the options structure should be 
     ! set to false."
 
+    print*,'co2: ',co2
+    print*,'n2o: ',n2o
+    print*,'co:  ',co
+    print*,'ch4: ',ch4
+    print*,'so2: ',so2
+    print*,'zenang: ',zenang
+
     profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
     
     do i = 1, rttovIN%nPoints
         
-      ! Initialize trace gas concentrations
-      profiles(i)%co2(:)        =  rttovIN%co2
-      profiles(i)%n2o(:)        =  rttovIN%n2o
-      profiles(i)%co(:)         =  rttovIN%n2o
-      profiles(i)%ch4(:)        =  rttovIN%ch4
+      ! Initialize trace gas concentrations from user input
+      ! These gases are not in COSP input files but might be in the futre
+      profiles(i)%co2(:)        = co2
+      profiles(i)%n2o(:)        = n2o
+      profiles(i)%co(:)         = co
+      profiles(i)%ch4(:)        = ch4
+      profiles(i)%so2           = so2
+      
+!      profiles(i)%co2(:)        =  rttovIN%co2
+!      profiles(i)%n2o(:)        =  rttovIN%n2o
+!      profiles(i)%co(:)         =  rttovIN%co
+!      profiles(i)%ch4(:)        =  rttovIN%ch4
       
       ! Initialize column pressure, temperature, and humidity
       profiles(i)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
@@ -365,7 +375,6 @@ contains
 
       ! Gas profiles
       profiles(i)%o3         =  rttovIN%o3(i, :)
-!      profiles(i)%so2        =  ! Sulfate not in COSP input files
        
       ! 2m parameters
       profiles(i)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
@@ -386,14 +395,14 @@ contains
       profiles(i)%skin%fastem(5)  =  0.3
 
       ! Viewing angles
-      profiles(i)%zenangle      = rttovIN%zenang ! pass in from cosp
+      profiles(i)%zenangle      = zenang ! pass in from cosp
       profiles(i)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
 
       profiles(i)%latitude      = rttovIN%latitude(i)
       profiles(i)%longitude     = rttovIN%longitude(i)
       profiles(i)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
 
-      ! Solar angles. JKS - get this from COSP? Doesn't seem to be passed in.
+      ! Solar angles. JKS - get this from COSP/CESM? Doesn't seem to be passed in.
       profiles(i)%sunzenangle   = 0. ! hard-coded in rttov9 int
       profiles(i)%sunazangle    = 0. ! hard-coded in rttov9 int
 
@@ -425,8 +434,6 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the cloud fields if simulating cloud.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!    rttov_simulate_cld = .false.
-!    if (rttov_simulate_cld) then
     
     if (do_rttov_cld) then
 
@@ -467,8 +474,6 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the aerosol fields if simulating aerosol.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!    rttov_simulate_aer = .false.
-!    if (rttov_simulate_aer) then
     
     if (do_rttov_aer) then
     
@@ -659,101 +664,5 @@ contains
     endif
 
   end subroutine cosp_rttov_deallocate_coefs
-
-
-  function construct_rttov_coeffilename(platform,satellite,instrument)
-    ! Inputs
-    integer,intent(in) :: platform,satellite,instrument
-    ! Outputs
-    character(len=256) :: construct_rttov_coeffilename
-    ! Local variables
-    character(len=256) :: coef_file
-    integer :: error
-
-    ! Initialize
-    error = 0
-    
-    ! Platform
-    if (platform .eq. 1)  coef_file = 'rtcoef_noaa_'
-    if (platform .eq. 10) coef_file = 'rtcoef_metop_'
-    if (platform .eq. 11) coef_file = 'rtcoef_envisat_'
-    if (platform .ne. 1 .and. platform .ne. 10 .and. platform .ne. 11) then
-       error=error+1
-       write ( *,* ) 'Unsupported platform ID ',platform
-       return
-    endif
-
-    ! Satellite
-    if (satellite .lt. 10) then
-       coef_file = trim(coef_file) // char(satellite+48)
-    else if (satellite .lt. 100) then
-       coef_file = trim(coef_file) // char(int(satellite/10)+48)
-       coef_file = trim(coef_file) // char(satellite-int(satellite/10)*10+48)
-    else
-       error=error+1
-       write ( *,* ) 'Unsupported satellite number ',satellite
-       return
-    endif
-
-    ! Sensor
-    if (sensor .eq. 3)  coef_file = trim(coef_file) // '_amsua.dat'
-    if (sensor .eq. 5)  coef_file = trim(coef_file) // '_avhrr.dat'
-    if (sensor .eq. 49) coef_file = trim(coef_file) // '_mwr.dat'
-    if (sensor .ne. 3 .and. sensor .ne. 5 .and. sensor .ne. 49) then
-       error=error+1
-       write ( *,* ) 'Unsupported sensor number ', sensor
-       return
-    endif
-
-    if (error .eq. 0) construct_rttov_coeffilename=coef_file
-    
-  end function construct_rttov_coeffilename
-  function construct_rttov_scatfilename(platform,satellite,instrument)
-    ! Inputs
-    integer,intent(in) :: platform,satellite,instrument
-    ! Outputs
-    character(len=256) :: construct_rttov_scatfilename
-    ! Local variables
-    character(len=256) :: coef_file
-    integer :: error
-
-    ! Initialize
-    error = 0
-    
-    ! Platform
-    if (platform .eq. 1)  coef_file = 'sccldcoef_noaa_'
-    if (platform .eq. 10) coef_file = 'sccldcoef_metop_'
-    if (platform .eq. 11) coef_file = 'sccldcoef_envisat_'
-    if (platform .ne. 1 .and. platform .ne. 10 .and. platform .ne. 11) then
-       error=error+1
-       write ( *,* ) 'Unsupported platform ID ',platform
-       return
-    endif
-
-    ! Satellite
-    if (satellite .lt. 10) then
-       coef_file = trim(coef_file) // char(satellite+48)
-    else if (satellite .lt. 100) then
-       coef_file = trim(coef_file) // char(int(satellite/10)+48)
-       coef_file = trim(coef_file) // char(satellite-int(satellite/10)*10+48)
-    else
-       error=error+1
-       write ( *,* ) 'Unsupported satellite number ',satellite
-       return
-    endif
-
-    ! Sensor
-    if (sensor .eq. 3)  coef_file = trim(coef_file) // '_amsua.dat'
-    if (sensor .eq. 5)  coef_file = trim(coef_file) // '_avhrr.dat'
-    if (sensor .eq. 49) coef_file = trim(coef_file) // '_mwr.dat'
-    if (sensor .ne. 3 .and. sensor .ne. 5 .and. sensor .ne. 49) then
-       error=error+1
-       write ( *,* ) 'Unsupported sensor number ', sensor
-       return
-    endif
-
-    if (error .eq. 0) construct_rttov_scatfilename=coef_file
-    
-  end function construct_rttov_scatfilename
   
 end module mod_cosp_rttov

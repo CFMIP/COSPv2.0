@@ -152,12 +152,7 @@ MODULE MOD_COSP_CONFIG
     ! ####################################################################################  
     ! Constants used by RTTOV.
     ! ####################################################################################  
-    integer,parameter :: &
-         RTTOV_MAX_CHANNELS = 20,   &
-         RTTOV_MAX_LOCALTIMES = 8 ! JKS arbitrary
-    character(len=256),parameter :: &
-!         rttovDir = '/homedata/rguzman/CALIPSO/RTTOV/rttov_11.3/'
-         rttovDir = '/glade/u/home/jonahshaw/w/RTTOV/' ! JKS update or pass in
+    ! None
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator.
     ! ####################################################################################  

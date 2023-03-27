@@ -25,43 +25,33 @@
 
 ! Namelist that sets up the main COSP options
 &RTTOV_INPUT
-  !-------------- RTTOV Outputs
-  !Ltbrttov=.true.,
-  !Lrttov_cld=.false.,
-  !Lrttov_cldparam=.false.,
-  !Lrttov_aer=.false.,
-  !Lrttov_aerparam=.false.,
-  !Lrttov_rad=.false.,
-  !Lrttov_localtime=.false.,
   !-------------- RTTOV Coefficient Paths 
   !- Paths should be relative to the RTTOVdir path specified in cosp_config.F90
+  rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/'
   OD_coef_filepath='rttov13pred54L/rtcoef_ticfire_1_mbfiri_o3co2.dat',
   aer_coef_filepath='cldaer_visir/scaercoef_ticfire_1_mbfiri_cams.dat',
   cld_coef_filepath='cldaer_visir/sccldcoef_ticfire_1_mbfiri.dat',
   !-------------- RTTOV Trace Gas Logicals (must match coefficient files)
-  so2_data=.false.,
-  n2o_data=.false.,
-  co_data=.false.,
-  co2_data=.false.,
-  ch4_data=.false.,
+  SO2_data=.false.,
+  N2O_data=.false.,
+  CO_data=.false.,
+  CO2_data=.false.,
+  CH4_data=.false.,
   ozone_data=.false.,
-  rttov_nthreads=1,                ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
-  !----------------------------------------------------------------------------------
-  !-------------- RTTOV inputs
-  !----------------------------------------------------------------------------------
-  !rttov_Platform=1,    ! satellite platform
-  !rttov_Satellite=15,  ! satellite
-  !rttov_Instrument=5,  ! instrument
-  !rttov_Nchannels=3,   ! Number of channels to be computed
-  !rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
-  !rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
-  !rttov_ZenAng=50.0, ! Satellite Zenith Angle
-  !CO2=5.241e-04, ! Mixing ratios of trace gases
-  !CH4=9.139e-07,
-  !N2O=4.665e-07,
-  !CO=2.098e-07,
-  !rttov_Nlocaltime=2,
-  !rttov_localtime=10.0,13.0,      ! To implement local time 
-  !rttov_localtimewindow=1.0,1.0  ! To implement local time width 
+  !--------------- RTTOV Trace Gas Concentrations
+  ! -------------- Specify units in RTTOV options set-up
+  CO2_mr=5.241e-04, 
+  CH4_mr=9.139e-07,
+  N2O_mr=4.665e-07,
+  CO_mr=2.098e-07,
+  SO2_mr=0.0,
+  !-------------- RTTOV Other --------------- 
+  ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
+  rttov_nthreads=1,
+  ! Channel indices (Nchannels must be supplied in COSP input namelist)
+  rttov_Channels=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  ! Surface emissivity (Nchannels must be supplied in COSP input namelist)
+!  rttov_Surfem=0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+  rttov_ZenAng=50.0,               ! Satellite Zenith Angle 
 /

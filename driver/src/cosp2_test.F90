@@ -35,7 +35,7 @@
 program cosp2_test
   use cosp_kinds,          only: wp                         
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
-                                 N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
+                                 N_HYDRO,numMISRHgtBins,                                  &
                                  cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
                                  CFODD_NDBZE,      CFODD_NICOD,                           &
                                  CFODD_BNDRE,      CFODD_NCLASS,                          &
@@ -52,8 +52,8 @@ program cosp2_test
                                  tau_binBoundsV1p4,tau_binEdgesV1p4, tau_binCentersV1p4,  &
                                  grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
                                  Nlvgrid_local  => Nlvgrid,                               &
-                                 vgrid_z,cloudsat_preclvl,                                &
-                                 RTTOV_MAX_LOCALTIMES
+                                 vgrid_z,cloudsat_preclvl
+!                                 RTTOV_MAX_LOCALTIMES,RTTOV_MAX_CHANNELS
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -134,29 +134,17 @@ program cosp2_test
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
        isccp_topheight,           & ! ISCCP cloud top height
        isccp_topheight_direction, & ! ISCCP cloud top height direction
-       rttov_platform,            & ! RTTOV: Satellite platform
-       rttov_satellite,           & ! RTTOV: Satellite
-       rttov_instrument,          & ! RTTOV: Instrument
        rttov_Nchannels,           & ! RTTOV: Number of channels to be computed
        rttov_Nlocaltime             ! RTTOV: Number of local times to be computed
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
-       cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
-       rttov_ZenAng,              & ! RTTOV: Satellite Zenith Angle
-       co2,                       & ! CO2 mixing ratio
-       ch4,                       & ! CH4 mixing ratio
-       n2o,                       & ! n2o mixing ratio
-       co                           ! co mixing ratio
+       cloudsat_k2                  ! |K|^2, -1=use frequency dependent default
   logical ::                      & !
        use_vgrid,                 & ! Use fixed vertical grid for outputs?
        csat_vgrid,                & ! CloudSat vertical grid? 
        use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
                                     ! algorithm 
-  integer,dimension(RTTOV_MAX_CHANNELS) :: &
-       rttov_Channels               ! RTTOV: Channel numbers
-  real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
-       rttov_Surfem                 ! RTTOV: Surface emissivity
-  real(wp),dimension(RTTOV_MAX_LOCALTIMES) ::  &
+  real(wp),dimension(10) ::  &   ! JKS - reasonable limit at 10
        rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
        rttov_localtimewindow        ! Width of local time window (hrs).
   character(len=64) :: &
@@ -173,9 +161,7 @@ program cosp2_test
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               &
-       rttov_Channels, rttov_Surfem, rttov_ZenAng, co2, ch4, n2o, co,                    &
-       rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow !JKS
+       rttov_Nchannels, rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -425,9 +411,8 @@ program cosp2_test
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
-       rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               & ! JKS added RTTOV inputs here
-       rttov_Channels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,       &
-       Lrttov_cldparam, Lrttov_aerparam,rttov_input_namelist) ! options RTTOV argument
+       rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,       &
+       Lrttov_cldparam, Lrttov_aerparam,rttov_input_namelist)
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -520,15 +505,18 @@ program cosp2_test
      ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
      
-     ! Assign RTTOV values (JKS)
-     ! From namelist file
-     cospstateIN%emis_sfc = rttov_Surfem(1:rttov_Nchannels)
-     cospstateIN%zenang   = rttov_ZenAng
-     ! Well-mixed gases
-     cospstateIN%co2      = co2
-     cospstateIN%ch4      = ch4
-     cospstateIN%n2o      = n2o
-     cospstateIN%co       = co
+     ! Assign RTTOV values
+     ! Keeping these structures since refl and emis could come from model input
+     cospstateIN%emis_sfc = 0._wp
+     cospstateIN%refl_sfc = 0._wp
+     
+     ! Well-mixed gases are not in COSP offline input
+     ! Moved user input of well-mixed gases to cosp2_rttov_nl
+     ! Keeping these structures since gases could come from model input
+     cospstateIN%co2      = 0._wp
+     cospstateIN%ch4      = 0._wp
+     cospstateIN%n2o      = 0._wp 
+     cospstateIN%co       = 0._wp
      
      ! From the data input file
      cospstateIN%u_sfc  = u_wind
@@ -1064,15 +1052,6 @@ contains
                 y%asym(npoints,           ncolumns,nlevels),&
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
-    ! JKS add RTTOV arguments when constructing the cospIN object
-    if (Lrttov) then
-       y%nChannels_rttov    = rttov_Nchannels
-       y%platformIN_rttov   = rttov_platform
-       y%satelliteIN_rttov  = rttov_satellite
-       y%instrumentIN_rttov = rttov_Instrument
-       y%channelsIN_rttov   = rttov_Channels
-       ! ^I could allocate this if I added "RTTOV_MAX_CHANNELS" at the beginning, but I don't think I need to.
-    endif
 
   end subroutine construct_cospIN
   
@@ -1091,7 +1070,8 @@ contains
     allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
-             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),           &
+             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),                             &
+             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
@@ -1486,6 +1466,7 @@ contains
     if (allocated(y%lat))             deallocate(y%lat)
     if (allocated(y%lon))             deallocate(y%lon)
     if (allocated(y%emis_sfc))        deallocate(y%emis_sfc)
+    if (allocated(y%refl_sfc))        deallocate(y%refl_sfc)
     if (allocated(y%cloudIce))        deallocate(y%cloudIce)
     if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
     if (allocated(y%seaice))          deallocate(y%seaice)

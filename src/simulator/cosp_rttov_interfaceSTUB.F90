@@ -32,53 +32,23 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS, ONLY: wp
-  USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
+!  USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   USE MOD_COSP_RTTOV,   ONLY: rttov_IN
   IMPLICIT NONE
-  
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE rttov_init_IN (RTTOV init DDT to be passed to cosp_init)
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
-! I may remove this because it will require an additional dependency between
-! cosp2_test and the RTTOV interface.
-
-! Integers: NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
-! Logicals: Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam
-  
-  type rttov_init_IN
-     logical,pointer :: &
-          Lrttov_cld,      &
-          Lrttov_aer,      &
-          Lrttov_rad,      &
-          Lrttov_cldparam, &
-          Lrttov_aerparam
-     integer,pointer :: &
-          NchanIN,         & ! Number of spectral channels to simulate
-          platformIN,      & ! Index of the platform
-          satelliteIN,     & ! Index of the satellite
-          instrumentIN       ! Index of the instrument
-     integer,dimension(RTTOV_MAX_CHANNELS) :: &
-         channelsIN          ! Indices of spectral channels
-  end type rttov_init_IN
   
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
-                             nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
                              Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
                              rttov_input_namelist)
-    integer,intent(in) :: & 
-         NchanIN,      & ! Number of channels
-         platformIN,   & ! Satellite platform
-         satelliteIN,  & ! Satellite
-         instrumentIN, & ! Instrument
+    integer,intent(in) :: &
+         NchanIN,    &
          nlevels
-    integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
-         channelsIN     ! RTTOV channels
+!    integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
+!         channelsIN     ! RTTOV channels
     logical,intent(in)   :: &
          Lrttov_bt,        &
          Lrttov_rad,       &
@@ -86,10 +56,11 @@ CONTAINS
          Lrttov_cld,       &
          Lrttov_aer,       &
          Lrttov_cldparam,  &
-         Lrttov_aerparam       
-         
-     ! JKS testing using a RTTOV input namelist here
-     character(len=256),intent(in) :: rttov_input_namelist
+         Lrttov_aerparam
+    
+    ! JKS testing using a RTTOV input namelist here 
+    ! (default cosp_rttov namelist is set in cosp.F90)
+    character(len=256),intent(in) :: rttov_input_namelist
      
      print*,'Running COSP_RTTOV_INIT from STUB files.', &
          'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'

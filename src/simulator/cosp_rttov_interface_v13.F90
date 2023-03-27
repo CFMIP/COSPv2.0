@@ -32,13 +32,11 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
-  USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
-  use mod_cosp_rttov,   only: platform,satellite,sensor,nChannels,iChannel,coef_rttov,   &
-                              opts,construct_rttov_coeffilename,rttov_in,                &
-                              construct_rttov_scatfilename,                              &
+  use mod_cosp_rttov,   only: nChannels,iChannel,coef_rttov,opts,rttov_in,               &
                               do_rttov_bt,do_rttov_rad,do_rttov_refl,                    &
                               do_rttov_cld,do_rttov_aer,rttov_cld_optparam,              &
-                              rttov_aer_optparam,rttov_direct_nthreads
+                              rttov_aer_optparam,rttov_direct_nthreads,                  &
+                              rttovDir,so2,ch4,co,co2,n2o,zenang
                               
                               
   ! rttov_const contains useful RTTOV constants
@@ -69,52 +67,19 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
 
   INTEGER(KIND=jpim) :: alloc_status(60)
-  
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE rttov_init_IN (RTTOV init DDT to be passed to cosp_init)
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
-! I may remove this because it will require an additional dependency between
-! cosp2_test and the RTTOV interface.
 
-! Integers: NchanIN, platformIN, satelliteIN, instrumentIN, channelsIN,                       &
-! Logicals: Lrttov_cld, Lrttov_aer, Lrttov_rad, Lrttov_cldparam, Lrttov_aerparam
-  
-  type rttov_init_IN
-     logical,pointer :: &
-          Lrttov_bt,       &
-          Lrttov_rad,      &
-          Lrttov_refl,     &
-          Lrttov_cld,      &
-          Lrttov_aer,      &
-          Lrttov_cldparam, &
-          Lrttov_aerparam
-     integer,pointer :: &
-          NchanIN,         & ! Number of spectral channels to simulate
-          platformIN,      & ! Index of the platform
-          satelliteIN,     & ! Index of the satellite
-          instrumentIN       ! Index of the instrument
-     integer,dimension(RTTOV_MAX_CHANNELS) :: &
-         channelsIN          ! Indices of spectral channels
-  end type rttov_init_IN
   
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,platformIN,satelliteIN,instrumentIN,channelsIN,   &
-                             nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
                              Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
                              rttov_input_namelist)
-    integer,intent(in) :: & 
-         NchanIN,      & ! Number of channels
-         platformIN,   & ! Satellite platform
-         satelliteIN,  & ! Satellite
-         instrumentIN, & ! Instrument
+    integer,intent(in) :: &
+         NchanIN,    &
          nlevels
-    integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
-         channelsIN     ! RTTOV channels
     logical,intent(in)   :: &
          Lrttov_bt,        &
          Lrttov_rad,       &
@@ -132,27 +97,44 @@ CONTAINS
     character(len=256) :: &
         coef_file,         &
         scat_file,         &
+        rttov_srcDir,      &
         rttov_coefDir,     &
-        rttov_predDir,     &
-        rttov_cldaerDir,   &
         OD_coef_file,      &
         aer_coef_file,     &
         cld_coef_file,     &
         OD_coef_filepath,  &
         aer_coef_filepath, &
         cld_coef_filepath
+        
+    real(wp)  :: &
+        SO2_mr,      &
+        N2O_mr,      &
+        CO_mr,       &
+        CH4_mr,      &
+        CO2_mr,      &
+        rttov_ZenAng
 
     ! Declare RTTOV namelist fields
-    logical :: so2_data,n2o_data,co_data,ch4_data,co2_data,ozone_data
+    logical :: SO2_data = .false. 
+    logical :: N2O_data = .false. 
+    logical :: CO_data = .false.
+    logical :: CO2_data = .false.
+    logical :: CH4_data = .false. 
+    logical :: ozone_data = .false. 
+        
     character(len=256) :: cosp_status
-    integer :: rttov_nthreads
+    integer ::             &
+        rttov_nthreads
+
+    integer,dimension(NchanIN) :: &
+         rttov_Channels     ! RTTOV channels
     
     ! Read RTTOV namelist fields
-    namelist/RTTOV_INPUT/rttov_coefDir,    &
-                         OD_coef_filepath,  &
-                         aer_coef_filepath,cld_coef_filepath,so2_data,n2o_data,      &
-                         co_data,ch4_data,co2_data,ozone_data,rttov_nthreads
-!        rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow !JKS
+    namelist/RTTOV_INPUT/rttov_srcDir,rttov_coefDir,                             &
+                         OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
+                         SO2_mr,N2O_mr,CO_mr,CH4_mr,CO2_mr,rttov_ZenAng,         & ! Mixing ratios
+                         SO2_data,N2O_data,CO_data,CH4_data,CO2_data,ozone_data, &
+                         rttov_nthreads,rttov_Channels
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -160,18 +142,12 @@ CONTAINS
     open(10,file=rttov_input_namelist,status='unknown')
     read(10,nml=RTTOV_INPUT)
     close(10)
-    
-    !print*,'OD_coef_file:    ',OD_coef_file
-    !print*,'aer_coef_file:    ',aer_coef_file
-    !print*,'cld_coef_file:    ',cld_coef_file
-    !print*,'OD_coef_filepath:    ',OD_coef_filepath
 
     ! Initialize fields in module memory (cosp_rttovXX.F90)
+    rttovDir   = rttov_srcDir
     nChannels  = NchanIN
-    platform   = platformIN 
-    satellite  = satelliteIN 
-    sensor     = instrumentIN 
-    iChannel   = channelsIN
+    allocate(iChannel(NchanIN))
+    iChannel   = rttov_Channels
     
     ! Set logicals for RTTOV options
     do_rttov_bt        = Lrttov_bt
@@ -181,6 +157,13 @@ CONTAINS
     do_rttov_aer       = Lrttov_aer
     rttov_cld_optparam = Lrttov_cldparam
     rttov_aer_optparam = Lrttov_aerparam
+    
+    so2 = SO2_mr
+    n2o = N2O_mr
+    co  = CO_mr
+    co2 = CO2_mr
+    ch4 = CH4_mr
+    zenang = rttov_ZenAng
     
     ! Set degree of parallelization
     rttov_direct_nthreads = rttov_nthreads
@@ -378,8 +361,7 @@ CONTAINS
         cosp_rttov_setup_emissivity_reflectance, &
         cosp_rttov_call_direct,                  &
         cosp_rttov_save_and_deallocate_profiles, &
-        cosp_rttov_deallocate_coefs,             &
-        rttov_direct_nthreads
+        cosp_rttov_deallocate_coefs
   
     type(rttov_in),intent(in) :: &
         rttovIN
