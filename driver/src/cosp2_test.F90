@@ -1009,7 +1009,10 @@ contains
     y%Npart    = 4
     y%Nrefl    = PARASOL_NREFL
     allocate(y%frac_out(npoints,       ncolumns,nlevels))
-
+    if (Lrttov) then
+       y%nChannels_rttov    = rttov_Nchannels ! RTTOV dimension
+    endif
+    
     if (Lmodis .or. Lmisr .or. Lisccp) then
        allocate(y%tau_067(npoints,        ncolumns,nlevels),&
                 y%emiss_11(npoints,       ncolumns,nlevels))
@@ -1052,7 +1055,6 @@ contains
                 y%asym(npoints,           ncolumns,nlevels),&
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
-
   end subroutine construct_cospIN
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

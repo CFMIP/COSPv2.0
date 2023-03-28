@@ -25,13 +25,16 @@
 
 ! Namelist that sets up the main COSP options
 &RTTOV_INPUT
-  !-------------- RTTOV Coefficient Paths 
-  !- Paths should be relative to the RTTOVdir path specified in cosp_config.F90
+  !-------------- RTTOV Filepaths 
+  channel_filepath='rttov_channel_input_AIRS.csv'
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/'
-  OD_coef_filepath='rttov13pred54L/rtcoef_ticfire_1_mbfiri_o3co2.dat',
-  aer_coef_filepath='cldaer_visir/scaercoef_ticfire_1_mbfiri_cams.dat',
-  cld_coef_filepath='cldaer_visir/sccldcoef_ticfire_1_mbfiri.dat',
+  OD_coef_filepath='rttov13pred101L/rtcoef_eos_2_airs_7gas.H5',
+  aer_coef_filepath='cldaer_visir/scaercoef_eos_2_airs_cams.H5',
+  cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_airs.H5',  
+!  OD_coef_filepath='rttov13pred54L/rtcoef_ticfire_1_mbfiri_o3co2.dat',
+!  aer_coef_filepath='cldaer_visir/scaercoef_ticfire_1_mbfiri_cams.dat',
+!  cld_coef_filepath='cldaer_visir/sccldcoef_ticfire_1_mbfiri.dat',
   !-------------- RTTOV Trace Gas Logicals (must match coefficient files)
   SO2_data=.false.,
   N2O_data=.false.,
@@ -49,9 +52,5 @@
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   rttov_nthreads=1,
-  ! Channel indices (Nchannels must be supplied in COSP input namelist)
-  rttov_Channels=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  ! Surface emissivity (Nchannels must be supplied in COSP input namelist)
-!  rttov_Surfem=0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
   rttov_ZenAng=50.0,               ! Satellite Zenith Angle 
 /

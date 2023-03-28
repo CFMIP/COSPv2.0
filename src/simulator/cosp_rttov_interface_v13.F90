@@ -32,7 +32,8 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
-  use mod_cosp_rttov,   only: nChannels,iChannel,coef_rttov,opts,rttov_in,               &
+  use mod_cosp_rttov,   only: nChannels,iChannel,emisChannel,reflChannel,                &
+                              coef_rttov,opts,rttov_in,                                  &
                               do_rttov_bt,do_rttov_rad,do_rttov_refl,                    &
                               do_rttov_cld,do_rttov_aer,rttov_cld_optparam,              &
                               rttov_aer_optparam,rttov_direct_nthreads,                  &
@@ -74,7 +75,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
+  SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,         &
                              Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
                              rttov_input_namelist)
     integer,intent(in) :: &
@@ -104,7 +105,8 @@ CONTAINS
         cld_coef_file,     &
         OD_coef_filepath,  &
         aer_coef_filepath, &
-        cld_coef_filepath
+        cld_coef_filepath, &
+        channel_filepath
         
     real(wp)  :: &
         SO2_mr,      &
@@ -124,17 +126,15 @@ CONTAINS
         
     character(len=256) :: cosp_status
     integer ::             &
+        i,             &
         rttov_nthreads
-
-    integer,dimension(NchanIN) :: &
-         rttov_Channels     ! RTTOV channels
-    
+            
     ! Read RTTOV namelist fields
-    namelist/RTTOV_INPUT/rttov_srcDir,rttov_coefDir,                             &
+    namelist/RTTOV_INPUT/channel_filepath,rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          SO2_mr,N2O_mr,CO_mr,CH4_mr,CO2_mr,rttov_ZenAng,         & ! Mixing ratios
                          SO2_data,N2O_data,CO_data,CH4_data,CO2_data,ozone_data, &
-                         rttov_nthreads,rttov_Channels
+                         rttov_nthreads
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -143,11 +143,26 @@ CONTAINS
     read(10,nml=RTTOV_INPUT)
     close(10)
 
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Read in channel indices, emissivities, and reflectivities from .csv
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    allocate(iChannel(NchanIN))
+    allocate(emisChannel(NchanIN))
+    allocate(reflChannel(NchanIN))
+    
+    open(18,file=channel_filepath,access='sequential',form="formatted")
+    do i = 1, NchanIN
+        read(18,*) iChannel(i), emisChannel(i), reflChannel(i)
+    end do
+    close(18)
+    
+!    print*,'iChannel:        ',iChannel
+!    print*,'emisChannel:     ',emisChannel
+!    print*,'reflChannel:     ',reflChannel
+
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     rttovDir   = rttov_srcDir
     nChannels  = NchanIN
-    allocate(iChannel(NchanIN))
-    iChannel   = rttov_Channels
     
     ! Set logicals for RTTOV options
     do_rttov_bt        = Lrttov_bt
@@ -402,9 +417,7 @@ CONTAINS
                                                  refl_total,refl_clear)
 !    print*,'cosp_rttov_save_and_deallocate_profiles successful' ! jks
     call cpu_time(driver_time(6))
-    
-!    print*,'RTTOV Tb output:  ',bt_total
-    
+        
     print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
     print*,'Time to run "cosp_rttov_construct_profiles":     ',          driver_time(3)-driver_time(2)
     print*,'Time to run "cosp_rttov_setup_emissivity_reflectance":     ',driver_time(4)-driver_time(3)

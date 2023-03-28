@@ -107,9 +107,10 @@ module mod_cosp_rttov
        nChannels     ! Number of channels
   integer(kind=jpim) ::  & ! Parallelization is default off
        rttov_direct_nthreads = 1_jpim
-!  integer,dimension(nChannels) :: &
   integer(kind=jpim),allocatable :: &
-       iChannel(:)      ! RTTOV channel numbers
+       iChannel(:),      &  ! RTTOV channel indices
+       emisChannel(:),   &  ! RTTOV channel emissivity
+       reflChannel(:)       ! RTTOV channel reflectivity
 
   ! Scattering coefficients (read in once during initialization)
   type(rttov_coefs) :: &
@@ -173,7 +174,7 @@ module mod_cosp_rttov
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols,     & ! Number of subcolumns
-          nChannels,    & ! Number of channels to simulate
+          nChannels,    & ! Number of channels to simulate ! JKS
           month           ! Month (needed for surface emissivity calculation)
      real(wp),pointer :: & ! Could change the dimensionality of these in the future
           co2,          & ! Carbon dioxide 
@@ -243,7 +244,7 @@ contains
   subroutine cosp_rttov_allocate(rttovIN &
                            )
                            
-    type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
+    type(rttov_in),intent(in) :: &
         rttovIN
         
     ! Loop variables
@@ -255,17 +256,7 @@ contains
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    ! Determine the total number of radiances to simulate (nchanprof).
-    ! We aren't doing subcolumn sampling (RTTOV already does this and it would be slow)
-!      nchanprof = nchannels * nprof
-
-    ! Allocate and fill in channel_list
-!    allocate(channel_list(rttovIN%nChannels)) 
-!    channel_list(1:nChannels) = rttovIN%channels(1:nChannels)
-    
-!    print*,'rttovIN%channels: ',rttovIN%channels
-!    print*,'channel_list:  ',channel_list
-    
+    ! Determine the total number of radiances to simulate (nchanprof).    
     nchanprof = rttovIN%nChannels * rttovIN%nPoints
 
     ! Allocate structures for rttov_direct
@@ -296,14 +287,13 @@ contains
     ! ------------------------------------------------------
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      
+        
     nch = 0_jpim
     do j = 1, rttovIN%nPoints
-      do jch = 1, rttovIN%nChannels
+      do jch = 1, rttovIN%nChannels ! nChannels
         nch = nch + 1_jpim
         chanprof(nch)%prof = j
         chanprof(nch)%chan = iChannel(jch) ! Example code used channel_list
-!        chanprof(nch)%chan = rttovIN%channels(jch) ! Example code used channel_list
       end do
     end do
         
@@ -333,12 +323,12 @@ contains
     ! ozone_data, co2_data and so on in the options structure should be 
     ! set to false."
 
-    print*,'co2: ',co2
-    print*,'n2o: ',n2o
-    print*,'co:  ',co
-    print*,'ch4: ',ch4
-    print*,'so2: ',so2
-    print*,'zenang: ',zenang
+!    print*,'co2: ',co2
+!    print*,'n2o: ',n2o
+!    print*,'co:  ',co
+!    print*,'ch4: ',ch4
+!    print*,'so2: ',so2
+!    print*,'zenang: ',zenang
 
     profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
     
@@ -584,7 +574,6 @@ contains
     ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-!    print *,"present check: ",present(four),present(five)
 
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
 

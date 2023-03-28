@@ -82,7 +82,7 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-  rttov_Nchannels=15,   ! Number of channels to be computed
+  rttov_Nchannels=200,   ! Number of channels to be computed
   rttov_Nlocaltime=2,
   rttov_localtime=10.0,13.0,      ! To implement local time 
   rttov_localtimewindow=1.0,1.0,   ! To implement local time width
