@@ -352,17 +352,11 @@ contains
       profiles(i)%t(:) =  rttovIN%t(i, :)
       profiles(i)%q(:) =  rttovIN%q(i, :)
 
-      ! q coefficient limit is 09=.1e-10
+      ! q coefficient limit is 0.1e-10
       where(profiles(i)%q(:) < 0.1e-10)
          profiles(i)%q(:) = 0.11e-10
       end where
       
-!      if (any(profiles%q < 0.1e-10)) then
-!        write(*,*) 'q profile less than RTTOV minimum. Rewritten to 1e-11'
-!        errorstatus = 1
-!        call rttov_exit(errorstatus)
-!      endif
-
       ! Gas profiles
       profiles(i)%o3         =  rttovIN%o3(i, :)
        
@@ -417,9 +411,9 @@ contains
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in profile initialization' , lalloc = .false.)
     
-!    print*,'profiles(90)%p(:):  ',profiles(90)%p(:)
-!    print*,'profiles(90)%q(:):  ',profiles(90)%q(:)
-!    print*,'profiles(90)%t(:):  ',profiles(90)%t(:)
+!    print*,'profiles(1)%p(:):  ',profiles(1)%p(:)
+!    print*,'profiles(1)%q(:):  ',profiles(1)%q(:)
+!    print*,'profiles(1)%t(:):  ',profiles(1)%t(:)
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the cloud fields if simulating cloud.
@@ -550,14 +544,15 @@ contains
   end subroutine cosp_rttov_call_direct
   
   
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! rttov_save_and_deallocate - 8. Save output data, 9. Deallocate all RTTOV arrays and structures
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! 8. Save output data
   ! ------------------------------------------------------
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_rttov_save_and_deallocate_profiles(rttovIN,                        &
-                                                     bt_total,bt_clear,              &
-                                                     rad_total,rad_clear,rad_cloudy, &
-                                                     refl_total,refl_clear)
+  ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_rttov_save_output(rttovIN,                        &
+                                    bt_total,bt_clear,              &
+                                    rad_total,rad_clear,rad_cloudy, &
+                                    refl_total,refl_clear)
     type(rttov_in),intent(in) :: &
         rttovIN
     real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels),intent(inout) :: & ! Can I do this? I guess so!
@@ -568,12 +563,6 @@ contains
         rad_cloudy,     &
         refl_total,     &
         refl_clear
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! 8. Save output data
-    ! ------------------------------------------------------
-    ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
 
@@ -607,11 +596,18 @@ contains
             transpose(reshape(radiance%refl_clear(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
           
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! 9. Deallocate all RTTOV arrays and structures
-    ! ------------------------------------------------------
-    ! From RTTOV example files.
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  end subroutine cosp_rttov_save_output
+  
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! 9. Deallocate all RTTOV arrays and structures
+  ! ------------------------------------------------------
+  ! From RTTOV example files.
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_rttov_deallocate_profiles(rttovIN)
+          
+    type(rttov_in),intent(in) :: &
+        rttovIN
     
     ! JKS no longer using channel_list, rttovIN%channels instead
     !deallocate (channel_list, stat=alloc_status(1))
@@ -643,7 +639,7 @@ contains
     call rttov_dealloc_coefs(errorstatus, coef_rttov)
     call rttov_error('coefs deallocation error', lalloc = .true.)
 
-  end subroutine cosp_rttov_save_and_deallocate_profiles
+  end subroutine cosp_rttov_deallocate_profiles
   
   subroutine cosp_rttov_deallocate_coefs()
   
