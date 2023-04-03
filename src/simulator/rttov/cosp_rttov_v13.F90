@@ -635,9 +635,6 @@ contains
         calcrefl=calcrefl,       &
         reflectance=reflectance)
     call rttov_error('deallocation error for rttov_direct structures', lalloc = .true.)
-        
-    call rttov_dealloc_coefs(errorstatus, coef_rttov)
-    call rttov_error('coefs deallocation error', lalloc = .true.)
 
   end subroutine cosp_rttov_deallocate_profiles
   
