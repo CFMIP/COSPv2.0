@@ -39,7 +39,8 @@ module mod_cosp_rttov
 ! Use RTTOV v13 types here, more may be needed
   use rttov_types,         only : rttov_options,rttov_coefs,rttov_profile,                &
                                   rttov_transmission,rttov_radiance,rttov_chanprof,       &
-                                  rttov_emissivity,rttov_reflectance,rttov_opt_param
+                                  rttov_emissivity,rttov_reflectance,rttov_opt_param,     &
+                                  rttov_pccomp
   use rttov_const,         only : surftype_sea, surftype_land, surftype_seaice,           &
                                   errorstatus_success,errorstatus_fatal,                  &
                                   platform_name,inst_name,                                &
@@ -66,29 +67,16 @@ module mod_cosp_rttov
   implicit none
 
 
-! Old includes
-!#include "rttov_direct.interface"
-!#include "rttov_alloc_prof.interface"
-!#include "rttov_alloc_rad.interface"
-!#include "rttov_alloc_transmission.interface"
-!#include "rttov_dealloc_coefs.interface"
-!#include "rttov_user_options_checkinput.interface"
-!#include "rttov_read_coefs.interface"
-!#include "rttov_get_emis.interface"
-!#include "rttov_boundaryconditions.interface"
-
 ! New includes for v13 (will need to clean up others)
 #include "rttov_direct.interface"
 #include "rttov_parallel_direct.interface"
-#include "rttov_read_coefs.interface"
-#include "rttov_read_scattcoeffs.interface"
 #include "rttov_dealloc_coefs.interface"
 #include "rttov_alloc_direct.interface"
 #include "rttov_init_emis_refl.interface"
 #include "rttov_user_options_checkinput.interface"
+#include "rttov_get_pc_predictindex.interface"
 #include "rttov_print_opts.interface"
 #include "rttov_print_profile.interface"
-#include "rttov_skipcommentline.interface"
 
 ! Includes when directly inputting cloud optical parameters
 #include "rttov_init_opt_param.interface"
@@ -113,20 +101,17 @@ module mod_cosp_rttov
        reflChannel(:)       ! RTTOV channel reflectivity
 
   ! Scattering coefficients (read in once during initialization)
-  type(rttov_coefs) :: &
-       coef_rttov
 ! JKS - KISS
 !  type(rttov_scatt_coef) :: &
 !       coef_scatt
   ! RTTOV setup and options (set during initialization)
-  type(rttov_options) :: &
-       opts     ! defaults to everything optional switched off
   logical             :: &
       do_rttov_cld,        & ! Include clouds in RTTOV calculations
       do_rttov_aer,        & ! Include aerosols in RTTOV calculations
       do_rttov_bt,         & ! Return brightness temps in RTTOV calculations
       do_rttov_rad,        & ! Return radiances in RTTOV calculations
       do_rttov_refl,       & ! Return reflectances in RTTOV calculations
+      do_rttov_pcrttov,    & ! Do computations using PC-RTTOV
       rttov_cld_optparam,  & ! Use user-supplied optical cloud parameters
       rttov_aer_optparam     ! Use user-supplied optical aerosol parameters
       
@@ -139,8 +124,9 @@ module mod_cosp_rttov
   real(wp)  :: zenang = 0._wp ! NADIR default
        
   character(len=256) :: &
-      rttovDir             ! Directory for the RTTOV source code
-
+      rttovDir,                &  ! Directory for the RTTOV source code
+      pc_coef_filepath
+      
 ! JKS - KISS
 !  type(rttov_options_scatt) :: &
 !       opts_scatt
@@ -149,8 +135,9 @@ module mod_cosp_rttov
   !====================
   integer(kind=jpim) :: dosolar
   integer(kind=jpim) :: nchanprof ! JKS - jpim is RTTOV integer type
-!  integer(kind=jpim), allocatable :: channel_list(:) ! JKS this needs to be specified
-  
+
+  TYPE(rttov_options)              :: opts                     ! defaults to everything optional switched off
+  TYPE(rttov_coefs)                :: coef_rttov               ! Coefficients structure
   TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
   LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
   TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
@@ -159,10 +146,18 @@ module mod_cosp_rttov
   TYPE(rttov_profile),     POINTER :: profiles(:)    => NULL() ! Input profiles
   TYPE(rttov_transmission)         :: transmission             ! Output transmittances
   TYPE(rttov_radiance)             :: radiance                 ! Output radiances
+  TYPE(rttov_pccomp)               :: pccomp                    ! Output PC structure
+  INTEGER(KIND=jpim),      POINTER :: channels_rec(:) => NULL() ! Reconstructed radiance channel list
   
   INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
 
   INTEGER(KIND=jpim) :: alloc_status(60)
+  
+  ! JKS additional variables used in PC-RTTOV
+!  INTEGER(KIND=jpim) :: ipcbnd, ipcreg, npcscores ! JKS delete?
+  INTEGER(KIND=jpim), POINTER :: predictindex(:)
+  INTEGER(KIND=jpim) :: nchannels_rec, nchannels_comp, npcscores
+  INTEGER(KIND=jpim) :: lo, hi
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
@@ -242,7 +237,7 @@ contains
   ! 4. Build the list of profile/channel indices in chanprof
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine cosp_rttov_allocate(rttovIN &
-                           )
+                                )
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -263,16 +258,13 @@ contains
     call rttov_alloc_direct( &
         errorstatus,             &
         1_jpim,                  &  ! 1 => allocate
-!       nprof,                   &
         rttovIN%nPoints,         &
         nchanprof,               &
-!       nlevels,                 &
         rttovIN%nLevels,         &
         chanprof,                &
         opts,                    &
         profiles,                &
         coef_rttov,              &
-!       coefs,                   &
         transmission,            &
         radiance,                &
         calcemis=calcemis,       &
@@ -299,7 +291,109 @@ contains
         
   end subroutine cosp_rttov_allocate
   
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE pc_rttov_allocate - Subroutine for running PC-RTTOV
+  ! ------------------------------------------------------
+  ! 3. Allocate RTTOV input and output structures
+  ! 4. Build the list of profile/channel indices in chanprof
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_pc_rttov_allocate(rttovIN &
+                                   )
+                           
+    type(rttov_in),intent(in) :: &
+        rttovIN
+        
+    ! Loop variables
+    integer(kind=jpim) :: j, jch, nch
+    
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 3. Allocate RTTOV input and output structures
+    ! ------------------------------------------------------
+    ! Largely from RTTOV documentation.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Determine the size of the chanprof array (the number of PC-RTTOV predictor channels).
+    ! This is determined by ipcbnd and ipcreg and is the same for all simulated profiles.
+    ! The channel list in chanprof is the set of predictor channels for the PC scheme.
+    ! The channel list may be obtained using the rttov_get_pc_predictindex subroutine:
+
+    nullify(predictindex)
+    call rttov_get_pc_predictindex(errorstatus, opts, predictindex, file_pccoef=pc_coef_filepath)
+    call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)
+    
+!    IF (errorstatus /= errorstatus_success) THEN
+!      WRITE(*,*) 'rttov_get_pc_predictindex fatal error'
+!      CALL rttov_exit(errorstatus)
+!    ENDIF
+
+    nchannels_rec = rttovIN%nChannels             ! Number of channels to reconstruct indicated in namelist.
+    nchannels_comp = SIZE(predictindex)           ! Number of channels to compute is determined by ipcreg in init.
+    nchanprof = nchannels_comp * rttovIN%nPoints  ! Size of chanprof array is total number of channels over all profiles.
+
+    ! Determine the number of reconstructed radiances per profile (nchannels_rec)
+    if (opts % rt_ir % pc % addradrec) then
+      if (nchannels_rec < 0) then
+        ! If the number of channels is negative, don't reconstruct radiances at all
+        opts % rt_ir % pc % addradrec = .FALSE.
+      else if (nchannels_rec == 0) then
+        ! If the number of channels is set to 0 then reconstruct all instrument channels
+        nchannels_rec = coef_rttov % coef % fmv_chn
+        allocate(channels_rec(nchannels_rec))
+        channels_rec(:) = (/ (j, j = 1, nchannels_rec) /)
+      else
+        ! Otherwise read the channel list from the file
+        allocate(channels_rec(nchannels_rec))
+        channels_rec(:) = iChannel ! channels_rec is just the index of the desired channels
+      endif
+    endif
+
+    ! Ensure we don't have unassociated pointers below when addradrec is FALSE
+    if (nchannels_rec <= 0) allocate(channels_rec(0))
+
+    ! Allocate structures for rttov_direct
+    CALL rttov_alloc_direct(                             &
+          errorstatus,                                   &
+          1_jpim,                                        &  ! 1 => allocate
+          rttovIN%nPoints,                               &
+          nchanprof,                                     &
+          rttovIN%nLevels,                               &
+          chanprof,                                      &
+          opts,                                          &
+          profiles,                                      &
+          coef_rttov,                                    &
+          transmission,                                  &
+          radiance,                                      &
+          calcemis=calcemis,                             &
+          emissivity=emissivity,                         &
+          npcscores=npcscores * rttovIN%nPoints,         &
+          nchannels_rec=nchannels_rec * rttovIN%nPoints, &
+          pccomp=pccomp,                                 &
+          init=.TRUE._jplm)
+    call rttov_error('allocation error for rttov_direct structures (PC-RTTOV)' , lalloc = .true.)
+          
+!    IF (errorstatus /= errorstatus_success) THEN
+!      WRITE(*,*) 'allocation error for rttov_direct structures'
+!      CALL rttov_exit(errorstatus)
+!    ENDIF
+
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 4. Build the list of profile/channel indices in chanprof
+    ! ------------------------------------------------------
+    ! Largely from RTTOV documentation.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Populate chanprof using the channel list obtained above in predictindex(:)
+    do j = 1, rttovIN%nPoints
+      lo = (j - 1) * nchannels_comp + 1
+      hi = lo + nchannels - 1
+      chanprof(lo:hi)%prof = j
+      chanprof(lo:hi)%chan = predictindex(:)
+    end do
+        
+  end subroutine cosp_pc_rttov_allocate
   
+
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 5. rttov_construct_profiles: 5. Read profile data
   ! ------------------------------------------------------
@@ -500,7 +594,23 @@ contains
     calcrefl(:) = (reflectance(:) % refl_in <= 0._jprb)  
   
   end subroutine cosp_rttov_setup_emissivity_reflectance
+
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! 6. rttov_setup_emissivity_reflectance - Specify surface emissivity for PC-RTTOV
+  ! ------------------------------------------------------
+  ! From RTTOV example files.
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_pc_rttov_setup_emissivity()
+    
+    ! PC-RTTOV requires using RTTOV to calculate the surface emissivities.
+    ! Reflectances are never calculated for hyper-spectral IR sounders
+    call rttov_init_emis_refl(emissivity)
+    calcemis(:) = .TRUE.
+    call rttov_error('error for emissivity initialization (PC-RTTOV)' , lalloc = .true.)
   
+  end subroutine cosp_pc_rttov_setup_emissivity
+
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 7. rttov_call_direct - Call RTTOV forward model (Woohoo!)
@@ -543,7 +653,49 @@ contains
   
   end subroutine cosp_rttov_call_direct
   
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! 7. rttov_call_direct - Call PC-RTTOV forward model (Woohoo!)
+  ! ------------------------------------------------------
+  ! From RTTOV example files.
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+  subroutine cosp_pc_rttov_call_direct()
+    
+    if (rttov_direct_nthreads <= 1) then
+      print*,'Calling rttov_direct'
+      call rttov_direct(                 &
+              errorstatus,               &! out   error flag
+              chanprof,                  &! in    channel and profile index structure
+              opts,                      &! in    options structure
+              profiles,                  &! in    profile array
+              coef_rttov,                &! in    coefficients structure
+              transmission,              &! inout computed transmittances
+              radiance,                  &! inout computed radiances
+              calcemis     = calcemis,   &! in    flag for internal emissivity calcs
+              emissivity   = emissivity, &! inout input/output emissivities per channel
+              pccomp       = pccomp,     &! inout computed PC scores
+              channels_rec = channels_rec) ! in    reconstructed channel list
+    else
+      print*,'Calling rttov_parallel_direct'
+      call rttov_parallel_direct(         &
+              errorstatus,                &! out   error flag
+              chanprof,                   &! in    channel and profile index structure
+              opts,                       &! in    options structure
+              profiles,                   &! in    profile array
+              coef_rttov,                 &! in    coefficients structure
+              transmission,               &! inout computed transmittances
+              radiance,                   &! inout computed radiances
+              calcemis     = calcemis,    &! in    flag for internal emissivity calcs
+              emissivity   = emissivity,  &! inout input/output emissivities per channel
+              pccomp       = pccomp,      &! inout computed PC scores
+              channels_rec = channels_rec,&! in    reconstructed channel list
+              nthreads     = rttov_direct_nthreads)     ! in    number of threads to use
+    endif
+    call rttov_error('rttov_direct error (PC-RTTOV)', lalloc = .true.)
   
+  end subroutine cosp_pc_rttov_call_direct
+
+
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 8. Save output data
   ! ------------------------------------------------------
@@ -556,7 +708,7 @@ contains
     type(rttov_in),intent(in) :: &
         rttovIN
     real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels),intent(inout) :: & ! Can I do this? I guess so!
-        bt_total,       &        ! RTTOV brightness temperature.
+        bt_total,       &
         bt_clear,       &
         rad_total,      &
         rad_clear,      &
@@ -599,6 +751,42 @@ contains
   end subroutine cosp_rttov_save_output
   
 
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! 8. Save output data (PC-RTTOV)
+  ! ------------------------------------------------------
+  ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
+  ! PC-RTTOV only does clear-sky IR calculations (can handle aerosols, but I'll ignore that for now.
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!  subroutine cosp_pc_rttov_save_output(rttovIN,                        &
+!                                       bt_total,bt_clear,              &
+!                                       rad_total,rad_clear,rad_cloudy, &
+!                                       refl_total,refl_clear)
+
+  subroutine cosp_pc_rttov_save_output(rttovIN,                        &
+                                       bt_total,rad_total)
+
+    type(rttov_in),intent(in) :: &
+        rttovIN
+    real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels),intent(inout) :: & ! Can I do this? I guess so!
+        bt_total,       &
+        rad_total
+
+    ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
+
+    ! Only save output if appropriate
+    if (do_rttov_bt) then
+        bt_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(pccomp%bt_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
+    
+    if (do_rttov_rad) then
+        rad_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
+            transpose(reshape(pccomp%total_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+    endif
+          
+  end subroutine cosp_pc_rttov_save_output
+  
+
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 9. Deallocate all RTTOV arrays and structures
   ! ------------------------------------------------------
@@ -619,10 +807,8 @@ contains
     call rttov_alloc_direct(     &
         errorstatus,             &
         0_jpim,                  &  ! 0 => deallocate
-!       nprof,                   &
         rttovIN%nPoints,         &
         nchanprof,               &
-!       nlevels,                 &
         rttovIN%nLevels,         &
         chanprof,                &
         opts,                    &
@@ -637,7 +823,47 @@ contains
     call rttov_error('deallocation error for rttov_direct structures', lalloc = .true.)
 
   end subroutine cosp_rttov_deallocate_profiles
+
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! 9. Deallocate all RTTOV arrays and structures (PC-RTTOV)
+  ! ------------------------------------------------------
+  ! From RTTOV example files.
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_pc_rttov_deallocate_profiles(rttovIN)
+          
+    type(rttov_in),intent(in) :: &
+        rttovIN
+    
+    if (ASSOCIATED(predictindex)) deallocate (predictindex, stat=alloc_status(10))
+    call rttov_error('mem dellocation error for "predictindex"', lalloc = .true.)
+
+    if (ASSOCIATED(channels_rec)) deallocate (channels_rec, stat=alloc_status(11))
+    call rttov_error('mem dellocation error for "channels_rec"', lalloc = .true.)
+    
+    ! Deallocate structures for rttov_direct
+    call rttov_alloc_direct(     &
+        errorstatus,             &
+        0_jpim,                  &  ! 0 => deallocate
+        rttovIN%nPoints,         &
+        nchanprof,               &
+        rttovIN%nLevels,         &
+        chanprof,                &
+        opts,                    &
+        profiles,                &
+        coef_rttov,              &
+        transmission,            &
+        radiance,                &
+        calcemis=calcemis,       &
+        emissivity=emissivity,   &
+        npcscores=npcscores * rttovIN%nPoints,         &
+        nchannels_rec=nchannels_rec * rttovIN%nPoints, &
+        pccomp=pccomp)
+    call rttov_error('deallocation error for rttov_direct structures (PC-RTTOV)', lalloc = .true.)
+
+  end subroutine cosp_pc_rttov_deallocate_profiles
   
+
   subroutine cosp_rttov_deallocate_coefs()
   
     call rttov_dealloc_coefs(errorstatus, coef_rttov)
