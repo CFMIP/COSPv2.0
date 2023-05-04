@@ -141,7 +141,7 @@
   Lrttov_aer=.true.,                ! Calculate RTTOV all-sky + cloudy-sky values
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
   Lrttov_localtime=.false.,         ! May not be necessary at this level
-  Lrttov_pc=.false.,
+  Lrttov_pc=.true.,
   ! -CLOUDSAT precipitation frequency/occurence diagnostics
   Lptradarflag0=.true.,
   Lptradarflag1=.true.,
