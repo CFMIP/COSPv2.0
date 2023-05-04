@@ -131,19 +131,27 @@ CONTAINS
         
     character(len=256) :: cosp_status
     integer ::             &
-        i,             &
+        i,                 &
         rttov_nthreads
-            
+                    
     integer(kind=jpim) :: ipcbnd, ipcreg
-
             
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/channel_filepath,rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
-                         PC_coef_filepath,                                       &
                          SO2_mr,N2O_mr,CO_mr,CH4_mr,CO2_mr,rttov_ZenAng,         & ! Mixing ratios
                          SO2_data,N2O_data,CO_data,CH4_data,CO2_data,ozone_data, &
                          rttov_nthreads
+                         
+    ! Only read some namelist fields if PC-RTTOV will run  
+    if (Lrttov_pc) then
+        namelist/RTTOV_INPUT/PC_coef_filepath,ipcbnd,ipcreg,npcscores
+    endif
+    
+    !! JKS - Hardcode in some options that will eventually be moved to the namelist
+    ipcbnd = 1 ! This should always be one per the User Guide
+    ipcreg = 2 ! 300 predictors (channels). See RTTOV user guide Table 31.
+    npcscores = 100 ! 100 principal component scores
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -285,11 +293,6 @@ CONTAINS
     
     ! Developer options that may be useful:
     opts%dev%do_opdep_calc = .true.
-        
-    !! JKS - Hardcode in some options that will eventually be moved to the namelist
-    ipcbnd = 1 ! This should always be one per the User Guide
-    ipcreg = 2 ! 300 predictors (channels). See RTTOV user guide Table 31.
-    npcscores = 100 ! 100 principal component scores
     
     ! If using PC-RTTOV, some settings must be a certain way. This isn't always true though...
     if (do_rttov_pcrttov) then
@@ -583,6 +586,10 @@ CONTAINS
     ! Deallocate the coefficient files if directed
     if (lCleanup) then
         print*,'NOT DEALLOCATING COEFS WHEN RUNNING PC-RTTOV. Unresolved Deallocation Error in "dealloc_fast_coefs" when using AIRS files.'
+        
+!        if (ASSOCIATED(coef_rttov)) deallocate (coef_rttov, stat=errorstatus)
+!        deallocate (coef_rttov, stat=errorstatus)
+!        call rttov_error('mem dellocation error for "coef_rttov"', lalloc = .true.)
         ! See error in "dealloc_fast_coefs" when using AIRS files.
 !        call cpu_time(driver_time(8))
 !        call cosp_rttov_deallocate_coefs2()

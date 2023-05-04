@@ -48,6 +48,10 @@
   N2O_mr=4.665e-07,
   CO_mr=2.098e-07,
   SO2_mr=2.0e-11,  ! RTTOV hard lower limit is 1.0e-11 ppmv
+  !-------------- PC-RTTOV ------------------
+  ipcbnd=1,       ! Always 1 for RTTOV v13
+  ipcreg=2,       ! Set the number of predictors (channel outputs)
+  npcscores=100,  ! Determine how many principal components are used (greater accuracy, greater cost)
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   rttov_nthreads=16,
