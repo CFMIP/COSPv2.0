@@ -194,6 +194,7 @@ program cosp2_test
   logical :: Lrttov_aer        = .false.         
   logical :: Lrttov_aerparam   = .false.         
   logical :: Lrttov_localtime  = .false.         
+  logical :: Lrttov_pc         = .false.         
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -218,7 +219,7 @@ program cosp2_test
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,             &
                        Lrttov_bt, Lrttov_rad, Lrttov_refl,                               & ! RTTOV output fields
                        Lrttov_cld, Lrttov_cldparam,Lrttov_aer, Lrttov_aerparam,          & ! RTTOV cld/aero
-                       Lrttov_localtime,                                                 & ! RTTOV other
+                       Lrttov_localtime,Lrttov_pc,                                       & ! RTTOV other
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
@@ -379,7 +380,11 @@ program cosp2_test
       Lrttov_rad  = .false.
       Lrttov_refl = .false.
   endif
-  
+  if (Lrttov_pc) then
+      Lrttov_refl = .false. ! PC-RTTOV does not do reflectances
+      Lrttov_cld  = .false. ! PC-RTTOV does not do aerosols
+      Lrttov_aer  = .false. ! PC-RTTOV does not do clouds
+  endif  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -411,8 +416,8 @@ program cosp2_test
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
-       rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,       &
-       Lrttov_cldparam, Lrttov_aerparam,rttov_input_namelist)
+       rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,      &
+       Lrttov_cldparam, Lrttov_aerparam,Lrttov_pc,rttov_input_namelist)
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -471,13 +476,13 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      if (iChunk .eq. 1) then
         call construct_cospIN(Nptsperit,nColumns,nLevels,cospIN)
-        call construct_cospstateIN(Nptsperit,nLevels,rttov_nChannels,cospstateIN)
+        call construct_cospstateIN(Nptsperit,nLevels,rttov_Nchannels,cospstateIN)
      endif
      if (iChunk .eq. nChunks) then
         call destroy_cospIN(cospIN)
         call destroy_cospstateIN(cospstateIN)
         call construct_cospIN(Nptsperit,nColumns,nLevels,cospIN)
-        call construct_cospstateIN(Nptsperit,nLevels,rttov_nChannels,cospstateIN)    
+        call construct_cospstateIN(Nptsperit,nLevels,rttov_Nchannels,cospstateIN)    
      endif
      call cpu_time(driver_time(4))
 
@@ -539,7 +544,8 @@ program cosp2_test
                
      ! Inputs not supplied in the UKMO test data
      cospstateIN%seaice(1:nPoints) = 0._wp
-     cospstateIN%month             = 0     
+     cospstateIN%month             = 0
+     
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
@@ -591,6 +597,8 @@ program cosp2_test
   call destroy_cospIN(cospIN)
   call destroy_cospstateIN(cospstateIN)
   call cosp_cleanUp()
+  ! Getting a segmentation fault here? Why? JKS
+
 contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   ! SUBROUTINE subsample_and_optics
@@ -1392,19 +1400,32 @@ contains
     if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
             
     ! RTTOV - Only add non-total fields if clouds or aerosols are simulated
-    if (Lrttov_bt) then                              ! Brightness temp
-        allocate(x%rttov_bt_total(Npoints,Nchan))
-        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
+    if (Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
+        if (Lrttov_bt) then                              ! Brightness temp
+            allocate(x%rttov_bt_total_pc(Npoints,Nchan))
+!            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
+        endif
+        if (Lrttov_rad) then                             ! Radiance
+            allocate(x%rttov_rad_total_pc(Npoints,Nchan))
+!            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
+!            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
+        endif  
+    else
+        if (Lrttov_bt) then                              ! Brightness temp
+            allocate(x%rttov_bt_total(Npoints,Nchan))
+            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
+        endif
+        if (Lrttov_rad) then                             ! Radiance
+            allocate(x%rttov_rad_total(Npoints,Nchan))
+            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
+            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
+        endif
+        if (Lrttov_refl) then                            ! Reflectance
+            allocate(x%rttov_refl_total(Npoints,Nchan))
+            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_refl_clear(Npoints,Nchan))
+        endif    
     endif
-    if (Lrttov_rad) then                             ! Radiance
-        allocate(x%rttov_rad_total(Npoints,Nchan))
-        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
-        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
-    endif
-    if (Lrttov_refl) then                            ! Reflectance
-        allocate(x%rttov_refl_total(Npoints,Nchan))
-        if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_refl_clear(Npoints,Nchan))
-    endif
+
 
     ! Joint MODIS/CloudSat Statistics
     if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
