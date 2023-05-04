@@ -43,7 +43,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
                              Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
-                             rttov_input_namelist)
+                             Lrttov_pc,rttov_input_namelist,rttov_pc_nchan)
     integer,intent(in) :: &
          NchanIN,    &
          nlevels
@@ -56,14 +56,18 @@ CONTAINS
          Lrttov_cld,       &
          Lrttov_aer,       &
          Lrttov_cldparam,  &
-         Lrttov_aerparam
-    
+         Lrttov_aerparam,  &
+         Lrttov_pc
+         
     ! JKS testing using a RTTOV input namelist here 
     ! (default cosp_rttov namelist is set in cosp.F90)
     character(len=256),intent(in) :: rttov_input_namelist
-     
-     print*,'Running COSP_RTTOV_INIT from STUB files.', &
-         'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
+
+    integer,intent(inout),optional  :: & ! JKS return number of channels determined by ipcreg
+        rttov_pc_nchan
+
+    print*,'Running COSP_RTTOV_INIT from STUB files.', &
+        'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
     
   END SUBROUTINE COSP_RTTOV_INIT
   
@@ -97,6 +101,31 @@ CONTAINS
   ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
   
   END SUBROUTINE COSP_RTTOV_SIMULATE
+  
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_pc_rttov_simulate
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
+                                    bt_total,rad_total,                               & ! Outputs
+                                    error)         
+
+      type(rttov_in),intent(in) :: &
+          rttovIN
+      logical,intent(in) :: &
+           lCleanup   ! Flag to determine whether to deallocate RTTOV types
+      real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+          bt_total,                          &        ! All-sky
+          rad_total                                   ! All-sky
+      character(len=128) :: &
+          error     ! Error messages (only populated if error encountered)  
+  
+      print*,'Running COSP_PC_RTTOV_SIMULATE from STUB files.', &
+             'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
+  ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
+  
+  END SUBROUTINE COSP_PC_RTTOV_SIMULATE
+  
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE
