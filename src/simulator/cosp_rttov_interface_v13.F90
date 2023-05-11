@@ -369,12 +369,18 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     ! Handle different radiance reconstruction options
+!    print*,'nchannels_rec:   ',nchannels_rec
     if (nchannels_rec < 0) then
+        print*,'The namelist value nchannels_rec is negative, rttov_direct call will fail. Exiting.'
+        errorstatus = errorstatus_fatal
+        call rttov_exit(errorstatus)
         ! If the number of channels is negative, don't reconstruct radiances at all
         nchan_out = 0
+        nchannels_rec = 0 ! Avoid nchanprof set to a negative value
     else if (nchannels_rec == 0) then
         ! If the number of channels is set to 0 then reconstruct all instrument channels
         nchan_out = coef_rttov % coef % fmv_chn
+        nchannels_rec = coef_rttov % coef % fmv_chn ! Avoid nchanprof set to 0
     else
         ! Otherwise read the channel list from the file
         nchan_out = nchannels_rec

@@ -26,7 +26,7 @@
 ! Namelist that sets up the main COSP options
 &RTTOV_INPUT
   !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
-  nchannels_rec=0, ! 2300
+  nchannels_rec=1000, ! 2300
   !-------------- RTTOV Filepaths 
   Lchannel_filepath=.false.,
   channel_filepath='rttov_channel_input_AIRS.csv',
