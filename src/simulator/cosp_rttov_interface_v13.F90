@@ -369,9 +369,8 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     ! Handle different radiance reconstruction options
-!    print*,'nchannels_rec:   ',nchannels_rec
     if (nchannels_rec < 0) then
-        print*,'The namelist value nchannels_rec is negative, rttov_direct call will fail. Exiting.'
+        print*,'The namelist varaible "nchannels_rec" is negative, rttov_direct call will fail. Exiting.'
         errorstatus = errorstatus_fatal
         call rttov_exit(errorstatus)
         ! If the number of channels is negative, don't reconstruct radiances at all
