@@ -264,7 +264,8 @@ contains
     ! Determine the total number of radiances to simulate (nchanprof).    
 !    nchanprof = rttovIN%nChannels * rttovIN%nPoints
     nchanprof = nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
-
+!    print*,'nchanprof:  ',nchanprof
+    
     ! Allocate structures for rttov_direct
     call rttov_alloc_direct( &
         errorstatus,             &
@@ -323,20 +324,6 @@ contains
     ! ------------------------------------------------------
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-!    IF (errorstatus /= errorstatus_success) THEN
-!      WRITE(*,*) 'rttov_get_pc_predictindex fatal error'
-!      CALL rttov_exit(errorstatus)
-!    ENDIF
-
-! JKS clean this up when done.
-!    nchannels_rec = rttovIN%nChannels             ! Number of channels to reconstruct indicated in namelist.
-!    nchannels_rec = rttovIN%nChannels             ! Number of channels to reconstruct indicated in namelist.    
-    
- !     nchannels = SIZE(predictindex)
- !     nchanprof = nchannels * nprof  ! Size of chanprof array is total number of channels over all profiles
- !     npred = SIZE(predictindex)
- !     nchanprof = npred * nprof  ! Size of chanprof array is total number of channels over all profiles
 
     nullify(predictindex)
     call rttov_get_pc_predictindex(errorstatus, opts, predictindex, file_pccoef=PC_coef_filepath)
@@ -786,14 +773,14 @@ contains
         bt_total,       &
         rad_total
 
-    print*,'shape(bt_total):   ',shape(bt_total)
-    print*,'shape(rad_total):  ',shape(rad_total)
-    print*,'rttovIN%nPoints:   ',rttovIN%nPoints
-    print*,'rttovIN%nChannels: ',rttovIN%nChannels
-    print*,'nchanprof:    ',nchanprof
-    print*,'size(pccomp%bt_pccomp):   ',size(pccomp%bt_pccomp)
-    print*,'size(pccomp%total_pccomp):   ',size(pccomp%total_pccomp)
-    print*,'nchannels_rec * rttovIN%nPoints:   ',nchannels_rec * rttovIN%nPoints
+!    print*,'shape(bt_total):   ',shape(bt_total)
+!    print*,'shape(rad_total):  ',shape(rad_total)
+!    print*,'rttovIN%nPoints:   ',rttovIN%nPoints
+!    print*,'rttovIN%nChannels: ',rttovIN%nChannels
+!    print*,'nchanprof:    ',nchanprof ! This is the number of predictors so not the reconstructed channel dimension
+!    print*,'size(pccomp%bt_pccomp):   ',size(pccomp%bt_pccomp)
+!    print*,'size(pccomp%total_pccomp):   ',size(pccomp%total_pccomp)
+!    print*,'nchannels_rec * rttovIN%nPoints:   ',nchannels_rec * rttovIN%nPoints
 
     ! JKS why not just pass in rttovIN%nPoints and use nchannels_rec here? TO-DO?
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
@@ -802,13 +789,11 @@ contains
     if (do_rttov_bt) then
         bt_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
             transpose(reshape(pccomp%bt_pccomp(1:(nchannels_rec * rttovIN%nPoints)), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
-!            transpose(reshape(pccomp%bt_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
     
     if (do_rttov_rad) then
         rad_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
             transpose(reshape(pccomp%total_pccomp(1:(nchannels_rec * rttovIN%nPoints)), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
-!            transpose(reshape(pccomp%total_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
           
   end subroutine cosp_pc_rttov_save_output
