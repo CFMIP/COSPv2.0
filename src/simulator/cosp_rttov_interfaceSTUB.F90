@@ -75,15 +75,18 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_simulate
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
+                                 iChannel_ret,                                     & ! Channel index outputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
-                                 error)        
+                                 error)       
   
       type(rttov_in),intent(in) :: &
           rttovIN
       logical,intent(in) :: &
           lCleanup   ! Flag to determine whether to deallocate RTTOV types          
+      integer,intent(inout),dimension(rttovIN%nChannels)  :: &
+          iChannel_ret
       real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
           bt_total,                          &        ! All-sky
           bt_clear,                          &        ! Clear-sky

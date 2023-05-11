@@ -193,7 +193,14 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_att(fileID,varID(83),"units",        "1")
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
+    
+    ! RTTOV Channel Indices (rttov_Ichannel)
+    status = nf90_def_var(fileID,"RTTOV_CHAN",  nf90_float, (/dimID(19)/),varID(157))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_put_att(fileID,varID(86),"long_name","rttov channel indices")
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_put_att(fileID,varID(86),"units",        "1")
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! CALIPSO simulator output
     if (associated(cospOUT%calipso_betaperp_tot)) then
@@ -1498,21 +1505,21 @@ contains
     if (associated(cospOUT%rttov_bt_total_pc)) then
        status = nf90_def_var(fileID,"rttov_bt_total_pc",nf90_float, (/dimID(1),dimID(19)/),varID(155))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(154),"long_name","PC-RTTOV All-sky Brightness Temperature")
+       status = nf90_put_att(fileID,varID(155),"long_name","PC-RTTOV All-sky Brightness Temperature")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(154),"units",        "Degrees Kelvin")
+       status = nf90_put_att(fileID,varID(155),"units",        "Degrees Kelvin")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-       status = nf90_put_att(fileID,varID(154),"standard_name", "bleh")
+       status = nf90_put_att(fileID,varID(155),"standard_name", "bleh")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif    
     if (associated(cospOUT%rttov_rad_total_pc)) then
        status = nf90_def_var(fileID,"rttov_rad_total_pc",nf90_float, (/dimID(1),dimID(19)/),varID(156))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(154),"long_name","PC-RTTOV All-sky Radiance")
+       status = nf90_put_att(fileID,varID(156),"long_name","PC-RTTOV All-sky Radiance")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(154),"units",        "mW/cm-1/sr/m2")
+       status = nf90_put_att(fileID,varID(156),"units",        "mW/cm-1/sr/m2")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-       status = nf90_put_att(fileID,varID(154),"standard_name", "bleh")
+       status = nf90_put_att(fileID,varID(156),"standard_name", "bleh")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif       
     
@@ -1553,6 +1560,10 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_var(fileID,varID(83),loc)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    if (associated(cospOUT%rttov_Ichannel)) then
+       status = nf90_put_var(fileID,varID(157),cospOUT%rttov_Ichannel)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    endif
     
     ! CALIPSO simulator output
     if (associated(cospOUT%calipso_betaperp_tot)) then

@@ -1401,6 +1401,7 @@ contains
             
     ! RTTOV - Only add non-total fields if clouds or aerosols are simulated
     if (Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
+        allocate(x%rttov_Ichannel(Nchan))
         if (Lrttov_bt) then                              ! Brightness temp
             allocate(x%rttov_bt_total_pc(Npoints,Nchan))
 !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
@@ -1411,6 +1412,7 @@ contains
 !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
         endif  
     else
+        allocate(x%rttov_Ichannel(Nchan))
         if (Lrttov_bt) then                              ! Brightness temp
             allocate(x%rttov_bt_total(Npoints,Nchan))
             if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
@@ -1816,6 +1818,10 @@ contains
      endif
      
      ! RTTOV
+     if (associated(y%rttov_Ichannel)) then
+        deallocate(y%rttov_Ichannel)
+        nullify(y%rttov_Ichannel)
+     endif
      if (associated(y%rttov_bt_total)) then
         deallocate(y%rttov_bt_total)
         nullify(y%rttov_bt_total)

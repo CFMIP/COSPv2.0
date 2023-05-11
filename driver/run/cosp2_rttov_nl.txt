@@ -25,6 +25,8 @@
 
 ! Namelist that sets up the main COSP options
 &RTTOV_INPUT
+  !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
+  nchannels_rec=2378,
   !-------------- RTTOV Filepaths 
   channel_filepath='rttov_channel_input_AIRS.csv'
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',

@@ -32,13 +32,14 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
-  use mod_cosp_rttov,   only: nChannels,iChannel,emisChannel,reflChannel,                &
+  use mod_cosp_rttov,   only: nchannels_rec,iChannel,emisChannel,reflChannel,            &
                               coef_rttov,opts,rttov_in,                                  &
                               do_rttov_bt,do_rttov_rad,do_rttov_refl,                    &
                               do_rttov_cld,do_rttov_aer,do_rttov_pcrttov,                &
                               rttov_cld_optparam,rttov_aer_optparam,                     &
                               rttov_direct_nthreads,rttovDir,PC_coef_filepath,           &
-                              so2,ch4,co,co2,n2o,zenang,npcscores,predictindex
+                              so2,ch4,co,co2,n2o,zenang,npcscores,predictindex,          &
+                              iChannel_out,Lchannel_filepath
                               
                               
   ! rttov_const contains useful RTTOV constants
@@ -77,13 +78,12 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,         &
+  SUBROUTINE COSP_RTTOV_INIT(nchan_out,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,       &
                              Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
                              Lrttov_pc,rttov_input_namelist)
     integer,intent(inout) :: &
-         NchanIN    
+         nchan_out    ! JKS make this out only soon
     integer,intent(in) :: &
-!         NchanIN,    &
          nlevels
     logical,intent(in)   :: &
          Lrttov_bt,        &
@@ -137,21 +137,26 @@ CONTAINS
     integer(kind=jpim) :: ipcbnd, ipcreg
             
     ! Read RTTOV namelist fields
-    namelist/RTTOV_INPUT/channel_filepath,rttov_srcDir,rttov_coefDir,            &
+    namelist/RTTOV_INPUT/Lchannel_filepath,rttov_srcDir,rttov_coefDir,           &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          SO2_mr,N2O_mr,CO_mr,CH4_mr,CO2_mr,rttov_ZenAng,         & ! Mixing ratios
                          SO2_data,N2O_data,CO_data,CH4_data,CO2_data,ozone_data, &
-                         rttov_nthreads
-                         
+                         rttov_nthreads,nchannels_rec
+                             
+    ! Only read channel indices and emissivities if prompted
+    if (Lchannel_filepath) then
+        namelist/RTTOV_INPUT/channel_filepath
+    endif
+              
     ! Only read some namelist fields if PC-RTTOV will run  
     if (Lrttov_pc) then
         namelist/RTTOV_INPUT/PC_coef_filepath,ipcbnd,ipcreg,npcscores
     endif
     
     !! JKS - Hardcode in some options that will eventually be moved to the namelist
-    ipcbnd = 1 ! This should always be one per the User Guide
-    ipcreg = 2 ! 300 predictors (channels). See RTTOV user guide Table 31.
-    npcscores = 100 ! 100 principal component scores
+!    ipcbnd = 1 ! This should always be one per the User Guide
+!    ipcreg = 2 ! 300 predictors (channels). See RTTOV user guide Table 31.
+!    npcscores = 100 ! 100 principal component scores
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -159,27 +164,10 @@ CONTAINS
     open(10,file=rttov_input_namelist,status='unknown')
     read(10,nml=RTTOV_INPUT)
     close(10)
-
-    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Read in channel indices, emissivities, and reflectivities from .csv
-    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    allocate(iChannel(NchanIN))
-    allocate(emisChannel(NchanIN))
-    allocate(reflChannel(NchanIN))
     
-    open(18,file=channel_filepath,access='sequential',form="formatted")
-    do i = 1, NchanIN
-        read(18,*) iChannel(i), emisChannel(i), reflChannel(i)
-    end do
-    close(18)
-    
-!    print*,'iChannel:        ',iChannel
-!    print*,'emisChannel:     ',emisChannel
-!    print*,'reflChannel:     ',reflChannel
 
     ! Initialize fields in module memory (cosp_rttovXX.F90)
     rttovDir   = rttov_srcDir
-    nChannels  = NchanIN
     
     ! Set logicals for RTTOV options
     do_rttov_bt        = Lrttov_bt
@@ -360,9 +348,10 @@ CONTAINS
                               file_scaer=aer_coef_filepath,     &
                               file_sccld=cld_coef_filepath)
         ! Ensure input number of channels is not higher than number stored in coefficient file
-        if (nchannels > coef_rttov % coef % fmv_chn) then
-            nchannels = coef_rttov % coef % fmv_chn
-        endif        
+        if (nchannels_rec > coef_rttov % coef % fmv_chn) then
+            nchannels_rec = coef_rttov % coef % fmv_chn
+            print*,'nchannels_rec cap hit'
+        endif            
     endif
                           
     ! We aren't checking an allocation steps so this seems more appropriate.
@@ -373,13 +362,46 @@ CONTAINS
     
     ! We aren't checking an allocation steps so this seems more appropriate.
     call rttov_error('error in rttov options' , lalloc = .false.)
-        
-    if (do_rttov_pcrttov) then
-        nullify(predictindex)
-        call rttov_get_pc_predictindex(errorstatus, opts, predictindex, file_pccoef=PC_coef_filepath)
-        call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)        
-        NchanIN = SIZE(predictindex) ! Correct the number of channels
+
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Figure out how many channels we actually want to reconstruct
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Handle different radiance reconstruction options
+    if (nchannels_rec < 0) then
+        ! If the number of channels is negative, don't reconstruct radiances at all
+        nchan_out = 0
+    else if (nchannels_rec == 0) then
+        ! If the number of channels is set to 0 then reconstruct all instrument channels
+        nchan_out = coef_rttov % coef % fmv_chn
+    else
+        ! Otherwise read the channel list from the file
+        nchan_out = nchannels_rec
     endif
+
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Read in channel indices, emissivities, and reflectivities from .csv if file is passed
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    print*,'nchan_out:   ',nchan_out
+    
+    if (Lchannel_filepath) then
+        allocate(iChannel(nchan_out))
+        allocate(emisChannel(nchan_out))
+        allocate(reflChannel(nchan_out))
+    
+        open(18,file=channel_filepath,access='sequential',form="formatted")
+        do i = 1, nchan_out
+            read(18,*) iChannel(i), emisChannel(i), reflChannel(i)
+        end do
+        close(18)
+    else ! If nothing is passed, compute the first "nchan_out" channels. Ignore emissivity and reflectivity for now.
+        allocate(iChannel(nchan_out))
+        iChannel(:) = (/ (i, i = 1, nchan_out) /)
+    endif
+
         
     ! subsub routines
     contains
@@ -408,6 +430,7 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
+                                 iChannel_ret,                                     & ! Channel index outputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
@@ -417,6 +440,8 @@ CONTAINS
         rttovIN
     logical,intent(in) :: &
         lCleanup   ! Flag to determine whether to deallocate RTTOV types
+    integer(kind=jpim),intent(out),dimension(rttovIN%nChannels)  :: & ! Channels indices to return for output
+        iChannel_ret
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
@@ -432,13 +457,20 @@ CONTAINS
     if (opts % rt_ir % pc % addpc) then
         call COSP_PC_RTTOV_SIMULATE(rttovIN,lCleanup,                                 &
                                     bt_total,rad_total,                                &
-                                    error)
+                                    error)                                
+!        print*,'SIZE(iChannel_ret):   ',SIZE(iChannel_ret)
+!        print*,'SIZE(iChannel_out):   ',SIZE(iChannel_out)
+        iChannel_ret = iChannel_out
     else
         call COSP_REG_RTTOV_SIMULATE(rttovIN,lCleanup,                                 &
                                      bt_total,bt_clear,                                &
                                      rad_total,rad_clear,rad_cloudy,                   &
                                      refl_total,refl_clear,                            &
                                      error)
+!        print*,'SIZE(iChannel_ret):   ',SIZE(iChannel_ret)
+!        print*,'SIZE(iChannel):   ',SIZE(iChannel)                                    
+        iChannel_ret = iChannel    
+        
     endif
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
@@ -537,7 +569,6 @@ CONTAINS
         cosp_pc_rttov_call_direct,          &
         cosp_pc_rttov_save_output,          &
         cosp_pc_rttov_deallocate_profiles,  &
-        cosp_rttov_deallocate_coefs2,       & ! JKS check
         cosp_rttov_deallocate_coefs
   
     type(rttov_in),intent(in) :: &
@@ -585,17 +616,10 @@ CONTAINS
     
     ! Deallocate the coefficient files if directed
     if (lCleanup) then
-        print*,'NOT DEALLOCATING COEFS WHEN RUNNING PC-RTTOV. Unresolved Deallocation Error in "dealloc_fast_coefs" when using AIRS files.'
-        
-!        if (ASSOCIATED(coef_rttov)) deallocate (coef_rttov, stat=errorstatus)
-!        deallocate (coef_rttov, stat=errorstatus)
-!        call rttov_error('mem dellocation error for "coef_rttov"', lalloc = .true.)
-        ! See error in "dealloc_fast_coefs" when using AIRS files.
-!        call cpu_time(driver_time(8))
-!        call cosp_rttov_deallocate_coefs2()
-!        call cosp_rttov_deallocate_coefs()
-!        call cpu_time(driver_time(9))
-!        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(9)-driver_time(8)
+        call cpu_time(driver_time(8))
+        call cosp_rttov_deallocate_coefs()
+        call cpu_time(driver_time(9))
+        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(9)-driver_time(8)
     endif
 
 !    print*,'Total RTTOV run time:     ',driver_time(8)-driver_time(1)

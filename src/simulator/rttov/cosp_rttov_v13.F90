@@ -76,11 +76,12 @@ module mod_cosp_rttov
 #include "rttov_user_options_checkinput.interface"
 #include "rttov_print_opts.interface"
 #include "rttov_print_profile.interface"
+#include "rttov_get_pc_predictindex.interface"
 
 ! checking inputs
-#include "rttov_dealloc_coef_scatt.interface"
-#include "rttov_dealloc_coef.interface"
-#include "rttov_dealloc_coef_pccomp.interface"
+!#include "rttov_dealloc_coef_scatt.interface"
+!#include "rttov_dealloc_coef.interface"
+!#include "rttov_dealloc_coef_pccomp.interface"
 
 
 ! Includes when directly inputting cloud optical parameters
@@ -96,14 +97,17 @@ module mod_cosp_rttov
   real(wp),parameter :: eps    =  0.622
 
   ! Initialization parameters
-  integer(kind=jpim) :: &
-       nChannels     ! Number of channels
+
+  ! Number of channels to reconstruct (-1: None, 1:All, otherwise the actual number)
+  INTEGER(kind=jpim) :: nchannels_rec 
+       
   integer(kind=jpim) ::  & ! Parallelization is default off
        rttov_direct_nthreads = 1_jpim
   integer(kind=jpim),allocatable :: &
        iChannel(:),      &  ! RTTOV channel indices
        emisChannel(:),   &  ! RTTOV channel emissivity
-       reflChannel(:)       ! RTTOV channel reflectivity
+       reflChannel(:),   &  ! RTTOV channel reflectivity
+       iChannel_out(:)      ! Passing out the channel indices
 
   ! Scattering coefficients (read in once during initialization)
 ! JKS - KISS
@@ -118,7 +122,8 @@ module mod_cosp_rttov
       do_rttov_refl,       & ! Return reflectances in RTTOV calculations
       do_rttov_pcrttov,    & ! Do computations using PC-RTTOV
       rttov_cld_optparam,  & ! Use user-supplied optical cloud parameters
-      rttov_aer_optparam     ! Use user-supplied optical aerosol parameters
+      rttov_aer_optparam,  & ! Use user-supplied optical aerosol parameters
+      Lchannel_filepath
       
   ! --- Well-mixed trace gas mixing ratios from user via RTTOV namelist
   real(wp)  :: so2 = 0._wp
@@ -161,7 +166,7 @@ module mod_cosp_rttov
   
   ! JKS additional variables used in PC-RTTOV
   INTEGER(KIND=jpim), POINTER :: predictindex(:)
-  INTEGER(KIND=jpim) :: nchannels_rec, nchannels_comp, npcscores
+  INTEGER(KIND=jpim) :: nchannels_comp, npcscores, npred_pc ! npred to go here
   INTEGER(KIND=jpim) :: lo, hi
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -174,7 +179,7 @@ module mod_cosp_rttov
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols,     & ! Number of subcolumns
-          nChannels,    & ! Number of channels to simulate ! JKS
+          nChannels,    & ! Number of channels to simulate ! JKS, can remove now
           month           ! Month (needed for surface emissivity calculation)
      real(wp),pointer :: & ! Could change the dimensionality of these in the future
           co2,          & ! Carbon dioxide 
@@ -257,7 +262,8 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     ! Determine the total number of radiances to simulate (nchanprof).    
-    nchanprof = rttovIN%nChannels * rttovIN%nPoints
+!    nchanprof = rttovIN%nChannels * rttovIN%nPoints
+    nchanprof = nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
 
     ! Allocate structures for rttov_direct
     call rttov_alloc_direct( &
@@ -325,24 +331,40 @@ contains
 
 ! JKS clean this up when done.
 !    nchannels_rec = rttovIN%nChannels             ! Number of channels to reconstruct indicated in namelist.
-    nchannels_rec  = SIZE(predictindex)           ! Number of channels to reconstruct indicated in namelist.
-    nchannels_comp = SIZE(predictindex)           ! Number of channels to compute is determined by ipcreg in init.
-    nchanprof = nchannels_comp * rttovIN%nPoints  ! Size of chanprof array is total number of channels over all profiles.
+!    nchannels_rec = rttovIN%nChannels             ! Number of channels to reconstruct indicated in namelist.    
+    
+ !     nchannels = SIZE(predictindex)
+ !     nchanprof = nchannels * nprof  ! Size of chanprof array is total number of channels over all profiles
+ !     npred = SIZE(predictindex)
+ !     nchanprof = npred * nprof  ! Size of chanprof array is total number of channels over all profiles
 
+    nullify(predictindex)
+    call rttov_get_pc_predictindex(errorstatus, opts, predictindex, file_pccoef=PC_coef_filepath)
+    call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)        
+
+    npred_pc  = SIZE(predictindex)
+    nchanprof = npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
+      
     ! Determine the number of reconstructed radiances per profile (nchannels_rec)
     if (opts % rt_ir % pc % addradrec) then
       if (nchannels_rec < 0) then
         ! If the number of channels is negative, don't reconstruct radiances at all
+        print*,'radrec 1.'
         opts % rt_ir % pc % addradrec = .FALSE.
       else if (nchannels_rec == 0) then
         ! If the number of channels is set to 0 then reconstruct all instrument channels
+        print*,'radrec 2.'
         nchannels_rec = coef_rttov % coef % fmv_chn
         allocate(channels_rec(nchannels_rec))
         channels_rec(:) = (/ (j, j = 1, nchannels_rec) /)
+        iChannel_out    = (/ (j, j = 1, nchannels_rec) /)
       else
         ! Otherwise read the channel list from the file
+        print*,'radrec 3.'
+        print*,'nchannels_rec:   ',nchannels_rec
         allocate(channels_rec(nchannels_rec))
         channels_rec(:) = iChannel ! channels_rec is just the index of the desired channels
+        iChannel_out    = iChannel
       endif
     endif
 
@@ -369,11 +391,6 @@ contains
           pccomp=pccomp,                                 &
           init=.TRUE._jplm)
     call rttov_error('allocation error for rttov_direct structures (PC-RTTOV)' , lalloc = .true.)
-          
-!    IF (errorstatus /= errorstatus_success) THEN
-!      WRITE(*,*) 'allocation error for rttov_direct structures'
-!      CALL rttov_exit(errorstatus)
-!    ENDIF
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4. Build the list of profile/channel indices in chanprof
@@ -383,8 +400,8 @@ contains
 
     ! Populate chanprof using the channel list obtained above in predictindex(:)
     do j = 1, rttovIN%nPoints
-      lo = (j - 1) * nchannels_comp + 1
-      hi = lo + nchannels - 1
+      lo = (j - 1) * npred_pc + 1
+      hi = lo + npred_pc - 1
       chanprof(lo:hi)%prof = j
       chanprof(lo:hi)%chan = predictindex(:)
     end do
@@ -718,7 +735,6 @@ contains
     
     ! Only save output if appropriate
     if (do_rttov_bt) then
-        print*,'trying'
         bt_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
             transpose(reshape(radiance%bt(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
@@ -746,7 +762,6 @@ contains
         bt_clear(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
             transpose(reshape(radiance%refl_clear(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
-    print*,'done.'
           
   end subroutine cosp_rttov_save_output
   
@@ -771,20 +786,29 @@ contains
         bt_total,       &
         rad_total
 
+    print*,'shape(bt_total):   ',shape(bt_total)
+    print*,'shape(rad_total):  ',shape(rad_total)
+    print*,'rttovIN%nPoints:   ',rttovIN%nPoints
+    print*,'rttovIN%nChannels: ',rttovIN%nChannels
+    print*,'nchanprof:    ',nchanprof
+    print*,'size(pccomp%bt_pccomp):   ',size(pccomp%bt_pccomp)
+    print*,'size(pccomp%total_pccomp):   ',size(pccomp%total_pccomp)
+    print*,'nchannels_rec * rttovIN%nPoints:   ',nchannels_rec * rttovIN%nPoints
+
+    ! JKS why not just pass in rttovIN%nPoints and use nchannels_rec here? TO-DO?
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
         
-    print*,'do_rttov_bt:   ',do_rttov_bt
-    print*,'do_rttov_rad:  ',do_rttov_rad    
-
     ! Only save output if appropriate
     if (do_rttov_bt) then
         bt_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
-            transpose(reshape(pccomp%bt_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+            transpose(reshape(pccomp%bt_pccomp(1:(nchannels_rec * rttovIN%nPoints)), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+!            transpose(reshape(pccomp%bt_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
     
     if (do_rttov_rad) then
         rad_total(1:rttovIN%nPoints, 1:rttovIN%nChannels) = &
-            transpose(reshape(pccomp%total_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+            transpose(reshape(pccomp%total_pccomp(1:(nchannels_rec * rttovIN%nPoints)), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
+!            transpose(reshape(pccomp%total_pccomp(1:nchanprof), (/ rttovIN%nChannels, rttovIN%nPoints/) ))
     endif
           
   end subroutine cosp_pc_rttov_save_output
@@ -875,414 +899,9 @@ contains
     endif
 
   end subroutine cosp_rttov_deallocate_coefs
-  
-  
-! Other subroutines used for bug chasing
-  subroutine cosp_rttov_deallocate_coefs2()
-  
-!      print*,'dealloc2 test(1)'
-      CALL rttov_dealloc_coef_scatt(errorstatus, coef_rttov%coef_scatt)
-!      THROW(err.NE.0)
 
-!      print*,'dealloc2 test(2)'
-      IF (ASSOCIATED(coef_rttov%coef_pccomp%pcreg)) THEN
-        print*,'running: "rttov_dealloc_coef_pccomp"'
-        CALL rttov_dealloc_coef_pccomp(errorstatus, coef_rttov%coef_pccomp)
-!        THROW(err.NE.0)
-      ENDIF
 
-!      IF (ASSOCIATED(coefs%coef_mfasis_cld%lut)) THEN
-!        CALL rttov_dealloc_coef_mfasis(err, coefs%coef_mfasis_cld)
-!        THROW(err.NE.0)
-!      ENDIF
-
-!      IF (ASSOCIATED(coefs%coef_mfasis_aer%lut)) THEN
-!        CALL rttov_dealloc_coef_mfasis(err, coefs%coef_mfasis_aer)
-!        THROW(err.NE.0)
-!      ENDIF
-
-!      IF (ASSOCIATED(coefs%coef_mfasis_nn%nn)) THEN
-!        CALL rttov_dealloc_coef_mfasis_nn(err, coefs%coef_mfasis_nn)
-!        THROW(err.NE.0)
-!      ENDIF
-
-!      IF (ASSOCIATED(coefs%coef_htfrtc%p)) THEN
-!        CALL rttov_dealloc_coef_htfrtc(err, coefs%coef_htfrtc)
-!        THROW(err.NE.0)
-!      ENDIF
-
-      print*,'dealloc2 test(3)'
-      CALL rttov_dealloc_coef2(errorstatus, coef_rttov%coef)
-!      CALL rttov_dealloc_coef(errorstatus, coef_rttov%coef)
-!      THROW(err.NE.0)
-
-      print*,'dealloc2 test(4)'
-      coef_rttov%initialised = .FALSE.
-      print*,'dealloc2 test(5)'
-      
-  end subroutine cosp_rttov_deallocate_coefs2
-  
-
-    SUBROUTINE rttov_dealloc_coef2(err, coef)
-    !INTF_OFF
-#include "throw.h"
-    !INTF_ON
-      USE rttov_types, ONLY : rttov_coef
-      USE parkind1, ONLY : jpim
-      IMPLICIT NONE
-
-      INTEGER(KIND=jpim), INTENT(OUT)   :: err
-      TYPE(rttov_coef),   INTENT(INOUT) :: coef
-    !INTF_END
-#include "rttov_nullify_coef.interface"
-#include "rttov_errorreport.interface"
-    !- End of header --------------------------------------------------------
-
-      TRY
-
-      print*,'dealloc_coef test(0)'
-
-      IF (ASSOCIATED(coef%fmv_gas_id)) DEALLOCATE (coef%fmv_gas_id, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%fmv_gas_pos)) DEALLOCATE (coef%fmv_gas_pos, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%fmv_var)) DEALLOCATE (coef%fmv_var, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%fmv_coe)) DEALLOCATE (coef%fmv_coe, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%fmv_ncorr)) DEALLOCATE (coef%fmv_ncorr, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%fmv_lvl)) DEALLOCATE (coef%fmv_lvl, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(1)'
-
-      IF (ASSOCIATED(coef%ff_ori_chn)) DEALLOCATE (coef%ff_ori_chn, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ff_val_chn)) DEALLOCATE (coef%ff_val_chn, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ff_cwn)) DEALLOCATE (coef%ff_cwn, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ff_bco)) DEALLOCATE (coef%ff_bco, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ff_bcs)) DEALLOCATE (coef%ff_bcs, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ff_gam)) DEALLOCATE (coef%ff_gam, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(2)'
-
-      IF (ASSOCIATED(coef%fastem_polar)) DEALLOCATE (coef%fastem_polar, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%pol_phi)) DEALLOCATE (coef%pol_phi, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%pol_fac_v)) DEALLOCATE (coef%pol_fac_v, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%pol_fac_h)) DEALLOCATE (coef%pol_fac_h, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(3)'
-
-      IF (ASSOCIATED(coef%ssirem_a0)) DEALLOCATE (coef%ssirem_a0, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ssirem_a1)) DEALLOCATE (coef%ssirem_a1, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ssirem_a2)) DEALLOCATE (coef%ssirem_a2, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ssirem_xzn1)) DEALLOCATE (coef%ssirem_xzn1, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ssirem_xzn2)) DEALLOCATE (coef%ssirem_xzn2, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(4)'
-
-      IF (ASSOCIATED(coef%iremis_coef)) DEALLOCATE (coef%iremis_coef, STAT = err)
-      THROW(err.NE.0)
-
-
-      IF (ASSOCIATED(coef%ref_prfl_p)) DEALLOCATE (coef%ref_prfl_p, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ref_prfl_t)) DEALLOCATE (coef%ref_prfl_t, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ref_prfl_mr)) DEALLOCATE (coef%ref_prfl_mr, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%bkg_prfl_mr)) DEALLOCATE (coef%bkg_prfl_mr, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%lim_prfl_p)) DEALLOCATE (coef%lim_prfl_p, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%env_prfl_tmax)) DEALLOCATE (coef%env_prfl_tmax, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%env_prfl_tmin)) DEALLOCATE (coef%env_prfl_tmin, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%env_prfl_gmin)) DEALLOCATE (coef%env_prfl_gmin, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%env_prfl_gmax)) DEALLOCATE (coef%env_prfl_gmax, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%lim_prfl_tmax)) DEALLOCATE (coef%lim_prfl_tmax, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%lim_prfl_tmin)) DEALLOCATE (coef%lim_prfl_tmin, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%lim_prfl_gmin)) DEALLOCATE (coef%lim_prfl_gmin, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%lim_prfl_gmax)) DEALLOCATE (coef%lim_prfl_gmax, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'coef%fmv_gas:    ',coef%fmv_gas
-
-      print*,'dealloc_coef test(5)'
-!      print*,'coef%thermal:   ',coef%thermal
-      CALL dealloc_fast_coefs(err, coef%thermal)
-      THROW(err.NE.0)
-      print*,'dealloc_coef test(5a)'
-
-      CALL dealloc_fast_coefs(err, coef%thermal_corr)
-      THROW(err.NE.0)
-      print*,'dealloc_coef test(5b)'
-
-      IF (coef%solarcoef) THEN
-        print*,'dealloc_coef test(5c)'
-        CALL dealloc_fast_coefs(err, coef%solar)
-        THROW(err.NE.0)
-
-        print*,'dealloc_coef test(5d)'
-        CALL dealloc_fast_coefs(err, coef%solar_corr)
-        THROW(err.NE.0)
-      ENDIF
-      
-      print*,'dealloc_coef test(6)'
-
-      IF (ASSOCIATED(coef%bounds)) DEALLOCATE (coef%bounds, STAT = err)
-      THROW(err.NE.0)
-
-
-      IF (coef%nltecoef) THEN
-        IF (ASSOCIATED(coef%nlte_coef%coef)) DEALLOCATE(coef%nlte_coef%coef, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%nlte_coef%sol_zen_angle)) DEALLOCATE(coef%nlte_coef%sol_zen_angle, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%nlte_coef%sat_zen_angle)) DEALLOCATE(coef%nlte_coef%sat_zen_angle, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%nlte_coef%cos_sol)) DEALLOCATE(coef%nlte_coef%cos_sol, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%nlte_coef%sec_sat)) DEALLOCATE(coef%nlte_coef%sec_sat, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%nlte_coef)) DEALLOCATE(coef%nlte_coef, STAT = err)
-        THROW(err.NE.0)
-      ENDIF
-
-      print*,'dealloc_coef test(7)'
-
-      IF (coef%pmc_shift) THEN
-        IF (ASSOCIATED(coef%pmc_ppmc)) DEALLOCATE(coef%pmc_ppmc, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%pmc_coef)) DEALLOCATE(coef%pmc_coef, STAT = err)
-        THROW(err.NE.0)
-
-        IF (ASSOCIATED(coef%pmc_pnominal)) DEALLOCATE(coef%pmc_pnominal, STAT = err)
-        THROW(err.NE.0)
-      ENDIF
-
-      print*,'dealloc_coef test(8)'
-
-      IF (ASSOCIATED(coef%planck1)) DEALLOCATE (coef%planck1, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%planck2)) DEALLOCATE (coef%planck2, STAT = err)
-      THROW(err.NE.0)
-
-
-      IF (ASSOCIATED(coef%frequency_ghz)) DEALLOCATE (coef%frequency_ghz, STAT = err)
-      THROW(err.NE.0)
-
-
-      IF (ASSOCIATED(coef%dp)) DEALLOCATE (coef%dp, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%dpp)) DEALLOCATE (coef%dpp, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%tstar)) &
-        DEALLOCATE (coef%tstar, coef%tstar_r, coef%tstar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%tstarmod_wsum_r)) &
-        DEALLOCATE (coef%tstarmod_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%tstar_uwsum_r)) &
-        DEALLOCATE (coef%tstar_uwsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%to3star)) &
-        DEALLOCATE (coef%to3star, coef%to3star_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%wstar)) &
-        DEALLOCATE (coef%wstar, coef%wstar_r, coef%wstar_wsum_r, coef%wtstar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ostar)) &
-        DEALLOCATE (coef%ostar, coef%ostar_r, coef%ostar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%co2star)) &
-        DEALLOCATE (coef%co2star, coef%co2star_r, coef%co2star_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%n2ostar)) &
-        DEALLOCATE (coef%n2ostar, coef%n2ostar_r, coef%n2ostar_wsum_r, coef%n2otstar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%costar)) &
-        DEALLOCATE (coef%costar, coef%costar_r, coef%costar_wsum_r, coef%cotstar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ch4star)) &
-        DEALLOCATE (coef%ch4star, coef%ch4star_r, coef%ch4star_wsum_r, coef%ch4tstar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%so2star)) &
-        DEALLOCATE (coef%so2star, coef%so2star_r, coef%so2star_wsum_r, coef%so2tstar_wsum_r, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(9)'
-
-      IF (ASSOCIATED(coef%tt_val_chn)) DEALLOCATE (coef%tt_val_chn, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%tt_a0)) DEALLOCATE (coef%tt_a0, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%tt_a1)) DEALLOCATE (coef%tt_a1, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(10)'
-
-      IF (ASSOCIATED(coef%pw_val_chn)) DEALLOCATE (coef%pw_val_chn, STAT = err)
-      THROW(err.NE.0)
-
-
-      IF (ASSOCIATED(coef%ss_val_chn)) DEALLOCATE (coef%ss_val_chn, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ss_solar_spectrum)) DEALLOCATE (coef%ss_solar_spectrum, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ss_rayleigh_ext)) DEALLOCATE (coef%ss_rayleigh_ext, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%rayleigh_depol_gamma)) DEALLOCATE (coef%rayleigh_depol_gamma, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(11)'
-
-      IF (ASSOCIATED(coef%refl_visnir_ow)) DEALLOCATE (coef%refl_visnir_ow, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%refl_visnir_fw)) DEALLOCATE (coef%refl_visnir_fw, STAT = err)
-      THROW(err.NE.0)
-
-
-      IF (ASSOCIATED(coef%woc_waopc_ow)) DEALLOCATE (coef%woc_waopc_ow, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%woc_waopc_fw)) DEALLOCATE (coef%woc_waopc_fw, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(12)'
-
-      IF (ASSOCIATED(coef%ws_k_omega)) DEALLOCATE (coef%ws_k_omega, STAT = err)
-      THROW(err.NE.0)
-
-      IF (ASSOCIATED(coef%ws_npoint)) DEALLOCATE (coef%ws_npoint, STAT = err)
-      THROW(err.NE.0)
-
-      print*,'dealloc_coef test(13)'
-
-      CALL rttov_nullify_coef(coef)
-
-      print*,'dealloc_coef test(14)'
-      
-      CATCH
-
-    CONTAINS
-
-      SUBROUTINE dealloc_fast_coefs(err, fast_coefs)
-        USE rttov_types, ONLY : rttov_fast_coef
-        INTEGER(jpim),                  INTENT(OUT)   :: err
-        TYPE(rttov_fast_coef), POINTER, INTENT(INOUT) :: fast_coefs(:)
-        INTEGER(jpim) :: ichan, igas
-        TRY
-        print*,'dealloc_fast_coef test(0)'
-        IF (ASSOCIATED(fast_coefs)) THEN ! If this part of the coef DDT is allocated
-          print*,'dealloc_fast_coef test(1)'
-          print*,'SIZE(fast_coefs):   ',SIZE(fast_coefs)
-          DO ichan = 1, SIZE(fast_coefs) ! Iterate over each instrument channel (2378)
-!            print*,ichan
-!            print*,(ichan .eq. 52)
-            IF (ASSOCIATED(fast_coefs(ichan)%gasarray)) THEN ! If this part of the coef DDT is allocated
-!              if (ichan .eq. 52) print*,'igas:  ',igas
-!              print*,'coef%fmv_gas:   ',coef%fmv_gas
-!              print*,'SIZE(fast_coefs(ichan)%gasarray):   ',SIZE(fast_coefs(ichan)%gasarray)
-              DO igas = 1, coef%fmv_gas ! Iterate over each gas type
-                if (ichan .eq. 52) then
-                    print*,'igas:  ',igas
-                    print*,'igas, SIZE(fast_coefs(ichan)%gasarray(igas)%coef):  ',igas,'  ',SIZE(fast_coefs(ichan)%gasarray(igas)%coef)
-                    print*,'ASSOCIATED(fast_coefs(ichan)%gasarray(igas)%coef):  ',ASSOCIATED(fast_coefs(ichan)%gasarray(igas)%coef)
-                endif
-!                if (ichan .eq. 52) print*,'igas:  ',igas
-!                if (ichan .eq. 52) print*,'SIZE(fast_coefs(ichan)%gasarray(igas)%coef):  ',SIZE(fast_coefs(ichan)%gasarray(igas)%coef)
-                IF (ASSOCIATED(fast_coefs(ichan)%gasarray(igas)%coef)) &
-                  DEALLOCATE(fast_coefs(ichan)%gasarray(igas)%coef, STAT = err)
-                  THROW(err.NE.0)
-              ENDDO
-              DEALLOCATE(fast_coefs(ichan)%gasarray, STAT = err)
-              THROW(err.NE.0)
-            ENDIF
-          ENDDO
-          DEALLOCATE(fast_coefs, STAT = err)
-          THROW(err.NE.0)
-        ENDIF
-        CATCH
-      END SUBROUTINE dealloc_fast_coefs
-
-    END SUBROUTINE rttov_dealloc_coef2
-
-
-  
+!##########################
+! Module End
+!##########################
 end module mod_cosp_rttov
