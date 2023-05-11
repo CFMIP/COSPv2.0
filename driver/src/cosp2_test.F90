@@ -1467,7 +1467,7 @@ contains
     if (allocated(y%betatot_atlid))       deallocate(y%betatot_atlid) 
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
-    if (allocated(y%fracPrecipIce))      deallocate(y%fracPrecipIce)
+    if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
@@ -1485,6 +1485,12 @@ contains
     if (allocated(y%hgt_matrix))      deallocate(y%hgt_matrix)
     if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
     if (allocated(y%surfelev))        deallocate(y%surfelev)
+! Must be allocatable, and these are single values. Waiting for GCM integration
+!    if (allocated(y%month))           deallocate(y%month)
+!    if (allocated(y%co2))             deallocate(y%co2)
+!    if (allocated(y%ch4))             deallocate(y%ch4)
+!    if (allocated(y%n2o))             deallocate(y%n2o)
+!    if (allocated(y%co))              deallocate(y%co)
     if (allocated(y%o3))              deallocate(y%o3)
     if (allocated(y%u_sfc))           deallocate(y%u_sfc)
     if (allocated(y%v_sfc))           deallocate(y%v_sfc)
