@@ -25,10 +25,13 @@
 
 ! Namelist that sets up the main COSP options
 &RTTOV_INPUT
+  !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
+  nchannels_rec=0, ! 2300
   !-------------- RTTOV Filepaths 
-  channel_filepath='rttov_channel_input_AIRS.csv'
+  Lchannel_filepath=.false.,
+  channel_filepath='rttov_channel_input_AIRS.csv',
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
-  rttov_coefDir='rtcoef_rttov13/'
+  rttov_coefDir='rtcoef_rttov13/',
   OD_coef_filepath='rttov9pred101L/rtcoef_eos_2_airs_pcrttov_compat.H5',
   aer_coef_filepath='cldaer_visir/scaercoef_eos_2_airs_cams.H5',
   cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_airs.H5',  
