@@ -133,6 +133,7 @@
   Liwpmodis=.true.,
   Lclmodis=.true.,
   !- RTTOV
+  Lrttov_run=.true.,
   Lrttov_bt=.true.,                 ! Calculate RTTOV brightness temps
   Lrttov_rad=.true.,                ! Calculate RTTOV radiances
   Lrttov_refl=.false.,              ! Calculate RTTOV reflectivities

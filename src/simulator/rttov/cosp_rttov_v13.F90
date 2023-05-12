@@ -217,6 +217,27 @@ module mod_cosp_rttov
           fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
           fl_snow         ! Precipitation flux (stratiform+convective snow)
   end type rttov_IN
+  
+  ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
+  type rttov_instrument_config
+      logical(KIND=jplm)             :: &
+          Lrttov_bt,           &
+          Lrttov_rad,          &
+          Lrttov_refl,         &
+          Lrttov_cld,          &
+          Lrttov_aer,          &
+          Lrttov_cldparam,     &
+          Lrttov_aerparam,     &
+          Lrttov_pc
+      character(len=256)             :: &
+          rttov_srcDir,        &
+          rttov_coefDir,       &
+          OD_coef_filepath,    &
+          aer_coef_filepath,   &
+          cld_coef_filepath,   &
+          PC_coef_filepath
+  end type rttov_instrument_config
+  
 
 contains
 
