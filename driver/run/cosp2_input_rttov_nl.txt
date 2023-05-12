@@ -82,6 +82,9 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
+  rttov_Ninstruments=3,
+!  rttov_instrument_namelists = (/'test1','test2','test3'/),
+!  rttov_instrument_namelists(1:3) = (/'test1','test2','test3'/),
   rttov_Nchannels=2300,   ! Number of channels to be computed
   rttov_Nlocaltime=2,
   rttov_localtime=10.0,13.0,      ! To implement local time 

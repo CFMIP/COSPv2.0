@@ -53,8 +53,10 @@ MODULE MOD_COSP
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY:   &
       cosp_rttov_init,            &
+      COSP_RTTOV_INI2,            &
       cosp_rttov_simulate,        &
-      cosp_pc_rttov_simulate
+      cosp_pc_rttov_simulate,     &
+      rttov_cfg
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
   USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN
   USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN
@@ -172,6 +174,8 @@ MODULE MOD_COSP
           fracPrecipIce          ! Fraction of precipitation which is frozen (1).
      type(radar_cfg) :: &
           rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
+     type(rttov_cfg),allocatable,dimension(:) :: &
+          cfg_rttov              ! RTTOV configuration information (multiple instruments)
   end type cosp_optical_inputs
 
   ! ######################################################################################
@@ -1846,7 +1850,8 @@ CONTAINS
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
        NchanIN, Lrttov_bt, Lrttov_rad, Lrttov_refl,                                      &
        Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam, Lrttov_pc,              &
-       rttov_input_namelist)
+       rttov_input_namelist,  &
+       rttov_Ninstruments, rttov_instrument_namelists,rttov_configs) !, rttov_instrument_Nchannels)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
@@ -1862,7 +1867,8 @@ CONTAINS
          isccp_top_height_direction, & !
          Nlevels,                    & !
          Nvgrid,                     & ! Number of levels for new L3 grid
-         surface_radar                 !
+         surface_radar,              & !
+         rttov_Ninstruments
 !    integer,pointer,intent(inout)  :: &
     integer,intent(inout)  :: &
          NchanIN
@@ -1879,8 +1885,16 @@ CONTAINS
     
     character(len=256),intent(in) :: rttov_input_namelist
     
+    type(character(len=256)), dimension(rttov_Ninstruments) :: & 
+        rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
+    
     ! OUTPUTS
     type(radar_cfg) :: rcfg
+!    type(rttov_cfg), :: rttov_configs
+    type(rttov_cfg), dimension(:), allocatable :: rttov_configs
+!    type(rttov_cfg), dimension(rttov_Ninstruments) :: rttov_configs
+!    type(rttov_cfg), allocatable :: rttov_configs(:)
+!    integer,intent(out),dimension(rttov_Ninstruments) :: rttov_instrument_Nchannels
 
     ! Local variables
     integer  :: i
@@ -1925,14 +1939,21 @@ CONTAINS
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
     
+    ! I think that I will try to store an object of rttov_init_objects here, 
+    
     ! Could print diagnostic on timing here.
+!    rttov_instrument_Nchannels(:) = 0 ! initialize at 0 ! JKS clean up
     if (Lrttov) then
         call cpu_time(driver_time(1))
+        call cosp_rttov_ini2(Nlevels,rttov_Ninstruments,       &
+                             rttov_instrument_namelists,       &
+                             rttov_configs)
         call cosp_rttov_init(NchanIN, Nlevels,                 &
                              Lrttov_bt,Lrttov_rad,Lrttov_refl, &
                              Lrttov_cld,Lrttov_aer,            &
                              Lrttov_cldparam,Lrttov_aerparam,  &
-                             Lrttov_pc,rttov_input_namelist)             
+                             Lrttov_pc,rttov_input_namelist)
+                             
         call cpu_time(driver_time(2))
         print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif

@@ -68,6 +68,7 @@ program cosp2_test
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
   use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID
+  use MOD_COSP_RTTOV_INTERFACE, only: rttov_cfg
   
   implicit none
 
@@ -134,8 +135,10 @@ program cosp2_test
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
        isccp_topheight,           & ! ISCCP cloud top height
        isccp_topheight_direction, & ! ISCCP cloud top height direction
+!       rttov_Ninstruments,        & ! RTTOV: Number of instruments to simulate
        rttov_Nchannels,           & ! RTTOV: Number of channels to be computed
        rttov_Nlocaltime             ! RTTOV: Number of local times to be computed
+  integer :: rttov_Ninstruments = 0
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2                  ! |K|^2, -1=use frequency dependent default
@@ -157,11 +160,17 @@ program cosp2_test
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
        fileIN                       ! dinput+finput       
+  type(character(len=256)), allocatable, dimension(:) :: & 
+       rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
+!  type(integer), allocatable, dimension(:)            :: &
+!      rttov_instrument_Nchannels
+       
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_Nchannels, rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow
+       rttov_Nchannels, rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow,        &
+       rttov_Ninstruments,rttov_instrument_namelists
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -186,6 +195,7 @@ program cosp2_test
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
              Lwr_occfreq,Lcfodd
+  logical :: Lrttov_run        = .false.        
   logical :: Lrttov_bt         = .false.        
   logical :: Lrttov_rad        = .false.
   logical :: Lrttov_refl       = .false.
@@ -217,6 +227,7 @@ program cosp2_test
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,             &
+                       Lrttov_run,                                                       &
                        Lrttov_bt, Lrttov_rad, Lrttov_refl,                               & ! RTTOV output fields
                        Lrttov_cld, Lrttov_cldparam,Lrttov_aer, Lrttov_aerparam,          & ! RTTOV cld/aero
                        Lrttov_localtime,Lrttov_pc,                                       & ! RTTOV other
@@ -241,13 +252,15 @@ program cosp2_test
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
        rcfg_cloudsat     ! Radar configuration
+  type(rttov_cfg), dimension(:), allocatable :: &
+       rttov_configs
   type(cosp_outputs) :: &
        cospOUT           ! COSP simulator outputs
   type(cosp_optical_inputs) :: &
        cospIN            ! COSP optical (or derived?) fields needed by simulators
   type(cosp_column_inputs) :: &
        cospstateIN       ! COSP model fields needed by simulators
-  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij
+  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij,inst_idx
   real(wp),dimension(10) :: driver_time
   character(len=256),dimension(100) :: cosp_status
 
@@ -283,6 +296,17 @@ program cosp2_test
        gamma_2 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/),&
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
+       
+!   logical, allocatable, dimension(:) :: & 
+!       Lrttov_inst_bt,      &
+!       Lrttov_inst_rad,     &
+!       Lrttov_inst_refl,    &
+!       Lrttov_inst_cld,     &
+!       Lrttov_inst_aer,     &
+!       Lrttov_inst_pc
+       
+!  type(rttov_instrument_config), allocatable :: rttov_instrument_configs ! JKS this won't work. DDTs would have to be in cosp.F90
+       
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -309,7 +333,55 @@ program cosp2_test
   else
       rttov_input_namelist = 'false'
   endif
-    
+ 
+  ! Jonah namelist checking area
+  print*,'Lrttov_run:   ',Lrttov_run
+  print*,'rttov_Ninstruments:    ',rttov_Ninstruments
+  allocate(rttov_instrument_namelists(rttov_Ninstruments))
+  
+!  if (Lrttov_run) then
+!      namelist/COSP_INPUT/rttov_instrument_namelists
+!  endif
+  
+!  open(10,file=cosp_input_namelist,status='unknown')
+!  read(10,nml=cosp_input)
+  
+!  print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
+  rttov_instrument_namelists(1:3) = (/'instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt'/)
+  print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! Read in Logical arguments needed to construct outputs from RTTOV instrument namelists.
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+!  allocate(Lrttov_inst_bt(rttov_Ninstruments),Lrttov_inst_rad(rttov_Ninstruments),     &
+!           Lrttov_inst_refl(rttov_Ninstruments),Lrttov_inst_cld(rttov_Ninstruments),   &
+!           Lrttov_inst_aer(rttov_Ninstruments),Lrttov_inst_pc(rttov_Ninstruments))
+!  allocate(rttov_instrument_Nchannels(rttov_Ninstruments))
+  
+!  do inst_idx=1,rttov_Ninstruments  
+!      namelist/RTTOV_CONFIG/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,Lrttov_aer, &
+!                            Lrttov_pc                          
+      
+!      open(10,file=rttov_instrument_namelists(inst_idx),status='unknown')
+!      read(10,nml=RTTOV_CONFIG) ! I needed to break up the namelist because I can't read a subset of values. This is weird.
+      
+!      Lrttov_inst_bt(inst_idx)        = Lrttov_bt
+!      Lrttov_inst_rad(inst_idx)       = Lrttov_rad
+!      Lrttov_inst_refl(inst_idx)      = Lrttov_refl
+!      Lrttov_inst_cld(inst_idx)       = Lrttov_cld
+!      Lrttov_inst_aer(inst_idx)       = Lrttov_aer
+!      Lrttov_inst_pc(inst_idx)        = Lrttov_pc
+!  end do
+  
+  
+!  print*,'Lrttov_inst_bt:    ',Lrttov_inst_bt
+!  print*,'Lrttov_inst_rad:   ',Lrttov_inst_rad
+!  print*,'Lrttov_inst_refl:  ',Lrttov_inst_refl
+!  print*,'Lrttov_inst_cld:   ',Lrttov_inst_cld
+!  print*,'Lrttov_inst_aer:   ',Lrttov_inst_aer
+!  print*,'Lrttov_inst_pc:    ',Lrttov_inst_pc
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -372,6 +444,8 @@ program cosp2_test
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
+  
+  ! JKS - This will need to be revamped. Each instrument needs these flags
   if ((Lrttov_bt .or. Lrttov_rad .or. Lrttov_refl) .and. (rttov_input_namelist /= 'false')) Lrttov = .true.   
   if ((Lrttov_bt .or. Lrttov_rad .or. Lrttov_refl) .and. (rttov_input_namelist .eq. 'false')) then 
       print*,'An RTTOV output must be true and a RTTOV namelist must be provided to run RTTOV.'
@@ -417,7 +491,11 @@ program cosp2_test
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
        rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,      &
-       Lrttov_cldparam, Lrttov_aerparam,Lrttov_pc,rttov_input_namelist)
+       Lrttov_cldparam, Lrttov_aerparam,Lrttov_pc,rttov_input_namelist,                  &
+       rttov_Ninstruments, rttov_instrument_namelists, rttov_configs)!, rttov_instrument_Nchannels)
+!       Lrttov_run,rttov_Ninstruments,rttov_instrument_namelists,                         & ! Input logical, input N instr., instr. nls
+!       rttov_instrument_configs,                                                         & ! Output object is an array of N rttov_config_opts ! JKS can this be a pointer?
+!       )
   call cpu_time(driver_time(3))
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -574,7 +652,8 @@ program cosp2_test
      print*,'COSP_SIMULATOR successful' ! jks
      
      call cpu_time(driver_time(7))
-  enddo
+  end do
+  
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to initialize:       ',driver_time(3)-driver_time(2)
   print*,'Time to construct types:  ',driver_time(4)-driver_time(3)
@@ -1396,7 +1475,7 @@ contains
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
     if (Lcltlidarradar) allocate(x%radar_lidar_tcc(Npoints))
-    if (Lcloudsat_tcc) allocate(x%cloudsat_tcc(Npoints))
+    if (Lcloudsat_tcc)  allocate(x%cloudsat_tcc(Npoints))
     if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
             
     ! RTTOV - Only add non-total fields if clouds or aerosols are simulated

@@ -72,8 +72,179 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 
   INTEGER(KIND=jpim) :: alloc_status(60)
 
+
+  ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
+  type rttov_cfg
+      logical(KIND=jplm)             :: &
+          Lrttov_bt,           &
+          Lrttov_rad,          &
+          Lrttov_refl,         &
+          Lrttov_cld,          &
+          Lrttov_aer,          &
+          Lrttov_cldparam,     &
+          Lrttov_aerparam,     &
+          Lrttov_pc
+      character(len=256)             :: &
+          rttov_srcDir,        &
+          rttov_coefDir,       &
+          OD_coef_filepath,    &
+          aer_coef_filepath,   &
+          cld_coef_filepath,   &
+          PC_coef_filepath
+      integer                        :: &
+          nchan_out
+  end type rttov_cfg
+
   
 CONTAINS
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_rttov_ini2
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_INI2(Nlevels,Ninstruments,instrument_namelists,       &
+                             rttov_configs)
+
+      integer,intent(in) :: &
+          Nlevels,   &
+          Ninstruments
+      type(character(len=256)), dimension(Ninstruments)     :: & 
+          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
+      type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
+          rttov_configs
+      ! Local variables
+      integer            :: &
+          inst_idx ! iterator
+        
+      allocate(rttov_configs(Ninstruments))
+        
+      ! Create config objects for each instrument to be simulated by RTTOV. Return to the main subroutine.
+      do inst_idx=1,Ninstruments
+          print*,'inst_idx:    ',inst_idx
+          print*,'Nlevels:     ',Nlevels
+          print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx)
+!          print*,'kind(rttov_configs(inst_idx)):     ',kind(rttov_configs(inst_idx))
+!          print*,'rttov_configs(inst_idx):           ',rttov_configs(inst_idx)
+          call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx))
+      end do
+         
+       
+  END SUBROUTINE COSP_RTTOV_INI2
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_rttov_init
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_INIT_S(Nlevels,namelist_filepath,       &
+                               rttov_config)
+  
+     integer,intent(in)                :: &
+         Nlevels
+     character(len=256),intent(in)     :: & 
+         namelist_filepath   ! Array of paths to RTTOV instrument namelists      
+     type(rttov_cfg),intent(out)       :: & ! intent(out)?
+         rttov_config 
+             
+    ! Local variables
+    character(len=256) :: &
+        channel_filepath,  &
+        rttov_srcDir,      &
+        rttov_coefDir,     &
+        OD_coef_filepath,  &
+        aer_coef_filepath, &
+        cld_coef_filepath, &
+        PC_coef_filepath
+        
+    real(wp)  :: &
+        CO2_mr,      &
+        CH4_mr,      &
+        CO_mr,       &
+        N2O_mr,      &
+        SO2_mr,      &
+        rttov_ZenAng
+
+    ! Declare RTTOV namelist fields
+    logical :: Lrttov_bt = .false.
+    logical :: Lrttov_rad = .false.
+    logical :: Lrttov_refl = .false.
+    logical :: Lrttov_cld = .false.
+    logical :: Lrttov_aer = .false.
+    logical :: Lrttov_cldparam = .false.
+    logical :: Lrttov_aerparam = .false.
+    logical :: Lrttov_pc = .false.
+
+    logical :: Lchannel_filepath2 = .false.
+    
+    logical :: SO2_data = .false. 
+    logical :: N2O_data = .false. 
+    logical :: CO_data = .false.
+    logical :: CO2_data = .false.
+    logical :: CH4_data = .false. 
+    logical :: ozone_data = .false.
+    
+    character(len=256) :: cosp_status
+    integer ::             &
+        i,                 &
+        rttov_nthreads,    &
+        nchannels_rec2
+                    
+    integer(kind=jpim) ::        &
+        ipcbnd,        &
+        ipcreg,        &
+        npcscores
+    
+    print*,'t1.'
+    rttov_config%Lrttov_bt = .false. ! Set something in the rttov_config DDT, anything...
+            
+    ! Read RTTOV namelist fields
+    namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
+                         Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
+                         Lrttov_pc,nchannels_rec2,Lchannel_filepath2,            &
+                         channel_filepath,rttov_srcDir,rttov_coefDir,            &
+                         OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
+                         PC_coef_filepath,                                       &
+                         CO2_data,CH4_data,CO_data,N2O_data,SO2_data,ozone_data, & ! User-supplied trace gas concentrations
+                         CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
+                         ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
+                         rttov_nthreads,rttov_ZenAng
+                                                      
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Read in namelists
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    print*,'t2.'
+    open(10,file=namelist_filepath,status='unknown')
+    read(10,nml=RTTOV_INPUT)
+    close(10)
+    
+
+    print*,'t3.'
+    ! Initialize fields in module memory (cosp_rttovXX.F90)
+    rttovDir   = rttov_srcDir
+    
+    !! JKS stopping here.
+        
+    ! subsub routines
+    contains
+      ! Wrapper function for exiting RTTOV and reporting the error
+      subroutine rttov_error(msg, lalloc)
+        character(*) :: msg
+        logical  :: lalloc
+
+        if(lalloc) then
+          if (any(alloc_status /= 0)) then
+            write(*,*) msg
+            errorstatus = 1
+            call rttov_exit(errorstatus)
+          endif
+        else
+          if (errorstatus /= errorstatus_success) then
+            write(*,*) msg
+            call rttov_exit(errorstatus)
+          endif
+        endif
+      end subroutine rttov_error
+ 
+  END SUBROUTINE COSP_RTTOV_INIT_S
+
+
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
@@ -101,8 +272,6 @@ CONTAINS
     
     ! Local variables
     character(len=256) :: &
-        coef_file,         &
-        scat_file,         &
         rttov_srcDir,      &
         rttov_coefDir,     &
         OD_coef_file,      &
@@ -370,7 +539,7 @@ CONTAINS
 
     ! Handle different radiance reconstruction options
     if (nchannels_rec < 0) then
-        print*,'The namelist varaible "nchannels_rec" is negative, rttov_direct call will fail. Exiting.'
+        print*,'The namelist variable "nchannels_rec" is negative, rttov_direct call will fail. Exiting.'
         errorstatus = errorstatus_fatal
         call rttov_exit(errorstatus)
         ! If the number of channels is negative, don't reconstruct radiances at all

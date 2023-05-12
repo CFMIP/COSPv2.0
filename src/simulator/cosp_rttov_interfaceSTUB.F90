@@ -35,8 +35,48 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 !  USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   USE MOD_COSP_RTTOV,   ONLY: rttov_IN
   IMPLICIT NONE
-  
+
+
+  ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
+  type rttov_cfg
+      logical                        :: &
+          Lrttov_bt,           &
+          Lrttov_rad,          &
+          Lrttov_refl,         &
+          Lrttov_cld,          &
+          Lrttov_aer,          &
+          Lrttov_cldparam,     &
+          Lrttov_aerparam,     &
+          Lrttov_pc
+      character(len=256)             :: &
+          rttov_srcDir,        &
+          rttov_coefDir,       &
+          OD_coef_filepath,    &
+          aer_coef_filepath,   &
+          cld_coef_filepath,   &
+          PC_coef_filepath
+  end type rttov_cfg
+
 CONTAINS
+
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_rttov_ini2
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_INI2(Nlevels,Ninstruments,instrument_namelists,       &
+                             rttov_config)
+
+      integer,intent(in) :: &
+          Nlevels,   &
+          Ninstruments
+      type(character(len=256)), dimension(Ninstruments)     :: & 
+          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
+      type(rttov_cfg), dimension(Ninstruments) :: & ! intent(out)?
+          rttov_config
+         
+       
+  END SUBROUTINE COSP_RTTOV_INI2
+
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
