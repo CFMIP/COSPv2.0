@@ -108,6 +108,7 @@ SUBROUTINE COSP_CHANGE_VERTICAL_GRID(Npoints,Ncolumns,Nlevels,zfull,zhalf,y,Ngle
        do
          l = l + 1
          w = 0.0 ! Initialise weight to 0
+         if (l > Nlevels) exit
          ! Distances between edges of both grids
          dbb = oldgrid_bot(l) - newgrid_bot(k)
          dtb = oldgrid_top(l) - newgrid_bot(k)
@@ -322,13 +323,11 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
 
     ! Local variables
     integer  :: i, j, k
-    integer  :: ix, iy
     integer  :: kctop, kcbtm
     integer  :: icls
     integer  :: iregime
     real     :: cmxdbz
     real(wp) :: diagcgt   !! diagnosed cloud geometric thickness [m]
-    real(wp) :: diagdbze  !! diagnosed dBZe
     real(wp) :: diagicod  !! diagnosed in-cloud optical depth
     real(wp) :: cbtmh     !! diagnosed in-cloud optical depth
     real(wp), dimension(Npoints,Ncolumns,Nlevels) :: icod  !! in-cloud optical depth (ICOD)

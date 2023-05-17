@@ -383,7 +383,7 @@ contains
     integer,dimension(Npoints) :: &
          cloudsat_preclvl_index ! Altitude index for precip flags calculation
                                 ! in 40-level grid (one layer above surfelev) 
-    integer :: pr,i,k,m,j
+    integer :: pr,i,k
     real(wp) :: Zmax
     
     ! Initialize 

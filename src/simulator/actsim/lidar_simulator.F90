@@ -1165,7 +1165,7 @@ contains
     
     ! Local variables
     integer  :: &
-         ip, k, iz, ic, ncol, nlev, i
+         ip, k, iz, ic
     real(wp) :: &
          p1
     real(wp),dimension(Npoints,Nlevels) :: &
