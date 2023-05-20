@@ -56,7 +56,8 @@ MODULE MOD_COSP
       COSP_RTTOV_INI2,            &
       cosp_rttov_simulate,        &
       cosp_pc_rttov_simulate,     &
-      rttov_cfg
+      rttov_cfg,                  &
+      rttov_output
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
   USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN
   USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN
@@ -298,6 +299,12 @@ MODULE MOD_COSP
           modis_Optical_Thickness_vs_ReffICE => null(),            & ! Tau/ReffICE joint histogram
           modis_Optical_Thickness_vs_ReffLIQ => null()               ! Tau/ReffLIQ joint histogram
 
+     ! Joint CloudSat+MODIS simulators outputs
+     real(wp),dimension(:,:,:,:),pointer :: &
+          cfodd_ntotal => null()       ! # of CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
+     real(wp),dimension(:,:),    pointer :: &
+          wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
+          
      ! RTTOV outputs - JKS consider clear-sky and cloudy-sky values here
      real(wp),pointer :: &
           rttov_bt_total(:,:)        => null(),         & ! Brightness Temperature
@@ -311,12 +318,10 @@ MODULE MOD_COSP
           rttov_rad_total_pc(:,:)    => null()            ! Radiance (PC-RTTOV)
      integer,dimension(:),pointer :: &
           rttov_Ichannel             => null()
-
-     ! Joint CloudSat+MODIS simulators outputs
-     real(wp),dimension(:,:,:,:),pointer :: &
-          cfodd_ntotal => null()       ! # of CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
-     real(wp),dimension(:,:),    pointer :: &
-          wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
+     integer :: N_rttov_instruments
+          
+     type(rttov_output),pointer :: &
+         rttov_outputs(:)
 
   end type cosp_outputs
 
