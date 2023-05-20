@@ -105,10 +105,13 @@ module mod_cosp_rttov
        rttov_direct_nthreads = 1_jpim
   integer(kind=jpim),allocatable :: &
        iChannel(:),      &  ! RTTOV channel indices
-       emisChannel(:),   &  ! RTTOV channel emissivity
-       reflChannel(:),   &  ! RTTOV channel reflectivity
+!       emisChannel(:),   &  ! RTTOV channel emissivity
+!       reflChannel(:),   &  ! RTTOV channel reflectivity
        iChannel_out(:)      ! Passing out the channel indices
-
+  real(kind=jplm),allocatable    :: &
+       emisChannel(:),   &  ! RTTOV channel emissivity
+       reflChannel(:)       ! RTTOV channel reflectivity
+       
   ! Scattering coefficients (read in once during initialization)
 ! JKS - KISS
 !  type(rttov_scatt_coef) :: &

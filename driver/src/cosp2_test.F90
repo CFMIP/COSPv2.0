@@ -497,7 +497,7 @@ program cosp2_test
 !       rttov_instrument_configs,                                                         & ! Output object is an array of N rttov_config_opts ! JKS can this be a pointer?
 !       )
   call cpu_time(driver_time(3))
-  
+    
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived type.
   ! *NOTE* The "construct/destroy" subroutines are local to this module and should be
@@ -525,6 +525,7 @@ program cosp2_test
        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,            &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
        Lwr_occfreq, Lcfodd,                                                              &
+       rttov_Ninstruments,rttov_configs,                                                 &
        Lrttov_bt, Lrttov_rad, Lrttov_refl,                                               &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
 
@@ -1204,8 +1205,9 @@ contains
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    Lrttov_bt,Lrttov_rad,Lrttov_refl,                    &
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
+                                    N_rttov_instruments,rttov_configs,                   &
+                                    Lrttov_bt,Lrttov_rad,Lrttov_refl,                    & ! JKS remove when going multi-instrument
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)              ! JKS remove Nchan when going multi-instrument
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1324,11 +1326,21 @@ contains
           Ncolumns,        & ! Number of subgrid columns
           Nlevels,         & ! Number of model levels
           Nlvgrid,         & ! Number of levels in L3 stats computation
-          Nchan              ! Number of RTTOV channels  
+          Nchan,           & ! Number of RTTOV channels  
+          N_rttov_instruments
           
+!     integer,dimension(N_rttov_instruments),intent(in) :: &
+!         rttov_instrument_nchannels
+          
+     type(rttov_cfg), dimension(N_rttov_instruments),intent(in) :: &
+         rttov_configs
+     
      ! Outputs
      type(cosp_outputs),intent(out) :: &
           x           ! COSP output structure  
+          
+     integer           :: &
+         i
    
      ! ISCCP simulator outputs
     if (Lboxtauisccp)    allocate(x%isccp_boxtau(Npoints,Ncolumns)) 
@@ -1478,6 +1490,11 @@ contains
     if (Lcloudsat_tcc)  allocate(x%cloudsat_tcc(Npoints))
     if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
             
+    ! Joint MODIS/CloudSat Statistics
+    if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
+    if (Lcfodd)       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
+    
+    ! JKS remove when going multi-instrument
     ! RTTOV - Only add non-total fields if clouds or aerosols are simulated
     if (Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
         allocate(x%rttov_Ichannel(Nchan))
@@ -1506,11 +1523,63 @@ contains
             if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_refl_clear(Npoints,Nchan))
         endif    
     endif
-
-
-    ! Joint MODIS/CloudSat Statistics
-    if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
-    if (Lcfodd)       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
+    
+    ! RTTOV - Allocate output for multiple instruments
+    ! Do I not need to allocate the number of instruments? Because each rttov output DDT will be a pointer?
+    x % N_rttov_instruments = N_rttov_instruments
+    allocate(x % rttov_outputs(N_rttov_instruments)) ! Need to allocate a pointer?
+    do i=1,N_rttov_instruments
+        print*,'i:   ',i
+        print*,'rttov_configs(i) % nchan_out:         ',rttov_configs(i) % nchan_out
+        print*,'rttov_configs(i) % Lrttov_bt:         ',rttov_configs(i) % Lrttov_bt
+        print*,'rttov_configs(i) % Lrttov_rad:        ',rttov_configs(i) % Lrttov_rad
+        print*,'rttov_configs(i) % Lrttov_refl:       ',rttov_configs(i) % Lrttov_refl
+        print*,'rttov_configs(i) % opts % rt_ir % addaerosl:        ',rttov_configs(i) % opts % rt_ir % addaerosl
+        print*,'rttov_configs(i) % opts % rt_ir % addclouds:        ',rttov_configs(i) % opts % rt_ir % addclouds
+        print*,'rttov_configs(i) % opts % rt_ir % user_aer_opt_param:   ',rttov_configs(i) % opts % rt_ir % user_aer_opt_param
+        print*,'rttov_configs(i) % opts % rt_ir % user_cld_opt_param:   ',rttov_configs(i) % opts % rt_ir % user_cld_opt_param
+        print*,'rttov_configs(i) % Lrttov_pc:         ',rttov_configs(i) % Lrttov_pc
+        
+        print*,'1.'
+        if (rttov_configs(i) % Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
+            print*,'2a.'
+            allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
+            if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
+                allocate(x % rttov_outputs(i) % bt_total_pc(Npoints,rttov_configs(i) % nchan_out))
+    !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
+            endif
+            if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
+                allocate(x % rttov_outputs(i) % rad_total_pc(Npoints,rttov_configs(i) % nchan_out))
+    !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
+    !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
+            endif  
+        else
+            print*,'3a.'
+            allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
+            if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
+                allocate(x % rttov_outputs(i) % bt_total(Npoints,rttov_configs(i) % nchan_out))
+                if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    allocate(x % rttov_outputs(i) % bt_clear(Npoints,rttov_configs(i) % nchan_out))
+                end if
+            endif
+            if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
+                allocate(x % rttov_outputs(i) % rad_total(Npoints,rttov_configs(i) % nchan_out))
+                if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    allocate(x % rttov_outputs(i) % rad_clear(Npoints,rttov_configs(i) % nchan_out))
+                end if
+                if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    allocate(x % rttov_outputs(i) % rad_cloudy(Npoints,rttov_configs(i) % nchan_out))
+                end if
+            endif
+            if (rttov_configs(i) % Lrttov_refl) then                            ! Reflectance
+                allocate(x % rttov_outputs(i) % refl_total(Npoints,rttov_configs(i) % nchan_out))
+                if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    allocate(x % rttov_outputs(i) % refl_clear(Npoints,rttov_configs(i) % nchan_out))
+                end if
+            endif    
+        endif
+         
+    end do
 
   end subroutine construct_cosp_outputs
   
@@ -1591,6 +1660,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine destroy_cosp_outputs(y)
      type(cosp_outputs),intent(inout) :: y
+     integer :: i ! Local iterator for RTTOV instruments
 
      ! Deallocate and nullify
      if (associated(y%calipso_beta_mol))          then
@@ -1934,7 +2004,65 @@ contains
      if (associated(y%rttov_refl_clear)) then
         deallocate(y%rttov_refl_clear)
         nullify(y%rttov_refl_clear)
-     endif         
+     endif
+     if (associated(y%rttov_bt_total_pc)) then
+        deallocate(y%rttov_bt_total_pc)
+        nullify(y%rttov_bt_total_pc)
+     endif
+     if (associated(y%rttov_rad_total_pc)) then
+        deallocate(y%rttov_rad_total_pc)
+        nullify(y%rttov_rad_total_pc)
+     endif     
+     
+     ! JKS - Add deallocate multi-inst rttov_output 
+     if (associated(y%rttov_outputs)) then
+         do i=1,y % N_rttov_instruments ! Iterate over each instrument
+             if (associated(y%rttov_outputs(i)%channel_indices)) then
+                deallocate(y%rttov_outputs(i)%channel_indices)
+                nullify(y%rttov_outputs(i)%channel_indices)
+             endif
+             if (associated(y%rttov_outputs(i)%bt_total)) then
+                deallocate(y%rttov_outputs(i)%bt_total)
+                nullify(y%rttov_outputs(i)%bt_total)
+             endif
+             if (associated(y%rttov_outputs(i)%bt_clear)) then
+                deallocate(y%rttov_outputs(i)%bt_clear)
+                nullify(y%rttov_outputs(i)%bt_clear)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_total)) then
+                deallocate(y%rttov_outputs(i)%rad_total)
+                nullify(y%rttov_outputs(i)%rad_total)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_clear)) then
+                deallocate(y%rttov_outputs(i)%rad_clear)
+                nullify(y%rttov_outputs(i)%rad_clear)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_cloudy)) then
+                deallocate(y%rttov_outputs(i)%rad_cloudy)
+                nullify(y%rttov_outputs(i)%rad_cloudy)
+             endif
+             if (associated(y%rttov_outputs(i)%refl_total)) then
+                deallocate(y%rttov_outputs(i)%refl_total)
+                nullify(y%rttov_outputs(i)%refl_total)
+             endif
+             if (associated(y%rttov_outputs(i)%refl_clear)) then
+                deallocate(y%rttov_outputs(i)%refl_clear)
+                nullify(y%rttov_outputs(i)%refl_clear)
+             endif
+             if (associated(y%rttov_outputs(i)%bt_total_pc)) then
+                deallocate(y%rttov_outputs(i)%bt_total_pc)
+                nullify(y%rttov_outputs(i)%bt_total_pc)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_total_pc)) then
+                deallocate(y%rttov_outputs(i)%rad_total_pc)
+                nullify(y%rttov_outputs(i)%rad_total_pc)
+             endif
+         end do
+         deallocate(y%rttov_outputs)
+         nullify(y%rttov_outputs)
+     end if
+     
+     
    end subroutine destroy_cosp_outputs
   
  end program cosp2_test

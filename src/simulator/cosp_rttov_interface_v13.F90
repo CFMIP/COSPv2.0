@@ -75,25 +75,61 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 
   ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
   type rttov_cfg
-      logical(KIND=jplm)             :: &
+      logical(KIND=jplm)           :: &
           Lrttov_bt,           &
           Lrttov_rad,          &
           Lrttov_refl,         &
-          Lrttov_cld,          &
-          Lrttov_aer,          &
-          Lrttov_cldparam,     &
-          Lrttov_aerparam,     &
+!          Lrttov_cld,          &
+!          Lrttov_aer,          &
+!          Lrttov_cldparam,     &
+!          Lrttov_aerparam,     &
           Lrttov_pc
-      character(len=256)             :: &
+      character(len=256)           :: &
           rttov_srcDir,        &
           rttov_coefDir,       &
           OD_coef_filepath,    &
           aer_coef_filepath,   &
           cld_coef_filepath,   &
           PC_coef_filepath
-      integer                        :: &
-          nchan_out
+      integer(KIND=jpim)           :: &
+          rttov_direct_nthreads
+      integer(KIND=jpim)           :: &
+          nchan_out,           &
+          nchannels_rec         
+      real(wp)                     :: &
+          CO2_mr,              &
+          CH4_mr,              &
+          CO_mr,               &
+          N2O_mr,              &
+          SO2_mr,              &
+          rttov_ZenAng
+      integer(kind=jpim), allocatable  :: &
+          iChannel(:),      &
+          iChannel_out(:)      ! Passing out the channel indices
+      real(kind=jplm),allocatable    :: &
+          emisChannel(:),   &                ! RTTOV channel emissivity
+          reflChannel(:)                     ! RTTOV channel reflectivity
+      type(rttov_options)          :: &
+          opts                               ! RTTOV options structure
+      type(rttov_coefs)            :: &
+          coefs
   end type rttov_cfg
+  
+  
+  type rttov_output
+      integer,pointer     :: &
+          channel_indices(:)
+      real(wp),pointer    :: &
+          bt_total(:,:),    &
+          bt_clear(:,:),    &
+          rad_total(:,:),   &
+          rad_clear(:,:),   &
+          rad_cloudy(:,:),  &
+          refl_total(:,:),  &
+          refl_clear(:,:),  &
+          bt_total_pc(:,:), &
+          rad_total_pc(:,:)
+  end type rttov_output    
 
   
 CONTAINS
@@ -144,7 +180,7 @@ CONTAINS
          rttov_config 
              
     ! Local variables
-    character(len=256) :: &
+    character(len=256),target :: &
         channel_filepath,  &
         rttov_srcDir,      &
         rttov_coefDir,     &
@@ -153,7 +189,7 @@ CONTAINS
         cld_coef_filepath, &
         PC_coef_filepath
         
-    real(wp)  :: &
+    real(wp), target  :: &
         CO2_mr,      &
         CH4_mr,      &
         CO_mr,       &
@@ -162,38 +198,42 @@ CONTAINS
         rttov_ZenAng
 
     ! Declare RTTOV namelist fields
-    logical :: Lrttov_bt = .false.
-    logical :: Lrttov_rad = .false.
-    logical :: Lrttov_refl = .false.
-    logical :: Lrttov_cld = .false.
-    logical :: Lrttov_aer = .false.
-    logical :: Lrttov_cldparam = .false.
-    logical :: Lrttov_aerparam = .false.
-    logical :: Lrttov_pc = .false.
+    logical         :: Lrttov_bt = .false.
+    logical         :: Lrttov_rad = .false.
+    logical         :: Lrttov_refl = .false.
+!    logical, target :: Lrttov_cld = .false.
+!    logical, target :: Lrttov_aer = .false.
+!    logical, target :: Lrttov_cldparam = .false.
+!    logical, target :: Lrttov_aerparam = .false.
+    logical         :: Lrttov_cld = .false.
+    logical         :: Lrttov_aer = .false.
+    logical         :: Lrttov_cldparam = .false.
+    logical         :: Lrttov_aerparam = .false.
+    logical         :: Lrttov_pc = .false.
 
-    logical :: Lchannel_filepath2 = .false.
+    logical         :: Lchannel_filepath2 = .false.
     
-    logical :: SO2_data = .false. 
-    logical :: N2O_data = .false. 
-    logical :: CO_data = .false.
-    logical :: CO2_data = .false.
-    logical :: CH4_data = .false. 
-    logical :: ozone_data = .false.
+    logical         :: SO2_data = .false. 
+    logical         :: N2O_data = .false. 
+    logical         :: CO_data = .false.
+    logical         :: CO2_data = .false.
+    logical         :: CH4_data = .false. 
+    logical         :: ozone_data = .false.
+    logical         :: clw_data = .false.
     
     character(len=256) :: cosp_status
     integer ::             &
         i,                 &
-        rttov_nthreads,    &
         nchannels_rec2
+        
+    integer, target ::     &
+        rttov_nthreads
                     
-    integer(kind=jpim) ::        &
+    integer(kind=jpim)   :: &
         ipcbnd,        &
         ipcreg,        &
         npcscores
-    
-    print*,'t1.'
-    rttov_config%Lrttov_bt = .false. ! Set something in the rttov_config DDT, anything...
-            
+                
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
@@ -202,6 +242,7 @@ CONTAINS
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          PC_coef_filepath,                                       &
                          CO2_data,CH4_data,CO_data,N2O_data,SO2_data,ozone_data, & ! User-supplied trace gas concentrations
+                         clw_data,                                               & ! MW option
                          CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
                          rttov_nthreads,rttov_ZenAng
@@ -209,17 +250,241 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    print*,'t2.'
     open(10,file=namelist_filepath,status='unknown')
     read(10,nml=RTTOV_INPUT)
     close(10)
     
+    print*,'Lrttov_pc:   ',Lrttov_pc
 
-    print*,'t3.'
-    ! Initialize fields in module memory (cosp_rttovXX.F90)
-    rttovDir   = rttov_srcDir
+    ! Set logicals for RTTOV config
+    rttov_config%Lrttov_bt         = Lrttov_bt
+    rttov_config%Lrttov_rad        = Lrttov_rad
+    rttov_config%Lrttov_refl       = Lrttov_refl
+!    rttov_config%Lrttov_cld        = Lrttov_cld
+!    rttov_config%Lrttov_aer        = Lrttov_aer
+!    rttov_config%Lrttov_cldparam   = Lrttov_cldparam
+!    rttov_config%Lrttov_aerparam   = Lrttov_aerparam
+    rttov_config%Lrttov_pc         = Lrttov_pc
+        
+    ! Set paths for RTTOV config
+    rttov_config%rttov_srcDir      = rttov_srcDir
+    rttov_config%rttov_coefDir     = rttov_coefDir
+    rttov_config%OD_coef_filepath  = OD_coef_filepath
+    rttov_config%aer_coef_filepath = aer_coef_filepath
+    rttov_config%cld_coef_filepath = cld_coef_filepath
+    rttov_config%PC_coef_filepath  = PC_coef_filepath
     
-    !! JKS stopping here.
+    ! Set other RTTOV config variables
+    rttov_config%rttov_direct_nthreads = rttov_nthreads
+    
+    rttov_config%SO2_mr       = SO2_mr
+    rttov_config%N2O_mr       = N2O_mr
+    rttov_config%CO_mr        = CO_mr
+    rttov_config%CO2_mr       = CO2_mr
+    rttov_config%CH4_mr       = CH4_mr
+    rttov_config%rttov_ZenAng = rttov_ZenAng
+
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 1. Initialise RTTOV options structure
+    ! ------------------------------------------------------
+    ! See page 157 of RTTOV v13 user guide for documentation
+    ! Initializing all options to defaults for consistency
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    ! General configuration options
+    rttov_config % opts % config % do_checkinput    = .true.
+    rttov_config % opts % config % apply_reg_limits = .false. ! True in v11
+    rttov_config % opts % config % verbose          = .false.  ! JKS suppress for now
+    rttov_config % opts % config % opdep13_gas_clip = .true.
+
+    ! Declare RTTOV namelist fields
+    rttov_config % opts % rt_all % SO2_data   = SO2_data
+    rttov_config % opts % rt_all % N2O_data   = N2O_data
+    rttov_config % opts % rt_all % CO_data    = CO_data
+    rttov_config % opts % rt_all % CO2_data   = CO2_data
+    rttov_config % opts % rt_all % CH4_data   = CH4_data
+    rttov_config % opts % rt_all % ozone_data = ozone_data
+    rttov_config % opts % rt_mw  % clw_data   = clw_data
+    
+    ! Other general RT options (initializing to defaults for completeness)
+    rttov_config % opts % rt_all % do_lambertian       = .false.
+    rttov_config % opts % rt_all % switchrad           = .false.
+    rttov_config % opts % rt_all % rad_down_lin_tau    = .true.
+    rttov_config % opts % rt_all % use_t2m_opdep       = .true.
+    rttov_config % opts % rt_all % use_q2m             = .true.
+    rttov_config % opts % rt_all % use_tskin_eff       = .false.
+    rttov_config % opts % rt_all % addrefrac           = .true.
+    rttov_config % opts % rt_all % plane_parallel      = .false.
+    rttov_config % opts % rt_all % transmittances_only = .false.
+    
+    ! MW-only radiative transfer options:
+    ! JKS make this optional?
+    rttov_config % opts % rt_mw % clw_data             = .false.
+    rttov_config % opts % rt_mw % clw_scheme           = 2       ! Default = 2/Rosenkranz
+    rttov_config % opts % rt_mw % clw_cloud_top        = 322     ! Default is 322 hPa
+    rttov_config % opts % rt_mw % fastem_version       = 6       ! Default FASTEM-6
+    rttov_config % opts % rt_mw % supply_foam_fraction = .false.
+
+    ! UV/visible/IR-only radiative transfer options
+    rttov_config % opts % rt_ir % addsolar                = .false.
+    rttov_config % opts % rt_ir % rayleigh_max_wavelength = 2._wp ! 2um 
+    rttov_config % opts % rt_ir % rayleigh_min_pressure   = 0._wp ! 0 hPa
+    rttov_config % opts % rt_ir % rayleigh_single_scatt   = .true.
+    rttov_config % opts % rt_ir % rayleigh_depol          = .true. ! Default false, recommended true
+    rttov_config % opts % rt_ir % do_nlte_correction      = .false.
+    rttov_config % opts % rt_ir % solar_sea_brdf_model    = 2
+    rttov_config % opts % rt_ir % ir_sea_emis_model       = 2
+
+    ! User options - JKS
+    rttov_config % opts % rt_ir % addaerosl               = Lrttov_aer
+    rttov_config % opts % rt_ir % addclouds               = Lrttov_cld
+    rttov_config % opts % rt_ir % user_aer_opt_param      = Lrttov_aerparam ! User specifies the aerosol scattering optical parameters 
+    rttov_config % opts % rt_ir % user_cld_opt_param      = Lrttov_cldparam ! User specifies the cloud scattering optical parameters 
+    
+    rttov_config % opts % rt_ir % grid_box_avg_cloud      = .true.
+    rttov_config % opts % rt_ir % cldcol_threshold        = -1._wp
+    rttov_config % opts % rt_ir % cloud_overlap           = 1 ! Maximum-random overlap
+    rttov_config % opts % rt_ir % cc_low_cloud_top        = 750_wp ! 750 hPa. Only applies when cloud_overlap=2.
+    rttov_config % opts % rt_ir % ir_scatt_model          = 2
+    rttov_config % opts % rt_ir % vis_scatt_model         = 1
+    rttov_config % opts % rt_ir % dom_nstreams            = 8
+    rttov_config % opts % rt_ir % dom_accuracy            = 0._wp ! only applies when addclouds or addaerosl is true and DOM is selected as a scattering solver.
+    rttov_config % opts % rt_ir % dom_opdep_threshold     = 0._wp
+    rttov_config % opts % rt_ir % dom_rayleigh            = .false.
+    
+    ! Principal Components-only radiative transfer options:
+    ! Default off
+    rttov_config % opts % rt_ir % pc % addpc     = .false.
+    rttov_config % opts % rt_ir % pc % npcscores = -1
+    rttov_config % opts % rt_ir % pc % addradrec = .false.
+    rttov_config % opts % rt_ir % pc % ipcbnd    = 1
+    rttov_config % opts % rt_ir % pc % ipcreg    = 1 ! The index of the required set of PC predictors
+    
+    ! Options related to interpolation and the vertical grid:
+    rttov_config % opts % interpolation % addinterp         = .true.
+    rttov_config % opts % interpolation % interp_mode       = 1
+!    rttov_config % opts % interpolation % reg_limit_extrap = .true. ! Depreciated
+    rttov_config % opts % interpolation % lgradp            = .false.
+!    rttov_config % opts % interpolation % spacetop         = .true. ! Depreciated
+
+    ! Options related to HTFRTC:
+    rttov_config % opts % htfrtc_opts % htfrtc       = .false.
+    rttov_config % opts % htfrtc_opts % n_pc_in      = -1
+    rttov_config % opts % htfrtc_opts % reconstruct  = .false.
+    rttov_config % opts % htfrtc_opts % simple_cloud = .false.
+    rttov_config % opts % htfrtc_opts % overcast     = .false.
+    
+    ! Developer options that may be useful:
+    rttov_config % opts % dev % do_opdep_calc = .true.
+    
+    ! If using PC-RTTOV, some settings must be a certain way. This isn't always true though...
+    if (do_rttov_pcrttov) then
+      rttov_config % opts % rt_ir % pc % addpc          = .true.
+      rttov_config % opts % rt_ir % pc % ipcbnd         = ipcbnd
+      rttov_config % opts % rt_ir % pc % ipcreg         = ipcreg
+      rttov_config % opts % rt_ir % pc % npcscores      = npcscores
+
+      rttov_config % opts % rt_ir % pc % addradrec      = .true. ! Alway reconstruct radiances
+
+      rttov_config % opts % interpolation % addinterp   = .true.  ! Allow interpolation of input profile
+      rttov_config % opts % interpolation % interp_mode = 1       ! Set interpolation method
+      rttov_config % opts % rt_all % addrefrac          = .true.  ! Include refraction in path calc (always for PC)
+      rttov_config % opts % rt_ir % addclouds           = .false. ! Don't include cloud effects     (always for PC?)
+      rttov_config % opts % rt_ir % addaerosl           = .false. ! Don't include aerosol effects   (not always for PC)
+      rttov_config % opts % rt_ir % addsolar            = .false. ! Do not include solar radiation  (always for PC?)
+
+    endif
+    
+    ! JKS To-do: include opts_scatt settings (user guide pg 161)
+
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 2. Read coefficients (from RTTOV example files)
+    ! ------------------------------------------------------
+    ! Using the GUI to figure out files that work together could be helpful here.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Construct optical depth and cloud coefficient files    
+    OD_coef_filepath  = trim(rttov_srcDir)//trim(rttov_coefDir)//trim(OD_coef_filepath)
+    aer_coef_filepath = trim(rttov_srcDir)//trim(rttov_coefDir)//trim(aer_coef_filepath)
+    cld_coef_filepath = trim(rttov_srcDir)//trim(rttov_coefDir)//trim(cld_coef_filepath)
+         
+    print*,'OD_coef_filepath:    ',OD_coef_filepath
+    print*,'aer_coef_filepath:   ',aer_coef_filepath
+    print*,'cld_coef_filepath:   ',cld_coef_filepath
+         
+    ! Do I need logicals here to direct how to read the coefficients?
+    if (rttov_config % Lrttov_pc) then ! PC-RTTOV cannot handle cloud, some aerosols
+        PC_coef_filepath  = trim(rttov_srcDir)//trim(rttov_coefDir)//trim(PC_coef_filepath)
+        call rttov_read_coefs(errorstatus, rttov_config % coefs, &
+                              rttov_config % opts,               &
+                              file_coef=OD_coef_filepath,        &
+!                              file_scaer=aer_coef_filepath,     & ! Needs to be PC-RTTOV compatible
+                              file_pccoef=PC_coef_filepath)    
+    else ! Read optical depth and cloud coefficient files together
+        call rttov_read_coefs(errorstatus, rttov_config % coefs, & 
+                              rttov_config % opts,               &
+                              file_coef=OD_coef_filepath,        &
+                              file_scaer=aer_coef_filepath,      &
+                              file_sccld=cld_coef_filepath)
+        ! Ensure input number of channels is not higher than number stored in coefficient file
+        if (nchannels_rec2 > rttov_config % coefs % coef % fmv_chn) then
+            nchannels_rec2 = rttov_config % coefs % coef % fmv_chn
+            print*,'nchannels_rec2 cap hit'
+        endif            
+    endif
+                          
+    ! We aren't checking an allocation steps so this seems more appropriate.
+    call rttov_error('fatal error reading coefficients' , lalloc = .false.)
+
+    ! Ensure the options and coefficients are consistent
+    call rttov_user_options_checkinput(errorstatus, rttov_config % opts, rttov_config % coefs)
+    
+    ! We aren't checking an allocation steps so this seems more appropriate.
+    call rttov_error('error in rttov options' , lalloc = .false.)
+
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Figure out how many channels we actually want to reconstruct
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Handle different radiance reconstruction options
+    ! JKS - I need to set these two separate variables here? Can one be set later?
+    if (nchannels_rec2 < 0) then
+        print*,'The namelist variable "nchannels_rec2" is negative, rttov_direct call will fail. Exiting.'
+        errorstatus = errorstatus_fatal
+        call rttov_exit(errorstatus)
+        ! If the number of channels is negative, don't reconstruct radiances at all
+        rttov_config % nchan_out = 0
+        rttov_config % nchannels_rec = 0 ! Avoid nchanprof set to a negative value
+    else if (nchannels_rec2 == 0) then
+        ! If the number of channels is set to 0 then reconstruct all instrument channels
+        rttov_config % nchan_out     = rttov_config % coefs % coef % fmv_chn
+        rttov_config % nchannels_rec = rttov_config % coefs % coef % fmv_chn ! Avoid nchanprof set to 0
+    else
+        ! Otherwise read the channel list from the file
+        rttov_config % nchan_out     = nchannels_rec2
+        rttov_config % nchannels_rec = nchannels_rec2
+    endif
+
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! Read in channel indices, emissivities, and reflectivities from .csv if file is passed
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+    if (Lchannel_filepath2) then
+        allocate(rttov_config % iChannel(rttov_config % nchan_out))
+        allocate(rttov_config % emisChannel(rttov_config % nchan_out))
+        allocate(rttov_config % reflChannel(rttov_config % nchan_out))
+    
+        open(18,file=channel_filepath,access='sequential',form="formatted")
+        do i = 1, rttov_config % nchan_out
+            read(18,*) rttov_config % iChannel(i), rttov_config % emisChannel(i), rttov_config % reflChannel(i)
+        end do
+        close(18)
+    else ! If nothing is passed, compute the first "nchan_out" channels. Ignore emissivity and reflectivity for now.
+        allocate(rttov_config % iChannel(rttov_config % nchan_out))
+        rttov_config % iChannel(:) = (/ (i, i = 1, rttov_config % nchan_out) /)
+    endif
         
     ! subsub routines
     contains
@@ -469,15 +734,6 @@ CONTAINS
       opts % rt_ir % addclouds           = .false. ! Don't include cloud effects     (always for PC?)
       opts % rt_ir % addaerosl           = .false. ! Don't include aerosol effects   (not always for PC)
       opts % rt_ir % addsolar            = .false. ! Do not include solar radiation  (always for PC?)
-
-      ! These options will depend on the coefficients used and should be left up to the user
-!      opts % rt_all % ozone_data         = .TRUE.  ! We have an ozone profile
-!      opts % rt_all % co2_data           = .FALSE. ! We do not have profiles
-!      opts % rt_all % n2o_data           = .FALSE. !   for any other constituents
-!      opts % rt_all % ch4_data           = .FALSE. !
-!      opts % rt_all % co_data            = .FALSE. !
-!      opts % rt_all % so2_data           = .FALSE. !
-!      opts % rt_mw % clw_data            = .FALSE. !
 
     endif
     
