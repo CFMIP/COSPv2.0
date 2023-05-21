@@ -79,10 +79,6 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           Lrttov_bt,           &
           Lrttov_rad,          &
           Lrttov_refl,         &
-!          Lrttov_cld,          &
-!          Lrttov_aer,          &
-!          Lrttov_cldparam,     &
-!          Lrttov_aerparam,     &
           Lrttov_pc
       character(len=256)           :: &
           rttov_srcDir,        &
@@ -201,10 +197,6 @@ CONTAINS
     logical         :: Lrttov_bt = .false.
     logical         :: Lrttov_rad = .false.
     logical         :: Lrttov_refl = .false.
-!    logical, target :: Lrttov_cld = .false.
-!    logical, target :: Lrttov_aer = .false.
-!    logical, target :: Lrttov_cldparam = .false.
-!    logical, target :: Lrttov_aerparam = .false.
     logical         :: Lrttov_cld = .false.
     logical         :: Lrttov_aer = .false.
     logical         :: Lrttov_cldparam = .false.
@@ -260,10 +252,6 @@ CONTAINS
     rttov_config%Lrttov_bt         = Lrttov_bt
     rttov_config%Lrttov_rad        = Lrttov_rad
     rttov_config%Lrttov_refl       = Lrttov_refl
-!    rttov_config%Lrttov_cld        = Lrttov_cld
-!    rttov_config%Lrttov_aer        = Lrttov_aer
-!    rttov_config%Lrttov_cldparam   = Lrttov_cldparam
-!    rttov_config%Lrttov_aerparam   = Lrttov_aerparam
     rttov_config%Lrttov_pc         = Lrttov_pc
         
     ! Set paths for RTTOV config
