@@ -71,7 +71,7 @@ MODULE MOD_COSP
   USE MOD_LIDAR_SIMULATOR,           ONLY: lidar_subcolumn,       lidar_column
   USE MOD_MODIS_SIM,                 ONLY: modis_subcolumn,       modis_column
   USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
-  USE MOD_COSP_RTTOV,                ONLY: rttov_IN
+  USE MOD_COSP_RTTOV,                ONLY: rttov_IN !,              rttov_instrument_OUT ! JKS - clean
   USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID, &
                                            COSP_DIAG_WARMRAIN
 
@@ -140,7 +140,8 @@ MODULE MOD_COSP
           Nlevels,             & ! Number of levels.
           Npart,               & ! Number of cloud meteors for LIDAR simulators.
           Nrefl,               & ! Number of reflectances for PARASOL simulator
-          nChannels_rttov        ! Number of RTTOV channels
+          nChannels_rttov,     & ! Number of RTTOV channels
+          Ninst_rttov            ! Number of RTTOV instruments
      real(wp) :: &
           emsfc_lw               ! Surface emissivity @ 11micron
      real(wp),allocatable,dimension(:,:,:) :: &
@@ -175,7 +176,7 @@ MODULE MOD_COSP
           fracPrecipIce          ! Fraction of precipitation which is frozen (1).
      type(radar_cfg) :: &
           rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
-     type(rttov_cfg),allocatable,dimension(:) :: &
+     type(rttov_cfg),dimension(:),pointer :: &
           cfg_rttov              ! RTTOV configuration information (multiple instruments)
   end type cosp_optical_inputs
 
@@ -421,6 +422,8 @@ CONTAINS
          zlev   (:,:),           & ! altitude (used only when use_vgrid=.true.)
          cfodd_ntotal (:,:,:,:), & ! # of total samples for CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
          wr_occfreq_ntotal(:,:)    ! # of warm-rain (nonprecip/drizzle/precip) (Npoints,WR_NREGIME)
+!    type(rttov_instrument_OUT),dimension(:),allocatable :: & ! JKS where RTTOV outputs are actually stored, not a pointer
+!         cosp_inst_OUTS
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
@@ -541,6 +544,11 @@ CONTAINS
     if (associated(cospOUT%rttov_bt_total_pc)                                 .or.          &
         associated(cospOUT%rttov_rad_total_pc))                                             &
        Lrttov_pc        = .true.
+       
+    if (associated(cospOUT%rttov_outputs)) then
+       Lrttov_column    = .true.
+       print*,'multi-inst. RTTOV called'
+    endif
         
     ! Set flag to deallocate rttov types (only done on final call to simulator)
     if (size(cospOUT%isccp_meantb) .eq. stop_idx) lrttov_cleanUp = .true.
@@ -1338,7 +1346,7 @@ CONTAINS
 
     ! MODIS
     if (Lmodis_column) then
-       if(modisiN%nSunlit > 0) then
+       if(modisIN%nSunlit > 0) then
           ! Allocate space for local variables
           allocate(modisCftotal(modisIN%nSunlit), modisCfLiquid(modisIN%nSunlit),        &
                    modisCfIce(modisIN%nSunlit),modisCfHigh(modisIN%nSunlit),             &
@@ -1633,6 +1641,122 @@ CONTAINS
                                                            
     endif
     print*,'Lrttov_column successful' ! jks
+    
+    
+    print*,'Lrttov_column multi-inst. start'
+    
+    ! RTTOV multi-instrument
+    if (Lrttov_column) then
+        print*,'0.'
+    ! 0. Load the column inputs. These are constant across instruments.
+    
+!        allocate(cosp_inst_OUTS(cospIN%Ninst_rttov)) ! Allocate output fields (I actually don't need this type because I run the instruments one-at-a-time
+
+        ! 1. Allocate output for each requested instrument
+        ! 2. Run RTTOV for each instrument, passing the config files along.
+        ! 3. Write to COSPout if output is requested
+        ! 4. Free up memory from output
+        do i=1,cospIN%Ninst_rttov
+           print*,i
+           print*,'1' 
+
+           ! Allocate memory for the outputs - I won't need all of these in every situation.
+           ! Only allocate clear-sky memory when PC-RTTOV is run.
+           print*,'cospIN % cfg_rttov(i) % nchan_out:    ',cospIN % cfg_rttov(i) % nchan_out ! issue here
+           allocate(rttov_Ichannel(cospIN % cfg_rttov(i) % nchan_out)) ! Channel indices
+!           allocate(cosp_inst_OUTS(i) % channel_indices(cospIN % cfg_rttov(i) % nchan_out)) ! Channel indices
+           print*,'2' 
+           if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
+               print*,'3a' 
+               allocate(rttov_bt_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
+               allocate(rttov_rad_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
+!               allocate(cosp_inst_OUTS(i) % bt_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
+!               allocate(cosp_inst_OUTS(i) % rad_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
+               
+    !           allocate(rttov_bt_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
+    !           allocate(rttov_rad_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky radiance
+           else 
+               print*,'3b' 
+               allocate(rttov_bt_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))   ! all-sky brightness temp
+               allocate(rttov_bt_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))   ! clear-sky brightness temp
+               allocate(rttov_rad_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))  ! all-sky brightness temp
+               allocate(rttov_rad_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))  ! clear-sky brightness temp
+               allocate(rttov_rad_cloudy(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! cloudy-sky brightness temp
+               allocate(rttov_refl_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky Bi-directional reflectance factor
+               allocate(rttov_refl_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! clear-sky Bi-directional reflectance factor
+               
+!               allocate(cosp_inst_OUTS(i) % bt_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))   ! all-sky brightness temp
+!               allocate(cosp_inst_OUTS(i) % bt_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))   ! clear-sky brightness temp
+!               allocate(cosp_inst_OUTS(i) % rad_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))  ! all-sky brightness temp
+!               allocate(cosp_inst_OUTS(i) % rad_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out))  ! clear-sky brightness temp
+!               allocate(cosp_inst_OUTS(i) % rad_cloudy(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! cloudy-sky brightness temp
+!               allocate(cosp_inst_OUTS(i) % refl_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky Bi-directional reflectance factor
+!               allocate(cosp_inst_OUTS(i) % refl_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! clear-sky Bi-directional reflectance factor                  
+           endif
+           
+           ! JKS new RTTOV subroutine for v13 called from the RTTOV interface.
+           call cpu_time(driver_time(3))
+           ! Run simulator
+!           call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,                             & ! Inputs
+!                                    cosp_inst_OUTS(i),                                  & ! RTTOV output fields DDT
+!                                    cosp_simulator(nError+1))
+           call cpu_time(driver_time(4))
+           print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
+
+           ! Write to cospOUT
+           if (associated(cospOUT % rttov_outputs(i) % channel_indices))                    &
+!               cospOUT % rttov_outputs(i) % channel_indices(:) = cosp_inst_OUTS(i) % channel_indices   
+               cospOUT % rttov_outputs(i) % channel_indices(:) = rttov_Ichannel
+           if (cospIN % cfg_rttov(i) % Lrttov_pc) then
+               if (associated(cospOUT % rttov_outputs(i) % bt_total_pc))                    &
+!                  cospOUT % rttov_outputs(i) % bt_total_pc(ij:ik,:) = cosp_inst_OUTS(i) % bt_total       
+                  cospOUT % rttov_outputs(i) % bt_total_pc(ij:ik,:) = rttov_bt_total       
+               if (associated(cospOUT % rttov_outputs(i) % rad_total_pc))                   &
+                  cospOUT % rttov_outputs(i) % rad_total_pc(ij:ik,:) = rttov_rad_total
+           else
+               if (associated(cospOUT % rttov_outputs(i) % bt_total))                    &
+                  cospOUT % rttov_outputs(i) % bt_total(ij:ik,:) = rttov_bt_total
+               if (associated(cospOUT % rttov_outputs(i) % bt_clear))                    &
+                  cospOUT % rttov_outputs(i) % bt_clear(ij:ik,:) = rttov_bt_clear
+               if (associated(cospOUT % rttov_outputs(i) % rad_total))                   &
+                  cospOUT % rttov_outputs(i) % rad_total(ij:ik,:) = rttov_rad_total 
+               if (associated(cospOUT % rttov_outputs(i) % rad_clear))                   &
+                  cospOUT % rttov_outputs(i) % rad_clear(ij:ik,:) = rttov_rad_clear
+               if (associated(cospOUT % rttov_outputs(i) % rad_cloudy))                  &
+                  cospOUT % rttov_outputs(i) % rad_cloudy(ij:ik,:) = rttov_rad_cloudy
+               if (associated(cospOUT % rttov_outputs(i) % refl_total))                  &
+                  cospOUT % rttov_outputs(i) % refl_total(ij:ik,:) = rttov_refl_total
+               if (associated(cospOUT % rttov_outputs(i) % refl_clear))                  &
+                  cospOUT % rttov_outputs(i) % refl_clear(ij:ik,:) = rttov_refl_clear
+           endif 
+
+           ! Free up memory from output (if necessary)
+           if (allocated(rttov_Ichannel))               deallocate(rttov_Ichannel)          
+           if (allocated(rttov_bt_total))               deallocate(rttov_bt_total)          
+           if (allocated(rttov_bt_clear))               deallocate(rttov_bt_clear)          
+           if (allocated(rttov_rad_total))              deallocate(rttov_rad_total)          
+           if (allocated(rttov_rad_clear))              deallocate(rttov_rad_clear)          
+           if (allocated(rttov_rad_cloudy))             deallocate(rttov_rad_cloudy)          
+           if (allocated(rttov_refl_total))             deallocate(rttov_refl_total)          
+           if (allocated(rttov_refl_clear))             deallocate(rttov_refl_clear)   
+           
+           ! Free up memory from output (if necessary)
+!           if (allocated(cosp_inst_OUTS(i) % channel_indices))        deallocate(cosp_inst_OUTS(i) % channel_indices)          
+!           if (allocated(cosp_inst_OUTS(i) % bt_total))               deallocate(cosp_inst_OUTS(i) % bt_total)          
+!           if (allocated(cosp_inst_OUTS(i) % bt_clear))               deallocate(cosp_inst_OUTS(i) % bt_clear)          
+!           if (allocated(cosp_inst_OUTS(i) % rad_total))              deallocate(cosp_inst_OUTS(i) % rad_total)          
+!           if (allocated(cosp_inst_OUTS(i) % rad_clear))              deallocate(cosp_inst_OUTS(i) % rad_clear)          
+!           if (allocated(cosp_inst_OUTS(i) % rad_cloudy))             deallocate(cosp_inst_OUTS(i) % rad_cloudy)          
+!           if (allocated(cosp_inst_OUTS(i) % refl_total))             deallocate(cosp_inst_OUTS(i) % refl_total)          
+!           if (allocated(cosp_inst_OUTS(i) % refl_clear))             deallocate(cosp_inst_OUTS(i) % refl_clear)    
+
+
+        end do
+    
+    endif
+    
+    print*,'Lrttov_column multi-inst. successful'
+    
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
