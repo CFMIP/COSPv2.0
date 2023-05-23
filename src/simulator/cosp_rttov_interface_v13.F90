@@ -886,7 +886,6 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_SIMULATE_MI(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
-                                 iChannel_ret,                                     & ! Channel index outputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
@@ -898,8 +897,6 @@ CONTAINS
         rttovConfig
     logical,intent(in) :: &
         lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    integer(kind=jpim),intent(out),dimension(rttovIN%nChannels)  :: & ! Channels indices to return for output
-        iChannel_ret
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
@@ -918,9 +915,7 @@ CONTAINS
                                     bt_total,rad_total,                               &
                                     error)                                
 
-!        print*,'SIZE(iChannel_ret):   ',SIZE(iChannel_ret)
-!        print*,'SIZE(iChannel_out):   ',SIZE(iChannel_out)
-        iChannel_ret = iChannel_out ! JKS need to fix this
+        print*,'end of COSP_PC_RTTOV_SIMULATE_MI'
     else
         print*,'Running COSP_REG_RTTOV_SIMULATE in multi-inst. set-up'
         call COSP_REG_RTTOV_SIMULATE_MI(rttovIN,rttovConfig,lCleanup,                                 &
@@ -928,10 +923,6 @@ CONTAINS
                                      rad_total,rad_clear,rad_cloudy,                   &
                                      refl_total,refl_clear,                            &
                                      error)
-                                     
-!        print*,'SIZE(iChannel_ret):   ',SIZE(iChannel_ret)
-!        print*,'SIZE(iChannel):   ',SIZE(iChannel)                                    
-        iChannel_ret = iChannel ! JKS need to fix this, better define these variables
         
     endif
 
