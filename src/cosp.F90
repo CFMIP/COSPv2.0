@@ -54,7 +54,6 @@ MODULE MOD_COSP
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY:   &
       cosp_rttov_init,            &
       COSP_RTTOV_INI2,            &
-      cosp_rttov_simulate,        &
       cosp_rttov_simulate_mi,     &
       rttov_cfg,                  &
       rttov_output
@@ -71,7 +70,7 @@ MODULE MOD_COSP
   USE MOD_LIDAR_SIMULATOR,           ONLY: lidar_subcolumn,       lidar_column
   USE MOD_MODIS_SIM,                 ONLY: modis_subcolumn,       modis_column
   USE MOD_PARASOL,                   ONLY: parasol_subcolumn,     parasol_column
-  USE MOD_COSP_RTTOV,                ONLY: rttov_IN,              cosp_rttov_construct_profiles
+  USE MOD_COSP_RTTOV,                ONLY: rttov_IN
   USE MOD_COSP_STATS,                ONLY: COSP_LIDAR_ONLY_CLOUD,COSP_CHANGE_VERTICAL_GRID, &
                                            COSP_DIAG_WARMRAIN
 
@@ -1646,14 +1645,7 @@ CONTAINS
     ! RTTOV multi-instrument
     if (Lrttov_column) then
         print*,'0.'
-        ! 0. Load the column inputs into the . These are constant across instruments.
-!        call cosp_rttov_construct_profiles(rttovIN) ! Profile information is stored at the simulator level
-! For now, the "profiles" object is complicated and different for each instrument/setting (depends on clouds, trace gases, PC-RTTOV, etc)
 
-        ! 1. Allocate output for each requested instrument
-        ! 2. Run RTTOV for each instrument, passing the config files along.
-        ! 3. Write to COSPout if output is requested
-        ! 4. Free up memory from output
         do i=1,cospIN%Ninst_rttov
            print*,i
            print*,'1' 

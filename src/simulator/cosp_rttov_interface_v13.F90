@@ -831,56 +831,7 @@ CONTAINS
       end subroutine rttov_error
  
   END SUBROUTINE COSP_RTTOV_INIT
-  
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
-                                 iChannel_ret,                                     & ! Channel index outputs
-                                 bt_total,bt_clear,                                & ! Brightness Temp Outputs
-                                 rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
-                                 refl_total,refl_clear,                            & ! Reflectance Outputs
-                                 error)      
-
-    type(rttov_in),intent(in) :: &
-        rttovIN
-    logical,intent(in) :: &
-        lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    integer(kind=jpim),intent(out),dimension(rttovIN%nChannels)  :: & ! Channels indices to return for output
-        iChannel_ret
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
-        bt_total,                          &        ! All-sky
-        bt_clear,                          &        ! Clear-sky
-        rad_total,                         &        ! All-sky
-        rad_clear,                         &        ! Clear-sky
-        rad_cloudy,                        &        ! Cloudy-sky
-        refl_total,                        &        ! All-sky
-        refl_clear                                  ! Clear-sky
-    character(len=128) :: &
-        error     ! Error messages (only populated if error encountered) 
-
-    ! Check options to determine if the principal component approach should be run
-    if (opts % rt_ir % pc % addpc) then
-        call COSP_PC_RTTOV_SIMULATE(rttovIN,lCleanup,                                 &
-                                    bt_total,rad_total,                                &
-                                    error)                                
-!        print*,'SIZE(iChannel_ret):   ',SIZE(iChannel_ret)
-!        print*,'SIZE(iChannel_out):   ',SIZE(iChannel_out)
-        iChannel_ret = iChannel_out
-    else
-        call COSP_REG_RTTOV_SIMULATE(rttovIN,lCleanup,                                 &
-                                     bt_total,bt_clear,                                &
-                                     rad_total,rad_clear,rad_cloudy,                   &
-                                     refl_total,refl_clear,                            &
-                                     error)
-!        print*,'SIZE(iChannel_ret):   ',SIZE(iChannel_ret)
-!        print*,'SIZE(iChannel):   ',SIZE(iChannel)                                    
-        iChannel_ret = iChannel    
-        
-    endif
-
-  END SUBROUTINE COSP_RTTOV_SIMULATE
-  
+    
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
@@ -931,82 +882,6 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call regular subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_REG_RTTOV_SIMULATE(rttovIN,lCleanup,                                & ! Inputs
-                                     bt_total,bt_clear,                                & ! Brightness Temp Outputs
-                                     rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
-                                     refl_total,refl_clear,                            & ! Reflectance Outputs
-                                     error)                                              
-  
-    use mod_cosp_rttov,             only:        &
-        cosp_rttov_allocate,                     &
-        cosp_rttov_construct_profiles,           &
-        cosp_rttov_setup_emissivity_reflectance, &
-        cosp_rttov_call_direct,                  &
-        cosp_rttov_save_output,                  &
-        cosp_rttov_deallocate_profiles,          &
-        cosp_rttov_deallocate_coefs
-  
-    type(rttov_in),intent(in) :: &
-        rttovIN
-    logical,intent(in) :: &
-        lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
-        bt_total,                          &        ! All-sky
-        bt_clear,                          &        ! Clear-sky
-        rad_total,                         &        ! All-sky
-        rad_clear,                         &        ! Clear-sky
-        rad_cloudy,                        &        ! Cloudy-sky
-        refl_total,                        &        ! All-sky
-        refl_clear                                  ! Clear-sky
-    character(len=128) :: &
-        error     ! Error messages (only populated if error encountered)  
-
-    real(wp),dimension(10) :: driver_time
-
-    ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
-!    print*,'cosp_rttov_allocate begin' ! jks
-    call cpu_time(driver_time(1))
-    call cosp_rttov_allocate(rttovIN)
-!    print*,'cosp_rttov_allocate successful' ! jks
-    call cpu_time(driver_time(2))
-    call cosp_rttov_construct_profiles(rttovIN)
-!    print*,'cosp_rttov_construct_profiles successful' ! jks
-    call cpu_time(driver_time(3))
-    call cosp_rttov_setup_emissivity_reflectance()
-!    print*,'cosp_rttov_setup_emissivity_reflectance successful' ! jks
-    call cpu_time(driver_time(4))
-    call cosp_rttov_call_direct()
-!    print*,'cosp_rttov_call_direct successful' ! jks
-    call cpu_time(driver_time(5))
-    
-    call cosp_rttov_save_output(rttovIN,                        &
-                                bt_total,bt_clear,              &
-                                rad_total,rad_clear,rad_cloudy, &
-                                refl_total,refl_clear)
-!    print*,'cosp_rttov_save_and_deallocate_profiles successful' ! jks
-    call cpu_time(driver_time(6))
-    call cosp_rttov_deallocate_profiles(rttovIN)
-    call cpu_time(driver_time(7))
-    
-    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
-    print*,'Time to run "cosp_rttov_construct_profiles":     ',          driver_time(3)-driver_time(2)
-    print*,'Time to run "cosp_rttov_setup_emissivity_reflectance":     ',driver_time(4)-driver_time(3)
-    print*,'Time to run "cosp_rttov_call_direct":     ',                 driver_time(5)-driver_time(4)
-    print*,'Time to run "cosp_rttov_save_output":     ',                 driver_time(6)-driver_time(5)
-    print*,'Time to run "cosp_rttov_deallocate_profiles":     ',         driver_time(7)-driver_time(6)
-    
-    ! Deallocate the coefficient files if directed
-    if (lCleanup) then
-        call cpu_time(driver_time(8))
-        call cosp_rttov_deallocate_coefs()
-        call cpu_time(driver_time(9))
-        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(9)-driver_time(8)
-    endif
-
-!    print*,'Total RTTOV run time:     ',driver_time(8)-driver_time(1)
-
-  END SUBROUTINE COSP_REG_RTTOV_SIMULATE
-
   SUBROUTINE COSP_REG_RTTOV_SIMULATE_MI(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
                                      bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                      rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
@@ -1109,75 +984,6 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_pc_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
-                                    bt_total,rad_total,                               & ! Outputs
-                                    error)                                              
-  
-    use mod_cosp_rttov,             only:   &
-        cosp_pc_rttov_allocate,             &
-        cosp_rttov_construct_profiles,      &
-        cosp_pc_rttov_setup_emissivity,     &
-        cosp_pc_rttov_call_direct,          &
-        cosp_pc_rttov_save_output,          &
-        cosp_pc_rttov_deallocate_profiles,  &
-        cosp_rttov_deallocate_coefs
-  
-    type(rttov_in),intent(in) :: &
-        rttovIN 
-    logical,intent(in) :: &
-         lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
-        bt_total,                          &        ! All-sky
-        rad_total                                   ! All-sky
-    character(len=128) :: &
-        error     ! Error messages (only populated if error encountered)  
-
-    real(wp),dimension(10) :: driver_time
-
-    ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
-!    print*,'cosp_rttov_allocate begin' ! jks
-    call cpu_time(driver_time(1))
-    call cosp_pc_rttov_allocate(rttovIN)
-    print*,'cosp_pc_rttov_allocate successful' ! jks
-    call cpu_time(driver_time(2))
-    call cosp_rttov_construct_profiles(rttovIN)
-    print*,'cosp_rttov_construct_profiles successful' ! jks
-    call cpu_time(driver_time(3))
-    call cosp_pc_rttov_setup_emissivity()
-    print*,'cosp_pc_rttov_setup_emissivity successful' ! jks
-    call cpu_time(driver_time(4))
-    call cosp_pc_rttov_call_direct()
-    print*,'cosp_pc_rttov_call_direct successful' ! jks
-    call cpu_time(driver_time(5))
-    
-    call cosp_pc_rttov_save_output(rttovIN,                        &
-                                   bt_total,rad_total)
-    
-    print*,'cosp_pc_rttov_save_output successful' ! jks
-    call cpu_time(driver_time(6))
-    call cosp_pc_rttov_deallocate_profiles(rttovIN)
-    call cpu_time(driver_time(7))
-    
-    print*,'Time to run "cosp_pc_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
-    print*,'Time to run "cosp_rttov_construct_profiles":     ',             driver_time(3)-driver_time(2)
-    print*,'Time to run "cosp_pc_rttov_setup_emissivity":     ',            driver_time(4)-driver_time(3)
-    print*,'Time to run "cosp_pc_rttov_call_direct":     ',                 driver_time(5)-driver_time(4)
-    print*,'Time to run "cosp_pc_rttov_save_output":     ',                 driver_time(6)-driver_time(5)
-    print*,'Time to run "cosp_pc_rttov_deallocate_profiles":     ',         driver_time(7)-driver_time(6)
-    
-    ! Deallocate the coefficient files if directed
-    if (lCleanup) then
-        call cpu_time(driver_time(8))
-        call cosp_rttov_deallocate_coefs()
-        call cpu_time(driver_time(9))
-        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(9)-driver_time(8)
-    endif
-
-!    print*,'Total RTTOV run time:     ',driver_time(8)-driver_time(1)
-
-  END SUBROUTINE COSP_PC_RTTOV_SIMULATE
-
-
   SUBROUTINE COSP_PC_RTTOV_SIMULATE_MI(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
                                     bt_total,rad_total,                               & ! Outputs
                                     error)                                              
