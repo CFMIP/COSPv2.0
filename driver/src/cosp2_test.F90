@@ -666,7 +666,7 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  call write_cosp2_output(Npoints, Ncolumns, Nlevels, rttov_Nchannels, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
+  call write_cosp2_output(Npoints, Ncolumns, Nlevels, rttov_Nchannels, rttov_Ninstruments, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
 
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
@@ -674,10 +674,15 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  print*,'destroy_cosp_outputs'
   call destroy_cosp_outputs(cospOUT)
+  print*,'destroy_cospIN'
   call destroy_cospIN(cospIN)
+  print*,'destroy_cospstateIN'
   call destroy_cospstateIN(cospstateIN)
+  print*,'cosp_cleanUp'
   call cosp_cleanUp()
+  print*,'done.'
   ! Getting a segmentation fault here? Why? JKS
 
 contains
@@ -1549,6 +1554,7 @@ contains
             print*,'rttov_configs(i) % Lrttov_pc:         ',rttov_configs(i) % Lrttov_pc
 
             print*,'1.'
+            x % rttov_outputs(i) % nchan_out = rttov_configs(i) % nchan_out
             if (rttov_configs(i) % Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
                 print*,'2a.'
                 allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
