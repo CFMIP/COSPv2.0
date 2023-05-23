@@ -297,16 +297,6 @@ program cosp2_test
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
        
-!   logical, allocatable, dimension(:) :: & 
-!       Lrttov_inst_bt,      &
-!       Lrttov_inst_rad,     &
-!       Lrttov_inst_refl,    &
-!       Lrttov_inst_cld,     &
-!       Lrttov_inst_aer,     &
-!       Lrttov_inst_pc
-       
-!  type(rttov_instrument_config), allocatable :: rttov_instrument_configs ! JKS this won't work. DDTs would have to be in cosp.F90
-       
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -349,38 +339,6 @@ program cosp2_test
 !  print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
   rttov_instrument_namelists(1:3) = (/'instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt'/)
   print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
-  
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! Read in Logical arguments needed to construct outputs from RTTOV instrument namelists.
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
-!  allocate(Lrttov_inst_bt(rttov_Ninstruments),Lrttov_inst_rad(rttov_Ninstruments),     &
-!           Lrttov_inst_refl(rttov_Ninstruments),Lrttov_inst_cld(rttov_Ninstruments),   &
-!           Lrttov_inst_aer(rttov_Ninstruments),Lrttov_inst_pc(rttov_Ninstruments))
-!  allocate(rttov_instrument_Nchannels(rttov_Ninstruments))
-  
-!  do inst_idx=1,rttov_Ninstruments  
-!      namelist/RTTOV_CONFIG/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,Lrttov_aer, &
-!                            Lrttov_pc                          
-      
-!      open(10,file=rttov_instrument_namelists(inst_idx),status='unknown')
-!      read(10,nml=RTTOV_CONFIG) ! I needed to break up the namelist because I can't read a subset of values. This is weird.
-      
-!      Lrttov_inst_bt(inst_idx)        = Lrttov_bt
-!      Lrttov_inst_rad(inst_idx)       = Lrttov_rad
-!      Lrttov_inst_refl(inst_idx)      = Lrttov_refl
-!      Lrttov_inst_cld(inst_idx)       = Lrttov_cld
-!      Lrttov_inst_aer(inst_idx)       = Lrttov_aer
-!      Lrttov_inst_pc(inst_idx)        = Lrttov_pc
-!  end do
-  
-  
-!  print*,'Lrttov_inst_bt:    ',Lrttov_inst_bt
-!  print*,'Lrttov_inst_rad:   ',Lrttov_inst_rad
-!  print*,'Lrttov_inst_refl:  ',Lrttov_inst_refl
-!  print*,'Lrttov_inst_cld:   ',Lrttov_inst_cld
-!  print*,'Lrttov_inst_aer:   ',Lrttov_inst_aer
-!  print*,'Lrttov_inst_pc:    ',Lrttov_inst_pc
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
@@ -666,7 +624,7 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  call write_cosp2_output(Npoints, Ncolumns, Nlevels, rttov_Nchannels, rttov_Ninstruments, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
+  call write_cosp2_output(Npoints, Ncolumns, Nlevels, rttov_Ninstruments, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
 
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
