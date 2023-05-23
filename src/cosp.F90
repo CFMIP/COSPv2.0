@@ -1818,22 +1818,9 @@ CONTAINS
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
     if (Lrttov) call cosp_rttov_init()
-    if (Lcloudsat) then
-       call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,                          &
+    if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
          cloudsat_use_gas_abs,cloudsat_do_ray,R_UNDEF,N_HYDRO, surface_radar,            &
          rcfg,cloudsat_micro_scheme)
-    else
-       allocate(rcfg%N_scale_flag(1,1))
-       allocate(rcfg%Z_scale_flag(1,1,1))
-       allocate(rcfg%Z_scale_added_flag(1,1,1))
-       allocate(rcfg%Ze_scaled(1,1,1))
-       allocate(rcfg%Zr_scaled(1,1,1))
-       allocate(rcfg%kr_scaled(1,1,1))
-       allocate(rcfg%fc(1,1,1))
-       allocate(rcfg%rho_eff(1,1,1))
-       allocate(rcfg%base_list(1))
-       allocate(rcfg%step_list(1))
-    end if
     if (Lcalipso) call cosp_calipso_init()
     if (LgrLidar532) call cosp_grLidar532_init()
     if (Latlid) call cosp_atlid_init()
