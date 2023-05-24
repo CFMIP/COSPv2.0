@@ -448,8 +448,8 @@ program cosp2_test
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
-       rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,      &
-       Lrttov_cldparam, Lrttov_aerparam,Lrttov_pc,rttov_input_namelist,                  &
+!       rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,      &
+!       Lrttov_cldparam, Lrttov_aerparam,Lrttov_pc,rttov_input_namelist,                  &
        rttov_Ninstruments, rttov_instrument_namelists, rttov_configs)!, rttov_instrument_Nchannels)
 !       Lrttov_run,rttov_Ninstruments,rttov_instrument_namelists,                         & ! Input logical, input N instr., instr. nls
 !       rttov_instrument_configs,                                                         & ! Output object is an array of N rttov_config_opts ! JKS can this be a pointer?

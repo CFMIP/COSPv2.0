@@ -425,14 +425,26 @@ contains
   ! Largely from cosp_rttov_v11.F90 file.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_construct_profiles_mi(rttovIN,Lrttov_cld,Lrttov_aer &
-                           )
+  subroutine cosp_rttov_construct_profiles_mi(rttovIN,        &
+                                              Lrttov_cld,     &
+                                              Lrttov_aer,     &
+                                              inst_co2_mr,    &
+                                              inst_ch4_mr,    &
+                                              inst_co_mr,     &
+                                              inst_n2o_mr,    &
+                                              inst_so2_mr)
 
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
         rttovIN
-    logical,intent(in) :: &
-        Lrttov_cld,        &
+    logical,intent(in)        :: &
+        Lrttov_cld,       &
         Lrttov_aer
+    real(wp),intent(in)       :: &
+        inst_co2_mr,      &
+        inst_ch4_mr,      &
+        inst_co_mr,       &
+        inst_n2o_mr,      &
+        inst_so2_mr
     
     ! Loop variables
     integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for levels.
@@ -452,12 +464,20 @@ contains
         
       ! Initialize trace gas concentrations from user input
       ! These gases are not in COSP input files but might be in the futre
-      profiles(i)%co2(:)        = co2
-      profiles(i)%n2o(:)        = n2o
-      profiles(i)%co(:)         = co
-      profiles(i)%ch4(:)        = ch4
-      profiles(i)%so2           = so2
+
+      profiles(i)%co2(:)        = inst_co2_mr
+      profiles(i)%n2o(:)        = inst_n2o_mr
+      profiles(i)%co(:)         = inst_co_mr
+      profiles(i)%ch4(:)        = inst_ch4_mr
+      profiles(i)%so2           = inst_so2_mr ! syntax slightly different?
       
+!      profiles(i)%co2(:)        = co2
+!      profiles(i)%n2o(:)        = n2o
+!      profiles(i)%co(:)         = co
+!      profiles(i)%ch4(:)        = ch4
+!      profiles(i)%so2           = so2
+      
+! For when trace gas columns are       
 !      profiles(i)%co2(:)        =  rttovIN%co2
 !      profiles(i)%n2o(:)        =  rttovIN%n2o
 !      profiles(i)%co(:)         =  rttovIN%co

@@ -52,7 +52,6 @@ MODULE MOD_COSP
                                          cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY:   &
-      cosp_rttov_init,            &
       COSP_RTTOV_INI2,            &
       cosp_rttov_simulate_mi,     &
       rttov_cfg,                  &
@@ -1567,102 +1566,20 @@ CONTAINS
        if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
     endif
 
-    print*,'Lrttov_column start' ! jks
-
-    ! RTTOV
-!    if (Lrttov_column) then
-
-       ! Allocate memory for the outputs - I won't need all of these in every situation.
-       ! Only allocate clear-sky memory when PC-RTTOV is run.       
-!       allocate(rttov_Ichannel(rttovIN%Nchannels)) ! Channel indices
-!       if (Lrttov_pc) then       
-!           allocate(rttov_bt_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
-!           allocate(rttov_rad_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
-!           allocate(rttov_bt_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky brightness temp
-!           allocate(rttov_rad_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky brightness temp
-!       else 
-!           allocate(rttov_bt_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky brightness temp
-!           allocate(rttov_bt_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
-!           allocate(rttov_rad_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky brightness temp
-!           allocate(rttov_rad_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
-!           allocate(rttov_rad_cloudy(rttovIN%Npoints,rttovIN%Nchannels)) ! cloudy-sky brightness temp
-!           allocate(rttov_refl_total(rttovIN%Npoints,rttovIN%Nchannels)) ! all-sky Bi-directional reflectance factor
-!           allocate(rttov_refl_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky Bi-directional reflectance factor       
-!       endif
-       ! JKS new RTTOV subroutine for v13 called from the RTTOV interface.
-!       call cpu_time(driver_time(3))
-       ! Run simulator
-!       call cosp_rttov_simulate(rttovIN,Lrttov_cleanUp,                             & ! Inputs
-!                                rttov_Ichannel,                                     & ! Channel Indices
-!                                rttov_bt_total,rttov_bt_clear,                      & ! Brightness Temp Outputs
-!                                rttov_rad_total,rttov_rad_clear,rttov_rad_cloudy,   & ! Radiance Outputs
-!                                rttov_refl_total,rttov_refl_clear,                  & ! Reflectance Outputs
-!                                cosp_simulator(nError+1))
-!       call cpu_time(driver_time(4))
-!       print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
-       
-       ! Write to cospOUT
-!       if (associated(cospOUT%rttov_Ichannel))                    &
-!           cospOUT%rttov_Ichannel(:) = rttov_Ichannel   
-!       if (Lrttov_pc) then
-!           if (associated(cospOUT%rttov_bt_total_pc))                    &
-!              cospOUT%rttov_bt_total_pc(ij:ik,:) = rttov_bt_total       
-!           if (associated(cospOUT%rttov_rad_total_pc))                    &
-!              cospOUT%rttov_rad_total_pc(ij:ik,:) = rttov_rad_total
-!       else
-!           if (associated(cospOUT%rttov_bt_total))                    &
-!              cospOUT%rttov_bt_total(ij:ik,:) = rttov_bt_total
-!           if (associated(cospOUT%rttov_bt_clear))                    &
-!              cospOUT%rttov_bt_clear(ij:ik,:) = rttov_bt_clear
-!           if (associated(cospOUT%rttov_rad_total))                    &
-!              cospOUT%rttov_rad_total(ij:ik,:) = rttov_rad_total 
-!           if (associated(cospOUT%rttov_rad_clear))                   &
-!              cospOUT%rttov_rad_clear(ij:ik,:) = rttov_rad_clear
-!           if (associated(cospOUT%rttov_rad_cloudy))                  &
-!              cospOUT%rttov_rad_cloudy(ij:ik,:) = rttov_rad_cloudy
-!           if (associated(cospOUT%rttov_refl_total))                  &
-!              cospOUT%rttov_refl_total(ij:ik,:) = rttov_refl_total
-!           if (associated(cospOUT%rttov_refl_clear))                  &
-!              cospOUT%rttov_refl_clear(ij:ik,:) = rttov_refl_clear
-!       endif 
-          
-       ! Free up memory from output (if necessary)
-!       if (allocated(rttov_Ichannel))               deallocate(rttov_Ichannel)          
-!       if (allocated(rttov_bt_total))               deallocate(rttov_bt_total)          
-!       if (allocated(rttov_bt_clear))               deallocate(rttov_bt_clear)          
-!       if (allocated(rttov_rad_total))              deallocate(rttov_rad_total)          
-!       if (allocated(rttov_rad_clear))              deallocate(rttov_rad_clear)          
-!       if (allocated(rttov_rad_cloudy))             deallocate(rttov_rad_cloudy)          
-!       if (allocated(rttov_refl_total))             deallocate(rttov_refl_total)          
-!       if (allocated(rttov_refl_clear))             deallocate(rttov_refl_clear)      
-                                                           
-!    endif
-!    print*,'Lrttov_column successful' ! jks
-    
-    
-    print*,'Lrttov_column multi-inst. start'
-    
     ! RTTOV multi-instrument
+    print*,'Lrttov_column multi-inst. start'
     if (Lrttov_column) then
-        print*,'0.'
-
         do i=1,cospIN%Ninst_rttov
-           print*,i
-           print*,'1' 
-
            ! Allocate memory for the outputs - I won't need all of these in every situation.
            ! Only allocate clear-sky memory when PC-RTTOV is run.
            print*,'cospIN % cfg_rttov(i) % nchan_out:    ',cospIN % cfg_rttov(i) % nchan_out ! issue here
            allocate(rttov_Ichannel(cospIN % cfg_rttov(i) % nchan_out)) ! Channel indices
-           print*,'2' 
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
-               print*,'3a' 
                allocate(rttov_bt_total(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
                allocate(rttov_rad_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
     !           allocate(rttov_bt_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
     !           allocate(rttov_rad_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky radiance
            else 
-               print*,'3b' 
                allocate(rttov_bt_total(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! all-sky brightness temp
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! clear-sky brightness temp
                allocate(rttov_rad_total(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out))  ! all-sky brightness temp
@@ -1673,7 +1590,6 @@ CONTAINS
            endif
            
            call cpu_time(driver_time(3))
-           print*,'4.'
            ! Run simulator
            call cosp_rttov_simulate_mi(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,        & ! Inputs
                                     rttov_bt_total,rttov_bt_clear,                      & ! Brightness Temp Outputs
@@ -1944,18 +1860,17 @@ CONTAINS
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
-       NchanIN, Lrttov_bt, Lrttov_rad, Lrttov_refl,                                      &
-       Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam, Lrttov_pc,              &
-       rttov_input_namelist,  &
+!       NchanIN, Lrttov_bt, Lrttov_rad, Lrttov_refl,                                      &
+!       Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam, Lrttov_pc,              &
+!       rttov_input_namelist,  &
        rttov_Ninstruments, rttov_instrument_namelists,rttov_configs) !, rttov_instrument_Nchannels)
 
     ! INPUTS
     logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
-    logical,intent(in) ::                                           &
-         Lrttov_bt, Lrttov_rad, Lrttov_refl,                        &
-         Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam,  &
-         Lrttov_pc
-    ! JKS to-do
+!    logical,intent(in) ::                                           &
+!         Lrttov_bt, Lrttov_rad, Lrttov_refl,                        &
+!         Lrttov_cld, Lrttov_aer, Lrttov_cldparam, Lrttov_aerparam,  &
+!         Lrttov_pc
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & !
          cloudsat_do_ray,            & !
@@ -1965,9 +1880,8 @@ CONTAINS
          Nvgrid,                     & ! Number of levels for new L3 grid
          surface_radar,              & !
          rttov_Ninstruments
-!    integer,pointer,intent(inout)  :: &
-    integer,intent(inout)  :: &
-         NchanIN
+!    integer,intent(inout)  :: &
+!         NchanIN
     real(wp),intent(in) :: &
          cloudsat_radar_freq,        & !
          cloudsat_k2                   !
@@ -1979,18 +1893,14 @@ CONTAINS
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
     real(wp),dimension(10) :: driver_time
     
-    character(len=256),intent(in) :: rttov_input_namelist
+!    character(len=256),intent(in) :: rttov_input_namelist
     
     type(character(len=256)), dimension(rttov_Ninstruments) :: & 
         rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
     
     ! OUTPUTS
     type(radar_cfg) :: rcfg
-!    type(rttov_cfg), :: rttov_configs
     type(rttov_cfg), dimension(:), allocatable :: rttov_configs
-!    type(rttov_cfg), dimension(rttov_Ninstruments) :: rttov_configs
-!    type(rttov_cfg), allocatable :: rttov_configs(:)
-!    integer,intent(out),dimension(rttov_Ninstruments) :: rttov_instrument_Nchannels
 
     ! Local variables
     integer  :: i
@@ -2038,17 +1948,11 @@ CONTAINS
     ! I think that I will try to store an object of rttov_init_objects here, 
     
     ! Could print diagnostic on timing here.
-!    rttov_instrument_Nchannels(:) = 0 ! initialize at 0 ! JKS clean up
     if (Lrttov) then
         call cpu_time(driver_time(1))
         call cosp_rttov_ini2(Nlevels,rttov_Ninstruments,       &
                              rttov_instrument_namelists,       &
                              rttov_configs)
-        call cosp_rttov_init(NchanIN, Nlevels,                 &
-                             Lrttov_bt,Lrttov_rad,Lrttov_refl, &
-                             Lrttov_cld,Lrttov_aer,            &
-                             Lrttov_cldparam,Lrttov_aerparam,  &
-                             Lrttov_pc,rttov_input_namelist)
                              
         call cpu_time(driver_time(2))
         print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
