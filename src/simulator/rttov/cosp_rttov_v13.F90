@@ -112,43 +112,12 @@ module mod_cosp_rttov
   ! Scattering coefficients (read in once during initialization)
 ! JKS - KISS
 !  type(rttov_scatt_coef) :: &
-!       coef_scatt
-  ! RTTOV setup and options (set during initialization)
-  logical             :: &
-      do_rttov_cld,        & ! Include clouds in RTTOV calculations
-      do_rttov_aer,        & ! Include aerosols in RTTOV calculations
-      do_rttov_bt,         & ! Return brightness temps in RTTOV calculations
-      do_rttov_rad,        & ! Return radiances in RTTOV calculations
-      do_rttov_refl,       & ! Return reflectances in RTTOV calculations
-      do_rttov_pcrttov,    & ! Do computations using PC-RTTOV
-      rttov_cld_optparam,  & ! Use user-supplied optical cloud parameters
-      rttov_aer_optparam,  & ! Use user-supplied optical aerosol parameters
-      Lchannel_filepath
-      
-  ! --- Well-mixed trace gas mixing ratios from user via RTTOV namelist
-  real(wp)  :: so2 = 0._wp
-  real(wp)  :: ch4 = 0._wp
-  real(wp)  :: co  = 0._wp
-  real(wp)  :: co2 = 0._wp
-  real(wp)  :: n2o = 0._wp
-  real(wp)  :: zenang = 0._wp ! NADIR default
-       
-  character(len=256) :: &
-      rttovDir                    ! Directory for the RTTOV source code
-      
-  character(len=256) :: PC_coef_filepath = ''
-      
-! JKS - KISS
-!  type(rttov_options_scatt) :: &
-!       opts_scatt
+!       coef_scatt      
 
   ! module-wides variables for input
   !====================
   integer(kind=jpim) :: dosolar
-  integer(kind=jpim) :: nchanprof ! JKS - jpim is RTTOV integer type
 
-  TYPE(rttov_options)              :: opts                     ! defaults to everything optional switched off
-  TYPE(rttov_coefs)                :: coef_rttov               ! Coefficients structure
   TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
   LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
   TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
@@ -178,7 +147,6 @@ module mod_cosp_rttov
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols,     & ! Number of subcolumns
-          nChannels,    & ! Number of channels to simulate ! JKS, can remove now
           month           ! Month (needed for surface emissivity calculation)
      real(wp),pointer :: & ! Could change the dimensionality of these in the future
           co2,          & ! Carbon dioxide 
@@ -245,7 +213,7 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   subroutine cosp_rttov_allocate_mi(rttovIN,inst_nChannels_rec,inst_opts,      &
-                                    inst_coefs,inst_iChannel)
+                                    inst_coefs,inst_iChannel,inst_nchanprof)
                            
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -257,7 +225,8 @@ contains
         inst_coefs
     integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
         inst_iChannel
-    
+    integer(kind=jpim),intent(inout) :: &
+        inst_nchanprof    
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch
     
@@ -268,15 +237,14 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     ! Determine the total number of radiances to simulate (nchanprof).    
-    nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
-!    print*,'nchanprof:  ',nchanprof
+    inst_nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
     
     ! Allocate structures for rttov_direct
     call rttov_alloc_direct( &
         errorstatus,             &
         1_jpim,                  &  ! 1 => allocate
         rttovIN%nPoints,         &
-        nchanprof,               &
+        inst_nchanprof,          &
         rttovIN%nLevels,         &
         chanprof,                &
         inst_opts,               &
@@ -319,7 +287,7 @@ contains
   subroutine cosp_pc_rttov_allocate_mi(rttovIN,inst_PC_coef_filepath, & !inst_npcscores,    &
                                        inst_coefs,inst_opts,                            &
                                        inst_nchannels_rec,inst_iChannel_in,             &
-                                       inst_iChannel_out) !,inst_predictindex)
+                                       inst_nchanprof, inst_iChannel_out) !,inst_predictindex)
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -333,6 +301,8 @@ contains
         inst_nchannels_rec
     integer(kind=jpim),intent(in),dimension(inst_nchannels_rec)     :: &
         inst_iChannel_in ! Channel indices the user initially requests.        
+    integer(kind=jpim),intent(inout) :: &
+        inst_nchanprof    
     integer(kind=jpim),intent(inout),allocatable  :: &
         inst_iChannel_out(:)      ! Passing out the channel indices
 
@@ -355,7 +325,7 @@ contains
 
     ! npred_pc is only used in the pc_rttov_allocate step so I can remove the global definition later
     inst_npred_pc  = SIZE(predictindex)
-    nchanprof = inst_npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
+    inst_nchanprof = inst_npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
       
     ! Determine the number of reconstructed radiances per profile (nchannels_rec)
     if (inst_opts % rt_ir % pc % addradrec) then
@@ -386,7 +356,7 @@ contains
           errorstatus,                                   &
           1_jpim,                                        &  ! 1 => allocate
           rttovIN%nPoints,                               &
-          nchanprof,                                     &
+          inst_nchanprof,                                &
           rttovIN%nLevels,                               &
           chanprof,                                      & ! Make this instrument-specific? The rttov_config DDT would then be assigned to this value. Allocation difficulties?
           inst_opts,                                     &
@@ -432,7 +402,8 @@ contains
                                               inst_ch4_mr,    &
                                               inst_co_mr,     &
                                               inst_n2o_mr,    &
-                                              inst_so2_mr)
+                                              inst_so2_mr,    &
+                                              inst_zenang)
 
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
         rttovIN
@@ -444,7 +415,8 @@ contains
         inst_ch4_mr,      &
         inst_co_mr,       &
         inst_n2o_mr,      &
-        inst_so2_mr
+        inst_so2_mr,      &
+        inst_zenang
     
     ! Loop variables
     integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for levels.
@@ -515,7 +487,7 @@ contains
       profiles(i)%skin%fastem(5)  =  0.3
 
       ! Viewing angles
-      profiles(i)%zenangle      = zenang ! pass in from cosp
+      profiles(i)%zenangle      = inst_zenang ! pass in from cosp
       profiles(i)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
 
       profiles(i)%latitude      = rttovIN%latitude(i)
@@ -881,26 +853,28 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_deallocate_profiles_mi(rttovIN,inst_nChannels_rec,inst_opts,inst_coefs)
+  subroutine cosp_rttov_deallocate_profiles_mi(rttovIN,              &
+                                               inst_opts,            &
+                                               inst_coefs,           &
+                                               inst_nchanprof)
 
     type(rttov_in),intent(in) :: &
         rttovIN
-    integer(kind=jpim),intent(in)  :: &
-        inst_nChannels_rec
+!    integer(kind=jpim),intent(in)  :: &
+!        inst_nChannels_rec
     type(rttov_options),intent(in) :: &
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
+    integer(kind=jpim),intent(in) :: &
+        inst_nchanprof    
         
-    ! Does this variable need to be global? I don't think so.
-    nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
-
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &
         errorstatus,             &
         0_jpim,                  &  ! 0 => deallocate
         rttovIN%nPoints,         &
-        nchanprof,               & ! JKS
+        inst_nchanprof,          & 
         rttovIN%nLevels,         &
         chanprof,                & ! JKS
         inst_opts,               &
@@ -925,9 +899,10 @@ contains
   subroutine cosp_pc_rttov_deallocate_profiles_mi(rttovIN,               &
                                                   inst_nChannels_rec,    &
                                                   inst_opts,             &
-                                                  inst_coefs)
+                                                  inst_coefs,            &
+                                                  inst_nchanprof)
                                                   
-    type(rttov_in),intent(in) :: &
+    type(rttov_in),intent(in)      :: &
         rttovIN
     integer(kind=jpim),intent(in)  :: &
         inst_nChannels_rec
@@ -935,6 +910,8 @@ contains
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
+    integer(kind=jpim),intent(in)  :: &
+        inst_nchanprof    
         
     if (ASSOCIATED(predictindex)) deallocate (predictindex, stat=alloc_status(10))
     call rttov_error('mem dellocation error for "predictindex"', lalloc = .true.)
@@ -947,7 +924,7 @@ contains
         errorstatus,             &
         0_jpim,                  &  ! 0 => deallocate
         rttovIN%nPoints,         &
-        nchanprof,               &
+        inst_nchanprof,          &
         rttovIN%nLevels,         &
         chanprof,                &
         inst_opts,               &

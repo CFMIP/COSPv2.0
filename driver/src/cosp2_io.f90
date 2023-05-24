@@ -1591,10 +1591,6 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_var(fileID,varID(83),loc)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    if (associated(cospOUT%rttov_Ichannel)) then
-       status = nf90_put_var(fileID,varID(157),cospOUT%rttov_Ichannel)
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    endif
     
     ! CALIPSO simulator output
     if (associated(cospOUT%calipso_betaperp_tot)) then

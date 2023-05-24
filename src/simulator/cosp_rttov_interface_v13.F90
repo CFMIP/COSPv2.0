@@ -32,15 +32,8 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
-  use mod_cosp_rttov,   only: nchannels_rec,iChannel,emisChannel,reflChannel,            &
-                              coef_rttov,opts,rttov_in,                                  &
-                              do_rttov_bt,do_rttov_rad,do_rttov_refl,                    &
-                              do_rttov_cld,do_rttov_aer,do_rttov_pcrttov,                &
-                              rttov_cld_optparam,rttov_aer_optparam,                     &
-                              rttov_direct_nthreads,rttovDir,PC_coef_filepath,           &
-                              so2,ch4,co,co2,n2o,zenang,npcscores,predictindex,          &
-                              iChannel_out,Lchannel_filepath
-                              
+
+  use mod_cosp_rttov,   only: rttov_in                              
                               
   ! rttov_const contains useful RTTOV constants
   USE rttov_const, ONLY :     &
@@ -72,7 +65,6 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 
   INTEGER(KIND=jpim) :: alloc_status(60)
 
-
   ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
   type rttov_cfg
       logical(KIND=jplm)           :: &
@@ -88,6 +80,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           cld_coef_filepath,   &
           PC_coef_filepath
       integer(KIND=jpim)           :: &
+          nchanprof,           &
           rttov_direct_nthreads
       integer(KIND=jpim)           :: &
           nchan_out,           &
@@ -98,7 +91,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           CO_mr,               &
           N2O_mr,              &
           SO2_mr,              &
-          rttov_ZenAng
+          ZenAng
       integer(kind=jpim), allocatable  :: &
           iChannel(:),      &  ! Requested channel indices
           iChannel_out(:)      ! Passing out the channel indices (actual output channels)
@@ -108,9 +101,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
       type(rttov_options)          :: &
           opts                               ! RTTOV options structure
       type(rttov_coefs)            :: &
-          coefs
+          coefs                              ! RTTOV coefficients structure
   end type rttov_cfg
-  
   
   type rttov_output
       integer             :: &
@@ -133,9 +125,9 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_ini2
+  ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INI2(Nlevels,Ninstruments,instrument_namelists,       &
+  SUBROUTINE COSP_RTTOV_INIT(Nlevels,Ninstruments,instrument_namelists,       &
                              rttov_configs)
 
       integer,intent(in) :: &
@@ -162,7 +154,7 @@ CONTAINS
       end do
          
        
-  END SUBROUTINE COSP_RTTOV_INI2
+  END SUBROUTINE COSP_RTTOV_INIT
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
@@ -274,7 +266,7 @@ CONTAINS
     rttov_config%CO_mr        = CO_mr
     rttov_config%CO2_mr       = CO2_mr
     rttov_config%CH4_mr       = CH4_mr
-    rttov_config%rttov_ZenAng = rttov_ZenAng
+    rttov_config%ZenAng       = rttov_ZenAng
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1. Initialise RTTOV options structure
@@ -508,7 +500,7 @@ CONTAINS
         rttovConfig
     logical,intent(in) :: &
         lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so! 
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
         rad_total,                         &        ! All-sky
@@ -563,7 +555,7 @@ CONTAINS
         rttovConfig
     logical,intent(in) :: &
          lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & 
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
         rad_total,                         &        ! All-sky
@@ -583,7 +575,8 @@ CONTAINS
                                 rttovConfig % nChannels_rec,   &
                                 rttovConfig % opts,            &
                                 rttovConfig % coefs,           &
-                                rttovConfig % iChannel)
+                                rttovConfig % iChannel,        &
+                                rttovConfig % nchanprof)    
         
     print*,'cosp_rttov_allocate successful' ! jks
     call cpu_time(driver_time(2))
@@ -594,7 +587,8 @@ CONTAINS
                                           rttovConfig % CH4_mr,                   &
                                           rttovConfig % CO_mr,                    &
                                           rttovConfig % N2O_mr,                   &
-                                          rttovConfig % SO2_mr)
+                                          rttovConfig % SO2_mr,                   &
+                                          rttovConfig % ZenAng)
           
     print*,'cosp_rttov_construct_profiles_mi successful' ! jks
     call cpu_time(driver_time(3))
@@ -622,9 +616,9 @@ CONTAINS
     print*,'cosp_rttov_save_output successful' ! jks
     call cpu_time(driver_time(6))
     call cosp_rttov_deallocate_profiles_mi(rttovIN,                       &
-                                           rttovConfig % nChannels_rec,   &
                                            rttovConfig % opts,            &
-                                           rttovConfig % coefs)    
+                                           rttovConfig % coefs,           &
+                                           rttovConfig % nchanprof)    
     call cpu_time(driver_time(7))
     
     print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
@@ -669,7 +663,7 @@ CONTAINS
         rttovConfig        
     logical,intent(in) :: &
          lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so!
         bt_total,                          &        ! All-sky
         rad_total                                   ! All-sky
     character(len=128) :: &
@@ -681,12 +675,13 @@ CONTAINS
 !    print*,'cosp_rttov_allocate begin' ! jks
     call cpu_time(driver_time(1))
     call cosp_pc_rttov_allocate_mi(rttovIN, &
-                                   rttovConfig%PC_coef_filepath,              &
-                                   rttovConfig%coefs,                         &
-                                   rttovConfig%opts,                          &
-                                   rttovConfig%nchannels_rec,                 &
-                                   rttovConfig%iChannel,                      &
-                                   rttovConfig%iChannel_out)    
+                                   rttovConfig % PC_coef_filepath,              &
+                                   rttovConfig % coefs,                         &
+                                   rttovConfig % opts,                          &
+                                   rttovConfig % nchannels_rec,                 &
+                                   rttovConfig % iChannel,                      &
+                                   rttovConfig % nchanprof,                     &
+                                   rttovConfig % iChannel_out)
     print*,'cosp_pc_rttov_allocate_mi successful' ! jks
     call cpu_time(driver_time(2))
     call cosp_rttov_construct_profiles_mi(rttovIN, &
@@ -696,7 +691,8 @@ CONTAINS
                                           rttovConfig % CH4_mr,                   &
                                           rttovConfig % CO_mr,                    &
                                           rttovConfig % N2O_mr,                   &
-                                          rttovConfig % SO2_mr)
+                                          rttovConfig % SO2_mr,                   &
+                                          rttovConfig % ZenAng)
     print*,'cosp_rttov_construct_profiles_mi successful' ! jks
     call cpu_time(driver_time(3))
     call cosp_pc_rttov_setup_emissivity()
@@ -722,7 +718,8 @@ CONTAINS
     call cosp_pc_rttov_deallocate_profiles_mi(rttovIN,                       &
                                               rttovConfig % nChannels_rec,   &
                                               rttovConfig % opts,            &
-                                              rttovConfig % coefs)
+                                              rttovConfig % coefs,           &
+                                              rttovConfig % nchanprof)    
     call cpu_time(driver_time(7))
     
     print*,'Time to run "cosp_pc_rttov_allocate":     ',                    driver_time(2)-driver_time(1)

@@ -448,12 +448,7 @@ program cosp2_test
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
-!       rttov_Nchannels, Lrttov_bt, Lrttov_rad, Lrttov_refl, Lrttov_cld, Lrttov_aer,      &
-!       Lrttov_cldparam, Lrttov_aerparam,Lrttov_pc,rttov_input_namelist,                  &
-       rttov_Ninstruments, rttov_instrument_namelists, rttov_configs)!, rttov_instrument_Nchannels)
-!       Lrttov_run,rttov_Ninstruments,rttov_instrument_namelists,                         & ! Input logical, input N instr., instr. nls
-!       rttov_instrument_configs,                                                         & ! Output object is an array of N rttov_config_opts ! JKS can this be a pointer?
-!       )
+       rttov_Ninstruments, rttov_instrument_namelists, rttov_configs)
   call cpu_time(driver_time(3))
     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -484,8 +479,7 @@ program cosp2_test
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
        Lwr_occfreq, Lcfodd,                                                              &
        rttov_Ninstruments,rttov_configs,                                                 &
-       Lrttov_bt, Lrttov_rad, Lrttov_refl,                                               &
-       Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
+       Npoints, Ncolumns, Nlevels, Nlvgrid_local, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
@@ -513,13 +507,13 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      if (iChunk .eq. 1) then
         call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
-        call construct_cospstateIN(Nptsperit,nLevels,rttov_Nchannels,cospstateIN)
+        call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)
      endif
      if (iChunk .eq. nChunks) then
         call destroy_cospIN(cospIN)
         call destroy_cospstateIN(cospstateIN)
         call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
-        call construct_cospstateIN(Nptsperit,nLevels,rttov_Nchannels,cospstateIN)    
+        call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)    
      endif
      call cpu_time(driver_time(4))
 
@@ -632,15 +626,10 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  print*,'destroy_cosp_outputs'
   call destroy_cosp_outputs(cospOUT)
-  print*,'destroy_cospIN'
   call destroy_cospIN(cospIN)
-  print*,'destroy_cospstateIN'
   call destroy_cospstateIN(cospstateIN)
-  print*,'cosp_cleanUp'
   call cosp_cleanUp()
-  print*,'done.'
   ! Getting a segmentation fault here? Why? JKS
 
 contains
@@ -1063,9 +1052,6 @@ contains
     y%Npart       = 4
     y%Nrefl       = PARASOL_NREFL
     allocate(y%frac_out(npoints,       ncolumns,nlevels))
-    if (Lrttov) then
-       y%nChannels_rttov    = rttov_Nchannels ! RTTOV dimension
-    endif
     
     if (Lmodis .or. Lmisr .or. Lisccp) then
        allocate(y%tau_067(npoints,        ncolumns,nlevels),&
@@ -1118,12 +1104,11 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospstateIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%     
-  subroutine construct_cospstateIN(npoints,nlevels,nchan,y)
+  subroutine construct_cospstateIN(npoints,nlevels,y)
     ! Inputs
     integer,intent(in) :: &
          npoints, & ! Number of horizontal gridpoints
-         nlevels, & ! Number of vertical levels
-         nchan      ! Number of channels
+         nlevels    ! Number of vertical levels
     ! Outputs
     type(cosp_column_inputs),intent(out) :: y         
     
@@ -1131,7 +1116,7 @@ contains
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),                             &
-             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
+!             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
@@ -1176,8 +1161,7 @@ contains
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
                                     N_rttov_instruments,rttov_configs,                   &
-                                    Lrttov_bt,Lrttov_rad,Lrttov_refl,                    & ! JKS remove when going multi-instrument
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)              ! JKS remove Nchan when going multi-instrument
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1274,9 +1258,6 @@ contains
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
-         Lrttov_bt,        & ! RTTOV mean clear-sky brightness temperature
-         Lrttov_rad,       & ! RTTOV mean clear-sky radiances
-         Lrttov_refl,      & ! RTTOV mean clear-sky radiances
          Lptradarflag0,    & ! CLOUDSAT 
          Lptradarflag1,    & ! CLOUDSAT 
          Lptradarflag2,    & ! CLOUDSAT 
@@ -1296,11 +1277,7 @@ contains
           Ncolumns,        & ! Number of subgrid columns
           Nlevels,         & ! Number of model levels
           Nlvgrid,         & ! Number of levels in L3 stats computation
-          Nchan,           & ! Number of RTTOV channels  
           N_rttov_instruments
-          
-!     integer,dimension(N_rttov_instruments),intent(in) :: &
-!         rttov_instrument_nchannels
           
      type(rttov_cfg), dimension(N_rttov_instruments),intent(in) :: &
          rttov_configs
@@ -1464,36 +1441,6 @@ contains
     if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
     if (Lcfodd)       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
     
-    ! JKS remove when going multi-instrument
-    ! RTTOV - Only add non-total fields if clouds or aerosols are simulated
-    if (Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
-        allocate(x%rttov_Ichannel(Nchan))
-        if (Lrttov_bt) then                              ! Brightness temp
-            allocate(x%rttov_bt_total_pc(Npoints,Nchan))
-!            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
-        endif
-        if (Lrttov_rad) then                             ! Radiance
-            allocate(x%rttov_rad_total_pc(Npoints,Nchan))
-!            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
-!            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
-        endif  
-    else
-        allocate(x%rttov_Ichannel(Nchan))
-        if (Lrttov_bt) then                              ! Brightness temp
-            allocate(x%rttov_bt_total(Npoints,Nchan))
-            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
-        endif
-        if (Lrttov_rad) then                             ! Radiance
-            allocate(x%rttov_rad_total(Npoints,Nchan))
-            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
-            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
-        endif
-        if (Lrttov_refl) then                            ! Reflectance
-            allocate(x%rttov_refl_total(Npoints,Nchan))
-            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_refl_clear(Npoints,Nchan))
-        endif    
-    endif
-    
     ! RTTOV - Allocate output for multiple instruments
     ! Do I not need to allocate the number of instruments? Because each rttov output DDT will be a pointer?
     if (N_rttov_instruments .gt. 0) then
@@ -1551,6 +1498,8 @@ contains
                 end if    
             end if         
         end do
+    else
+        x % N_rttov_instruments = 0
     end if
 
   end subroutine construct_cosp_outputs
@@ -1944,49 +1893,7 @@ contains
         nullify(y%wr_occfreq_ntotal)
      endif
      
-     ! RTTOV
-     if (associated(y%rttov_Ichannel)) then
-        deallocate(y%rttov_Ichannel)
-        nullify(y%rttov_Ichannel)
-     endif
-     if (associated(y%rttov_bt_total)) then
-        deallocate(y%rttov_bt_total)
-        nullify(y%rttov_bt_total)
-     endif
-     if (associated(y%rttov_bt_clear)) then
-        deallocate(y%rttov_bt_clear)
-        nullify(y%rttov_bt_clear)
-     endif
-     if (associated(y%rttov_rad_total)) then
-        deallocate(y%rttov_rad_total)
-        nullify(y%rttov_rad_total)
-     endif
-     if (associated(y%rttov_rad_clear)) then
-        deallocate(y%rttov_rad_clear)
-        nullify(y%rttov_rad_clear)
-     endif
-     if (associated(y%rttov_rad_cloudy)) then
-        deallocate(y%rttov_rad_cloudy)
-        nullify(y%rttov_rad_cloudy)
-     endif
-     if (associated(y%rttov_refl_total)) then
-        deallocate(y%rttov_refl_total)
-        nullify(y%rttov_refl_total)
-     endif
-     if (associated(y%rttov_refl_clear)) then
-        deallocate(y%rttov_refl_clear)
-        nullify(y%rttov_refl_clear)
-     endif
-     if (associated(y%rttov_bt_total_pc)) then
-        deallocate(y%rttov_bt_total_pc)
-        nullify(y%rttov_bt_total_pc)
-     endif
-     if (associated(y%rttov_rad_total_pc)) then
-        deallocate(y%rttov_rad_total_pc)
-        nullify(y%rttov_rad_total_pc)
-     endif     
-     
-     ! JKS - Add deallocate multi-inst rttov_output 
+     ! RTTOV multi-instrument
      if (associated(y%rttov_outputs)) then
          do i=1,y % N_rttov_instruments ! Iterate over each instrument
              if (associated(y%rttov_outputs(i)%channel_indices)) then
