@@ -35,9 +35,9 @@
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
   Lrttov_pc=.false.,                ! Run with PC-RTTOV
   !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
-  nchannels_rec2=500, ! 2300
+  nchannels_rec=500, ! 2300
   !-------------- RTTOV Filepaths 
-  Lchannel_filepath2=.false.,
+  Lchannel_filepath=.false.,
   channel_filepath='rttov_channel_input_AIRS.csv',
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/',

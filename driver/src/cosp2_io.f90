@@ -1449,7 +1449,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "1")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", " ")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_ichan")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif           
             if (associated(cospOUT%rttov_outputs(i)%bt_total)) then
@@ -1460,7 +1460,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_bt")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
             if (associated(cospOUT%rttov_outputs(i)%bt_clear)) then
@@ -1471,7 +1471,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_bt")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
             if (associated(cospOUT%rttov_outputs(i)%rad_total)) then
@@ -1482,7 +1482,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif    
             if (associated(cospOUT%rttov_outputs(i)%rad_clear)) then
@@ -1493,7 +1493,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif    
             if (associated(cospOUT%rttov_outputs(i)%rad_cloudy)) then
@@ -1504,7 +1504,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_cloudysky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif    
             if (associated(cospOUT%rttov_outputs(i)%refl_total)) then
@@ -1526,29 +1526,29 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "unitless")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_refl")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif    
             if (associated(cospOUT%rttov_outputs(i)%bt_total_pc)) then
                ii = ii + 1
-               status = nf90_def_var(fileID,"rttov_bt_total_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               status = nf90_def_var(fileID,"rttov_bt_clear_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-               status = nf90_put_att(fileID,varID(ii),"long_name","PC-RTTOV All-sky Brightness Temperature")
+               status = nf90_put_att(fileID,varID(ii),"long_name","PC-RTTOV Clear-sky Brightness Temperature")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "pcrttov_clearsky_bt")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif    
             if (associated(cospOUT%rttov_outputs(i)%rad_total_pc)) then
                ii = ii + 1
-               status = nf90_def_var(fileID,"rttov_rad_total_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               status = nf90_def_var(fileID,"rttov_rad_clear_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-               status = nf90_put_att(fileID,varID(ii),"long_name","PC-RTTOV All-sky Radiance")
+               status = nf90_put_att(fileID,varID(ii),"long_name","PC-RTTOV Clear-sky Radiance")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "pcrttov_clearsky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
         end do

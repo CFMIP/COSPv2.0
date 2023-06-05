@@ -134,15 +134,6 @@
   Lclmodis=.true.,
   !- RTTOV
   Lrttov_run=.true.,                ! Run RTTOV?
-  Lrttov_bt=.true.,                 ! Calculate RTTOV brightness temps
-  Lrttov_rad=.true.,                ! Calculate RTTOV radiances
-  Lrttov_refl=.false.,              ! Calculate RTTOV reflectivities
-  Lrttov_cld=.true.,                ! Calculate RTTOV all-sky + cloudy-sky values
-  Lrttov_cldparam=.false.,          ! Use user input cloud optical parameters
-  Lrttov_aer=.true.,                ! Calculate RTTOV all-sky + cloudy-sky values
-  Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
-  Lrttov_localtime=.false.,         ! May not be necessary at this level
-  Lrttov_pc=.true.,
   ! -CLOUDSAT precipitation frequency/occurence diagnostics
   Lptradarflag0=.true.,
   Lptradarflag1=.true.,

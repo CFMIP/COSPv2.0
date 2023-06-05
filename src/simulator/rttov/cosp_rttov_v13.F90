@@ -212,8 +212,8 @@ contains
   ! 4. Build the list of profile/channel indices in chanprof
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_allocate_mi(rttovIN,inst_nChannels_rec,inst_opts,      &
-                                    inst_coefs,inst_iChannel,inst_nchanprof)
+  subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,      &
+                                 inst_coefs,inst_iChannel,inst_nchanprof)
                            
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -275,7 +275,7 @@ contains
       end do
     end do
         
-  end subroutine cosp_rttov_allocate_mi
+  end subroutine cosp_rttov_allocate
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE pc_rttov_allocate - Subroutine for running PC-RTTOV
@@ -284,10 +284,10 @@ contains
   ! 4. Build the list of profile/channel indices in chanprof
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_pc_rttov_allocate_mi(rttovIN,inst_PC_coef_filepath, & !inst_npcscores,    &
-                                       inst_coefs,inst_opts,                            &
-                                       inst_nchannels_rec,inst_iChannel_in,             &
-                                       inst_nchanprof, inst_iChannel_out) !,inst_predictindex)
+  subroutine cosp_pc_rttov_allocate(rttovIN,inst_PC_coef_filepath, & !inst_npcscores,    &
+                                    inst_coefs,inst_opts,                            &
+                                    inst_nchannels_rec,inst_iChannel_in,             &
+                                    inst_nchanprof, inst_iChannel_out) !,inst_predictindex)
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -386,7 +386,7 @@ contains
       chanprof(lo:hi)%chan = predictindex(:)
     end do
         
-  end subroutine cosp_pc_rttov_allocate_mi
+  end subroutine cosp_pc_rttov_allocate
 
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -395,15 +395,15 @@ contains
   ! Largely from cosp_rttov_v11.F90 file.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_construct_profiles_mi(rttovIN,        &
-                                              Lrttov_cld,     &
-                                              Lrttov_aer,     &
-                                              inst_co2_mr,    &
-                                              inst_ch4_mr,    &
-                                              inst_co_mr,     &
-                                              inst_n2o_mr,    &
-                                              inst_so2_mr,    &
-                                              inst_zenang)
+  subroutine cosp_rttov_construct_profiles(rttovIN,        &
+                                           Lrttov_cld,     &
+                                           Lrttov_aer,     &
+                                           inst_co2_mr,    &
+                                           inst_ch4_mr,    &
+                                           inst_co_mr,     &
+                                           inst_n2o_mr,    &
+                                           inst_so2_mr,    &
+                                           inst_zenang)
 
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
         rttovIN
@@ -443,13 +443,7 @@ contains
       profiles(i)%ch4(:)        = inst_ch4_mr
       profiles(i)%so2           = inst_so2_mr ! syntax slightly different?
       
-!      profiles(i)%co2(:)        = co2
-!      profiles(i)%n2o(:)        = n2o
-!      profiles(i)%co(:)         = co
-!      profiles(i)%ch4(:)        = ch4
-!      profiles(i)%so2           = so2
-      
-! For when trace gas columns are       
+! For when trace gas columns are supplied   
 !      profiles(i)%co2(:)        =  rttovIN%co2
 !      profiles(i)%n2o(:)        =  rttovIN%n2o
 !      profiles(i)%co(:)         =  rttovIN%co
@@ -584,7 +578,7 @@ contains
     
     ! JKS To-do: set up scattering profiles (MW only) (rttov_profile_cloud)
 
-  end subroutine cosp_rttov_construct_profiles_mi
+  end subroutine cosp_rttov_construct_profiles
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 6. rttov_setup_emissivity_reflectance - Specify surface emissivity and reflectance
@@ -631,7 +625,9 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
   
-  subroutine cosp_rttov_call_direct_mi(inst_nthreads,inst_opts,inst_coefs)
+  subroutine cosp_rttov_call_direct(inst_nthreads,   &
+                                    inst_opts,       &
+                                    inst_coefs)
   
     integer(KIND=jpim),intent(in)   :: &
         inst_nthreads
@@ -672,7 +668,7 @@ contains
     endif
     call rttov_error('rttov_direct error', lalloc = .true.)
   
-  end subroutine cosp_rttov_call_direct_mi
+  end subroutine cosp_rttov_call_direct
   
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -680,11 +676,11 @@ contains
   ! ------------------------------------------------------
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-  subroutine cosp_pc_rttov_call_direct_mi(     &
-                 inst_nthreads,inst_opts,      &
-                 inst_coefs,                   &
-                 inst_nchannels_rec,           &
-                 inst_channels_rec)
+  subroutine cosp_pc_rttov_call_direct(inst_nthreads,                &
+                                       inst_opts,                    &
+                                       inst_coefs,                   &
+                                       inst_nchannels_rec,           &
+                                       inst_channels_rec)
   
     integer(KIND=jpim),intent(in)   :: &
         inst_nthreads
@@ -729,7 +725,7 @@ contains
     endif
     call rttov_error('rttov_direct error (PC-RTTOV)', lalloc = .true.)
   
-  end subroutine cosp_pc_rttov_call_direct_mi
+  end subroutine cosp_pc_rttov_call_direct
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 8. Save output data
@@ -737,7 +733,7 @@ contains
   ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
   
-  subroutine cosp_rttov_save_output_mi(rttovIN,inst_nchan_out,         & ! Inputs
+  subroutine cosp_rttov_save_output(rttovIN,inst_nchan_out,         & ! Inputs
                                     Lrttov_bt,Lrttov_rad,Lrttov_refl,  &
                                     Lrttov_cld,Lrttov_aer,             &
                                     bt_total,bt_clear,                 &
@@ -795,7 +791,7 @@ contains
             transpose(reshape(radiance%refl_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
     endif
           
-  end subroutine cosp_rttov_save_output_mi
+  end subroutine cosp_rttov_save_output
   
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -805,12 +801,12 @@ contains
   ! PC-RTTOV only does clear-sky IR calculations (can handle aerosols, but I'll ignore that for now.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_pc_rttov_save_output_mi(nPoints,              &
-                                          inst_nchannels_rec,   &
-                                          Lrttov_bt,            &
-                                          Lrttov_rad,           &
-                                          bt_total,             &
-                                          rad_total)
+  subroutine cosp_pc_rttov_save_output(nPoints,              &
+                                       inst_nchannels_rec,   &
+                                       Lrttov_bt,            &
+                                       Lrttov_rad,           &
+                                       bt_clear,             &
+                                       rad_clear)
 
     integer,intent(in)        :: &
         nPoints,            &
@@ -819,8 +815,8 @@ contains
         Lrttov_bt,      &
         Lrttov_rad
     real(wp),dimension(nPoints,inst_nchannels_rec),intent(inout) :: & ! Can I do this? I guess so!
-        bt_total,       &
-        rad_total
+        bt_clear,       &
+        rad_clear
 
 !    print*,'shape(bt_total):   ',shape(bt_total)
 !    print*,'shape(rad_total):  ',shape(rad_total)
@@ -836,16 +832,16 @@ contains
         
     ! Only save output if appropriate
     if (Lrttov_bt) then
-        bt_total(1:nPoints, 1:inst_nchannels_rec) = &
+        bt_clear(1:nPoints, 1:inst_nchannels_rec) = &
             transpose(reshape(pccomp%bt_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
     endif
     
     if (Lrttov_rad) then
-        rad_total(1:nPoints, 1:inst_nchannels_rec) = &
+        rad_clear(1:nPoints, 1:inst_nchannels_rec) = &
             transpose(reshape(pccomp%total_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
     endif
           
-  end subroutine cosp_pc_rttov_save_output_mi
+  end subroutine cosp_pc_rttov_save_output
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 9. Deallocate all RTTOV arrays and structures
@@ -853,10 +849,10 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_deallocate_profiles_mi(rttovIN,              &
-                                               inst_opts,            &
-                                               inst_coefs,           &
-                                               inst_nchanprof)
+  subroutine cosp_rttov_deallocate_profiles(rttovIN,              &
+                                            inst_opts,            &
+                                            inst_coefs,           &
+                                            inst_nchanprof)
 
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -888,7 +884,7 @@ contains
         reflectance=reflectance)
     call rttov_error('deallocation error for rttov_direct structures', lalloc = .true.)
 
-  end subroutine cosp_rttov_deallocate_profiles_mi
+  end subroutine cosp_rttov_deallocate_profiles
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 9. Deallocate all RTTOV arrays and structures (PC-RTTOV)
@@ -896,11 +892,11 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_pc_rttov_deallocate_profiles_mi(rttovIN,               &
-                                                  inst_nChannels_rec,    &
-                                                  inst_opts,             &
-                                                  inst_coefs,            &
-                                                  inst_nchanprof)
+  subroutine cosp_pc_rttov_deallocate_profiles(rttovIN,               &
+                                               inst_nChannels_rec,    &
+                                               inst_opts,             &
+                                               inst_coefs,            &
+                                               inst_nchanprof)
                                                   
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -939,9 +935,9 @@ contains
         pccomp=pccomp)
     call rttov_error('deallocation error for rttov_direct structures (PC-RTTOV)', lalloc = .true.)
 
-  end subroutine cosp_pc_rttov_deallocate_profiles_mi
+  end subroutine cosp_pc_rttov_deallocate_profiles
   
-  subroutine cosp_rttov_deallocate_coefs_mi(inst_coefs)
+  subroutine cosp_rttov_deallocate_coefs(inst_coefs)
 
     type(rttov_coefs),intent(inout)   :: &
         inst_coefs
@@ -951,7 +947,7 @@ contains
       write(*,*) 'coefs deallocation error'
     endif
 
-  end subroutine cosp_rttov_deallocate_coefs_mi
+  end subroutine cosp_rttov_deallocate_coefs
 
 !##########################
 ! Module End

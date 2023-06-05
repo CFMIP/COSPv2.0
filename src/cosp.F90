@@ -53,7 +53,7 @@ MODULE MOD_COSP
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY:   &
       COSP_RTTOV_INIT,            &
-      cosp_rttov_simulate_mi,     &
+      cosp_rttov_simulate,        &
       rttov_cfg,                  &
       rttov_output
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN
@@ -360,7 +360,6 @@ CONTAINS
          Lcloudsat_column,     & ! On/Off switch for column CLOUDSAT simulator
          Lmodis_column,        & ! On/Off switch for column MODIS simulator
          Lrttov_column,        & ! On/Off switch for column RTTOV simulator
-!         Lrttov_pc,            & ! On/Off switch for PC-RTTOV simulator
          Lradar_lidar_tcc,     & ! On/Off switch from joint Calipso/Cloudsat product
          Lcloudsat_tcc,        & !
          Lcloudsat_tcc2,       & !         
@@ -448,7 +447,6 @@ CONTAINS
     Lcloudsat_column    = .false.
     Lmodis_column       = .false.
     Lrttov_column       = .false.
-!    Lrttov_pc           = .false.
     Lradar_lidar_tcc    = .false.
     Llidar_only_freq_cloud = .false.
     Lcloudsat_tcc       = .false.
@@ -1544,10 +1542,8 @@ CONTAINS
            print*,'cospIN % cfg_rttov(i) % nchan_out:    ',cospIN % cfg_rttov(i) % nchan_out ! issue here
            allocate(rttov_Ichannel(cospIN % cfg_rttov(i) % nchan_out)) ! Channel indices
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
-               allocate(rttov_bt_total(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
-               allocate(rttov_rad_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
-    !           allocate(rttov_bt_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky brightness temp
-    !           allocate(rttov_rad_clear(rttovIN%Npoints,rttovIN%Nchannels)) ! clear-sky radiance
+               allocate(rttov_bt_clear(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
+               allocate(rttov_rad_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
            else 
                allocate(rttov_bt_total(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! all-sky brightness temp
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! clear-sky brightness temp
@@ -1560,7 +1556,7 @@ CONTAINS
            
            call cpu_time(driver_time(3))
            ! Run simulator
-           call cosp_rttov_simulate_mi(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,        & ! Inputs
+           call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,        & ! Inputs
                                     rttov_bt_total,rttov_bt_clear,                      & ! Brightness Temp Outputs
                                     rttov_rad_total,rttov_rad_clear,rttov_rad_cloudy,   & ! Radiance Outputs
                                     rttov_refl_total,rttov_refl_clear,                  & ! Reflectance Outputs
@@ -1573,9 +1569,9 @@ CONTAINS
                cospOUT % rttov_outputs(i) % channel_indices(:) = cospIN % cfg_rttov(i) % iChannel         
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then
                if (associated(cospOUT % rttov_outputs(i) % bt_total_pc))                    &
-                  cospOUT % rttov_outputs(i) % bt_total_pc(ij:ik,:) = rttov_bt_total       
+                  cospOUT % rttov_outputs(i) % bt_total_pc(ij:ik,:) = rttov_bt_clear
                if (associated(cospOUT % rttov_outputs(i) % rad_total_pc))                   &
-                  cospOUT % rttov_outputs(i) % rad_total_pc(ij:ik,:) = rttov_rad_total
+                  cospOUT % rttov_outputs(i) % rad_total_pc(ij:ik,:) = rttov_rad_clear
            else
                if (associated(cospOUT % rttov_outputs(i) % bt_total))                    &
                   cospOUT % rttov_outputs(i) % bt_total(ij:ik,:) = rttov_bt_total
@@ -1832,7 +1828,8 @@ CONTAINS
        rttov_Ninstruments, rttov_instrument_namelists,rttov_configs)
 
     ! INPUTS
-    logical,intent(in) :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol,Lrttov
+    logical,intent(in)    :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol
+    logical,intent(inout) :: Lrttov
     integer,intent(in)  :: &
          cloudsat_use_gas_abs,       & !
          cloudsat_do_ray,            & !
@@ -1853,7 +1850,7 @@ CONTAINS
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
     real(wp),dimension(10) :: driver_time
         
-    type(character(len=256)), dimension(rttov_Ninstruments) :: & 
+    type(character(len=128)), dimension(rttov_Ninstruments) :: & 
         rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
     
     ! OUTPUTS
@@ -1908,8 +1905,8 @@ CONTAINS
     ! Could print diagnostic on timing here.
     if (Lrttov) then
         call cpu_time(driver_time(1))
-        call cosp_rttov_init(Nlevels,rttov_Ninstruments,       &
-                             rttov_instrument_namelists,       &
+        call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
+                             rttov_instrument_namelists,        &
                              rttov_configs)
                              
         call cpu_time(driver_time(2))

@@ -73,7 +73,7 @@ program cosp2_test
   implicit none
 
   ! Input/Output driver file control
-  character(len=256) :: cosp_input_namelist,rttov_input_namelist
+  character(len=256) :: cosp_input_namelist
   character(len=64)  :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
@@ -135,8 +135,6 @@ program cosp2_test
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
        isccp_topheight,           & ! ISCCP cloud top height
        isccp_topheight_direction, & ! ISCCP cloud top height direction
-!       rttov_Ninstruments,        & ! RTTOV: Number of instruments to simulate
-       rttov_Nchannels,           & ! RTTOV: Number of channels to be computed
        rttov_Nlocaltime             ! RTTOV: Number of local times to be computed
   integer :: rttov_Ninstruments = 0
   real(wp) ::                     & !
@@ -147,6 +145,7 @@ program cosp2_test
        csat_vgrid,                & ! CloudSat vertical grid? 
        use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
                                     ! algorithm 
+  logical :: Lrttov_localtime  = .false.             
   real(wp),dimension(10) ::  &   ! JKS - reasonable limit at 10
        rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
        rttov_localtimewindow        ! Width of local time window (hrs).
@@ -160,17 +159,15 @@ program cosp2_test
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
        fileIN                       ! dinput+finput       
-  type(character(len=256)), allocatable, dimension(:) :: & 
+  type(character(len=128)), allocatable, dimension(:) :: & 
        rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
-!  type(integer), allocatable, dimension(:)            :: &
-!      rttov_instrument_Nchannels
        
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_Nchannels, rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow,        &
-       rttov_Ninstruments,rttov_instrument_namelists
+       rttov_Ninstruments, rttov_instrument_namelists,                                   &
+       Lrttov_localtime, rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -196,15 +193,6 @@ program cosp2_test
              Lptradarflag9,Lradarpia,                                                    &
              Lwr_occfreq,Lcfodd
   logical :: Lrttov_run        = .false.        
-  logical :: Lrttov_bt         = .false.        
-  logical :: Lrttov_rad        = .false.
-  logical :: Lrttov_refl       = .false.
-  logical :: Lrttov_cld        = .false.         
-  logical :: Lrttov_cldparam   = .false.         
-  logical :: Lrttov_aer        = .false.         
-  logical :: Lrttov_aerparam   = .false.         
-  logical :: Lrttov_localtime  = .false.         
-  logical :: Lrttov_pc         = .false.         
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -228,9 +216,6 @@ program cosp2_test
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,             &
                        Lrttov_run,                                                       &
-                       Lrttov_bt, Lrttov_rad, Lrttov_refl,                               & ! RTTOV output fields
-                       Lrttov_cld, Lrttov_cldparam,Lrttov_aer, Lrttov_aerparam,          & ! RTTOV cld/aero
-                       Lrttov_localtime,Lrttov_pc,                                       & ! RTTOV other
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
@@ -314,15 +299,6 @@ program cosp2_test
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
-  
-  ! Save the path for the RTTOV input namelist to read later
-  ! Because cosp2_test is an outer program, rttov_input_name cannot be optional.
-  ! I use this solution, which isn't great but works.
-  if (command_argument_count() .ge. 3) then 
-      call get_command_argument(3, rttov_input_namelist)
-  else
-      rttov_input_namelist = 'false'
-  endif
  
   ! Jonah namelist checking area
   print*,'Lrttov_run:   ',Lrttov_run
@@ -388,7 +364,7 @@ program cosp2_test
        Lclthinmeanzse .or. Lclzopaquecalipsose) Lcalipso = .true. 
 
   if (LlidarBetaMol532gr .or. LcfadLidarsr532gr .or. Latb532gr .or. LclgrLidar532 .or.  & 
-       LclhgrLidar532 .or. LcllgrLidar532 .or. LclmgrLidar532 .or. LcltgrLidar532)   & 
+       LclhgrLidar532 .or. LcllgrLidar532 .or. LclmgrLidar532 .or. LcltgrLidar532)      & 
        LgrLidar532 = .true.
 
   if (LlidarBetaMol355 .or. LcfadLidarsr355 .or. Latb355 .or. Lclatlid .or.              & 
@@ -404,19 +380,16 @@ program cosp2_test
   if (Lparasolrefl) Lparasol = .true.
   
   ! JKS - This will need to be revamped. Each instrument needs these flags
-  if ((Lrttov_bt .or. Lrttov_rad .or. Lrttov_refl) .and. (rttov_input_namelist /= 'false')) Lrttov = .true.   
-  if ((Lrttov_bt .or. Lrttov_rad .or. Lrttov_refl) .and. (rttov_input_namelist .eq. 'false')) then 
-      print*,'An RTTOV output must be true and a RTTOV namelist must be provided to run RTTOV.'
-      Lrttov      = .false.
-      Lrttov_bt   = .false.
-      Lrttov_rad  = .false.
-      Lrttov_refl = .false.
+  if (Lrttov_run .and. (rttov_Ninstruments .gt. 0))         Lrttov = .true.
+  if ((Lrttov_run) .and. (rttov_Ninstruments .le. 0))  then
+      print*,'Lrttov_run is "true" but rttov_Ninstruments < 1. COSP-RTTOV will not run.'
+      Lrttov = .false.
   endif
-  if (Lrttov_pc) then
-      Lrttov_refl = .false. ! PC-RTTOV does not do reflectances
-      Lrttov_cld  = .false. ! PC-RTTOV does not do aerosols
-      Lrttov_aer  = .false. ! PC-RTTOV does not do clouds
+  if ((Lrttov_run .eq. .false.) .and. (rttov_Ninstruments .gt. 0)) then
+      print*,'rttov_Ninstruments > 0 but Lrttov_run is "false". COSP-RTTOV will not run.'
+      Lrttov = .false.
   endif  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1443,7 +1416,7 @@ contains
     
     ! RTTOV - Allocate output for multiple instruments
     ! Do I not need to allocate the number of instruments? Because each rttov output DDT will be a pointer?
-    if (N_rttov_instruments .gt. 0) then
+    if ((N_rttov_instruments .gt. 0) .and. (Lrttov)) then
         x % N_rttov_instruments = N_rttov_instruments
         allocate(x % rttov_outputs(N_rttov_instruments)) ! Need to allocate a pointer?
         do i=1,N_rttov_instruments
@@ -1452,10 +1425,8 @@ contains
             print*,'rttov_configs(i) % Lrttov_bt:         ',rttov_configs(i) % Lrttov_bt
             print*,'rttov_configs(i) % Lrttov_rad:        ',rttov_configs(i) % Lrttov_rad
             print*,'rttov_configs(i) % Lrttov_refl:       ',rttov_configs(i) % Lrttov_refl
-            print*,'rttov_configs(i) % opts % rt_ir % addaerosl:        ',rttov_configs(i) % opts % rt_ir % addaerosl
-            print*,'rttov_configs(i) % opts % rt_ir % addclouds:        ',rttov_configs(i) % opts % rt_ir % addclouds
-            print*,'rttov_configs(i) % opts % rt_ir % user_aer_opt_param:   ',rttov_configs(i) % opts % rt_ir % user_aer_opt_param
-            print*,'rttov_configs(i) % opts % rt_ir % user_cld_opt_param:   ',rttov_configs(i) % opts % rt_ir % user_cld_opt_param
+            print*,'rttov_configs(i) % Lrttov_cld:        ',rttov_configs(i) % Lrttov_cld
+            print*,'rttov_configs(i) % Lrttov_aer:        ',rttov_configs(i) % Lrttov_aer
             print*,'rttov_configs(i) % Lrttov_pc:         ',rttov_configs(i) % Lrttov_pc
 
             print*,'1.'
@@ -1477,22 +1448,22 @@ contains
                 allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
                 if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
                     allocate(x % rttov_outputs(i) % bt_total(Npoints,rttov_configs(i) % nchan_out))
-                    if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % bt_clear(Npoints,rttov_configs(i) % nchan_out))
                     end if
                 end if
                 if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
                     allocate(x % rttov_outputs(i) % rad_total(Npoints,rttov_configs(i) % nchan_out))
-                    if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % rad_clear(Npoints,rttov_configs(i) % nchan_out))
                     end if
-                    if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % rad_cloudy(Npoints,rttov_configs(i) % nchan_out))
                     end if
                 end if
                 if (rttov_configs(i) % Lrttov_refl) then                            ! Reflectance
                     allocate(x % rttov_outputs(i) % refl_total(Npoints,rttov_configs(i) % nchan_out))
-                    if ((rttov_configs(i) % opts % rt_ir % addclouds) .or. (rttov_configs(i) % opts % rt_ir % addaerosl)) then
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % refl_clear(Npoints,rttov_configs(i) % nchan_out))
                     end if
                 end if    
