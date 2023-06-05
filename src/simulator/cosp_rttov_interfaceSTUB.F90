@@ -39,23 +39,61 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 
   ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
   type rttov_cfg
-      logical                        :: &
+      logical                      :: &
           Lrttov_bt,           &
           Lrttov_rad,          &
           Lrttov_refl,         &
           Lrttov_cld,          &
           Lrttov_aer,          &
-          Lrttov_cldparam,     &
-          Lrttov_aerparam,     &
           Lrttov_pc
-      character(len=256)             :: &
+      character(len=256)           :: &
           rttov_srcDir,        &
           rttov_coefDir,       &
           OD_coef_filepath,    &
           aer_coef_filepath,   &
           cld_coef_filepath,   &
           PC_coef_filepath
+      integer                      :: &
+          nchanprof,           &
+          rttov_direct_nthreads
+      integer                      :: &
+          nchan_out,           &
+          nchannels_rec         
+      real(wp)                     :: &
+          CO2_mr,              &
+          CH4_mr,              &
+          CO_mr,               &
+          N2O_mr,              &
+          SO2_mr,              &
+          ZenAng
+      integer,allocatable          :: &
+          iChannel(:),      &  ! Requested channel indices
+          iChannel_out(:)      ! Passing out the channel indices (actual output channels)
+      real(kind=wp),allocatable    :: &
+          emisChannel(:),   &                ! RTTOV channel emissivity
+          reflChannel(:)                     ! RTTOV channel reflectivity
+!      type(rttov_options)          :: &
+!          opts                               ! RTTOV options structure
+!      type(rttov_coefs)            :: &
+!          coefs                              ! RTTOV coefficients structure
   end type rttov_cfg
+
+  type rttov_output
+      integer             :: &
+          nchan_out
+      integer,pointer     :: &
+          channel_indices(:)
+      real(wp),pointer    :: &
+          bt_total(:,:),    &
+          bt_clear(:,:),    &
+          rad_total(:,:),   &
+          rad_clear(:,:),   &
+          rad_cloudy(:,:),  &
+          refl_total(:,:),  &
+          refl_clear(:,:),  &
+          bt_total_pc(:,:), &
+          rad_total_pc(:,:)
+  end type rttov_output   
 
 CONTAINS
 
@@ -81,70 +119,57 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT(NchanIN,nlevels,Lrttov_bt,Lrttov_rad,Lrttov_refl,                 &
-                             Lrttov_cld,Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,    &
-                             Lrttov_pc,rttov_input_namelist,rttov_pc_nchan)
-    integer,intent(in) :: &
-         NchanIN,    &
-         nlevels
-!    integer,intent(in),dimension(RTTOV_MAX_CHANNELS) :: &
-!         channelsIN     ! RTTOV channels
-    logical,intent(in)   :: &
-         Lrttov_bt,        &
-         Lrttov_rad,       &
-         Lrttov_refl,      &
-         Lrttov_cld,       &
-         Lrttov_aer,       &
-         Lrttov_cldparam,  &
-         Lrttov_aerparam,  &
-         Lrttov_pc
-         
-    ! JKS testing using a RTTOV input namelist here 
-    ! (default cosp_rttov namelist is set in cosp.F90)
-    character(len=256),intent(in) :: rttov_input_namelist
+  SUBROUTINE COSP_RTTOV_INIT(Lrttov,Nlevels,Ninstruments,instrument_namelists,       &
+                             rttov_configs)
 
-    integer,intent(inout),optional  :: & ! JKS return number of channels determined by ipcreg
-        rttov_pc_nchan
-
-    print*,'Running COSP_RTTOV_INIT from STUB files.', &
+      logical,intent(inout) :: &
+          Lrttov
+      integer,intent(in) :: &
+          Nlevels,   &
+          Ninstruments
+      type(character(len=128)), dimension(Ninstruments)     :: & 
+          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
+      type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
+          rttov_configs
+          
+      Lrttov = .false.
+          
+      print*,'Running COSP_RTTOV_INIT from STUB files.', &
         'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
-    
+       
   END SUBROUTINE COSP_RTTOV_INIT
-  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
-                                 iChannel_ret,                                     & ! Channel index outputs
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
-                                 error)       
-  
-      type(rttov_in),intent(in) :: &
-          rttovIN
-      logical,intent(in) :: &
-          lCleanup   ! Flag to determine whether to deallocate RTTOV types          
-      integer,intent(inout),dimension(rttovIN%nChannels)  :: &
-          iChannel_ret
-      real(wp),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
-          bt_total,                          &        ! All-sky
-          bt_clear,                          &        ! Clear-sky
-          rad_total,                         &        ! All-sky
-          rad_clear,                         &        ! Clear-sky
-          rad_cloudy,                        &        ! Cloudy-sky
-          refl_total,                        &        ! All-sky
-          refl_clear                                  ! Clear-sky
-      character(len=128) :: &
-          error     ! Error messages (only populated if error encountered)  
-  
-  
-      print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
+                                 error)      
+
+    type(rttov_in),intent(in) :: &
+        rttovIN
+    type(rttov_cfg),intent(inout) :: &
+        rttovConfig
+    logical,intent(in) :: &
+        lCleanup   ! Flag to determine whether to deallocate RTTOV types
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so! 
+        bt_total,                          &        ! All-sky
+        bt_clear,                          &        ! Clear-sky
+        rad_total,                         &        ! All-sky
+        rad_clear,                         &        ! Clear-sky
+        rad_cloudy,                        &        ! Cloudy-sky
+        refl_total,                        &        ! All-sky
+        refl_clear                                  ! Clear-sky
+    character(len=128) :: &
+        error     ! Error messages (only populated if error encountered) 
+
+    print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
              'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
-  ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
-  
+    ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
+
   END SUBROUTINE COSP_RTTOV_SIMULATE
-  
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_pc_rttov_simulate
