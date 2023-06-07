@@ -1371,6 +1371,16 @@ contains
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
     if (allocated(y%fracPrecipIce))      deallocate(y%fracPrecipIce)
+    if (allocated(y%rcfg_cloudsat%N_scale_flag))       deallocate(y%rcfg_cloudsat%N_scale_flag)
+    if (allocated(y%rcfg_cloudsat%Z_scale_flag))       deallocate(y%rcfg_cloudsat%Z_scale_flag)
+    if (allocated(y%rcfg_cloudsat%Z_scale_added_flag)) deallocate(y%rcfg_cloudsat%Z_scale_added_flag)
+    if (allocated(y%rcfg_cloudsat%Ze_scaled))          deallocate(y%rcfg_cloudsat%Ze_scaled)
+    if (allocated(y%rcfg_cloudsat%Zr_scaled))          deallocate(y%rcfg_cloudsat%Zr_scaled)
+    if (allocated(y%rcfg_cloudsat%kr_scaled))          deallocate(y%rcfg_cloudsat%kr_scaled)
+    if (allocated(y%rcfg_cloudsat%fc))                 deallocate(y%rcfg_cloudsat%fc)
+    if (allocated(y%rcfg_cloudsat%rho_eff))            deallocate(y%rcfg_cloudsat%rho_eff)
+    if (allocated(y%rcfg_cloudsat%base_list))          deallocate(y%rcfg_cloudsat%base_list)
+    if (allocated(y%rcfg_cloudsat%step_list))          deallocate(y%rcfg_cloudsat%step_list)
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     

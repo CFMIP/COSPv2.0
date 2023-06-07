@@ -43,7 +43,6 @@ jobs:
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
       ATOL: 0.0
       RTOL: 0.0
-      #KGO_VERSION: v001
       KGO_VERSION: v002
       NFHOME: /home/runner/netcdf-fortran
       LD_LIBRARY_PATH: /home/runner/netcdf-fortran/lib

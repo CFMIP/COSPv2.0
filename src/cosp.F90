@@ -385,7 +385,7 @@ CONTAINS
          out1D_1,out1D_2,out1D_3,out1D_4,out1D_5,out1D_6,out1D_7,out1D_8,       &
          out1D_9,out1D_10,out1D_11,out1D_12 
     real(wp),dimension(:,:,:),allocatable :: &
-       betamol_in,betamoli,pnormi,ze_toti,ze_noni
+       betamol_in,betamoli,pnormi,ze_toti
     real(wp),dimension(:,:,:),allocatable :: &
          t_in,tempI,frac_outI      ! subscript "I": vertical interpolation (use_vgrid=.true.)
     real(wp), allocatable ::     &
@@ -1884,7 +1884,6 @@ CONTAINS
     integer,intent(out) :: nError
     
     ! Local variables
-    character(len=100) :: parasolErrorMessage
     logical :: alloc_status
     
     nError = 0

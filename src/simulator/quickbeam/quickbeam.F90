@@ -90,12 +90,11 @@ module quickbeam
      ! Variables used to store Z scale factors
      character(len=240)                             :: scale_LUT_file_name
      logical                                        :: load_scale_LUTs, update_scale_LUTs
-     logical, dimension(maxhclass,nRe_types)        :: N_scale_flag
-     logical, dimension(maxhclass,mt_ntt,nRe_types) :: Z_scale_flag,Z_scale_added_flag
-     real(wp),dimension(maxhclass,mt_ntt,nRe_types) :: Ze_scaled,Zr_scaled,kr_scaled
-     real(wp),dimension(maxhclass,nd,nRe_types)     :: fc, rho_eff
-     real(wp),dimension(Re_MAX_BIN)                 :: base_list,step_list
-
+     logical,  allocatable, dimension(:,:)   :: N_scale_flag
+     logical,  allocatable, dimension(:,:,:) :: Z_scale_flag, Z_scale_added_flag
+     real(wp), allocatable, dimension(:,:,:) :: Ze_scaled, Zr_scaled, kr_scaled
+     real(wp), allocatable, dimension(:,:,:) :: fc, rho_eff
+     real(wp), allocatable, dimension(:)     :: base_list, step_list
   end type radar_cfg
 
 contains
@@ -383,7 +382,7 @@ contains
     integer,dimension(Npoints) :: &
          cloudsat_preclvl_index ! Altitude index for precip flags calculation
                                 ! in 40-level grid (one layer above surfelev) 
-    integer :: pr,i,k,m,j
+    integer :: pr,i,k
     real(wp) :: Zmax
     
     ! Initialize 
