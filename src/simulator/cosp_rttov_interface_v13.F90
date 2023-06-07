@@ -589,8 +589,6 @@ CONTAINS
     call cosp_rttov_construct_profiles(rttovIN, &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
-!                                       rttovConfig % opts % rt_ir % addclouds, &
-!                                       rttovConfig % opts % rt_ir % addaerosl, &
                                        rttovConfig % CO2_mr,                   &
                                        rttovConfig % CH4_mr,                   &
                                        rttovConfig % CO_mr,                    &
