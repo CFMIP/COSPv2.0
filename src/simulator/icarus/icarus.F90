@@ -52,7 +52,7 @@ MODULE MOD_ICARUS
        isccp_taumin = 0.3_wp,             & ! Minimum optical depth for joint-hostogram
        pstd = 1013250._wp,                & ! Mean sea-level pressure (Pa)
        isccp_t0 = 296._wp,                & ! Mean surface temperature (K)
-       output_missing_value = -1.E+30       ! Missing values
+       output_missing_value = -1.E+30_wp    ! Missing values
 
 contains
   ! ##########################################################################
@@ -231,8 +231,8 @@ contains
        itrop(1:npoints)     = 1
 
        do ilev=1,nlev
-          where(pfull(1:npoints,ilev) .lt. 40000. .and. &
-                pfull(1:npoints,ilev) .gt.  5000. .and. &
+          where(pfull(1:npoints,ilev) .lt. 40000._wp .and. &
+                pfull(1:npoints,ilev) .gt.  5000._wp .and. &
                 at(1:npoints,ilev)    .lt. attropmin(1:npoints))
              ptrop(1:npoints)     = pfull(1:npoints,ilev)
              attropmin(1:npoints) = at(1:npoints,ilev)
@@ -257,7 +257,7 @@ contains
        ! ############################################################################
        do ilev=1,nlev
           press(1:npoints)  = pfull(1:npoints,ilev)*10._wp
-          dpress(1:npoints) = (phalf(1:npoints,ilev+1)-phalf(1:npoints,ilev))*10
+          dpress(1:npoints) = (phalf(1:npoints,ilev+1)-phalf(1:npoints,ilev))*10._wp
           atmden(1:npoints) = dpress(1:npoints)/(grav*100._wp)
           rvh20(1:npoints)  = qv(1:npoints,ilev)*amd/amw
           wk(1:npoints)     = rvh20(1:npoints)*avo*atmden/amd
@@ -265,8 +265,8 @@ contains
           rh20s(1:npoints)  = rvh20(1:npoints)*rhoave(1:npoints)
           rfrgn(1:npoints)  = rhoave(1:npoints)-rh20s(1:npoints)
           tmpexp(1:npoints) = exp(-0.02_wp*(at(1:npoints,ilev)-isccp_t0))
-          tauwv(1:npoints)  = wk(1:npoints)*1.e-20*((0.0224697_wp*rh20s(1:npoints)*      &
-                              tmpexp(1:npoints))+(3.41817e-7*rfrgn(1:npoints)))*0.98_wp
+          tauwv(1:npoints)  = wk(1:npoints)*1.e-20_wp*((0.0224697_wp*rh20s(1:npoints)* &
+                              tmpexp(1:npoints))+(3.41817e-7_wp*rfrgn(1:npoints)))*0.98_wp
           dem_wv(1:npoints,ilev) = 1._wp - exp( -1._wp * tauwv(1:npoints))
        enddo
 
@@ -282,7 +282,7 @@ contains
           
           ! Update trans_layers_above with transmissivity from this layer for next time around loop
           trans_layers_above_clrsky(1:npoints) = trans_layers_above_clrsky(1:npoints)*&
-              (1.-dem_wv(1:npoints,ilev))                
+              (1._wp-dem_wv(1:npoints,ilev))
        enddo
 
        ! Add in surface emission
@@ -307,7 +307,7 @@ contains
              ! Emissivity
              dem(1:npoints,ibox) = merge(dem_wv(1:npoints,ilev), &
                                          1._wp-(1._wp-demIN(1:npoints,ibox,ilev))*(1._wp-dem_wv(1:npoints,ilev)), &
-                                         demIN(1:npoints,ibox,ilev) .eq. 0)
+                                         demIN(1:npoints,ibox,ilev) .eq. 0._wp)
 
              ! Increase TOA flux emitted from layer
              fluxtop(1:npoints,ibox) = fluxtop(1:npoints,ibox) + dem(1:npoints,ibox)*bb*trans_layers_above(1:npoints,ibox) 
@@ -349,7 +349,7 @@ contains
           taumin(1:npoints)   = -log(max(min(transmax(1:npoints),0.9999999_wp),0.001_wp))
           if (isccp_top_height .eq. 1) then
              do j=1,npoints  
-                if (transmax(j) .gt. 0.001 .and.  transmax(j) .le. 0.9999999) then
+                if (transmax(j) .gt. 0.001_wp .and. transmax(j) .le. 0.9999999_wp) then
                    fluxtopinit(j) = fluxtop(j,ibox)
                    tauir(j) = tau(j,ibox)/2.13_wp
                 endif
@@ -357,12 +357,12 @@ contains
              do icycle=1,2
                 do j=1,npoints  
                    if (tau(j,ibox) .gt. (tauchk)) then 
-                      if (transmax(j) .gt. 0.001 .and.  transmax(j) .le. 0.9999999) then
+                      if (transmax(j) .gt. 0.001_wp .and. transmax(j) .le. 0.9999999_wp) then
                          emcld(j,ibox) = 1._wp - exp(-1._wp * tauir(j)  )
                          fluxtop(j,ibox) = fluxtopinit(j) - ((1.-emcld(j,ibox))*fluxtop_clrsky(j))
                          fluxtop(j,ibox)=max(1.E-06_wp,(fluxtop(j,ibox)/emcld(j,ibox)))
                          tb(j,ibox)= 1307.27_wp / (log(1._wp + (1._wp/fluxtop(j,ibox))))
-                         if (tb(j,ibox) .gt. 260.) then
+                         if (tb(j,ibox) .gt. 260._wp) then
                             tauir(j) = tau(j,ibox) / 2.56_wp
                          end if
                       end if
@@ -373,7 +373,7 @@ contains
 
           ! Cloud-top temperature
           where(tau(1:npoints,ibox) .gt. tauchk)
-             tb(1:npoints,ibox)= 1307.27_wp/ (log(1. + (1._wp/fluxtop(1:npoints,ibox))))
+             tb(1:npoints,ibox)= 1307.27_wp/ (log(1._wp + (1._wp/fluxtop(1:npoints,ibox))))
              where (isccp_top_height .eq. 1 .and. tauir(1:npoints) .lt. taumin(1:npoints))
                 tb(1:npoints,ibox) = attrop(1:npoints) - 5._wp 
                 tau(1:npoints,ibox) = 2.13_wp*taumin(1:npoints)
@@ -427,6 +427,8 @@ contains
                 ptop(j,ibox) = exp(logp)
                 levmatch(j,ibox) = merge(k1,k2,abs(pfull(j,k1)-ptop(j,ibox)) .lt. abs(pfull(j,k2)-ptop(j,ibox)))
              else
+                ptop(j,ibox)=0._wp
+                levmatch(j,ibox)=0._wp
                 if (tb(j,ibox) .le. attrop(j)) then
                    ptop(j,ibox)=ptrop(j)
                    levmatch(j,ibox)=itrop(j)
@@ -438,9 +440,9 @@ contains
              end if
           enddo
        else
-          ptop(1:npoints,ibox)=0.
+          ptop(1:npoints,ibox)=0._wp
           do ilev=1,nlev
-             where((ptop(1:npoints,ibox) .eq. 0. ) .and.(frac_out(1:npoints,ibox,ilev) .ne. 0))
+             where((ptop(1:npoints,ibox) .eq. 0._wp) .and.(frac_out(1:npoints,ibox,ilev) > 0._wp))
                 ptop(1:npoints,ibox)=phalf(1:npoints,ilev)
                 levmatch(1:npoints,ibox)=ilev
              endwhere
@@ -459,7 +461,7 @@ contains
     boxptop(1:npoints,1:ncol) = output_missing_value
     do ibox=1,ncol
        do j=1,npoints 
-          if (tau(j,ibox) .gt. (tauchk) .and. ptop(j,ibox) .gt. 0.) then
+          if (tau(j,ibox) .gt. (tauchk) .and. ptop(j,ibox) .gt. 0._wp) then
              if (sunlit(j).eq.1 .or. isccp_top_height .eq. 3) then
                 boxtau(j,ibox) = tau(j,ibox)
                 boxptop(j,ibox) = ptop(j,ibox)!/100._wp
@@ -535,7 +537,7 @@ contains
        do ilev2=1,7
           do j=1,npoints ! 
              if (sunlit(j).eq.1 .or. isccp_top_height .eq. 3) then 
-                fq_isccp(j,ilev,ilev2)= 0.
+                fq_isccp(j,ilev,ilev2)= 0._wp
 	     else 
                 fq_isccp(j,ilev,ilev2)= output_missing_value
              end if
@@ -560,7 +562,7 @@ contains
     ! Compute column quantities and joint-histogram
     do j=1,npoints 
        ! Subcolumns that are cloudy(true) and not(false)
-       box_cloudy2(1:ncol) = merge(.true.,.false.,boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0.)
+       box_cloudy2(1:ncol) = merge(.true.,.false.,boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
 
        ! Compute joint histogram and column quantities for points that are sunlit and cloudy
        if (sunlit(j) .eq.1 .or. isccp_top_height .eq. 3) then 
@@ -571,7 +573,7 @@ contains
                fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins)/ncol
           
           ! Column cloud area
-          totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin))/ncol
+          totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
              
           ! Subcolumn cloud albedo
           !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
@@ -591,10 +593,10 @@ contains
     enddo
     
     ! Compute mean cloud properties. Set to mssing value in the event that totalcldarea=0
-    where(totalcldarea(1:npoints) .gt. 0)
+    where(totalcldarea(1:npoints) .gt. 0._wp)
        meanptop(1:npoints)      = 100._wp*meanptop(1:npoints)/totalcldarea(1:npoints)
        meanalbedocld(1:npoints) = meanalbedocld(1:npoints)/totalcldarea(1:npoints)
-       meantaucld(1:npoints)    = (6.82_wp/((1._wp/meanalbedocld(1:npoints))-1.))**(1._wp/0.895_wp)
+       meantaucld(1:npoints)    = (6.82_wp/((1._wp/meanalbedocld(1:npoints))-1._wp))**(1._wp/0.895_wp)
     elsewhere
        meanptop(1:nPoints)      = output_missing_value
        meanalbedocld(1:nPoints) = output_missing_value
@@ -642,4 +644,3 @@ contains
     enddo
   end subroutine cosp_simulator_optics
 end module MOD_ICARUS
-
