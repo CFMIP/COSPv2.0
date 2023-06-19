@@ -396,6 +396,8 @@ contains
     ! top pressure (isccp_top_height = 2) or the radiatively determined cloud top
     ! pressure (isccp_top_height = 1 or 3)
     ! ####################################################################################
+    ptop(:,:)=0._wp
+    levmatch(:,:)=0
     do ibox=1,ncol
        !segregate according to optical thickness
        if (isccp_top_height .eq. 1 .or. isccp_top_height .eq. 3) then  
@@ -427,8 +429,6 @@ contains
                 ptop(j,ibox) = exp(logp)
                 levmatch(j,ibox) = merge(k1,k2,abs(pfull(j,k1)-ptop(j,ibox)) .lt. abs(pfull(j,k2)-ptop(j,ibox)))
              else
-                ptop(j,ibox)=0._wp
-                levmatch(j,ibox)=0._wp
                 if (tb(j,ibox) .le. attrop(j)) then
                    ptop(j,ibox)=ptrop(j)
                    levmatch(j,ibox)=itrop(j)
@@ -440,7 +440,6 @@ contains
              end if
           enddo
        else
-          ptop(1:npoints,ibox)=0._wp
           do ilev=1,nlev
              where((ptop(1:npoints,ibox) .eq. 0._wp) .and.(frac_out(1:npoints,ibox,ilev) > 0._wp))
                 ptop(1:npoints,ibox)=phalf(1:npoints,ilev)
@@ -450,7 +449,7 @@ contains
        end if
        where(tau(1:npoints,ibox) .le. tauchk)
           ptop(1:npoints,ibox)=0._wp
-          levmatch(1:npoints,ibox)=0._wp
+          levmatch(1:npoints,ibox)=0
        endwhere
     enddo
 
