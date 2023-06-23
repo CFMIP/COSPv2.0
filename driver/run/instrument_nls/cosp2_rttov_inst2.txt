@@ -35,18 +35,18 @@
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
   Lrttov_pc=.false.,                ! Run with PC-RTTOV
   !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
-  nchannels_rec=500, ! 2300
+  nchannels_rec=0, ! do all
   !-------------- RTTOV Filepaths 
   Lchannel_filepath=.false.,
   channel_filepath='rttov_channel_input_AIRS.csv',
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/',
-!  OD_coef_filepath='rttov9pred101L/rtcoef_eos_2_airs_pcrttov_compat.H5',
-!  aer_coef_filepath='cldaer_visir/scaercoef_eos_2_airs_cams.H5',
-!  cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_airs.H5',  
-  OD_coef_filepath='rttov13pred54L/rtcoef_ticfire_1_mbfiri_o3co2.dat',
-  aer_coef_filepath='cldaer_visir/scaercoef_ticfire_1_mbfiri_cams.dat',
-  cld_coef_filepath='cldaer_visir/sccldcoef_ticfire_1_mbfiri.dat',
+  OD_coef_filepath='rttov9pred101L/rtcoef_eos_2_airs_pcrttov_compat.H5',
+  aer_coef_filepath='cldaer_visir/scaercoef_eos_2_airs_cams.H5',
+  cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_airs.H5',  
+!  OD_coef_filepath='rttov13pred54L/rtcoef_ticfire_1_mbfiri_o3co2.dat',
+!  aer_coef_filepath='cldaer_visir/scaercoef_ticfire_1_mbfiri_cams.dat',
+!  cld_coef_filepath='cldaer_visir/sccldcoef_ticfire_1_mbfiri.dat',
   PC_coef_filepath='pc/pccoef_eos_2_airs_landsea.H5',  
   !-------------- RTTOV Trace Gas Logicals (must match coefficient files)
   SO2_data=.false.,

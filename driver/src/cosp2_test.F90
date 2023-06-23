@@ -518,25 +518,30 @@ program cosp2_test
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
      cospstateIN%emis_sfc = 0._wp
-     cospstateIN%refl_sfc = 0._wp
+     cospstateIN%refl_sfc = 0._wp     
      
      ! Well-mixed gases are not in COSP offline input
-     ! Moved user input of well-mixed gases to cosp2_rttov_nl
+     ! Moved user input of well-mixed gases to instrument namelists
      ! Keeping these structures since gases could come from model input
-     cospstateIN%co2      = 0._wp
-     cospstateIN%ch4      = 0._wp
-     cospstateIN%n2o      = 0._wp 
-     cospstateIN%co       = 0._wp
-     
+     cospstateIN%co2(:)   = 0._wp
+     cospstateIN%ch4(:)   = 0._wp
+     cospstateIN%n2o(:)   = 0._wp 
+     cospstateIN%co(:)    = 0._wp
+
+!     cospstateIN%co2   = 0._wp
+!     cospstateIN%ch4   = 0._wp
+!     cospstateIN%n2o   = 0._wp 
+!     cospstateIN%co    = 0._wp
+
      ! From the data input file
-     cospstateIN%u_sfc  = u_wind
-     cospstateIN%v_sfc  = v_wind
-     cospstateIN%lat    = lat
-     cospstateIN%lon    = lon
-     
+     cospstateIN%u_sfc  = u_wind(start_idx:end_idx)
+     cospstateIN%v_sfc  = v_wind(start_idx:end_idx)
+     cospstateIN%lat    = lat(start_idx:end_idx)
+     cospstateIN%lon    = lon(start_idx:end_idx)
+          
      cospstateIN%o3  = mr_ozone(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%tca = tca(start_idx:end_idx,Nlevels:1:-1)
-     
+          
      ! Combine large-scale and convective cloud mixing ratios for RTTOV
      cospstateIN%cloudIce = mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%cloudLiq = mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)     
@@ -546,11 +551,10 @@ program cosp2_test
      cospstateIN%fl_rain = fl_lsrain(start_idx:end_idx,Nlevels:1:-1) + fl_ccrain(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%fl_snow = fl_lssnow(start_idx:end_idx,Nlevels:1:-1) + fl_ccsnow(start_idx:end_idx,Nlevels:1:-1) + &
                            fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1)
-               
+
      ! Inputs not supplied in the UKMO test data
-     cospstateIN%seaice(1:nPoints) = 0._wp
-     cospstateIN%month             = 0
-     
+     cospstateIN%seaice(:)    = 0._wp
+     cospstateIN%month        = 0
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
@@ -568,10 +572,11 @@ program cosp2_test
           cospstateIN,cospIN)
 
      call cpu_time(driver_time(6))
-    
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+          
      cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,.false.)
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
@@ -1526,11 +1531,11 @@ contains
     if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
     if (allocated(y%surfelev))        deallocate(y%surfelev)
 ! Must be allocatable, and these are single values. Waiting for GCM integration
-!    if (allocated(y%month))           deallocate(y%month)
-!    if (allocated(y%co2))             deallocate(y%co2)
-!    if (allocated(y%ch4))             deallocate(y%ch4)
-!    if (allocated(y%n2o))             deallocate(y%n2o)
-!    if (allocated(y%co))              deallocate(y%co)
+    if (allocated(y%month))           deallocate(y%month)
+    if (allocated(y%co2))             deallocate(y%co2)
+    if (allocated(y%ch4))             deallocate(y%ch4)
+    if (allocated(y%n2o))             deallocate(y%n2o)
+    if (allocated(y%co))              deallocate(y%co)
     if (allocated(y%o3))              deallocate(y%o3)
     if (allocated(y%u_sfc))           deallocate(y%u_sfc)
     if (allocated(y%v_sfc))           deallocate(y%v_sfc)
