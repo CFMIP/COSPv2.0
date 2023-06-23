@@ -104,9 +104,9 @@ MODULE MOD_COSP
           skt,                 & ! Surface temperature                    (K)
           surfelev               ! Surface Elevation                      (m)
      ! Fields used ONLY by RTTOV
-     integer :: &
+     integer,allocatable,dimension(:) :: &
           month                  ! Month for surface emissivty atlas      (1-12)
-     real(wp) :: &
+     real(wp),allocatable,dimension(:) :: &
           co2,                 & ! CO2                                    (kg/kg)
           ch4,                 & ! Methane                                (kg/kg)
           n2o,                 & ! N2O                                    (kg/kg)
@@ -408,8 +408,7 @@ CONTAINS
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
-        
-
+    
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1) Determine if using full inputs or subset
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -511,7 +510,6 @@ CONTAINS
     ! RTTOV Column
     if (associated(cospOUT%rttov_outputs)) then
        Lrttov_column    = .true.
-       print*,'multi-inst. RTTOV called'
     endif
         
     ! Set flag to deallocate rttov types (only done on final call to simulator)
@@ -1534,12 +1532,11 @@ CONTAINS
     endif
 
     ! RTTOV multi-instrument
-    print*,'Lrttov_column multi-inst. start'
     if (Lrttov_column) then
         do i=1,cospIN%Ninst_rttov
            ! Allocate memory for the outputs - I won't need all of these in every situation.
            ! Only allocate clear-sky memory when PC-RTTOV is run.
-           print*,'cospIN % cfg_rttov(i) % nchan_out:    ',cospIN % cfg_rttov(i) % nchan_out ! issue here
+!           print*,'cospIN % cfg_rttov(i) % nchan_out:    ',cospIN % cfg_rttov(i) % nchan_out ! JKS
            allocate(rttov_Ichannel(cospIN % cfg_rttov(i) % nchan_out)) ! Channel indices
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
@@ -1556,13 +1553,13 @@ CONTAINS
            
            call cpu_time(driver_time(3))
            ! Run simulator
-           call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,        & ! Inputs
+           call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,         & ! Inputs
                                     rttov_bt_total,rttov_bt_clear,                      & ! Brightness Temp Outputs
                                     rttov_rad_total,rttov_rad_clear,rttov_rad_cloudy,   & ! Radiance Outputs
                                     rttov_refl_total,rttov_refl_clear,                  & ! Reflectance Outputs
                                     cosp_simulator(nError+1))
            call cpu_time(driver_time(4))
-           print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3)
+!           print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3) ! JKS
 
            ! Write to cospOUT
            if (associated(cospOUT % rttov_outputs(i) % channel_indices))                    &
@@ -1601,10 +1598,7 @@ CONTAINS
 
         end do
     
-    endif
-    
-    print*,'Lrttov_column multi-inst. successful'
-    
+    endif    
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 6) Compute multi-instrument products
@@ -1910,7 +1904,7 @@ CONTAINS
                              rttov_configs)
                              
         call cpu_time(driver_time(2))
-        print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
+!        print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif
 
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
@@ -3157,7 +3151,7 @@ CONTAINS
     
     ! RTTOV Inputs
     if (Lrttov_column) then
-       if (cospgridIN%co2 .lt. 0) then
+       if (any(cospgridIN%co2 .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
           Lrttov_column = .false.
@@ -3176,7 +3170,7 @@ CONTAINS
              end do
           end if
        endif
-       if (cospgridIN%ch4 .lt. 0) then
+       if (any(cospgridIN%ch4 .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%ch4 contains values out of range'
           Lrttov_column = .false.
@@ -3195,7 +3189,7 @@ CONTAINS
              end do
           end if
        endif
-       if (cospgridIN%n2o .lt. 0) then
+       if (any(cospgridIN%n2o .lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%n2o contains values out of range'
           Lrttov_column = .false.
@@ -3214,7 +3208,7 @@ CONTAINS
              end do
           end if
        endif
-       if (cospgridIN%co.lt. 0) then
+       if (any(cospgridIN%co.lt. 0)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co contains values out of range'
           Lrttov_column = .false.
@@ -4139,8 +4133,11 @@ CONTAINS
            size(cospgridIN%v_sfc)             .ne. cospIN%Npoints .OR. &
            size(cospgridIN%skt)               .ne. cospIN%Npoints .OR. &
            size(cospgridIN%phalf,1)           .ne. cospIN%Npoints .OR. &
-           size(cospgridIN%qv,1)              .ne. cospIN%Npoints .OR. &
+           size(cospgridIN%seaice)            .ne. cospIN%Npoints .OR. &
+           size(cospgridIN%cloudIce,1)        .ne. cospIN%Npoints .OR. &
+           size(cospgridIN%cloudLiq,1)        .ne. cospIN%Npoints .OR. &
            size(cospgridIN%land)              .ne. cospIN%Npoints .OR. &
+           size(cospgridIN%lon)               .ne. cospIN%Npoints .OR. &
            size(cospgridIN%lat)               .ne. cospIN%Npoints) then
           Lrttov_column    = .false.
           nError=nError+1

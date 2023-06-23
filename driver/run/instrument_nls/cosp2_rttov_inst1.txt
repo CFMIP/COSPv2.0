@@ -41,9 +41,13 @@
   channel_filepath='rttov_channel_input_AIRS.csv',
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/',
-  OD_coef_filepath='rttov9pred101L/rtcoef_eos_2_airs_pcrttov_compat.H5',
-  aer_coef_filepath='cldaer_visir/scaercoef_eos_2_airs_cams.H5',
-  cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_airs.H5',  
+  
+  OD_coef_filepath='rttov13pred54L/rtcoef_eos_2_modis-shifted_7gas.dat',
+  aer_coef_filepath='cldaer_visir/scaercoef_eos_2_modis-shifted_cams.dat',
+  cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_modis-shifted.dat',
+!  OD_coef_filepath='rttov9pred101L/rtcoef_eos_2_airs_pcrttov_compat.H5',
+!  aer_coef_filepath='cldaer_visir/scaercoef_eos_2_airs_cams.H5',
+!  cld_coef_filepath='cldaer_visir/sccldcoef_eos_2_airs.H5',  
   PC_coef_filepath='pc/pccoef_eos_2_airs_landsea.H5',  
   !-------------- RTTOV Trace Gas Logicals (must match coefficient files)
   SO2_data=.false.,

@@ -73,7 +73,6 @@ module mod_cosp_rttov
 #include "rttov_dealloc_coefs.interface"
 #include "rttov_alloc_direct.interface"
 #include "rttov_init_emis_refl.interface"
-#include "rttov_user_options_checkinput.interface"
 #include "rttov_print_opts.interface"
 #include "rttov_print_profile.interface"
 #include "rttov_get_pc_predictindex.interface"
@@ -146,9 +145,10 @@ module mod_cosp_rttov
      integer(kind=jpim),pointer :: & ! JKS trying this
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
-          nSubCols,     & ! Number of subcolumns
-          month           ! Month (needed for surface emissivity calculation)
-     real(wp),pointer :: & ! Could change the dimensionality of these in the future
+          nSubCols        ! Number of subcolumns
+     integer(kind=jpim),dimension(:),pointer :: &
+          month
+     real(wp),dimension(:),pointer :: & ! Could change the dimensionality of these in the future
           co2,          & ! Carbon dioxide 
           ch4,          & ! Methane 
           n2o,          & ! n2o 
@@ -327,7 +327,8 @@ contains
     inst_npred_pc  = SIZE(predictindex)
     inst_nchanprof = inst_npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
       
-    ! Determine the number of reconstructed radiances per profile (nchannels_rec)
+    ! Determine the number of reconstructed radiances per profile (nchannels_rec)    
+    if (allocated(inst_iChannel_out))             deallocate(inst_iChannel_out) ! Reset because this variable is internal and used by multiple instruments.  ! JKS
     if (inst_opts % rt_ir % pc % addradrec) then
       if (inst_nchannels_rec < 0) then
         ! If the number of channels is negative, don't reconstruct radiances at all
@@ -342,7 +343,6 @@ contains
       else
         ! Otherwise read the channel list from the file
         print*,'radrec 3.'
-        print*,'inst_nchannels_rec:   ',inst_nchannels_rec
         allocate(inst_iChannel_out(inst_nchannels_rec))
         inst_iChannel_out    = inst_iChannel_in
       endif
@@ -435,7 +435,7 @@ contains
     do i = 1, rttovIN%nPoints
         
       ! Initialize trace gas concentrations from user input
-      ! These gases are not in COSP input files but might be in the futre
+      ! These gases are not in COSP input files but might be in the future
 
       profiles(i)%co2(:)        = inst_co2_mr
       profiles(i)%n2o(:)        = inst_n2o_mr
@@ -464,7 +464,7 @@ contains
        
       ! 2m parameters
       profiles(i)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
-      profiles(i)%s2m%t      =  rttovIN%t2m(i) ! JKS or rttovIN%t_skin
+      profiles(i)%s2m%t      =  rttovIN%t2m(i)
       profiles(i)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
       profiles(i)%s2m%u      =  rttovIN%u_surf(i)
       profiles(i)%s2m%v      =  rttovIN%v_surf(i)
@@ -472,7 +472,7 @@ contains
 
       ! skin variables for emissivity calculations
       profiles(i)%skin%t          =  rttovIN%t_skin(i)
-
+            
       ! fastem coefficients - for mw calculations
       profiles(i)%skin%fastem(1)  =  3.0
       profiles(i)%skin%fastem(2)  =  5.0
@@ -508,7 +508,7 @@ contains
       profiles(i)%skin%watertype = 1
       !profiles(i) %idg         = 0. ! Depreciated?
       !profiles(i) %ish         = 0. ! Depreciated?
-    end do
+    end do     
         
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in profile initialization' , lalloc = .false.)
@@ -631,10 +631,14 @@ contains
   
     integer(KIND=jpim),intent(in)   :: &
         inst_nthreads
-    type(rttov_options),intent(in) :: &
+    type(rttov_options),intent(in)  :: &
         inst_opts
-    type(rttov_coefs),intent(in)   :: &
+    type(rttov_coefs),intent(in)    :: &
         inst_coefs
+        
+!    print*,'shape(chanprof%prof):      ',shape(chanprof%prof)
+!    print*,'shape(chanprof%chan):      ',shape(chanprof%chan)
+!    print*,'shape(bt_total):   ',shape(bt_total)
         
     if (inst_nthreads <= 1) then
       print*,'Calling rttov_direct'
@@ -730,7 +734,6 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 8. Save output data
   ! ------------------------------------------------------
-  ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
   
   subroutine cosp_rttov_save_output(rttovIN,inst_nchan_out,         & ! Inputs
@@ -797,7 +800,6 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 8. Save output data (PC-RTTOV)
   ! ------------------------------------------------------
-  ! JKS - Need to allow options for Tb and radiance for clear- and cloudy-skies
   ! PC-RTTOV only does clear-sky IR calculations (can handle aerosols, but I'll ignore that for now.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
