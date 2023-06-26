@@ -53,18 +53,20 @@ MODULE MOD_COSP_RTTOV
   ! TYPE rttov_IN - Data type specific to inputs required by RTTOV
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   type rttov_IN
-     integer,pointer :: &
+     integer,pointer :: & ! JKS trying this
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
-          nSubCols,     & ! Number of subcolumns
-          nChannels,    & ! Number of channels to simulate
-          month           ! Month (needed for surface emissivity calculation)
-     real(wp),pointer :: &
-          zenang,       & ! Satellite zenith angle
+          nSubCols        ! Number of subcolumns
+     integer,dimension(:),pointer :: &
+          month
+     real(wp),dimension(:),pointer :: & ! Could change the dimensionality of these in the future
           co2,          & ! Carbon dioxide 
           ch4,          & ! Methane 
           n2o,          & ! n2o 
           co              ! Carbon monoxide
+!     real(wp),dimension(:),pointer :: &
+!          surfem           ! Surface emissivities for the channels
+!          refl,         & ! Surface reflectances for the channels
      real(wp),dimension(:),pointer :: &
           h_surf,       & ! Surface height
           u_surf,       & ! U component of surface wind
@@ -83,7 +85,6 @@ MODULE MOD_COSP_RTTOV
           t,            & ! Temperature 
           q,            & ! Specific humidity
           o3              ! Ozone
-     
      ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
      real(wp),dimension(:,:),pointer :: &
           tca,          & ! Cloud fraction

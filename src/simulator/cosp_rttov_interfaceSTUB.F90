@@ -174,15 +174,17 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_pc_rttov_simulate
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,lCleanup,                                 & ! Inputs
+  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                     & ! Inputs
                                     bt_total,rad_total,                               & ! Outputs
                                     error)         
 
       type(rttov_in),intent(in) :: &
           rttovIN
+      type(rttov_cfg),intent(inout) :: &
+        rttovConfig   
       logical,intent(in) :: &
            lCleanup   ! Flag to determine whether to deallocate RTTOV types
-      real(wp),intent(inout),dimension(rttovIN%nPoints,rttovIN%nChannels) :: & ! Can I do this? I guess so!
+      real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so!
           bt_total,                          &        ! All-sky
           rad_total                                   ! All-sky
       character(len=128) :: &
