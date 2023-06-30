@@ -62,7 +62,7 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
             cosp_calipso_interface.o  lidar_simulator.o cosp_cloudsat_interface.o quickbeam.o    \
             cosp_grLidar532_interface.o cosp_atlid_interface.o
 
-# Add RTTOV files appropriately. JKS: cosp should only need to depend on the interface, not the simulator.
+# Add RTTOV files appropriately.
 ifdef RTTOV
 COSP_OBJS += cosp_rttov_interface_v13.o cosp_rttov_v13.o
 else
