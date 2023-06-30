@@ -11,3 +11,4 @@ driver/run/cosp2_test
 
 # Ignore anything in a .ipynb_checkpoint directory
 **/.ipynb_checkpoints/*
+src/simulator/plot_testRTTOV_output.ipynb

@@ -159,8 +159,10 @@ program cosp2_test
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
        fileIN                       ! dinput+finput       
-  type(character(len=128)), allocatable, dimension(:) :: & 
-       rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
+  character(len=128), dimension(50) :: &   ! Arbitrary limit of 50 should be fine.
+       rttov_instrument_namelists          ! Input of paths to RTTOV instrument namelists
+  character(len=128), allocatable   :: & 
+       rttov_instrument_namelists_final(:) ! Array of paths to RTTOV instrument namelists
        
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
@@ -237,7 +239,7 @@ program cosp2_test
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
        rcfg_cloudsat     ! Radar configuration
-  type(rttov_cfg), dimension(:), allocatable, target :: & ! JKS check
+  type(rttov_cfg), dimension(:), allocatable, target :: &
        rttov_configs
   type(cosp_outputs) :: &
        cospOUT           ! COSP simulator outputs
@@ -303,19 +305,13 @@ program cosp2_test
   ! Jonah namelist checking area
   print*,'Lrttov_run:   ',Lrttov_run
   print*,'rttov_Ninstruments:    ',rttov_Ninstruments
-  allocate(rttov_instrument_namelists(rttov_Ninstruments))
-  
-!  if (Lrttov_run) then
-!      namelist/COSP_INPUT/rttov_instrument_namelists
-!  endif
-  
-!  open(10,file=cosp_input_namelist,status='unknown')
-!  read(10,nml=cosp_input)
-  
-!  print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
-  rttov_instrument_namelists(1:3) = (/'instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt'/)
-  print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
-  
+
+  ! Shift the namelists read in into a shorter array for cosp_init:    
+  allocate(rttov_instrument_namelists_final(rttov_Ninstruments)) 
+  rttov_instrument_namelists_final(:) = rttov_instrument_namelists(1:rttov_Ninstruments)
+
+  print*,'rttov_instrument_namelists_final:         ',rttov_instrument_namelists_final
+     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -421,7 +417,7 @@ program cosp2_test
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
-       rttov_Ninstruments, rttov_instrument_namelists, rttov_configs)
+       rttov_Ninstruments, rttov_instrument_namelists_final, rttov_configs)
   call cpu_time(driver_time(3))
     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1530,7 +1526,6 @@ contains
     if (allocated(y%hgt_matrix))      deallocate(y%hgt_matrix)
     if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
     if (allocated(y%surfelev))        deallocate(y%surfelev)
-! Must be allocatable, and these are single values. Waiting for GCM integration
     if (allocated(y%month))           deallocate(y%month)
     if (allocated(y%co2))             deallocate(y%co2)
     if (allocated(y%ch4))             deallocate(y%ch4)
