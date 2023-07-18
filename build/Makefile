@@ -87,11 +87,6 @@ driver:
 	make cosp2_test
 	mv cosp2_test ../driver/run
 
-# I would like to set the env variable here, but it won't work.
-driver_rttov:
-	make driver
-
-
 # Dependencies for normal COSP libary
 cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o                              \
          cosp_misr_interface.o cosp_isccp_interface.o cosp_calipso_interface.o             \
