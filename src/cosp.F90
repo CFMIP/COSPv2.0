@@ -1819,7 +1819,7 @@ CONTAINS
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
-       rttov_Ninstruments, rttov_instrument_namelists,rttov_configs)
+       rttov_Ninstruments, rttov_instrument_namelists,rttov_configs,unitn)
 
     ! INPUTS
     logical,intent(in)    :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol
@@ -1850,6 +1850,9 @@ CONTAINS
     ! OUTPUTS
     type(radar_cfg) :: rcfg
     type(rttov_cfg), dimension(:), allocatable :: rttov_configs
+    
+    ! Optional args
+    integer,intent(in),Optional :: unitn ! Used for io limits
 
     ! Local variables
     integer  :: i
@@ -1899,10 +1902,15 @@ CONTAINS
     ! Could print diagnostic on timing here.
     if (Lrttov) then
         call cpu_time(driver_time(1))
-        call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
-                             rttov_instrument_namelists,        &
-                             rttov_configs)
-                             
+        if (present(unitn)) then
+            call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
+                                 rttov_instrument_namelists,        &
+                                 rttov_configs,unitn=unitn)
+        else
+            call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
+                                 rttov_instrument_namelists,        &
+                                 rttov_configs)
+        end if
         call cpu_time(driver_time(2))
 !        print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif

@@ -123,14 +123,13 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           rad_total_pc(:,:)
   end type rttov_output    
 
-  
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(Lrttov, Nlevels,Ninstruments,instrument_namelists,       &
-                             rttov_configs)
+                             rttov_configs, unitn)
 
       logical,intent(in) :: &
           Lrttov
@@ -141,6 +140,8 @@ CONTAINS
           instrument_namelists   ! Array of paths to RTTOV instrument namelists      
       type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
           rttov_configs
+      integer,intent(in),Optional :: unitn ! Used for io limits
+          
       ! Local variables
       integer            :: &
           inst_idx ! iterator
@@ -153,7 +154,11 @@ CONTAINS
 !          print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx)
 !          print*,'kind(rttov_configs(inst_idx)):     ',kind(rttov_configs(inst_idx))
 !          print*,'rttov_configs(inst_idx):           ',rttov_configs(inst_idx)
-          call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx))
+          if (present(unitn)) then
+              call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx),unitn=unitn)
+          else
+              call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx))
+          endif
       end do
          
        
@@ -163,15 +168,17 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT_S(Nlevels,namelist_filepath,       &
-                               rttov_config)
+                               rttov_config, unitn)
   
      integer,intent(in)                :: &
          Nlevels
-     character(len=128),intent(in)     :: & 
+    character(len=128),intent(in)     :: & 
          namelist_filepath   ! Array of paths to RTTOV instrument namelists      
-     type(rttov_cfg),intent(out)       :: & ! intent(out)?
+    type(rttov_cfg),intent(out)       :: & ! intent(out)?
          rttov_config 
-             
+      
+    integer,intent(in),Optional :: unitn ! Used for io limits
+      
     ! Local variables
     character(len=256),target :: &
         channel_filepath,  &
@@ -239,9 +246,16 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    open(10,file=namelist_filepath,status='unknown')
-    read(10,nml=RTTOV_INPUT)
-    close(10)
+    ! Handle indices of files already opened (for CESM integration)
+    if (present(unitn)) then
+        open(unitn,file=namelist_filepath,status='unknown')
+        read(unitn,nml=RTTOV_INPUT)
+        close(unitn)    
+    else
+        open(10,file=namelist_filepath,status='unknown')
+        read(10,nml=RTTOV_INPUT)
+        close(10)
+    endif
     
     ! Set logicals for RTTOV config
     rttov_config%Lrttov_bt         = Lrttov_bt
