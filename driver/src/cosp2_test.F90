@@ -159,9 +159,9 @@ program cosp2_test
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
        fileIN                       ! dinput+finput       
-  character(len=128), dimension(50) :: &   ! Arbitrary limit of 50 should be fine.
+  character(len=256), dimension(50) :: &   ! Arbitrary limit of 50 should be fine.
        rttov_instrument_namelists          ! Input of paths to RTTOV instrument namelists
-  character(len=128), allocatable   :: & 
+  character(len=256), allocatable   :: & 
        rttov_instrument_namelists_final(:) ! Array of paths to RTTOV instrument namelists
        
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
