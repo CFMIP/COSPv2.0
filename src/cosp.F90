@@ -1844,7 +1844,7 @@ CONTAINS
        cloudsat_micro_scheme           ! Microphysical scheme used by CLOUDSAT
     real(wp),dimension(10) :: driver_time
         
-    type(character(len=128)), dimension(rttov_Ninstruments) :: & 
+    type(character(len=256)), dimension(rttov_Ninstruments) :: & 
         rttov_instrument_namelists   ! Array of paths to RTTOV instrument namelists
     
     ! OUTPUTS
@@ -1902,6 +1902,7 @@ CONTAINS
     ! Could print diagnostic on timing here.
     if (Lrttov) then
         call cpu_time(driver_time(1))
+        print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists ! JKS test
         if (present(unitn)) then
             call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
                                  rttov_instrument_namelists,        &

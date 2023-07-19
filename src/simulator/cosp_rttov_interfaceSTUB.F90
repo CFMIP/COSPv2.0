@@ -99,28 +99,28 @@ CONTAINS
 
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_ini2
+  ! SUBROUTINE cosp_rttov_ini2 - JKS can I delete this??
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INI2(Nlevels,Ninstruments,instrument_namelists,       &
-                             rttov_config)
+!  SUBROUTINE COSP_RTTOV_INI2(Nlevels,Ninstruments,instrument_namelists,       &
+!                             rttov_config)
 
-      integer,intent(in) :: &
-          Nlevels,   &
-          Ninstruments
-      type(character(len=256)), dimension(Ninstruments)     :: & 
-          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
-      type(rttov_cfg), dimension(Ninstruments) :: & ! intent(out)?
-          rttov_config
+!      integer,intent(in) :: &
+!          Nlevels,   &
+!          Ninstruments
+!      type(character(len=256)), dimension(Ninstruments)     :: & 
+!          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
+!      type(rttov_cfg), dimension(Ninstruments) :: & ! intent(out)?
+!          rttov_config
          
        
-  END SUBROUTINE COSP_RTTOV_INI2
+!  END SUBROUTINE COSP_RTTOV_INI2
 
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(Lrttov,Nlevels,Ninstruments,instrument_namelists,       &
-                             rttov_configs)
+                             rttov_configs,unitn)
 
       logical,intent(inout) :: &
           Lrttov
@@ -131,6 +131,7 @@ CONTAINS
           instrument_namelists   ! Array of paths to RTTOV instrument namelists      
       type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
           rttov_configs
+      integer,intent(in),Optional :: unitn ! Used for io limits
           
       Lrttov = .false.
           

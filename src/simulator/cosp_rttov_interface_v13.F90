@@ -136,7 +136,7 @@ CONTAINS
       integer,intent(in) :: &
           Nlevels,   &
           Ninstruments
-      type(character(len=128)), dimension(Ninstruments)     :: & 
+      type(character(len=256)), dimension(Ninstruments)     :: & 
           instrument_namelists   ! Array of paths to RTTOV instrument namelists      
       type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
           rttov_configs
@@ -155,6 +155,7 @@ CONTAINS
 !          print*,'kind(rttov_configs(inst_idx)):     ',kind(rttov_configs(inst_idx))
 !          print*,'rttov_configs(inst_idx):           ',rttov_configs(inst_idx)
           if (present(unitn)) then
+              print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx) ! JKS check
               call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx),unitn=unitn)
           else
               call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx))
@@ -172,7 +173,7 @@ CONTAINS
   
      integer,intent(in)                :: &
          Nlevels
-    character(len=128),intent(in)     :: & 
+    character(len=256),intent(in)     :: & 
          namelist_filepath   ! Array of paths to RTTOV instrument namelists      
     type(rttov_cfg),intent(out)       :: & ! intent(out)?
          rttov_config 
@@ -230,6 +231,10 @@ CONTAINS
         ipcreg,        &
         npcscores
                 
+    ! JKS for checking errors in filenames.
+    character(len=256) :: imsg  !<-- some suitable length, say XX=256      
+    integer            :: erro
+                
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
@@ -246,13 +251,29 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Handle indices of files already opened (for CESM integration)
+    ! Handle indices of files already opened (for CESM integration)    
     if (present(unitn)) then
-        open(unitn,file=namelist_filepath,status='unknown')
+        open(unitn,file=namelist_filepath,status='unknown',iostat=erro,iomsg=imsg)
+        if (erro > 0) then
+            print*,'Error reading in "namelist_filepath" in COSP_RTTOV_INIT_S'
+            print*,'erro:                ', erro
+            print*,'imsg:                ', imsg
+            print*,'namelist_filepath:   ',namelist_filepath
+            errorstatus = 1
+            call rttov_exit(errorstatus)                
+        end if
         read(unitn,nml=RTTOV_INPUT)
         close(unitn)    
     else
-        open(10,file=namelist_filepath,status='unknown')
+        open(10,file=namelist_filepath,status='unknown',iostat=erro,iomsg=imsg)
+        if (erro > 0) then
+            print*,'Error reading in "namelist_filepath" in COSP_RTTOV_INIT_S'
+            print*,'erro:                ', erro
+            print*,'imsg:                ', imsg
+            print*,'namelist_filepath:   ',namelist_filepath
+            errorstatus = 1
+            call rttov_exit(errorstatus)                
+        end if      
         read(10,nml=RTTOV_INPUT)
         close(10)
     endif
