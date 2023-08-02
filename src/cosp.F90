@@ -52,7 +52,7 @@ MODULE MOD_COSP
                                          cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY:   &
-      COSP_RTTOV_INIT,            &
+      cosp_rttov_init,            &
       cosp_rttov_simulate,        &
       rttov_cfg,                  &
       rttov_output
