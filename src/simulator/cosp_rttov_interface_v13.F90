@@ -82,11 +82,11 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           cld_coef_filepath,   &
           PC_coef_filepath
       integer(KIND=jpim)           :: &
-          nchanprof,           &
-          rttov_direct_nthreads
-      integer(KIND=jpim)           :: &
-          nchan_out,           &
-          nchannels_rec         
+          nchanprof,             &
+          rttov_direct_nthreads, &
+          nchan_out,             &
+          nchannels_rec,         &
+          rttov_Nlocaltime
       real(wp)                     :: &
           CO2_mr,              &
           CH4_mr,              &
@@ -98,8 +98,10 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           iChannel(:),      &  ! Requested channel indices
           iChannel_out(:)      ! Passing out the channel indices (actual output channels)
       real(kind=jprb),allocatable    :: &
-          emisChannel(:),   &                ! RTTOV channel emissivity
-          reflChannel(:)                     ! RTTOV channel reflectivity
+          emisChannel(:),          &         ! RTTOV channel emissivity
+          reflChannel(:),          &         ! RTTOV channel reflectivity
+          rttov_localtime(:),      &
+          rttov_localtime_width(:) 
       type(rttov_options)          :: &
           opts                               ! RTTOV options structure
       type(rttov_coefs)            :: &
@@ -155,7 +157,7 @@ CONTAINS
 !          print*,'kind(rttov_configs(inst_idx)):     ',kind(rttov_configs(inst_idx))
 !          print*,'rttov_configs(inst_idx):           ',rttov_configs(inst_idx)
           if (present(unitn)) then
-              print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx) ! JKS check
+!              print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx) ! JKS check
               call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx),unitn=unitn)
           else
               call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx))
@@ -230,6 +232,13 @@ CONTAINS
         ipcbnd,        &
         ipcreg,        &
         npcscores
+        
+    ! JKS for orbital swathing
+    integer(kind=jpim)     ::  &   
+        rttov_Nlocaltime             ! Number of orbits
+    real(wp),dimension(20) ::  &         ! Reasonable but arbitrary limit at 10 local time orbits
+        rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
+        rttov_localtime_width        ! Width of satellite swath (km).
                 
     ! JKS for checking errors in filenames.
     character(len=256) :: imsg  !<-- some suitable length, say XX=256      
@@ -246,8 +255,10 @@ CONTAINS
                          clw_data,                                               & ! MW option
                          CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
-                         rttov_nthreads,rttov_ZenAng
-                                                      
+!                         rttov_nthreads,rttov_ZenAng
+                         rttov_nthreads,rttov_ZenAng,rttov_Nlocaltime,           &
+                         rttov_localtime,rttov_localtime_width
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -277,6 +288,16 @@ CONTAINS
         read(10,nml=RTTOV_INPUT)
         close(10)
     endif
+    
+    ! Set swath arrays correctly.
+    allocate(rttov_config%rttov_localtime(rttov_Nlocaltime),rttov_config%rttov_localtime_width(rttov_Nlocaltime))
+    rttov_config%rttov_Nlocaltime         = rttov_Nlocaltime
+    rttov_config%rttov_localtime(:)       = rttov_localtime(1:rttov_Nlocaltime)
+    rttov_config%rttov_localtime_width(:) = rttov_localtime_width(1:rttov_Nlocaltime)
+    
+! Old code that doesn't make sense...
+!    rttov_config%rttov_localtime(1:rttov_Nlocaltime)      = rttov_localtime_in
+!    rttov_config%rttov_localtimewidth(1:rttov_Nlocaltime) = rttov_localtimewidth_in    
     
     ! Set logicals for RTTOV config
     rttov_config%Lrttov_bt         = Lrttov_bt

@@ -97,25 +97,6 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 
 CONTAINS
 
-
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_ini2 - JKS can I delete this??
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!  SUBROUTINE COSP_RTTOV_INI2(Nlevels,Ninstruments,instrument_namelists,       &
-!                             rttov_config)
-
-!      integer,intent(in) :: &
-!          Nlevels,   &
-!          Ninstruments
-!      type(character(len=256)), dimension(Ninstruments)     :: & 
-!          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
-!      type(rttov_cfg), dimension(Ninstruments) :: & ! intent(out)?
-!          rttov_config
-         
-       
-!  END SUBROUTINE COSP_RTTOV_INI2
-
-
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

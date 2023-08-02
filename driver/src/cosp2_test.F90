@@ -1429,6 +1429,9 @@ contains
             print*,'rttov_configs(i) % Lrttov_cld:        ',rttov_configs(i) % Lrttov_cld
             print*,'rttov_configs(i) % Lrttov_aer:        ',rttov_configs(i) % Lrttov_aer
             print*,'rttov_configs(i) % Lrttov_pc:         ',rttov_configs(i) % Lrttov_pc
+            print*,'rttov_configs(i) % rttov_Nlocaltime:        ',rttov_configs(i) % rttov_Nlocaltime
+            print*,'rttov_configs(i) % rttov_localtime:         ',rttov_configs(i) % rttov_localtime
+            print*,'rttov_configs(i) % rttov_localtime_width:   ',rttov_configs(i) % rttov_localtime_width            
 
             print*,'1.'
             x % rttov_outputs(i) % nchan_out = rttov_configs(i) % nchan_out
