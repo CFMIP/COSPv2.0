@@ -54,11 +54,11 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           cld_coef_filepath,   &
           PC_coef_filepath
       integer                      :: &
-          nchanprof,           &
-          rttov_direct_nthreads
-      integer                      :: &
-          nchan_out,           &
-          nchannels_rec         
+          nchanprof,             &
+          rttov_direct_nthreads, &
+          nchan_out,             &
+          nchannels_rec,         &
+          rttov_Nlocaltime
       real(wp)                     :: &
           CO2_mr,              &
           CH4_mr,              &
@@ -70,8 +70,10 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           iChannel(:),      &  ! Requested channel indices
           iChannel_out(:)      ! Passing out the channel indices (actual output channels)
       real(kind=wp),allocatable    :: &
-          emisChannel(:),   &                ! RTTOV channel emissivity
-          reflChannel(:)                     ! RTTOV channel reflectivity
+          emisChannel(:),           &      ! RTTOV channel emissivity
+          reflChannel(:),           &      ! RTTOV channel reflectivity
+          rttov_localtime(:),       &      ! RTTOV localtime
+          rttov_localtime_width(:) 
 !      type(rttov_options)          :: &
 !          opts                               ! RTTOV options structure
 !      type(rttov_coefs)            :: &

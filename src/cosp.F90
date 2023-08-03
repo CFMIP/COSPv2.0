@@ -110,7 +110,8 @@ MODULE MOD_COSP
           co2,                 & ! CO2                                    (kg/kg)
           ch4,                 & ! Methane                                (kg/kg)
           n2o,                 & ! N2O                                    (kg/kg)
-          co                     ! CO                                     (kg/kg)
+          co,                  & ! CO                                     (kg/kg)
+          time_frac              ! Time (UTC) expressed as a fraction on [0,1]
      real(wp),allocatable,dimension(:) :: &
           u_sfc,               & ! Surface u-wind                         (m/s)
           v_sfc,               & ! Surface v-wind                         (m/s)
@@ -769,6 +770,7 @@ CONTAINS
        rttovIN%o3         => cospgridIN%o3
        ! Below only needed for all-sky RTTOV calculation
        rttovIN%month      => cospgridIN%month
+       rttovIN%time_frac  => cospgridIN%time_frac
        rttovIN%tca        => cospgridIN%tca
        rttovIN%cldIce     => cospgridIN%cloudIce
        rttovIN%cldLiq     => cospgridIN%cloudLiq

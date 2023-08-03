@@ -81,7 +81,7 @@ program cosp2_test
        Nlon,Nlat,geomode
   real(wp) :: &
        emsfc_lw
-  real(wp),dimension(:),allocatable,target:: &
+  real(wp),dimension(:),allocatable,target   :: &
        lon,       & ! Longitude (deg)
        lat,       & ! Latitude (deg)
        skt,       & ! Skin temperature (K)
@@ -89,7 +89,11 @@ program cosp2_test
        landmask,  & ! Land/sea mask (0/1)
        u_wind,    & ! U-component of wind (m/s)
        v_wind,    & ! V-component of wind (m/s)
-       sunlit       ! Sunlit flag
+       sunlit     ! Sunlit flag
+  real(wp),dimension(:),allocatable          :: &
+       month,     & ! Month  [1,12]
+       hour,      & ! Hour   [0,24]
+       minute       ! Minute [0,60]
   real(wp),dimension(:,:),allocatable,target :: &
        p,         & ! Model pressure levels (pa)
        ph,        & ! Moddel pressure @ half levels (pa)
@@ -326,14 +330,15 @@ program cosp2_test
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
-           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints))
+           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),month(Npoints),          &
+           hour(Npoints),minute(Npoints))
 
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat,surfelev)
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev,month,hour,minute)
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -518,7 +523,8 @@ program cosp2_test
      
      ! Well-mixed gases are not in COSP offline input
      ! Moved user input of well-mixed gases to instrument namelists
-     ! Keeping these structures since gases could come from model input
+     ! Keeping these structures since gases could come from model input.
+     ! JKS should probably be 2-dimensional
      cospstateIN%co2(:)   = 0._wp
      cospstateIN%ch4(:)   = 0._wp
      cospstateIN%n2o(:)   = 0._wp 
@@ -528,6 +534,11 @@ program cosp2_test
 !     cospstateIN%ch4   = 0._wp
 !     cospstateIN%n2o   = 0._wp 
 !     cospstateIN%co    = 0._wp
+
+     ! Time information
+     cospstateIN%month       = month(start_idx:end_idx)
+     cospstateIN%time_frac   = (60*hour(start_idx:end_idx) + minute(start_idx:end_idx)) / (24*60) ! Time (UTC) expressed as a fraction on [0,1]
+     deallocate(month,hour,minute) ! JKS - helpful?
 
      ! From the data input file
      cospstateIN%u_sfc  = u_wind(start_idx:end_idx)
@@ -550,7 +561,6 @@ program cosp2_test
 
      ! Inputs not supplied in the UKMO test data
      cospstateIN%seaice(:)    = 0._wp
-     cospstateIN%month        = 0
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
@@ -1072,6 +1082,7 @@ contains
     
     if (Lrttov) then
        allocate(y%cfg_rttov(ninst_rttov))
+       ! JKS allocate localtime
     endif
   end subroutine construct_cospIN
   
@@ -1093,7 +1104,9 @@ contains
 !             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
-             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
+             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels),                  &
+             y%month(nPoints),y%time_frac(nPoints))
+!             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
 
   end subroutine construct_cospstateIN
 
@@ -1530,6 +1543,7 @@ contains
     if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
     if (allocated(y%surfelev))        deallocate(y%surfelev)
     if (allocated(y%month))           deallocate(y%month)
+    if (allocated(y%time_frac))       deallocate(y%time_frac)
     if (allocated(y%co2))             deallocate(y%co2)
     if (allocated(y%ch4))             deallocate(y%ch4)
     if (allocated(y%n2o))             deallocate(y%n2o)
