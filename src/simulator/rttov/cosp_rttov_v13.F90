@@ -152,7 +152,8 @@ module mod_cosp_rttov
           co2,          & ! Carbon dioxide 
           ch4,          & ! Methane 
           n2o,          & ! n2o 
-          co              ! Carbon monoxide
+          co,           & ! Carbon monoxide
+          time_frac
 !     real(wp),dimension(:),pointer :: &
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
@@ -213,7 +214,9 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,      &
-                                 inst_coefs,inst_iChannel,inst_nchanprof)
+                                 inst_coefs,inst_iChannel,rttov_Nlocaltime, &
+                                 rttov_localtime,rttov_localtime_width,     &
+                                 inst_nchanprof)
                            
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -225,17 +228,76 @@ contains
         inst_coefs
     integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
         inst_iChannel
+    integer(KIND=jpim),intent(in)           :: &
+        rttov_Nlocaltime    
+    real(kind=jprb), dimension(rttov_Nlocaltime), intent(in)    :: &
+        rttov_localtime,       &
+        rttov_localtime_width
     integer(kind=jpim),intent(inout) :: &
-        inst_nchanprof    
+        inst_nchanprof 
+    
+    !---- Local variables ----!
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch
-    
+
+    real(kind=jprb),parameter                     :: &
+        pi = 4.D0*DATAN(1.D0),  &  ! yum
+        radius = 6371.0            ! Earth's radius in km (mean volumetric)
+
+    logical(jplm),dimension(rttovIN % nPoints)    :: &
+        swath_mask
+        
+    real(kind=jprb), dimension(rttov_Nlocaltime)  :: &
+        sat_lon
+        
+    real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
+        swath_mask_all, & ! Mask of reals over all local times
+        dlon,           & ! distance to satellite longitude in degrees
+        dx                ! distance to satellite longitude in km?
+        
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3. Allocate RTTOV input and output structures
     ! ------------------------------------------------------
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    ! Handle swathing here. Initial code from Genevieve with minor changes.
+    if (rttov_Nlocaltime > 0) then
+        ! Calculate the longitude where it is the requested local time. 15 degrees lon. per hour.
+        sat_lon = 15.0 * (rttov_localtime - (rttovIN%time_frac * 24.0)) 
+        ! frac_day will either be a scalar (one for all gridpoint) or a vector. Should broadcast ok.
+
+        ! Iterate over local times
+        do j=1,rttov_Nlocaltime
+            ! Calculate distance (in degrees) from each grid cell to the satellite central long
+            dlon(:,j) = mod((rttovIN%longitude - sat_lon(j) + 180.0), 360.0) - 180.0 
+            ! calculate distance to satellite in km 
+            dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude) * radius
+        end do
+        
+        ! inside swath = 1, outside swath = 0 for "swath_mask_all"
+        swath_mask_all = 0
+        do j=1,rttov_Nlocaltime
+            where (abs(dx(:,j))<(rttov_localtime_width(j)*0.5))
+                 swath_mask_all(:,j) = 1
+            end where
+        end do
+
+        ! Collapse along the Nlocaltimes dimension and shift to logicals
+        swath_mask(:) = .false. ! Initialize to false
+        do j = 1,rttovIN % nPoints
+            if ( ANY( swath_mask_all(j,:) .eq. 1) ) then
+                swath_mask(j) = .true.
+            end if
+        end do
+    else
+        swath_mask(:) = .true. ! Compute on all columns in no local times are passed.
+    end if
     
+    print*,'dlon:         ',dlon
+    print*,'dx:           ',dx
+    print*,'swath_mask:   ',swath_mask
+
     ! Determine the total number of radiances to simulate (nchanprof).    
     inst_nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
     

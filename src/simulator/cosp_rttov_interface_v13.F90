@@ -235,7 +235,7 @@ CONTAINS
         
     ! JKS for orbital swathing
     integer(kind=jpim)     ::  &   
-        rttov_Nlocaltime             ! Number of orbits
+        rttov_Nlocaltime = 0         ! Number of orbits
     real(wp),dimension(20) ::  &         ! Reasonable but arbitrary limit at 10 local time orbits
         rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
         rttov_localtime_width        ! Width of satellite swath (km).
@@ -294,11 +294,7 @@ CONTAINS
     rttov_config%rttov_Nlocaltime         = rttov_Nlocaltime
     rttov_config%rttov_localtime(:)       = rttov_localtime(1:rttov_Nlocaltime)
     rttov_config%rttov_localtime_width(:) = rttov_localtime_width(1:rttov_Nlocaltime)
-    
-! Old code that doesn't make sense...
-!    rttov_config%rttov_localtime(1:rttov_Nlocaltime)      = rttov_localtime_in
-!    rttov_config%rttov_localtimewidth(1:rttov_Nlocaltime) = rttov_localtimewidth_in    
-    
+        
     ! Set logicals for RTTOV config
     rttov_config%Lrttov_bt         = Lrttov_bt
     rttov_config%Lrttov_rad        = Lrttov_rad
@@ -629,11 +625,14 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
-    call cosp_rttov_allocate(rttovIN,                       &
-                             rttovConfig % nChannels_rec,   &
-                             rttovConfig % opts,            &
-                             rttovConfig % coefs,           &
-                             rttovConfig % iChannel,        &
+    call cosp_rttov_allocate(rttovIN,                             &
+                             rttovConfig % nChannels_rec,         &
+                             rttovConfig % opts,                  &
+                             rttovConfig % coefs,                 &
+                             rttovConfig % iChannel,              &
+                             rttovConfig % rttov_Nlocaltime,      &
+                             rttovConfig % rttov_localtime,       &
+                             rttovConfig % rttov_localtime_width, &
                              rttovConfig % nchanprof)    
         
     call cpu_time(driver_time(2))

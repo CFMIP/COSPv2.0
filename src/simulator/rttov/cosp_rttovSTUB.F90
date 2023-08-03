@@ -63,7 +63,8 @@ MODULE MOD_COSP_RTTOV
           co2,          & ! Carbon dioxide 
           ch4,          & ! Methane 
           n2o,          & ! n2o 
-          co              ! Carbon monoxide
+          co,           & ! Carbon monoxide
+          time_frac
 !     real(wp),dimension(:),pointer :: &
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
