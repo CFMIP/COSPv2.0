@@ -292,34 +292,25 @@ contains
             end if
         end do
         ! Determine the total number of radiances to simulate (nchanprof).
-        inst_nchanprof = inst_nChannels_rec * inst_nprof
     else
         swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
-        inst_nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
     end if
+    ! Determine the total number of radiances to simulate (nchanprof).
     inst_nprof     = count(swath_mask)
+    inst_nchanprof = inst_nChannels_rec * inst_nprof
     
-    ! To keep functionality for the commit
-    inst_nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
-    
-    
-    ! Set rttovIN%nPointsCalc ! the number of columns to actually operate on.
-    
-!    print*,'rttovIN%time_frac:   ',rttovIN%time_frac(1:10)
-!    print*,'sat_lon:             ',sat_lon(1:10,:)
-!    print*,'rttovIN%longitude:   ',rttovIN%longitude(1:10)
-!    print*,'rttovIN%latitude:    ',rttovIN%latitude(1:10)
-!    print*,'dlon:         ',dlon(1:10,:)
-!    print*,'dx:           ',dx(1:10,:)
     print*,'swath_mask:   ',swath_mask
     print*,'count(swath_mask):   ',count(swath_mask)
+    print*,'inst_nprof:          ',inst_nprof
+    print*,'inst_nChannels_rec:  ',inst_nChannels_rec
+    print*,'inst_nchanprof:      ',inst_nchanprof
     
     ! Allocate structures for rttov_direct
     call rttov_alloc_direct( &
         errorstatus,             &
         1_jpim,                  &  ! 1 => allocate
-!        inst_nprof,         &
-        rttovIN%nPoints,         &
+        inst_nprof,              &
+!        rttovIN%nPoints,         &
         inst_nchanprof,          &
         rttovIN%nLevels,         &
         chanprof,                &
@@ -342,14 +333,15 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
     nch = 0_jpim
-    do j = 1, rttovIN%nPoints
+!    do j = 1, rttovIN%nPoints
+    do j = 1, inst_nprof
       do jch = 1, inst_nChannels_rec ! nChannels
-!      do jch = 1, rttovIN%nChannels ! nChannels
         nch = nch + 1_jpim
         chanprof(nch)%prof = j
         chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
       end do
     end do
+    print*,'Done with "cosp_rttov_allocate"'
         
   end subroutine cosp_rttov_allocate
 
@@ -361,9 +353,10 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   subroutine cosp_pc_rttov_allocate(rttovIN,inst_PC_coef_filepath, & !inst_npcscores,    &
-                                    inst_coefs,inst_opts,                            &
-                                    inst_nchannels_rec,inst_iChannel_in,             &
-                                    inst_nchanprof, inst_iChannel_out) !,inst_predictindex)
+                                    inst_coefs,inst_opts,                                   &
+                                    inst_nchannels_rec,inst_iChannel_in,                    &
+                                    rttov_Nlocaltime,rttov_localtime,rttov_localtime_width, &
+                                    inst_nchanprof,inst_iChannel_out,swath_mask) !,inst_predictindex)
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -376,11 +369,18 @@ contains
     integer(kind=jpim),intent(inout) :: &
         inst_nchannels_rec
     integer(kind=jpim),intent(in),dimension(inst_nchannels_rec)     :: &
-        inst_iChannel_in ! Channel indices the user initially requests.        
+        inst_iChannel_in ! Channel indices the user initially requests.
+    integer(KIND=jpim),intent(in)           :: &
+        rttov_Nlocaltime    
+    real(kind=jprb), dimension(rttov_Nlocaltime), intent(in)    :: &
+        rttov_localtime,       &
+        rttov_localtime_width        
     integer(kind=jpim),intent(inout) :: &
         inst_nchanprof    
     integer(kind=jpim),intent(inout),allocatable  :: &
         inst_iChannel_out(:)      ! Passing out the channel indices
+    logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
+        swath_mask
 
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch
@@ -479,7 +479,9 @@ contains
                                            inst_co_mr,     &
                                            inst_n2o_mr,    &
                                            inst_so2_mr,    &
-                                           inst_zenang)
+                                           inst_zenang,    &
+                                           inst_nprof,     &
+                                           inst_swath_mask)
 
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
         rttovIN
@@ -493,9 +495,13 @@ contains
         inst_n2o_mr,      &
         inst_so2_mr,      &
         inst_zenang
+    integer(kind=jpim),intent(in) :: &
+        inst_nprof
+    logical(kind=jplm),dimension(rttovIN % nPoints),intent(in) :: &
+        inst_swath_mask
     
     ! Loop variables
-    integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for levels.
+    integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for swath_mask.
         
     ! Store profile data from rttovIN in profile type.
     ! See RTTOV user guide pg 163 for description of "profiles" type
@@ -508,82 +514,88 @@ contains
 
     profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
     
+    ! Iterate over all columns
+    j = 0 ! Initialize input
     do i = 1, rttovIN%nPoints
         
-      ! Initialize trace gas concentrations from user input
-      ! These gases are not in COSP input files but might be in the future
-
-      profiles(i)%co2(:)        = inst_co2_mr
-      profiles(i)%n2o(:)        = inst_n2o_mr
-      profiles(i)%co(:)         = inst_co_mr
-      profiles(i)%ch4(:)        = inst_ch4_mr
-      profiles(i)%so2           = inst_so2_mr ! syntax slightly different?
+      if (inst_swath_mask(i)) then ! only added masked columns to profiles
+          j = j + 1 ! Increment first
       
-! For when trace gas columns are supplied   
-!      profiles(i)%co2(:)        =  rttovIN%co2
-!      profiles(i)%n2o(:)        =  rttovIN%n2o
-!      profiles(i)%co(:)         =  rttovIN%co
-!      profiles(i)%ch4(:)        =  rttovIN%ch4
-      
-      ! Initialize column pressure, temperature, and humidity
-      profiles(i)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
-      profiles(i)%t(:) =  rttovIN%t(i, :)
-      profiles(i)%q(:) =  rttovIN%q(i, :)
+          ! Initialize trace gas concentrations from user input
+          ! These gases are not in COSP input files but might be in the future
 
-      ! q coefficient limit is 0.1e-10
-      where(profiles(i)%q(:) < 0.1e-10)
-         profiles(i)%q(:) = 0.11e-10
-      end where
-      
-      ! Gas profiles
-      profiles(i)%o3         =  rttovIN%o3(i, :)
-       
-      ! 2m parameters
-      profiles(i)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
-      profiles(i)%s2m%t      =  rttovIN%t2m(i)
-      profiles(i)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
-      profiles(i)%s2m%u      =  rttovIN%u_surf(i)
-      profiles(i)%s2m%v      =  rttovIN%v_surf(i)
-      profiles(i)%s2m%wfetc  =  10000. ! only used by sea surface solar BRDF model.
+          profiles(j)%co2(:)        = inst_co2_mr
+          profiles(j)%n2o(:)        = inst_n2o_mr
+          profiles(j)%co(:)         = inst_co_mr
+          profiles(j)%ch4(:)        = inst_ch4_mr
+          profiles(j)%so2           = inst_so2_mr ! syntax slightly different?
 
-      ! skin variables for emissivity calculations
-      profiles(i)%skin%t          =  rttovIN%t_skin(i)
-            
-      ! fastem coefficients - for mw calculations
-      profiles(i)%skin%fastem(1)  =  3.0
-      profiles(i)%skin%fastem(2)  =  5.0
-      profiles(i)%skin%fastem(3)  =  15.0
-      profiles(i)%skin%fastem(4)  =  0.1
-      profiles(i)%skin%fastem(5)  =  0.3
+    ! For when trace gas columns are supplied   
+    !      profiles(j)%co2(:)        =  rttovIN%co2
+    !      profiles(j)%n2o(:)        =  rttovIN%n2o
+    !      profiles(j)%co(:)         =  rttovIN%co
+    !      profiles(j)%ch4(:)        =  rttovIN%ch4
 
-      ! Viewing angles
-      profiles(i)%zenangle      = inst_zenang ! pass in from cosp
-      profiles(i)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
+          ! Initialize column pressure, temperature, and humidity
+          profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
+          profiles(j)%t(:) =  rttovIN%t(i, :)
+          profiles(j)%q(:) =  rttovIN%q(i, :)
 
-      profiles(i)%latitude      = rttovIN%latitude(i)
-      profiles(i)%longitude     = rttovIN%longitude(i)
-      profiles(i)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
+          ! q coefficient limit is 0.1e-10
+          where(profiles(j)%q(:) < 0.1e-10)
+             profiles(j)%q(:) = 0.11e-10
+          end where
 
-      ! Solar angles. JKS - get this from COSP/CESM? Doesn't seem to be passed in.
-      profiles(i)%sunzenangle   = 0. ! hard-coded in rttov9 int
-      profiles(i)%sunazangle    = 0. ! hard-coded in rttov9 int
+          ! Gas profiles
+          profiles(j)%o3         =  rttovIN%o3(i, :)
 
-      ! surface type
-      ! land-sea mask (lsmask) indicates proportion of land in grid
-      if (rttovIN%lsmask(i) < 0.5) then
-        profiles(i)%skin%surftype  = surftype_sea
-      else
-        profiles(i)%skin%surftype  = surftype_land
-      endif
-      ! sea-ice fraction
-      if (rttovIN%seaice(i) >= 0.5) then
-        profiles(i)%skin%surftype  = surftype_seaice
-      endif
+          ! 2m parameters
+          profiles(j)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
+          profiles(j)%s2m%t      =  rttovIN%t2m(i)
+          profiles(j)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
+          profiles(j)%s2m%u      =  rttovIN%u_surf(i)
+          profiles(j)%s2m%v      =  rttovIN%v_surf(i)
+          profiles(j)%s2m%wfetc  =  10000. ! only used by sea surface solar BRDF model.
 
-      ! dar: hard-coded to 1 (=ocean water) in rttov 9 int
-      profiles(i)%skin%watertype = 1
-      !profiles(i) %idg         = 0. ! Depreciated?
-      !profiles(i) %ish         = 0. ! Depreciated?
+          ! skin variables for emissivity calculations
+          profiles(j)%skin%t          =  rttovIN%t_skin(i)
+
+          ! fastem coefficients - for mw calculations
+          profiles(j)%skin%fastem(1)  =  3.0
+          profiles(j)%skin%fastem(2)  =  5.0
+          profiles(j)%skin%fastem(3)  =  15.0
+          profiles(j)%skin%fastem(4)  =  0.1
+          profiles(j)%skin%fastem(5)  =  0.3
+
+          ! Viewing angles
+          profiles(j)%zenangle      = inst_zenang ! pass in from cosp
+          profiles(j)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
+
+          profiles(j)%latitude      = rttovIN%latitude(i)
+          profiles(j)%longitude     = rttovIN%longitude(i)
+          profiles(j)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
+
+          ! Solar angles. JKS - get this from COSP/CESM? Doesn't seem to be passed in.
+          profiles(j)%sunzenangle   = 0. ! hard-coded in rttov9 int
+          profiles(j)%sunazangle    = 0. ! hard-coded in rttov9 int
+
+          ! surface type
+          ! land-sea mask (lsmask) indicates proportion of land in grid
+          if (rttovIN%lsmask(i) < 0.5) then
+            profiles(j)%skin%surftype  = surftype_sea
+          else
+            profiles(j)%skin%surftype  = surftype_land
+          endif
+          ! sea-ice fraction
+          if (rttovIN%seaice(i) >= 0.5) then
+            profiles(j)%skin%surftype  = surftype_seaice
+          endif
+
+          ! dar: hard-coded to 1 (=ocean water) in rttov 9 int
+          profiles(j)%skin%watertype = 1
+          !profiles(j) %idg         = 0. ! Depreciated?
+          !profiles(j) %ish         = 0. ! Depreciated?
+      end if 
     end do     
         
     ! JKS - nothing to check here, this will never trigger.
@@ -607,27 +619,33 @@ contains
       profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
       profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
         
-      do i = 1, rttovIN%nPoints        
-        ! Cloud scheme stuff
-        profiles(i)%cfrac(:)   = rttovIN%tca(i,:)         ! Cloud fraction for each layer       
-        profiles(i)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
-        profiles(i)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
+      j = 0 ! Initialize input
+      do i = 1,rttovIN%nPoints
+      
+        if (inst_swath_mask(i)) then ! only added masked columns to profiles
+            j = j + 1 ! Increment profile counter      
+            
+            ! Cloud scheme stuff
+            profiles(j)%cfrac(:)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
+            profiles(j)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
+            profiles(j)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
 
         ! Example UKMO input has effective radii for multiple cloud types, making identification of a single
         ! liquid droplet or ice crystal effective diameter difficult.
         ! I opt to let RTTOV decide on the effective radius values, but more complex implementation
         ! could do a more thorough conversion between UKMO output and RTTOV input
-    !    profiles(i)%clwde = ! Cloud water effective diameter
-    !    profiles(i)%icede = ! Cloud ice effective diameter
+    !    profiles(j)%clwde = ! Cloud water effective diameter
+    !    profiles(j)%icede = ! Cloud ice effective diameter
 
         ! Old code for simple cloud schemes only
-    !    profiles(i)%cfraction  =  0.
-    !    profiles(i)%ctp        =  500.
+    !    profiles(j)%cfraction  =  0.
+    !    profiles(j)%ctp        =  500.
 
         ! Other options not implemented
-!        profiles(i)%clw        = ! Cloud liquid water (kg/kg) – MW only,
+!        profiles(j)%clw        = ! Cloud liquid water (kg/kg) – MW only,
+        end if
       end do
-    endif
+    end if
     
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in cloud profile initialization' , lalloc = .false.)
@@ -712,8 +730,10 @@ contains
     type(rttov_coefs),intent(in)    :: &
         inst_coefs
         
-!    print*,'shape(chanprof%prof):      ',shape(chanprof%prof)
-!    print*,'shape(chanprof%chan):      ',shape(chanprof%chan)
+    print*,'shape(chanprof%prof):      ',shape(chanprof%prof)
+    print*,'shape(chanprof%chan):      ',shape(chanprof%chan)
+    print*,'shape(profiles):           ',shape(profiles)
+!    print*,'shape(profiles(:)%q):         ',shape(profiles(:)%q)
 !    print*,'shape(bt_total):   ',shape(bt_total)
         
     if (inst_nthreads <= 1) then
@@ -812,16 +832,18 @@ contains
   ! ------------------------------------------------------
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
   
-  subroutine cosp_rttov_save_output(rttovIN,inst_nchan_out,         & ! Inputs
-                                    Lrttov_bt,Lrttov_rad,Lrttov_refl,  &
-                                    Lrttov_cld,Lrttov_aer,             &
-                                    bt_total,bt_clear,                 &
-                                    rad_total,rad_clear,rad_cloudy,    &
+  subroutine cosp_rttov_save_output(rttovIN,inst_nchan_out,inst_swath_mask, & ! Inputs
+                                    Lrttov_bt,Lrttov_rad,Lrttov_refl,       &
+                                    Lrttov_cld,Lrttov_aer,                  &
+                                    bt_total,bt_clear,                      &
+                                    rad_total,rad_clear,rad_cloudy,         &
                                     refl_total,refl_clear)
     type(rttov_in),intent(in) :: &
         rttovIN
     integer,intent(in)        :: &
         inst_nchan_out
+    logical,dimension(rttovIN%nPoints),intent(in) :: &
+        inst_swath_mask
     logical,intent(in)        :: &
         Lrttov_bt,       &
         Lrttov_rad,      &
@@ -837,38 +859,88 @@ contains
         rad_cloudy,     &
         refl_total,     &
         refl_clear
+        
+    ! Local iterators. i is the gridcell index. j is the swath cells index.
+    integer :: i, j
 
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
     
-    ! Only save output if appropriate
-    if (Lrttov_bt) then
-        bt_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%bt(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
-    endif
-    if (Lrttov_bt .and. (Lrttov_cld .or. Lrttov_aer)) then
-        bt_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%bt_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
-    endif
+    ! Initialize all fields to undefined
+!    bt_total(:,:)   = R_UNDEF
+!    bt_clear(:,:)   =  
+!    rad_total(:,:)  =  
+!    rad_clear(:,:)  =  
+!    rad_cloudy(:,:) =  
+!    refl_total(:,:) =  
+!    refl_clear(:,:) =  
     
-    if (Lrttov_rad) then
-        rad_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%total(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
-    endif
-    if (Lrttov_rad .and. (Lrttov_cld .or. Lrttov_aer)) then
-        rad_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) )) 
-        rad_cloudy(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%cloudy(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))   
-    endif
+    ! Only save output if appropriate
+    if (count(inst_swath_mask) .eq. rttovIN%nPoints) then ! No swathing, save all output
+        if (Lrttov_bt) then
+            bt_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%bt(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+        end if
+        if (Lrttov_bt .and. (Lrttov_cld .or. Lrttov_aer)) then
+            bt_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%bt_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+        end if
 
-    if (Lrttov_refl) then
-        refl_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%refl(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
-    endif
-    if (Lrttov_refl .and. (Lrttov_cld .or. Lrttov_aer)) then
-        bt_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-            transpose(reshape(radiance%refl_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
-    endif
+        if (Lrttov_rad) then
+            rad_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%total(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+        end if
+        if (Lrttov_rad .and. (Lrttov_cld .or. Lrttov_aer)) then
+            rad_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) )) 
+            rad_cloudy(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%cloudy(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))   
+        end if
+
+        if (Lrttov_refl) then
+            refl_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%refl(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+        end if
+        if (Lrttov_refl .and. (Lrttov_cld .or. Lrttov_aer)) then
+            refl_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%refl_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+        end if
+!    else if (count(inst_swath_mask) .eq. 0) then ! No gridcells included in the swath, set everything as undefined.
+!        bt_total(:,:)   =  
+!        bt_clear(:,:)   =  
+!        rad_total(:,:)  =  
+!        rad_clear(:,:)  =  
+!        rad_cloudy(:,:) =  
+!        refl_total(:,:) =  
+!        refl_clear(:,:) =  
+    else ! If swathing is occurring, assign the outputs appropriately
+        j = 0
+        do i=1,rttovIN%nPoints
+          if (inst_swath_mask(i)) then ! only added masked columns to profiles
+            if (Lrttov_bt) then
+              bt_total(i, 1:inst_nchan_out) = radiance%bt(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+            end if
+            if (Lrttov_bt .and. (Lrttov_cld .or. Lrttov_aer)) then
+              bt_clear(i, 1:inst_nchan_out) = radiance%bt_clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+            end if            
+            if (Lrttov_rad) then
+              rad_total(i, 1:inst_nchan_out) = radiance%total(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+            end if
+            if (Lrttov_rad .and. (Lrttov_cld .or. Lrttov_aer)) then
+              rad_clear(i, 1:inst_nchan_out) = radiance%clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              rad_cloudy(i, 1:inst_nchan_out) = radiance%cloudy(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+            end if
+            if (Lrttov_refl) then
+              refl_total(i, 1:inst_nchan_out) = radiance%refl(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+            end if
+            if (Lrttov_refl .and. (Lrttov_cld .or. Lrttov_aer)) then
+              refl_clear(i, 1:inst_nchan_out) = radiance%refl_clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+            end if            
+            j = j + 1 ! Increment profile counter afterwards
+          end if
+        end do
+    end if
+    
+    
           
   end subroutine cosp_rttov_save_output
   
@@ -930,7 +1002,8 @@ contains
   subroutine cosp_rttov_deallocate_profiles(rttovIN,              &
                                             inst_opts,            &
                                             inst_coefs,           &
-                                            inst_nchanprof)
+                                            inst_nchanprof,       &
+                                            inst_nprof)
 
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -941,13 +1014,15 @@ contains
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
     integer(kind=jpim),intent(in) :: &
-        inst_nchanprof    
+        inst_nchanprof,    &
+        inst_nprof
         
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &
         errorstatus,             &
         0_jpim,                  &  ! 0 => deallocate
-        rttovIN%nPoints,         &
+        inst_nprof,              &
+!        rttovIN%nPoints,         &
         inst_nchanprof,          & 
         rttovIN%nLevels,         &
         chanprof,                & ! JKS

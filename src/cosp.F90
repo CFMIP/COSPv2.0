@@ -1543,6 +1543,9 @@ CONTAINS
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
                allocate(rttov_rad_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
+               ! Init to R_UNDEF - JKS check
+               rttov_bt_clear(:,:)  = R_UNDEF
+               rttov_rad_clear(:,:) = R_UNDEF
            else 
                allocate(rttov_bt_total(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! all-sky brightness temp
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! clear-sky brightness temp
@@ -1550,7 +1553,15 @@ CONTAINS
                allocate(rttov_rad_clear(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out))  ! clear-sky brightness temp
                allocate(rttov_rad_cloudy(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! cloudy-sky brightness temp
                allocate(rttov_refl_total(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky Bi-directional reflectance factor
-               allocate(rttov_refl_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! clear-sky Bi-directional reflectance factor                 
+               allocate(rttov_refl_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! clear-sky Bi-directional reflectance factor
+               ! Init to R_UNDEF
+               rttov_bt_total(:,:)   = R_UNDEF
+               rttov_bt_clear(:,:)   = R_UNDEF               
+               rttov_rad_total(:,:)  = R_UNDEF               
+               rttov_rad_clear(:,:)  = R_UNDEF               
+               rttov_rad_cloudy(:,:) = R_UNDEF               
+               rttov_refl_total(:,:) = R_UNDEF               
+               rttov_refl_clear(:,:) = R_UNDEF               
            endif
            
            call cpu_time(driver_time(3))
