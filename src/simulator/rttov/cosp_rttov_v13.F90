@@ -166,8 +166,8 @@ module mod_cosp_rttov
           t2m,          & ! 2 m Temperature
           q2m,          & ! 2 m Specific humidity
           lsmask,       & ! land-sea mask
-          latitude,     & ! Latitude
-          longitude,    & ! Longitude
+          latitude,     & ! Latitude (degrees)
+          longitude,    & ! Longitude (degrees)
           seaice          ! Sea-ice? 
      real(wp),dimension(:,:),pointer :: &
           p,            & ! Pressure @ model levels
@@ -216,7 +216,7 @@ contains
   subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,      &
                                  inst_coefs,inst_iChannel,rttov_Nlocaltime, &
                                  rttov_localtime,rttov_localtime_width,     &
-                                 inst_nchanprof)
+                                 inst_nchanprof,inst_nprof,swath_mask)
                            
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -234,8 +234,11 @@ contains
         rttov_localtime,       &
         rttov_localtime_width
     integer(kind=jpim),intent(inout) :: &
-        inst_nchanprof 
-    
+        inst_nchanprof, &
+        inst_nprof          ! Now accounting for orbits
+    logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
+        swath_mask
+        
     !---- Local variables ----!
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch
@@ -244,13 +247,8 @@ contains
         pi = 4.D0*DATAN(1.D0),  &  ! yum
         radius = 6371.0            ! Earth's radius in km (mean volumetric)
 
-    logical(jplm),dimension(rttovIN % nPoints)    :: &
-        swath_mask
-        
-    real(kind=jprb), dimension(rttov_Nlocaltime)  :: &
-        sat_lon
-        
     real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
+        sat_lon,        & ! Central longitude of the instrument.
         swath_mask_all, & ! Mask of reals over all local times
         dlon,           & ! distance to satellite longitude in degrees
         dx                ! distance to satellite longitude in km?
@@ -263,16 +261,19 @@ contains
 
     ! Handle swathing here. Initial code from Genevieve with minor changes.
     if (rttov_Nlocaltime > 0) then
-        ! Calculate the longitude where it is the requested local time. 15 degrees lon. per hour.
-        sat_lon = 15.0 * (rttov_localtime - (rttovIN%time_frac * 24.0)) 
-        ! frac_day will either be a scalar (one for all gridpoint) or a vector. Should broadcast ok.
-
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
+            ! Calculate the central longitude for each gridcell and orbit
+            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%time_frac * 24.0)) 
             ! Calculate distance (in degrees) from each grid cell to the satellite central long
-            dlon(:,j) = mod((rttovIN%longitude - sat_lon(j) + 180.0), 360.0) - 180.0 
-            ! calculate distance to satellite in km 
-            dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude) * radius
+            dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0 
+            
+!            print*,'rttovIN%longitude(1:7):    ',rttovIN%longitude(1:7)
+!            print*,'sat_lon(j):    ',sat_lon(1:7,j)
+!            print*,'dlon(1:7,j):   ',dlon(1:7,j)
+            
+            ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
+            dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude * pi / 180) * radius
         end do
         
         ! inside swath = 1, outside swath = 0 for "swath_mask_all"
@@ -290,21 +291,34 @@ contains
                 swath_mask(j) = .true.
             end if
         end do
+        ! Determine the total number of radiances to simulate (nchanprof).
+        inst_nchanprof = inst_nChannels_rec * inst_nprof
     else
-        swath_mask(:) = .true. ! Compute on all columns in no local times are passed.
+        swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
+        inst_nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
     end if
+    inst_nprof     = count(swath_mask)
     
-    print*,'dlon:         ',dlon
-    print*,'dx:           ',dx
-    print*,'swath_mask:   ',swath_mask
-
-    ! Determine the total number of radiances to simulate (nchanprof).    
+    ! To keep functionality for the commit
     inst_nchanprof = inst_nChannels_rec * rttovIN%nPoints ! RTTOV (non-PC) needs nchan_out? JKS potential bug
+    
+    
+    ! Set rttovIN%nPointsCalc ! the number of columns to actually operate on.
+    
+!    print*,'rttovIN%time_frac:   ',rttovIN%time_frac(1:10)
+!    print*,'sat_lon:             ',sat_lon(1:10,:)
+!    print*,'rttovIN%longitude:   ',rttovIN%longitude(1:10)
+!    print*,'rttovIN%latitude:    ',rttovIN%latitude(1:10)
+!    print*,'dlon:         ',dlon(1:10,:)
+!    print*,'dx:           ',dx(1:10,:)
+    print*,'swath_mask:   ',swath_mask
+    print*,'count(swath_mask):   ',count(swath_mask)
     
     ! Allocate structures for rttov_direct
     call rttov_alloc_direct( &
         errorstatus,             &
         1_jpim,                  &  ! 1 => allocate
+!        inst_nprof,         &
         rttovIN%nPoints,         &
         inst_nchanprof,          &
         rttovIN%nLevels,         &
