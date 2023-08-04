@@ -86,7 +86,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           rttov_direct_nthreads, &
           nchan_out,             &
           nchannels_rec,         &
-          rttov_Nlocaltime
+          rttov_Nlocaltime,      &
+          nprof
       real(wp)                     :: &
           CO2_mr,              &
           CH4_mr,              &
@@ -97,7 +98,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
       integer(kind=jpim), allocatable  :: &
           iChannel(:),      &  ! Requested channel indices
           iChannel_out(:)      ! Passing out the channel indices (actual output channels)
-      real(kind=jprb),allocatable    :: &
+      real(kind=jprb), allocatable     :: &
           emisChannel(:),          &         ! RTTOV channel emissivity
           reflChannel(:),          &         ! RTTOV channel reflectivity
           rttov_localtime(:),      &
@@ -106,6 +107,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           opts                               ! RTTOV options structure
       type(rttov_coefs)            :: &
           coefs                              ! RTTOV coefficients structure
+      logical(KIND=jplm), allocatable  :: &
+          swath_mask(:)
   end type rttov_cfg
   
   type rttov_output
@@ -235,7 +238,7 @@ CONTAINS
         
     ! JKS for orbital swathing
     integer(kind=jpim)     ::  &   
-        rttov_Nlocaltime = 0         ! Number of orbits
+        rttov_Nlocaltime            ! Number of orbits
     real(wp),dimension(20) ::  &         ! Reasonable but arbitrary limit at 10 local time orbits
         rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
         rttov_localtime_width        ! Width of satellite swath (km).
@@ -244,6 +247,9 @@ CONTAINS
     character(len=256) :: imsg  !<-- some suitable length, say XX=256      
     integer            :: erro
                 
+    ! Init. local time variables for multiple instruments:
+    rttov_Nlocaltime = 0
+    
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
@@ -625,6 +631,7 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
+    allocate(rttovConfig % swath_mask(rttovIN % nPoints))
     call cosp_rttov_allocate(rttovIN,                             &
                              rttovConfig % nChannels_rec,         &
                              rttovConfig % opts,                  &
@@ -633,7 +640,9 @@ CONTAINS
                              rttovConfig % rttov_Nlocaltime,      &
                              rttovConfig % rttov_localtime,       &
                              rttovConfig % rttov_localtime_width, &
-                             rttovConfig % nchanprof)    
+                             rttovConfig % nchanprof,             &
+                             rttovConfig % nprof,                 &
+                             rttovConfig % swath_mask)    
         
     call cpu_time(driver_time(2))
     call cosp_rttov_construct_profiles(rttovIN, &
