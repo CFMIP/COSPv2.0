@@ -593,7 +593,7 @@ CONTAINS
   END SUBROUTINE COSP_RTTOV_SIMULATE
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_simulate - Call regular subroutines in mod_cosp_rttov to run RTTOV
+  ! SUBROUTINE cosp_reg_rttov_simulate - Call regular subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
                                      bt_total,bt_clear,                                & ! Brightness Temp Outputs
@@ -653,8 +653,10 @@ CONTAINS
                                        rttovConfig % CO_mr,                    &
                                        rttovConfig % N2O_mr,                   &
                                        rttovConfig % SO2_mr,                   &
-                                       rttovConfig % ZenAng)
-          
+                                       rttovConfig % ZenAng,                   &
+                                       rttovConfig % nprof,                    &
+                                       rttovConfig % swath_mask)
+                                       
     call cpu_time(driver_time(3))
     call cosp_rttov_setup_emissivity_reflectance() ! Config agnostic after allocate step.
     call cpu_time(driver_time(4))
@@ -664,8 +666,9 @@ CONTAINS
     
     call cpu_time(driver_time(5))
     
-    call cosp_rttov_save_output(rttovIN,                        &
+    call cosp_rttov_save_output(rttovIN,                                &
                                 rttovConfig % nchan_out,                &
+                                rttovConfig % swath_mask,               &
                                 rttovConfig % Lrttov_bt,                &
                                 rttovConfig % Lrttov_rad,               &
                                 rttovConfig % Lrttov_refl,              &
@@ -679,7 +682,8 @@ CONTAINS
     call cosp_rttov_deallocate_profiles(rttovIN,                       &
                                         rttovConfig % opts,            &
                                         rttovConfig % coefs,           &
-                                        rttovConfig % nchanprof)    
+                                        rttovConfig % nchanprof,       &
+                                        rttovConfig % nprof)
     call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
@@ -740,8 +744,12 @@ CONTAINS
                                 rttovConfig % opts,                          &
                                 rttovConfig % nchannels_rec,                 &
                                 rttovConfig % iChannel,                      &
+                                rttovConfig % rttov_Nlocaltime,              &
+                                rttovConfig % rttov_localtime,               &
+                                rttovConfig % rttov_localtime_width,         &
                                 rttovConfig % nchanprof,                     &
-                                rttovConfig % iChannel_out)
+                                rttovConfig % iChannel_out,                  &
+                                rttovConfig % swath_mask)
     call cpu_time(driver_time(2))
     call cosp_rttov_construct_profiles(rttovIN, &
                                        rttovConfig % Lrttov_cld,               &
@@ -751,7 +759,9 @@ CONTAINS
                                        rttovConfig % CO_mr,                    &
                                        rttovConfig % N2O_mr,                   &
                                        rttovConfig % SO2_mr,                   &
-                                       rttovConfig % ZenAng)
+                                       rttovConfig % ZenAng,                   &
+                                       rttovConfig % nprof,                    &
+                                       rttovConfig % swath_mask)
     call cpu_time(driver_time(3))
     call cosp_pc_rttov_setup_emissivity()
     call cpu_time(driver_time(4))
