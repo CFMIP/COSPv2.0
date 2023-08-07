@@ -536,7 +536,7 @@ program cosp2_test
      ! Time information
      cospstateIN%month       = month(start_idx:end_idx)
      cospstateIN%time_frac   = (60*hour(start_idx:end_idx) + minute(start_idx:end_idx)) / (24*60) ! Time (UTC) expressed as a fraction on [0,1]
-     deallocate(month,hour,minute) ! JKS - helpful?
+     !deallocate(month,hour,minute) ! JKS - helpful?
 
      ! From the data input file
      cospstateIN%u_sfc  = u_wind(start_idx:end_idx)
@@ -580,12 +580,10 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-          
      cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,.false.)
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
      end do
-     print*,'COSP_SIMULATOR successful' ! jks
      
      call cpu_time(driver_time(7))
   end do
@@ -612,7 +610,6 @@ program cosp2_test
   call destroy_cospIN(cospIN)
   call destroy_cospstateIN(cospstateIN)
   call cosp_cleanUp()
-  ! Getting a segmentation fault here? Why? JKS
 
 contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
@@ -1559,6 +1556,7 @@ contains
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
+    if (allocated(y%time_frac))       deallocate(y%time_frac)
     
   end subroutine destroy_cospstateIN
   
