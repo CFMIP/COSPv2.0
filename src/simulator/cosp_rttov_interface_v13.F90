@@ -575,17 +575,15 @@ CONTAINS
 
     ! Check options to determine if the principal component approach should be run
     if (rttovConfig % opts % rt_ir % pc % addpc) then
-!        print*,'Running COSP_PC_RTTOV_SIMULATE in multi-inst. set-up'
         call COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                     &
                                     bt_clear,rad_clear,                               &
                                     error)                                
 
     else
-!        print*,'Running COSP_REG_RTTOV_SIMULATE in multi-inst. set-up'
-        call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                                 &
-                                     bt_total,bt_clear,                                &
-                                     rad_total,rad_clear,rad_cloudy,                   &
-                                     refl_total,refl_clear,                            &
+        call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                    &
+                                     bt_total,bt_clear,                               &
+                                     rad_total,rad_clear,rad_cloudy,                  &
+                                     refl_total,refl_clear,                           &
                                      error)
         
     endif
@@ -631,6 +629,7 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
+    if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
     allocate(rttovConfig % swath_mask(rttovIN % nPoints))
     call cosp_rttov_allocate(rttovIN,                             &
                              rttovConfig % nChannels_rec,         &
@@ -738,6 +737,7 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
+    if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
     allocate(rttovConfig % swath_mask(rttovIN % nPoints))
     call cosp_pc_rttov_allocate(rttovIN, &
                                 rttovConfig % PC_coef_filepath,              &
