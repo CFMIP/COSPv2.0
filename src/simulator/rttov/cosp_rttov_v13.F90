@@ -308,7 +308,6 @@ contains
         errorstatus,             &
         1_jpim,                  &  ! 1 => allocate
         inst_nprof,              &
-!        rttovIN%nPoints,         &
         inst_nchanprof,          &
         rttovIN%nLevels,         &
         chanprof,                &
@@ -331,7 +330,6 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
     nch = 0_jpim
-!    do j = 1, rttovIN%nPoints
     do j = 1, inst_nprof
       do jch = 1, inst_nChannels_rec ! nChannels
         nch = nch + 1_jpim
@@ -444,8 +442,7 @@ contains
 
     ! npred_pc is only used in the pc_rttov_allocate step so I can remove the global definition later
     inst_npred_pc  = SIZE(predictindex)
-    inst_nchanprof = inst_npred_pc * inst_nprof
-!    inst_nchanprof = inst_npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
+    inst_nchanprof = inst_npred_pc * inst_nprof  ! Size of chanprof array is total number of predictors over all profiles
 
     print*,'inst_nprof:          ',inst_nprof
     print*,'inst_nChannels_rec:  ',inst_nChannels_rec
@@ -879,17 +876,16 @@ contains
   ! ------------------------------------------------------
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
   
-  subroutine cosp_rttov_save_output(rttovIN,inst_nchan_out,inst_swath_mask, & ! Inputs
+  subroutine cosp_rttov_save_output(nPoints,inst_nchan_out,inst_swath_mask, &
                                     Lrttov_bt,Lrttov_rad,Lrttov_refl,       &
                                     Lrttov_cld,Lrttov_aer,                  &
                                     bt_total,bt_clear,                      &
                                     rad_total,rad_clear,rad_cloudy,         &
                                     refl_total,refl_clear)
-    type(rttov_in),intent(in) :: &
-        rttovIN
     integer,intent(in)        :: &
+        nPoints,    &
         inst_nchan_out
-    logical,dimension(rttovIN%nPoints),intent(in) :: &
+    logical,dimension(nPoints),intent(in) :: &
         inst_swath_mask
     logical,intent(in)        :: &
         Lrttov_bt,       &
@@ -897,8 +893,7 @@ contains
         Lrttov_refl,     &
         Lrttov_cld,      &
         Lrttov_aer
-        
-    real(wp),dimension(rttovIN%nPoints,inst_nchan_out),intent(inout) :: & ! Can I do this? I guess so!
+    real(wp),dimension(nPoints,inst_nchan_out),intent(inout) :: &
         bt_total,       &
         bt_clear,       &
         rad_total,      &
@@ -912,56 +907,39 @@ contains
 
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
     
-    ! Initialize all fields to undefined
-!    bt_total(:,:)   = R_UNDEF
-!    bt_clear(:,:)   =  
-!    rad_total(:,:)  =  
-!    rad_clear(:,:)  =  
-!    rad_cloudy(:,:) =  
-!    refl_total(:,:) =  
-!    refl_clear(:,:) =  
-    
     ! Only save output if appropriate
-    if (count(inst_swath_mask) .eq. rttovIN%nPoints) then ! No swathing, save all output
+    if (count(inst_swath_mask) .eq. nPoints) then ! No swathing, save all output
         if (Lrttov_bt) then
-            bt_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%bt(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+            bt_total(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%bt(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
         if (Lrttov_bt .and. (Lrttov_cld .or. Lrttov_aer)) then
-            bt_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%bt_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+            bt_clear(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%bt_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
 
         if (Lrttov_rad) then
-            rad_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%total(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+            rad_total(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%total(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
         if (Lrttov_rad .and. (Lrttov_cld .or. Lrttov_aer)) then
-            rad_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) )) 
-            rad_cloudy(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%cloudy(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))   
+            rad_clear(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) )) 
+            rad_cloudy(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%cloudy(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))   
         end if
 
         if (Lrttov_refl) then
-            refl_total(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%refl(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+            refl_total(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%refl(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
         if (Lrttov_refl .and. (Lrttov_cld .or. Lrttov_aer)) then
-            refl_clear(1:rttovIN%nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%refl_clear(1:inst_nchan_out * rttovIN%nPoints), (/ inst_nchan_out, rttovIN%nPoints/) ))
+            refl_clear(1:nPoints, 1:inst_nchan_out) = &
+                transpose(reshape(radiance%refl_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
-!    else if (count(inst_swath_mask) .eq. 0) then ! No gridcells included in the swath, set everything as undefined.
-!        bt_total(:,:)   =  
-!        bt_clear(:,:)   =  
-!        rad_total(:,:)  =  
-!        rad_clear(:,:)  =  
-!        rad_cloudy(:,:) =  
-!        refl_total(:,:) =  
-!        refl_clear(:,:) =  
     else ! If swathing is occurring, assign the outputs appropriately
         j = 0
-        do i=1,rttovIN%nPoints
+        do i=1,nPoints
           if (inst_swath_mask(i)) then ! only added masked columns to profiles
             if (Lrttov_bt) then
               bt_total(i, 1:inst_nchan_out) = radiance%bt(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
@@ -1019,17 +997,15 @@ contains
     ! Local iterators. i is the gridcell index. j is the swath cells index.
     integer :: i, j
     
-
 !    print*,'shape(bt_total):   ',shape(bt_total)
 !    print*,'shape(rad_total):  ',shape(rad_total)
-!    print*,'rttovIN%nPoints:   ',rttovIN%nPoints
-!    print*,'rttovIN%nChannels: ',rttovIN%nChannels
+!    print*,'nPoints:   ',nPoints
+!    print*,'inst_nchannels_rec: ',inst_nchannels_rec
 !    print*,'nchanprof:    ',nchanprof ! This is the number of predictors so not the reconstructed channel dimension
 !    print*,'size(pccomp%bt_pccomp):   ',size(pccomp%bt_pccomp)
 !    print*,'size(pccomp%total_pccomp):   ',size(pccomp%total_pccomp)
-!    print*,'nchannels_rec * rttovIN%nPoints:   ',nchannels_rec * rttovIN%nPoints
+!    print*,'inst_nchannels_rec * nPoints:   ',inst_nchannels_rec * nPoints
 
-    ! JKS why not just pass in rttovIN%nPoints and use nchannels_rec here? TO-DO?
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
         
     ! Only save output if appropriate
@@ -1065,32 +1041,29 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_deallocate_profiles(rttovIN,              &
-                                            inst_opts,            &
-                                            inst_coefs,           &
+  subroutine cosp_rttov_deallocate_profiles(inst_nprof,           &
                                             inst_nchanprof,       &
-                                            inst_nprof)
+                                            nLevels,              &
+                                            inst_opts,            &
+                                            inst_coefs)
 
-    type(rttov_in),intent(in) :: &
-        rttovIN
-!    integer(kind=jpim),intent(in)  :: &
-!        inst_nChannels_rec
+    integer(kind=jpim),intent(in) :: &
+        inst_nprof,        &
+        inst_nchanprof,    &
+        nLevels
     type(rttov_options),intent(in) :: &
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
-    integer(kind=jpim),intent(in) :: &
-        inst_nchanprof,    &
-        inst_nprof
+
         
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &
         errorstatus,             &
         0_jpim,                  &  ! 0 => deallocate
         inst_nprof,              &
-!        rttovIN%nPoints,         &
         inst_nchanprof,          & 
-        rttovIN%nLevels,         &
+        nLevels,                 &
         chanprof,                & ! JKS
         inst_opts,               &
         profiles,                &
@@ -1111,24 +1084,22 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_pc_rttov_deallocate_profiles(rttovIN,               &
+  subroutine cosp_pc_rttov_deallocate_profiles(inst_nprof,            &
+                                               inst_nchanprof,        &
+                                               nlevels,               &
                                                inst_nChannels_rec,    &
                                                inst_opts,             &
-                                               inst_coefs,            &
-                                               inst_nchanprof,        &
-                                               inst_nprof)
-                                                  
-    type(rttov_in),intent(in)      :: &
-        rttovIN
+                                               inst_coefs)
+ 
     integer(kind=jpim),intent(in)  :: &
+        inst_nprof,      &
+        inst_nchanprof,  &
+        nlevels,         &
         inst_nChannels_rec
     type(rttov_options),intent(in) :: &
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
-    integer(kind=jpim),intent(in)  :: &
-        inst_nchanprof,  &
-        inst_nprof
         
     if (ASSOCIATED(predictindex)) deallocate (predictindex, stat=alloc_status(10))
     call rttov_error('mem dellocation error for "predictindex"', lalloc = .true.)
@@ -1142,7 +1113,7 @@ contains
         0_jpim,                  &  ! 0 => deallocate
         inst_nprof,              &
         inst_nchanprof,          &
-        rttovIN%nLevels,         &
+        nLevels,                 &
         chanprof,                &
         inst_opts,               &
         profiles,                &

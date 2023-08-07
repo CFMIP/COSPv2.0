@@ -666,7 +666,7 @@ CONTAINS
     
     call cpu_time(driver_time(5))
     
-    call cosp_rttov_save_output(rttovIN,                                &
+    call cosp_rttov_save_output(rttovIN % nPoints,                      &
                                 rttovConfig % nchan_out,                &
                                 rttovConfig % swath_mask,               &
                                 rttovConfig % Lrttov_bt,                &
@@ -678,12 +678,12 @@ CONTAINS
                                 rad_total,rad_clear,rad_cloudy,         &
                                 refl_total,refl_clear)
 
-    call cpu_time(driver_time(6))
-    call cosp_rttov_deallocate_profiles(rttovIN,                       &
-                                        rttovConfig % opts,            &
-                                        rttovConfig % coefs,           &
+    call cpu_time(driver_time(6))                                        
+    call cosp_rttov_deallocate_profiles(rttovConfig % nprof,           &
                                         rttovConfig % nchanprof,       &
-                                        rttovConfig % nprof)
+                                        rttovIN % nLevels,               &
+                                        rttovConfig % opts,            &
+                                        rttovConfig % coefs)                                        
     call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
@@ -774,21 +774,22 @@ CONTAINS
                                    rttovConfig % iChannel_out) ! iChannel_out should have been updated
 
     call cpu_time(driver_time(5))
-    call cosp_pc_rttov_save_output(rttovIN%nPoints,                       &
-                                   rttovConfig%nchannels_rec,             &
-                                   rttovConfig%swath_mask,                &
-                                   rttovConfig%Lrttov_bt,                 &
-                                   rttovConfig%Lrttov_rad,                &
-                                   bt_clear,                              &
+    call cosp_pc_rttov_save_output(rttovIN % nPoints,                       &
+                                   rttovConfig % nchannels_rec,             &
+                                   rttovConfig % swath_mask,                &
+                                   rttovConfig % Lrttov_bt,                 &
+                                   rttovConfig % Lrttov_rad,                &
+                                   bt_clear,                                &
                                    rad_clear)
 
-    call cpu_time(driver_time(6))
-    call cosp_pc_rttov_deallocate_profiles(rttovIN,                       &
+    call cpu_time(driver_time(6))                                           
+    call cosp_pc_rttov_deallocate_profiles(rttovConfig % nprof,           &
+                                           rttovConfig % nchanprof,       &
+                                           rttovIN % nlevels,             &
                                            rttovConfig % nChannels_rec,   &
                                            rttovConfig % opts,            &
-                                           rttovConfig % coefs,           &
-                                           rttovConfig % nchanprof,       &
-                                           rttovConfig % nprof)    
+                                           rttovConfig % coefs)
+                                           
     call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_pc_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
