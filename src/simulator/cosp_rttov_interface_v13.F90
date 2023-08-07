@@ -738,6 +738,7 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
+    allocate(rttovConfig % swath_mask(rttovIN % nPoints))
     call cosp_pc_rttov_allocate(rttovIN, &
                                 rttovConfig % PC_coef_filepath,              &
                                 rttovConfig % coefs,                         &
@@ -748,6 +749,7 @@ CONTAINS
                                 rttovConfig % rttov_localtime,               &
                                 rttovConfig % rttov_localtime_width,         &
                                 rttovConfig % nchanprof,                     &
+                                rttovConfig % nprof,                         &
                                 rttovConfig % iChannel_out,                  &
                                 rttovConfig % swath_mask)
     call cpu_time(driver_time(2))
@@ -774,6 +776,7 @@ CONTAINS
     call cpu_time(driver_time(5))
     call cosp_pc_rttov_save_output(rttovIN%nPoints,                       &
                                    rttovConfig%nchannels_rec,             &
+                                   rttovConfig%swath_mask,                &
                                    rttovConfig%Lrttov_bt,                 &
                                    rttovConfig%Lrttov_rad,                &
                                    bt_clear,                              &
@@ -784,7 +787,8 @@ CONTAINS
                                            rttovConfig % nChannels_rec,   &
                                            rttovConfig % opts,            &
                                            rttovConfig % coefs,           &
-                                           rttovConfig % nchanprof)    
+                                           rttovConfig % nchanprof,       &
+                                           rttovConfig % nprof)    
     call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_pc_rttov_allocate":     ',                    driver_time(2)-driver_time(1)

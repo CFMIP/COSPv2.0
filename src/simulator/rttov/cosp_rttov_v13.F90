@@ -299,8 +299,6 @@ contains
     inst_nprof     = count(swath_mask)
     inst_nchanprof = inst_nChannels_rec * inst_nprof
     
-    print*,'swath_mask:   ',swath_mask
-    print*,'count(swath_mask):   ',count(swath_mask)
     print*,'inst_nprof:          ',inst_nprof
     print*,'inst_nChannels_rec:  ',inst_nChannels_rec
     print*,'inst_nchanprof:      ',inst_nchanprof
@@ -352,11 +350,11 @@ contains
   ! 4. Build the list of profile/channel indices in chanprof
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_pc_rttov_allocate(rttovIN,inst_PC_coef_filepath, & !inst_npcscores,    &
+  subroutine cosp_pc_rttov_allocate(rttovIN,inst_PC_coef_filepath,                          &
                                     inst_coefs,inst_opts,                                   &
                                     inst_nchannels_rec,inst_iChannel_in,                    &
                                     rttov_Nlocaltime,rttov_localtime,rttov_localtime_width, &
-                                    inst_nchanprof,inst_iChannel_out,swath_mask) !,inst_predictindex)
+                                    inst_nchanprof,inst_nprof,inst_iChannel_out,swath_mask)
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -376,7 +374,8 @@ contains
         rttov_localtime,       &
         rttov_localtime_width        
     integer(kind=jpim),intent(inout) :: &
-        inst_nchanprof    
+        inst_nchanprof,        &
+        inst_nprof
     integer(kind=jpim),intent(inout),allocatable  :: &
         inst_iChannel_out(:)      ! Passing out the channel indices
     logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
@@ -388,7 +387,17 @@ contains
     
     ! Local variables
     integer(kind=jpim) :: inst_npred_pc
-    
+
+    real(kind=jprb),parameter                     :: &
+        pi = 4.D0*DATAN(1.D0),  &  ! yum
+        radius = 6371.0            ! Earth's radius in km (mean volumetric)
+
+    real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
+        sat_lon,        & ! Central longitude of the instrument.
+        swath_mask_all, & ! Mask of reals over all local times
+        dlon,           & ! distance to satellite longitude in degrees
+        dx                ! distance to satellite longitude in km?
+
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 3. Allocate RTTOV input and output structures
     ! ------------------------------------------------------
@@ -399,10 +408,49 @@ contains
     call rttov_get_pc_predictindex(errorstatus, inst_opts, predictindex, file_pccoef=inst_PC_coef_filepath)
     call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)        
 
+    ! Handle swathing here. Initial code from Genevieve with minor changes.
+    if (rttov_Nlocaltime > 0) then
+        ! Iterate over local times
+        do j=1,rttov_Nlocaltime
+            ! Calculate the central longitude for each gridcell and orbit
+            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%time_frac * 24.0)) 
+            ! Calculate distance (in degrees) from each grid cell to the satellite central long
+            dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
+            ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
+            dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude * pi / 180) * radius
+        end do
+        
+        ! inside swath = 1, outside swath = 0 for "swath_mask_all"
+        swath_mask_all = 0
+        do j=1,rttov_Nlocaltime
+            where (abs(dx(:,j))<(rttov_localtime_width(j)*0.5))
+                 swath_mask_all(:,j) = 1
+            end where
+        end do
+
+        ! Collapse along the Nlocaltimes dimension and shift to logicals
+        swath_mask(:) = .false. ! Initialize to false
+        do j = 1,rttovIN % nPoints
+            if ( ANY( swath_mask_all(j,:) .eq. 1) ) then
+                swath_mask(j) = .true.
+            end if
+        end do
+        ! Determine the total number of radiances to simulate (nchanprof).
+    else
+        swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
+    end if
+    ! Determine the total number of radiances to simulate (nchanprof).
+    inst_nprof     = count(swath_mask)
+
     ! npred_pc is only used in the pc_rttov_allocate step so I can remove the global definition later
     inst_npred_pc  = SIZE(predictindex)
-    inst_nchanprof = inst_npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
-      
+    inst_nchanprof = inst_npred_pc * inst_nprof
+!    inst_nchanprof = inst_npred_pc * rttovIN%nPoints  ! Size of chanprof array is total number of predictors over all profiles
+
+    print*,'inst_nprof:          ',inst_nprof
+    print*,'inst_nChannels_rec:  ',inst_nChannels_rec
+    print*,'inst_nchanprof:      ',inst_nchanprof
+
     ! Determine the number of reconstructed radiances per profile (nchannels_rec)    
     if (allocated(inst_iChannel_out))             deallocate(inst_iChannel_out) ! Reset because this variable is internal and used by multiple instruments.  ! JKS
     if (inst_opts % rt_ir % pc % addradrec) then
@@ -431,7 +479,7 @@ contains
     CALL rttov_alloc_direct(                             &
           errorstatus,                                   &
           1_jpim,                                        &  ! 1 => allocate
-          rttovIN%nPoints,                               &
+          inst_nprof,                                    &
           inst_nchanprof,                                &
           rttovIN%nLevels,                               &
           chanprof,                                      & ! Make this instrument-specific? The rttov_config DDT would then be assigned to this value. Allocation difficulties?
@@ -442,9 +490,9 @@ contains
           radiance,                                      &
           calcemis=calcemis,                             &
           emissivity=emissivity,                         &
-          npcscores=inst_opts%rt_ir%pc%npcscores * rttovIN%nPoints,         &
-          nchannels_rec=inst_nchannels_rec * rttovIN%nPoints, &
-          pccomp=pccomp,                                      &
+          npcscores=inst_opts%rt_ir%pc%npcscores * inst_nprof,         &
+          nchannels_rec=inst_nchannels_rec * inst_nprof, &
+          pccomp=pccomp,                                 &
           init=.TRUE._jplm)
     call rttov_error('allocation error for rttov_direct structures (PC-RTTOV)' , lalloc = .true.)
 
@@ -455,7 +503,7 @@ contains
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     ! Populate chanprof using the channel list obtained above in predictindex(:)
-    do j = 1, rttovIN%nPoints
+    do j = 1, inst_nprof
       lo = (j - 1) * inst_npred_pc + 1
       hi = lo + inst_npred_pc - 1
       chanprof(lo:hi)%prof = j
@@ -824,7 +872,6 @@ contains
               nthreads     = inst_nthreads)     ! in    number of threads to use
     endif
     call rttov_error('rttov_direct error (PC-RTTOV)', lalloc = .true.)
-  
   end subroutine cosp_pc_rttov_call_direct
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -939,8 +986,6 @@ contains
           end if
         end do
     end if
-    
-    
           
   end subroutine cosp_rttov_save_output
   
@@ -953,6 +998,7 @@ contains
 
   subroutine cosp_pc_rttov_save_output(nPoints,              &
                                        inst_nchannels_rec,   &
+                                       inst_swath_mask,      &
                                        Lrttov_bt,            &
                                        Lrttov_rad,           &
                                        bt_clear,             &
@@ -961,12 +1007,18 @@ contains
     integer,intent(in)        :: &
         nPoints,            &
         inst_nchannels_rec
+    logical,dimension(nPoints),intent(in) :: &
+        inst_swath_mask        
     logical,intent(in)        :: &
         Lrttov_bt,      &
         Lrttov_rad
     real(wp),dimension(nPoints,inst_nchannels_rec),intent(inout) :: & ! Can I do this? I guess so!
         bt_clear,       &
         rad_clear
+        
+    ! Local iterators. i is the gridcell index. j is the swath cells index.
+    integer :: i, j
+    
 
 !    print*,'shape(bt_total):   ',shape(bt_total)
 !    print*,'shape(rad_total):  ',shape(rad_total)
@@ -981,15 +1033,29 @@ contains
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
         
     ! Only save output if appropriate
-    if (Lrttov_bt) then
-        bt_clear(1:nPoints, 1:inst_nchannels_rec) = &
-            transpose(reshape(pccomp%bt_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
-    endif
-    
-    if (Lrttov_rad) then
-        rad_clear(1:nPoints, 1:inst_nchannels_rec) = &
-            transpose(reshape(pccomp%total_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
-    endif
+    if (count(inst_swath_mask) .eq. nPoints) then ! No swathing, save all output  
+      if (Lrttov_bt) then
+          bt_clear(1:nPoints, 1:inst_nchannels_rec) = &
+              transpose(reshape(pccomp%bt_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
+      end if
+      if (Lrttov_rad) then
+          rad_clear(1:nPoints, 1:inst_nchannels_rec) = &
+              transpose(reshape(pccomp%total_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
+      end if
+    else ! If swathing is occurring, assign the outputs appropriately
+      j = 0
+      do i=1,nPoints
+        if (inst_swath_mask(i)) then ! only added masked columns to profiles
+          if (Lrttov_bt) then
+            bt_clear(i, 1:inst_nchannels_rec) = pccomp%bt_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
+          end if          
+          if (Lrttov_rad) then
+            rad_clear(i, 1:inst_nchannels_rec) = pccomp%total_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
+          end if       
+          j = j + 1 ! Increment profile counter afterwards
+        end if
+      end do
+    end if
           
   end subroutine cosp_pc_rttov_save_output
 
@@ -1049,7 +1115,8 @@ contains
                                                inst_nChannels_rec,    &
                                                inst_opts,             &
                                                inst_coefs,            &
-                                               inst_nchanprof)
+                                               inst_nchanprof,        &
+                                               inst_nprof)
                                                   
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -1060,7 +1127,8 @@ contains
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
     integer(kind=jpim),intent(in)  :: &
-        inst_nchanprof    
+        inst_nchanprof,  &
+        inst_nprof
         
     if (ASSOCIATED(predictindex)) deallocate (predictindex, stat=alloc_status(10))
     call rttov_error('mem dellocation error for "predictindex"', lalloc = .true.)
@@ -1072,7 +1140,7 @@ contains
     call rttov_alloc_direct(     &
         errorstatus,             &
         0_jpim,                  &  ! 0 => deallocate
-        rttovIN%nPoints,         &
+        inst_nprof,              &
         inst_nchanprof,          &
         rttovIN%nLevels,         &
         chanprof,                &
@@ -1083,8 +1151,8 @@ contains
         radiance,                &
         calcemis=calcemis,       &
         emissivity=emissivity,   &
-        npcscores=inst_opts%rt_ir%pc%npcscores * rttovIN%nPoints,         &
-        nchannels_rec=inst_nChannels_rec * rttovIN%nPoints, &
+        npcscores=inst_opts%rt_ir%pc%npcscores * inst_nprof,         &
+        nchannels_rec=inst_nChannels_rec * inst_nprof, &
         pccomp=pccomp)
     call rttov_error('deallocation error for rttov_direct structures (PC-RTTOV)', lalloc = .true.)
 

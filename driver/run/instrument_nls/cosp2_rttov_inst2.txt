@@ -71,5 +71,9 @@
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   rttov_nthreads=16,
-  rttov_ZenAng=0.0,               ! Satellite Zenith Angle 
+  rttov_ZenAng=0.0,               ! Satellite Zenith Angle
+  ! Set local time sampling with swath widths
+  rttov_Nlocaltime=2,                ! Number of local times to sample at
+  rttov_localtime=0.75,13.5,         ! Local times to sample at in hrs [0,24]
+  rttov_localtime_width=2.e3,5.6e3,  ! Swath width (km)    
 /
