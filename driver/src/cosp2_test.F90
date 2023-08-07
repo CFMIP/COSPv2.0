@@ -313,8 +313,6 @@ program cosp2_test
   ! Shift the namelists read in into a shorter array for cosp_init:    
   allocate(rttov_instrument_namelists_final(rttov_Ninstruments)) 
   rttov_instrument_namelists_final(:) = rttov_instrument_namelists(1:rttov_Ninstruments)
-
-  print*,'rttov_instrument_namelists_final:         ',rttov_instrument_namelists_final
      
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
