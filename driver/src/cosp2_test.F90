@@ -519,19 +519,14 @@ program cosp2_test
      cospstateIN%emis_sfc = 0._wp
      cospstateIN%refl_sfc = 0._wp     
      
-     ! Well-mixed gases are not in COSP offline input
-     ! Moved user input of well-mixed gases to instrument namelists
-     ! Keeping these structures since gases could come from model input.
-     ! JKS should probably be 2-dimensional
-     cospstateIN%co2(:)   = 0._wp
-     cospstateIN%ch4(:)   = 0._wp
-     cospstateIN%n2o(:)   = 0._wp 
-     cospstateIN%co(:)    = 0._wp
-
-!     cospstateIN%co2   = 0._wp
-!     cospstateIN%ch4   = 0._wp
-!     cospstateIN%n2o   = 0._wp 
-!     cospstateIN%co    = 0._wp
+     ! Well-mixed gases are not provided in COSP offline input, so hardcoding them in.
+     ! Units are kg/kg over moist air.
+     ! Note: user_tracegas_input should be true in instrument namelists for the COSP offline driver
+     cospstateIN%co2(:,:)   = 5.241e-04
+     cospstateIN%ch4(:,:)   = 9.139e-07
+     cospstateIN%n2o(:,:)   = 4.665e-07
+     cospstateIN%co(:,:)    = 2.098e-07
+     cospstateIN%so2(:,:)   = 2.0e-11
 
      ! Time information
      cospstateIN%month       = month(start_idx:end_idx)
@@ -1096,12 +1091,13 @@ contains
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),                             &
+             y%co(npoints,nlevels),y%n2o(npoints,nlevels),y%ch4(npoints,nlevels),        &
+             y%co2(npoints,nlevels), &             
 !             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels),                  &
              y%month(nPoints),y%time_frac(nPoints))
-!             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
 
   end subroutine construct_cospstateIN
 

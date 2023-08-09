@@ -73,7 +73,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           Lrttov_refl,         &
           Lrttov_cld,          &
           Lrttov_aer,          &
-          Lrttov_pc
+          Lrttov_pc,           &
+          user_tracegas_input
       character(len=256)           :: &
           rttov_srcDir,        &
           rttov_coefDir,       &
@@ -204,24 +205,23 @@ CONTAINS
         rttov_ZenAng
 
     ! Declare RTTOV namelist fields
-    logical         :: Lrttov_bt = .false.
-    logical         :: Lrttov_rad = .false.
-    logical         :: Lrttov_refl = .false.
-    logical         :: Lrttov_cld = .false.
-    logical         :: Lrttov_aer = .false.
-    logical         :: Lrttov_cldparam = .false.
-    logical         :: Lrttov_aerparam = .false.
-    logical         :: Lrttov_pc = .false.
-
-    logical         :: Lchannel_filepath = .false.
-    
-    logical         :: SO2_data = .false. 
-    logical         :: N2O_data = .false. 
-    logical         :: CO_data = .false.
-    logical         :: CO2_data = .false.
-    logical         :: CH4_data = .false. 
-    logical         :: ozone_data = .false.
-    logical         :: clw_data = .false.
+    logical         :: Lrttov_bt
+    logical         :: Lrttov_rad
+    logical         :: Lrttov_refl
+    logical         :: Lrttov_cld
+    logical         :: Lrttov_aer
+    logical         :: Lrttov_cldparam
+    logical         :: Lrttov_aerparam
+    logical         :: Lrttov_pc
+    logical         :: Lchannel_filepath
+    logical         :: user_tracegas_input 
+    logical         :: SO2_data
+    logical         :: N2O_data
+    logical         :: CO_data
+    logical         :: CO2_data
+    logical         :: CH4_data
+    logical         :: ozone_data
+    logical         :: clw_data
     
     character(len=256) :: cosp_status
     integer ::             &
@@ -247,18 +247,36 @@ CONTAINS
     character(len=256) :: imsg  !<-- some suitable length, say XX=256      
     integer            :: erro
                 
-    ! Init. local time variables for multiple instruments:
-    rttov_Nlocaltime = 0
+    ! Init. variables to false.
+    rttov_Nlocaltime    = 0
+    Lrttov_bt           = .false.
+    Lrttov_rad          = .false.
+    Lrttov_refl         = .false.
+    Lrttov_cld          = .false.
+    Lrttov_aer          = .false.
+    Lrttov_cldparam     = .false.
+    Lrttov_aerparam     = .false.
+    Lrttov_pc           = .false.
+    Lchannel_filepath   = .false.
+    SO2_data            = .false. 
+    N2O_data            = .false. 
+    CO_data             = .false.
+    CO2_data            = .false.
+    CH4_data            = .false. 
+    ozone_data          = .false.
+    clw_data            = .false.    
+    user_tracegas_input = .false.
     
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
-                         Lrttov_pc,nchannels_rec,Lchannel_filepath,            &
+                         Lrttov_pc,nchannels_rec,Lchannel_filepath,              &
                          channel_filepath,rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          PC_coef_filepath,                                       &
                          CO2_data,CH4_data,CO_data,N2O_data,SO2_data,ozone_data, & ! User-supplied trace gas concentrations
                          clw_data,                                               & ! MW option
+                         user_tracegas_input,                                    &
                          CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
 !                         rttov_nthreads,rttov_ZenAng
@@ -319,6 +337,9 @@ CONTAINS
         
     ! Set other RTTOV config variables
     rttov_config%rttov_direct_nthreads = rttov_nthreads
+    
+    ! Set to false in namelist if model supplies trace profiles
+    rttov_config%user_tracegas_input = user_tracegas_input
     
     rttov_config%SO2_mr       = SO2_mr
     rttov_config%N2O_mr       = N2O_mr
@@ -626,11 +647,13 @@ CONTAINS
         error     ! Error messages (only populated if error encountered)  
 
     real(wp),dimension(10) :: driver_time
+    logical :: verbose = .false.
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
     if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
     allocate(rttovConfig % swath_mask(rttovIN % nPoints))
+    if (verbose) print*,'Beginning "cosp_rttov_allocate".'
     call cosp_rttov_allocate(rttovIN,                             &
                              rttovConfig % nChannels_rec,         &
                              rttovConfig % opts,                  &
@@ -644,9 +667,11 @@ CONTAINS
                              rttovConfig % swath_mask)    
         
     call cpu_time(driver_time(2))
+    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN, &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
+                                       rttovConfig % user_tracegas_input,      &
                                        rttovConfig % CO2_mr,                   &
                                        rttovConfig % CH4_mr,                   &
                                        rttovConfig % CO_mr,                    &
@@ -657,6 +682,7 @@ CONTAINS
                                        rttovConfig % swath_mask)
                                        
     call cpu_time(driver_time(3))
+    if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
     call cosp_rttov_setup_emissivity_reflectance() ! Config agnostic after allocate step.
     call cpu_time(driver_time(4))
     call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
@@ -665,6 +691,7 @@ CONTAINS
     
     call cpu_time(driver_time(5))
     
+    if (verbose) print*,'Beginning "cosp_rttov_save_output".'
     call cosp_rttov_save_output(rttovIN % nPoints,                      &
                                 rttovConfig % nchan_out,                &
                                 rttovConfig % swath_mask,               &
@@ -678,6 +705,7 @@ CONTAINS
                                 refl_total,refl_clear)
 
     call cpu_time(driver_time(6))                                        
+    if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
     call cosp_rttov_deallocate_profiles(rttovConfig % nprof,           &
                                         rttovConfig % nchanprof,       &
                                         rttovIN % nLevels,               &
@@ -756,6 +784,7 @@ CONTAINS
     call cosp_rttov_construct_profiles(rttovIN, &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
+                                       rttovConfig % user_tracegas_input,      &
                                        rttovConfig % CO2_mr,                   &
                                        rttovConfig % CH4_mr,                   &
                                        rttovConfig % CO_mr,                    &
