@@ -148,12 +148,6 @@ module mod_cosp_rttov
           nSubCols        ! Number of subcolumns
      integer(kind=jpim),dimension(:),pointer :: &
           month
-     real(wp),dimension(:),pointer :: & ! Could change the dimensionality of these in the future
-          co2,          & ! Carbon dioxide 
-          ch4,          & ! Methane 
-          n2o,          & ! n2o 
-          co,           & ! Carbon monoxide
-          time_frac
 !     real(wp),dimension(:),pointer :: &
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
@@ -168,13 +162,19 @@ module mod_cosp_rttov
           lsmask,       & ! land-sea mask
           latitude,     & ! Latitude (degrees)
           longitude,    & ! Longitude (degrees)
-          seaice          ! Sea-ice? 
+          seaice,       & ! Sea-ice? 
+          time_frac       ! Fractional UTC time [0-1] 
      real(wp),dimension(:,:),pointer :: &
           p,            & ! Pressure @ model levels
           ph,           & ! Pressure @ model half levels
           t,            & ! Temperature 
           q,            & ! Specific humidity
-          o3              ! Ozone
+          o3,           & ! Ozone
+          co2,          & ! Carbon dioxide 
+          ch4,          & ! Methane 
+          n2o,          & ! n2o 
+          co,           & ! Carbon monoxide
+          so2             ! Sulfur dioxide
      ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
      real(wp),dimension(:,:),pointer :: &
           tca,          & ! Cloud fraction
@@ -266,12 +266,7 @@ contains
             ! Calculate the central longitude for each gridcell and orbit
             sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%time_frac * 24.0)) 
             ! Calculate distance (in degrees) from each grid cell to the satellite central long
-            dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0 
-            
-!            print*,'rttovIN%longitude(1:7):    ',rttovIN%longitude(1:7)
-!            print*,'sat_lon(j):    ',sat_lon(1:7,j)
-!            print*,'dlon(1:7,j):   ',dlon(1:7,j)
-            
+            dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
             ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
             dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude * pi / 180) * radius
         end do
@@ -519,6 +514,7 @@ contains
   subroutine cosp_rttov_construct_profiles(rttovIN,        &
                                            Lrttov_cld,     &
                                            Lrttov_aer,     &
+                                           Luser_tracegas, &
                                            inst_co2_mr,    &
                                            inst_ch4_mr,    &
                                            inst_co_mr,     &
@@ -532,7 +528,8 @@ contains
         rttovIN
     logical,intent(in)        :: &
         Lrttov_cld,       &
-        Lrttov_aer
+        Lrttov_aer,       &
+        Luser_tracegas      ! Use user-supplied trace gas columns from instrument namelists. 
     real(wp),intent(in)       :: &
         inst_co2_mr,      &
         inst_ch4_mr,      &
@@ -568,19 +565,21 @@ contains
       
           ! Initialize trace gas concentrations from user input
           ! These gases are not in COSP input files but might be in the future
-
-          profiles(j)%co2(:)        = inst_co2_mr
-          profiles(j)%n2o(:)        = inst_n2o_mr
-          profiles(j)%co(:)         = inst_co_mr
-          profiles(j)%ch4(:)        = inst_ch4_mr
-          profiles(j)%so2           = inst_so2_mr ! syntax slightly different?
-
-    ! For when trace gas columns are supplied   
-    !      profiles(j)%co2(:)        =  rttovIN%co2
-    !      profiles(j)%n2o(:)        =  rttovIN%n2o
-    !      profiles(j)%co(:)         =  rttovIN%co
-    !      profiles(j)%ch4(:)        =  rttovIN%ch4
-
+          if (Luser_tracegas) then
+              profiles(j)%co2(:)        = inst_co2_mr
+              profiles(j)%n2o(:)        = inst_n2o_mr
+              profiles(j)%co(:)         = inst_co_mr
+              profiles(j)%ch4(:)        = inst_ch4_mr
+              profiles(j)%so2(:)        = inst_so2_mr ! syntax slightly different?
+          else
+              ! For when trace gas columns are supplied by the model. Units must match (kg/kg over moist air)
+              profiles(j)%co2(:)        =  rttovIN%co2(i,:)
+              profiles(j)%n2o(:)        =  rttovIN%n2o(i,:)
+              profiles(j)%co(:)         =  rttovIN%co(i,:)
+              profiles(j)%ch4(:)        =  rttovIN%ch4(i,:)
+              profiles(j)%so2(:)        =  rttovIN%so2(i,:)
+          end if
+          
           ! Initialize column pressure, temperature, and humidity
           profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
           profiles(j)%t(:) =  rttovIN%t(i, :)
