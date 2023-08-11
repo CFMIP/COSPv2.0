@@ -59,12 +59,6 @@ MODULE MOD_COSP_RTTOV
           nSubCols        ! Number of subcolumns
      integer,dimension(:),pointer :: &
           month
-     real(wp),dimension(:),pointer :: & ! Could change the dimensionality of these in the future
-          co2,          & ! Carbon dioxide 
-          ch4,          & ! Methane 
-          n2o,          & ! n2o 
-          co,           & ! Carbon monoxide
-          time_frac
 !     real(wp),dimension(:),pointer :: &
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
@@ -77,15 +71,21 @@ MODULE MOD_COSP_RTTOV
           t2m,          & ! 2 m Temperature
           q2m,          & ! 2 m Specific humidity
           lsmask,       & ! land-sea mask
-          latitude,     & ! Latitude
-          longitude,    & ! Longitude
-          seaice          ! Sea-ice? 
+          latitude,     & ! Latitude (degrees)
+          longitude,    & ! Longitude (degrees)
+          seaice,       & ! Sea-ice? 
+          time_frac       ! Fractional UTC time [0-1] 
      real(wp),dimension(:,:),pointer :: &
           p,            & ! Pressure @ model levels
           ph,           & ! Pressure @ model half levels
           t,            & ! Temperature 
           q,            & ! Specific humidity
-          o3              ! Ozone
+          o3,           & ! Ozone
+          co2,          & ! Carbon dioxide 
+          ch4,          & ! Methane 
+          n2o,          & ! n2o 
+          co,           & ! Carbon monoxide
+          so2             ! Sulfur dioxide
      ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
      real(wp),dimension(:,:),pointer :: &
           tca,          & ! Cloud fraction
