@@ -603,6 +603,7 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   call destroy_cosp_outputs(cospOUT)
   call destroy_cospIN(cospIN)
+  deallocate(rttov_configs)
   call destroy_cospstateIN(cospstateIN)
   call cosp_cleanUp()
 
@@ -1487,7 +1488,11 @@ contains
   ! SUBROUTINE destroy_cospIN     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine destroy_cospIN(y)
+    use MOD_COSP_RTTOV_INTERFACE, only: DESTROY_RTTOV_CONFIG
+    
     type(cosp_optical_inputs),intent(inout) :: y
+    integer :: i
+    
     if (allocated(y%tau_067))             deallocate(y%tau_067)
     if (allocated(y%emiss_11))            deallocate(y%emiss_11)
     if (allocated(y%frac_out))            deallocate(y%frac_out)
@@ -1516,11 +1521,18 @@ contains
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
     if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
+    
+    if (size(y%cfg_rttov) .gt. 0) then
+        do i=1,y%Ninst_rttov
+            call destroy_rttov_config(y%cfg_rttov(i))
+        end do
+    end if
+    
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine destroy_cospstateIN(y)
+  subroutine destroy_cospstateIN(y)  
     type(cosp_column_inputs),intent(inout) :: y
 
     if (allocated(y%sunlit))          deallocate(y%sunlit)
@@ -1559,7 +1571,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cosp_outputs
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine destroy_cosp_outputs(y)
+  subroutine destroy_cosp_outputs(y)    
      type(cosp_outputs),intent(inout) :: y
      integer :: i ! Local iterator for RTTOV instruments
 

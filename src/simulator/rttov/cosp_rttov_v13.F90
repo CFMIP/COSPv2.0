@@ -95,18 +95,6 @@ module mod_cosp_rttov
   real(wp),parameter :: eps    =  0.622
 
   ! Initialization parameters
-
-  ! Number of channels to reconstruct (-1: None, 1:All, otherwise the actual number)
-  INTEGER(kind=jpim) :: nchannels_rec 
-       
-  integer(kind=jpim) ::  & ! Parallelization is default off
-       rttov_direct_nthreads = 1_jpim
-  integer(kind=jpim),allocatable :: &
-       iChannel(:),      &  ! RTTOV channel indices
-       iChannel_out(:)      ! Passing out the channel indices
-  real(kind=jplm),allocatable    :: &
-       emisChannel(:),   &  ! RTTOV channel emissivity
-       reflChannel(:)       ! RTTOV channel reflectivity
        
   ! Scattering coefficients (read in once during initialization)
 ! JKS - KISS
@@ -444,7 +432,7 @@ contains
     print*,'inst_nchanprof:      ',inst_nchanprof
 
     ! Determine the number of reconstructed radiances per profile (nchannels_rec)    
-    if (allocated(inst_iChannel_out))             deallocate(inst_iChannel_out) ! Reset because this variable is internal and used by multiple instruments.  ! JKS
+    if (allocated(inst_iChannel_out))             deallocate(inst_iChannel_out) ! Reset because this variable is internal and used by multiple instruments.
     if (inst_opts % rt_ir % pc % addradrec) then
       if (inst_nchannels_rec < 0) then
         ! If the number of channels is negative, don't reconstruct radiances at all

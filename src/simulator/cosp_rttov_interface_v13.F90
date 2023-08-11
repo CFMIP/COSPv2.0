@@ -144,7 +144,7 @@ CONTAINS
           Ninstruments
       type(character(len=256)), dimension(Ninstruments)     :: & 
           instrument_namelists   ! Array of paths to RTTOV instrument namelists      
-      type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
+      type(rttov_cfg), dimension(:), intent(out), allocatable :: & ! intent(out)?
           rttov_configs
       integer,intent(in),Optional :: unitn ! Used for io limits
           
@@ -566,7 +566,22 @@ CONTAINS
       end subroutine rttov_error
  
   END SUBROUTINE COSP_RTTOV_INIT_S
+  
+  
+  SUBROUTINE DESTROY_RTTOV_CONFIG(rttovConfig)
+  
+      type(rttov_cfg),intent(inout) :: &
+          rttovConfig
+          
+      if (allocated(rttovConfig % iChannel))              deallocate(rttovConfig % iChannel)
+      if (allocated(rttovConfig % iChannel_out))          deallocate(rttovConfig % iChannel_out)
+      if (allocated(rttovConfig % emisChannel))           deallocate(rttovConfig % emisChannel)
+      if (allocated(rttovConfig % reflChannel))           deallocate(rttovConfig % reflChannel)
+      if (allocated(rttovConfig % rttov_localtime))       deallocate(rttovConfig % rttov_localtime)
+      if (allocated(rttovConfig % rttov_localtime_width)) deallocate(rttovConfig % rttov_localtime_width)
+      if (allocated(rttovConfig % swath_mask))            deallocate(rttovConfig % swath_mask)
 
+  END SUBROUTINE DESTROY_RTTOV_CONFIG
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV

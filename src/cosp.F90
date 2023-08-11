@@ -139,7 +139,6 @@ MODULE MOD_COSP
           Nlevels,             & ! Number of levels.
           Npart,               & ! Number of cloud meteors for LIDAR simulators.
           Nrefl,               & ! Number of reflectances for PARASOL simulator
-!          nChannels_rttov,     & ! Number of RTTOV channels
           Ninst_rttov            ! Number of RTTOV instruments
      real(wp) :: &
           emsfc_lw               ! Surface emissivity @ 11micron
@@ -1862,7 +1861,7 @@ CONTAINS
     
     ! OUTPUTS
     type(radar_cfg) :: rcfg
-    type(rttov_cfg), dimension(:), allocatable :: rttov_configs
+    type(rttov_cfg), dimension(:), allocatable,intent(inout) :: rttov_configs
     
     ! Optional args
     integer,intent(in),Optional :: unitn ! Used for io limits

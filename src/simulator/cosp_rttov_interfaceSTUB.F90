@@ -32,7 +32,6 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS, ONLY: wp
-!  USE MOD_COSP_CONFIG,  ONLY: RTTOV_MAX_CHANNELS,rttovDir
   USE MOD_COSP_RTTOV,   ONLY: rttov_IN
   IMPLICIT NONE
 
@@ -74,10 +73,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           reflChannel(:),           &      ! RTTOV channel reflectivity
           rttov_localtime(:),       &      ! RTTOV localtime
           rttov_localtime_width(:) 
-!      type(rttov_options)          :: &
-!          opts                               ! RTTOV options structure
-!      type(rttov_coefs)            :: &
-!          coefs                              ! RTTOV coefficients structure
+      logical, allocatable  :: &
+          swath_mask(:)          
   end type rttov_cfg
 
   type rttov_output
@@ -112,16 +109,35 @@ CONTAINS
           Ninstruments
       type(character(len=128)), dimension(Ninstruments)     :: & 
           instrument_namelists   ! Array of paths to RTTOV instrument namelists      
-      type(rttov_cfg), dimension(:), allocatable :: & ! intent(out)?
+      type(rttov_cfg), dimension(:), intent(out), allocatable :: & ! intent(out)?
           rttov_configs
       integer,intent(in),Optional :: unitn ! Used for io limits
           
       Lrttov = .false.
-          
+      allocate(rttov_configs(Ninstruments))
+      
       print*,'Running COSP_RTTOV_INIT from STUB files.', &
         'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
        
   END SUBROUTINE COSP_RTTOV_INIT
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE DESTROY_RTTOV_CONFIG
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE DESTROY_RTTOV_CONFIG(rttovConfig)
+  
+      type(rttov_cfg),intent(inout) :: &
+          rttovConfig
+    
+      if (allocated(rttovConfig % iChannel))              deallocate(rttovConfig % iChannel)
+      if (allocated(rttovConfig % iChannel_out))          deallocate(rttovConfig % iChannel_out)
+      if (allocated(rttovConfig % emisChannel))           deallocate(rttovConfig % emisChannel)
+      if (allocated(rttovConfig % reflChannel))           deallocate(rttovConfig % reflChannel)
+      if (allocated(rttovConfig % rttov_localtime))       deallocate(rttovConfig % rttov_localtime)
+      if (allocated(rttovConfig % rttov_localtime_width)) deallocate(rttovConfig % rttov_localtime_width)
+      if (allocated(rttovConfig % swath_mask))            deallocate(rttovConfig % swath_mask)
+
+  END SUBROUTINE DESTROY_RTTOV_CONFIG  
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
@@ -179,7 +195,6 @@ CONTAINS
   ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
   
   END SUBROUTINE COSP_PC_RTTOV_SIMULATE
-  
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE
