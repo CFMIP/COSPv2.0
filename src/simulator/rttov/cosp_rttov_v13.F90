@@ -510,14 +510,16 @@ contains
                                            inst_so2_mr,    &
                                            inst_zenang,    &
                                            inst_nprof,     &
-                                           inst_swath_mask)
+                                           inst_swath_mask,&
+                                           verbose)
 
     type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
         rttovIN
     logical,intent(in)        :: &
         Lrttov_cld,       &
         Lrttov_aer,       &
-        Luser_tracegas      ! Use user-supplied trace gas columns from instrument namelists. 
+        Luser_tracegas,   & ! Use user-supplied trace gas columns from instrument namelists. 
+        verbose
     real(wp),intent(in)       :: &
         inst_co2_mr,      &
         inst_ch4_mr,      &
@@ -532,7 +534,7 @@ contains
     
     ! Loop variables
     integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for swath_mask.
-        
+            
     ! Store profile data from rttovIN in profile type.
     ! See RTTOV user guide pg 163 for description of "profiles" type
     
@@ -543,6 +545,13 @@ contains
     ! set to false."
 
     profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
+    
+    if (verbose) then
+        print*,'shape(rttovIN%co2):    ',shape(rttovIN%co2)
+        print*,'shape(rttovIN%n2o):    ',shape(rttovIN%n2o)
+        print*,'rttovIN%co2(1,:):    ',rttovIN%co2(1,1:10)
+        print*,'rttovIN%n2o(1,:):    ',rttovIN%n2o(1,1:10)
+    end if
     
     ! Iterate over all columns
     j = 0 ! Initialize input
