@@ -751,7 +751,8 @@ CONTAINS
        rttovIN%co         => cospgridIN%co
 !       rttovIN%surfem     => cospgridIN%emis_sfc
 !       rttovIN%refl_sfc     => cospgridIN%refl_sfc
-       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels)
+!       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels)
+       rttovIN%h_surf     => cospgridIN%surfelev
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
@@ -4168,11 +4169,11 @@ CONTAINS
            size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%qv,2)              .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%hgt_matrix_half,2) .ne. cospIN%Nlevels   .OR. &
-           size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1 .OR. &
-           size(cospgridIN%qv,2)              .ne. cospIN%Nlevels) then
+           size(cospgridIN%phalf,2)           .ne. cospIN%Nlevels+1) then
           Lrttov_column    = .false.
           nError=nError+1
           errorMessage(nError) = 'ERROR(rttov_simulator): The number of levels in the input fields are inconsistent'
+
        endif
     endif
   end subroutine cosp_errorCheck

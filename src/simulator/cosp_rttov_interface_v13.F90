@@ -662,7 +662,7 @@ CONTAINS
         error     ! Error messages (only populated if error encountered)  
 
     real(wp),dimension(10) :: driver_time
-    logical :: verbose = .false.
+    logical :: verbose = .true.
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
@@ -694,7 +694,8 @@ CONTAINS
                                        rttovConfig % SO2_mr,                   &
                                        rttovConfig % ZenAng,                   &
                                        rttovConfig % nprof,                    &
-                                       rttovConfig % swath_mask)
+                                       rttovConfig % swath_mask,               &
+                                       verbose)
                                        
     call cpu_time(driver_time(3))
     if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
@@ -777,6 +778,7 @@ CONTAINS
         error     ! Error messages (only populated if error encountered)  
 
     real(wp),dimension(10) :: driver_time
+    logical :: verbose = .true.
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
@@ -807,7 +809,8 @@ CONTAINS
                                        rttovConfig % SO2_mr,                   &
                                        rttovConfig % ZenAng,                   &
                                        rttovConfig % nprof,                    &
-                                       rttovConfig % swath_mask)
+                                       rttovConfig % swath_mask,               &
+                                       verbose)
     call cpu_time(driver_time(3))
     call cosp_pc_rttov_setup_emissivity()
     call cpu_time(driver_time(4))

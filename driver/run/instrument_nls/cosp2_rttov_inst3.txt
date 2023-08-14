@@ -56,6 +56,7 @@
   ! -------------- RTTOV Trace Gas Concentrations
   ! -------------- Specify units in RTTOV options set-up
   ! ---------------Standard units are kg/kg over moist air
+  user_tracegas_input=.false., ! Have RTTOV use the trace gas concentrations below
   CO2_mr=5.241e-04, 
   CH4_mr=9.139e-07,
   CO_mr=2.098e-07,
