@@ -503,6 +503,12 @@ contains
                                            Lrttov_cld,     &
                                            Lrttov_aer,     &
                                            Luser_tracegas, &
+                                           Ldo_co2,        &
+                                           Ldo_ch4,        &
+                                           Ldo_co,         &
+                                           Ldo_n2o,        &
+                                           Ldo_so2,        &
+                                           Ldo_o3,         &
                                            inst_co2_mr,    &
                                            inst_ch4_mr,    &
                                            inst_co_mr,     &
@@ -519,6 +525,12 @@ contains
         Lrttov_cld,       &
         Lrttov_aer,       &
         Luser_tracegas,   & ! Use user-supplied trace gas columns from instrument namelists. 
+        Ldo_co2,          &
+        Ldo_ch4,          &
+        Ldo_co,           &
+        Ldo_n2o,          &
+        Ldo_so2,          &
+        Ldo_o3,           &
         verbose
     real(wp),intent(in)       :: &
         inst_co2_mr,      &
@@ -546,12 +558,12 @@ contains
 
     profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
     
-    if (verbose) then
-        print*,'shape(rttovIN%co2):    ',shape(rttovIN%co2)
-        print*,'shape(rttovIN%n2o):    ',shape(rttovIN%n2o)
-        print*,'rttovIN%co2(1,:):    ',rttovIN%co2(1,1:10)
-        print*,'rttovIN%n2o(1,:):    ',rttovIN%n2o(1,1:10)
-    end if
+!    if (verbose) then
+!        print*,'shape(rttovIN%co2):    ',shape(rttovIN%co2)
+!        print*,'shape(rttovIN%n2o):    ',shape(rttovIN%n2o)
+!        print*,'rttovIN%co2(1,:):    ',rttovIN%co2(1,1:10)
+!        print*,'rttovIN%n2o(1,:):    ',rttovIN%n2o(1,1:10)
+!    end if
     
     ! Iterate over all columns
     j = 0 ! Initialize input
@@ -560,21 +572,22 @@ contains
       if (inst_swath_mask(i)) then ! only added masked columns to profiles
           j = j + 1 ! Increment first
       
-          ! Initialize trace gas concentrations from user input
-          ! These gases are not in COSP input files but might be in the future
+          ! Initialize trace gas concentrations from user input.
           if (Luser_tracegas) then
-              profiles(j)%co2(:)        = inst_co2_mr
-              profiles(j)%n2o(:)        = inst_n2o_mr
-              profiles(j)%co(:)         = inst_co_mr
-              profiles(j)%ch4(:)        = inst_ch4_mr
-              profiles(j)%so2(:)        = inst_so2_mr ! syntax slightly different?
+              if (Ldo_co2) profiles(j)%co2(:)        = inst_co2_mr
+              if (Ldo_n2o) profiles(j)%n2o(:)        = inst_n2o_mr
+              if (Ldo_co)  profiles(j)%co(:)         = inst_co_mr
+              if (Ldo_ch4) profiles(j)%ch4(:)        = inst_ch4_mr
+              if (Ldo_so2) profiles(j)%so2(:)        = inst_so2_mr
+              if (Ldo_o3)  profiles(j)%o3(:)         = rttovIN%o3(i, :) ! no O3 user input set up
           else
               ! For when trace gas columns are supplied by the model. Units must match (kg/kg over moist air)
-              profiles(j)%co2(:)        =  rttovIN%co2(i,:)
-              profiles(j)%n2o(:)        =  rttovIN%n2o(i,:)
-              profiles(j)%co(:)         =  rttovIN%co(i,:)
-              profiles(j)%ch4(:)        =  rttovIN%ch4(i,:)
-              profiles(j)%so2(:)        =  rttovIN%so2(i,:)
+              if (Ldo_co2) profiles(j)%co2(:)        = rttovIN%co2(i,:)
+              if (Ldo_n2o) profiles(j)%n2o(:)        = rttovIN%n2o(i,:)
+              if (Ldo_co)  profiles(j)%co(:)         = rttovIN%co(i,:)
+              if (Ldo_ch4) profiles(j)%ch4(:)        = rttovIN%ch4(i,:)
+              if (Ldo_so2) profiles(j)%so2(:)        = rttovIN%so2(i,:)
+              if (Ldo_o3)  profiles(j)%o3(:)         = rttovIN%o3(i, :)
           end if
           
           ! Initialize column pressure, temperature, and humidity
