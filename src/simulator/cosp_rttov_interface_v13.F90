@@ -586,11 +586,10 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
-                                 refl_total,refl_clear,                            & ! Reflectance Outputs
-                                 error)      
+                                 refl_total,refl_clear)                              ! Reflectance Outputs
 
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -598,7 +597,9 @@ CONTAINS
         rttovConfig
     logical,intent(in) :: &
         lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so! 
+    character(len=128),intent(inout) :: &
+        error     ! Error messages (only populated if error encountered)         
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out),optional :: & ! Can I do this? I guess so! 
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
         rad_total,                         &        ! All-sky
@@ -606,8 +607,6 @@ CONTAINS
         rad_cloudy,                        &        ! Cloudy-sky
         refl_total,                        &        ! All-sky
         refl_clear                                  ! Clear-sky
-    character(len=128) :: &
-        error     ! Error messages (only populated if error encountered) 
 
     ! Check options to determine if the principal component approach should be run
     if (rttovConfig % opts % rt_ir % pc % addpc) then

@@ -1546,6 +1546,13 @@ CONTAINS
                ! Init to R_UNDEF - JKS check
                rttov_bt_clear(:,:)  = R_UNDEF
                rttov_rad_clear(:,:) = R_UNDEF
+               ! Run simulator
+               call cpu_time(driver_time(3))
+               call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,    & ! Inputs
+                                        cosp_simulator(nError+1),                      & ! Error message holder
+                                        bt_clear=rttov_bt_clear,                       & ! Clear-sky BT
+                                        rad_clear=rttov_rad_clear)                       ! Clear-sky radiance
+               call cpu_time(driver_time(4))
            else 
                allocate(rttov_bt_total(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! all-sky brightness temp
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN   % cfg_rttov(i) % nchan_out))   ! clear-sky brightness temp
@@ -1562,17 +1569,19 @@ CONTAINS
                rttov_rad_cloudy(:,:) = R_UNDEF               
                rttov_refl_total(:,:) = R_UNDEF               
                rttov_refl_clear(:,:) = R_UNDEF               
+               ! Run simulator
+               call cpu_time(driver_time(3))
+               call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,    & ! Inputs
+                                        cosp_simulator(nError+1),                      & ! Error message holder
+                                        bt_total=rttov_bt_total,                       & ! Brightness Temp Outputs
+                                        bt_clear=rttov_bt_clear,                       &
+                                        rad_total=rttov_rad_total,                     & ! Radiance Outputs
+                                        rad_clear=rttov_rad_clear,                     &
+                                        rad_cloudy=rttov_rad_cloudy,                   & 
+                                        refl_total=rttov_refl_total,                   & ! Reflectance Outputs
+                                        refl_clear=rttov_refl_clear)
+               call cpu_time(driver_time(4))
            endif
-           
-           call cpu_time(driver_time(3))
-           ! Run simulator
-           call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,         & ! Inputs
-                                    rttov_bt_total,rttov_bt_clear,                      & ! Brightness Temp Outputs
-                                    rttov_rad_total,rttov_rad_clear,rttov_rad_cloudy,   & ! Radiance Outputs
-                                    rttov_refl_total,rttov_refl_clear,                  & ! Reflectance Outputs
-                                    cosp_simulator(nError+1))
-           call cpu_time(driver_time(4))
-!           print*,'Time to run RTTOV:     ',driver_time(4)-driver_time(3) ! JKS
 
            ! Write to cospOUT
            if (associated(cospOUT % rttov_outputs(i) % channel_indices))                    &
