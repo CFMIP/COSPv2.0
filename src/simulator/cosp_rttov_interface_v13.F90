@@ -683,10 +683,17 @@ CONTAINS
         
     call cpu_time(driver_time(2))
     if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
-    call cosp_rttov_construct_profiles(rttovIN, &
+ 
+    call cosp_rttov_construct_profiles(rttovIN,                                &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
                                        rttovConfig % user_tracegas_input,      &
+                                       rttovConfig % opts % rt_all % CO2_data, &
+                                       rttovConfig % opts % rt_all % CH4_data, &
+                                       rttovConfig % opts % rt_all % CO_data,  &
+                                       rttovConfig % opts % rt_all % N2O_data, &
+                                       rttovConfig % opts % rt_all % SO2_data, &
+                                       rttovConfig % opts % rt_all % ozone_data, &
                                        rttovConfig % CO2_mr,                   &
                                        rttovConfig % CH4_mr,                   &
                                        rttovConfig % CO_mr,                    &
@@ -798,10 +805,16 @@ CONTAINS
                                 rttovConfig % iChannel_out,                  &
                                 rttovConfig % swath_mask)
     call cpu_time(driver_time(2))
-    call cosp_rttov_construct_profiles(rttovIN, &
+    call cosp_rttov_construct_profiles(rttovIN,                                &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
                                        rttovConfig % user_tracegas_input,      &
+                                       rttovConfig % opts % rt_all % CO2_data, &
+                                       rttovConfig % opts % rt_all % CH4_data, &
+                                       rttovConfig % opts % rt_all % CO_data,  &
+                                       rttovConfig % opts % rt_all % N2O_data, &
+                                       rttovConfig % opts % rt_all % SO2_data, &
+                                       rttovConfig % opts % rt_all % ozone_data, &
                                        rttovConfig % CO2_mr,                   &
                                        rttovConfig % CH4_mr,                   &
                                        rttovConfig % CO_mr,                    &
