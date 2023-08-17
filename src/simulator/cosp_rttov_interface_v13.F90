@@ -135,7 +135,7 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(Lrttov, Nlevels,Ninstruments,instrument_namelists,       &
-                             rttov_configs, unitn)
+                             rttov_configs, unitn, debug)
 
       logical,intent(in) :: &
           Lrttov
@@ -144,27 +144,25 @@ CONTAINS
           Ninstruments
       type(character(len=256)), dimension(Ninstruments)     :: & 
           instrument_namelists   ! Array of paths to RTTOV instrument namelists      
-      type(rttov_cfg), dimension(:), intent(out), allocatable :: & ! intent(out)?
+      type(rttov_cfg), dimension(:), intent(out), allocatable :: &
           rttov_configs
-      integer,intent(in),Optional :: unitn ! Used for io limits
+      integer,intent(in),Optional :: unitn
+      logical,intent(in),Optional :: debug
           
       ! Local variables
       integer            :: &
           inst_idx ! iterator
+      logical :: verbose
+      if (present(debug)) verbose = debug
         
       allocate(rttov_configs(Ninstruments))
         
       ! Create config objects for each instrument to be simulated by RTTOV. Return to the main subroutine.
       do inst_idx=1,Ninstruments
-!          print*,'inst_idx:    ',inst_idx
-!          print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx)
-!          print*,'kind(rttov_configs(inst_idx)):     ',kind(rttov_configs(inst_idx))
-!          print*,'rttov_configs(inst_idx):           ',rttov_configs(inst_idx)
           if (present(unitn)) then
-!              print*,'instrument_namelists(inst_idx):    ',instrument_namelists(inst_idx) ! JKS check
-              call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx),unitn=unitn)
+              call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx),unitn=unitn,debug=verbose)
           else
-              call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx))
+              call cosp_rttov_init_s(Nlevels,instrument_namelists(inst_idx),rttov_configs(inst_idx),debug=verbose)
           endif
       end do
          
@@ -175,7 +173,7 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT_S(Nlevels,namelist_filepath,       &
-                               rttov_config, unitn)
+                               rttov_config, unitn, debug)
   
      integer,intent(in)                :: &
          Nlevels
@@ -183,9 +181,10 @@ CONTAINS
          namelist_filepath   ! Array of paths to RTTOV instrument namelists      
     type(rttov_cfg),intent(out)       :: & ! intent(out)?
          rttov_config 
-      
+    
     integer,intent(in),Optional :: unitn ! Used for io limits
-      
+    logical,intent(in),Optional :: debug
+    
     ! Local variables
     character(len=256),target :: &
         channel_filepath,  &
@@ -246,7 +245,10 @@ CONTAINS
     ! JKS for checking errors in filenames.
     character(len=256) :: imsg  !<-- some suitable length, say XX=256      
     integer            :: erro
-                
+               
+    logical :: verbose = .false.
+    if (present(debug)) verbose = debug
+               
     ! Init. variables to false.
     rttov_Nlocaltime    = 0
     Lrttov_bt           = .false.
@@ -489,7 +491,7 @@ CONTAINS
             nchannels_rec = rttov_config % coefs % coef % fmv_chn
             print*,'nchannels_rec cap hit'
         endif            
-    endif
+    endif   
                           
     ! We aren't checking an allocation steps so this seems more appropriate.
     call rttov_error('fatal error reading coefficients' , lalloc = .false.)
@@ -499,7 +501,6 @@ CONTAINS
     
     ! We aren't checking an allocation steps so this seems more appropriate.
     call rttov_error('error in rttov options' , lalloc = .false.)
-
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Figure out how many channels we actually want to reconstruct
@@ -543,6 +544,19 @@ CONTAINS
         allocate(rttov_config % iChannel(rttov_config % nchan_out))
         rttov_config % iChannel(:) = (/ (i, i = 1, rttov_config % nchan_out) /)
     endif
+    
+    if (verbose) then
+        print*,'rttov_config % nchan_out:         ',rttov_config % nchan_out
+        print*,'rttov_config % Lrttov_bt:         ',rttov_config % Lrttov_bt
+        print*,'rttov_config % Lrttov_rad:        ',rttov_config % Lrttov_rad
+        print*,'rttov_config % Lrttov_refl:       ',rttov_config % Lrttov_refl
+        print*,'rttov_config % Lrttov_cld:        ',rttov_config % Lrttov_cld
+        print*,'rttov_config % Lrttov_aer:        ',rttov_config % Lrttov_aer
+        print*,'rttov_config % Lrttov_pc:         ',rttov_config % Lrttov_pc
+        print*,'rttov_config % rttov_Nlocaltime:        ',rttov_config % rttov_Nlocaltime
+        print*,'rttov_config % rttov_localtime:         ',rttov_config % rttov_localtime
+        print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width            
+    end if     
         
     ! subsub routines
     contains
@@ -589,7 +603,8 @@ CONTAINS
   SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
-                                 refl_total,refl_clear)                              ! Reflectance Outputs
+                                 refl_total,refl_clear,                            & ! Reflectance Outputs
+                                 debug)
 
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -607,20 +622,23 @@ CONTAINS
         rad_cloudy,                        &        ! Cloudy-sky
         refl_total,                        &        ! All-sky
         refl_clear                                  ! Clear-sky
+    logical,intent(in),optional :: &
+        debug
+        
+    logical :: verbose = .false.
+    if (present(debug)) verbose = debug
 
     ! Check options to determine if the principal component approach should be run
     if (rttovConfig % opts % rt_ir % pc % addpc) then
         call COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                     &
                                     bt_clear,rad_clear,                               &
-                                    error)                                
-
+                                    error,verbose)                                
     else
         call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                    &
                                      bt_total,bt_clear,                               &
                                      rad_total,rad_clear,rad_cloudy,                  &
                                      refl_total,refl_clear,                           &
-                                     error)
-        
+                                     error,verbose)
     endif
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
@@ -632,7 +650,7 @@ CONTAINS
                                      bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                      rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                      refl_total,refl_clear,                            & ! Reflectance Outputs
-                                     error)                                              
+                                     error,verbose)                                              
   
     use mod_cosp_rttov,             only:        &
         cosp_rttov_allocate,                     &
@@ -657,11 +675,11 @@ CONTAINS
         rad_cloudy,                        &        ! Cloudy-sky
         refl_total,                        &        ! All-sky
         refl_clear                                  ! Clear-sky
-    character(len=128) :: &
-        error     ! Error messages (only populated if error encountered)  
+    character(len=128),intent(inout) :: &
+        error     ! Error messages (only populated if error encountered)
+    logical,intent(in) :: verbose
 
     real(wp),dimension(10) :: driver_time
-    logical :: verbose = .true.
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
@@ -759,8 +777,8 @@ CONTAINS
   ! SUBROUTINE cosp_pc_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
-                                    bt_clear,rad_clear,                               & ! Outputs
-                                    error)                                              
+                                    bt_clear,rad_clear,                            & ! Outputs
+                                    error,verbose)                                              
   
     use mod_cosp_rttov,             only:   &
         cosp_pc_rttov_allocate,             &
@@ -780,11 +798,11 @@ CONTAINS
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so!
         bt_clear,                          &        ! All-sky
         rad_clear                                   ! All-sky
-    character(len=128) :: &
+    character(len=128),intent(inout) :: &
         error     ! Error messages (only populated if error encountered)  
+    logical,intent(in) :: verbose
 
     real(wp),dimension(10) :: driver_time
-    logical :: verbose = .true.
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
