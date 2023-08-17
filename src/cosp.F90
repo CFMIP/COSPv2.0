@@ -328,11 +328,13 @@ CONTAINS
     type(cloudsat_IN) :: cloudsatIN ! Input to the CLOUDSAT radar simulator
     type(modis_IN)    :: modisIN    ! Input to the MODIS simulator
     type(rttov_IN)    :: rttovIN    ! Input to the RTTOV simulator
-    integer,optional  :: start_idx,stop_idx
-    logical,optional  :: debug
 
     ! Outputs from the simulators (nested simulator output structure)
     type(cosp_outputs), intent(inout) :: cospOUT
+    
+    integer,optional  :: start_idx,stop_idx
+    logical,optional  :: debug
+    
     character(len=256),dimension(100) :: cosp_simulator
 
     ! Local variables
@@ -366,10 +368,11 @@ CONTAINS
          Llidar_only_freq_cloud, & ! On/Off switch from joint Calipso/Cloudsat product
          Lcloudsat_modis_wr      ! On/Off switch from joint CloudSat/MODIS warm rain product
     logical :: &
-         ok_lidar_cfad    = .false., &
+         ok_lidar_cfad    = .false.,         &
          ok_lidar_cfad_grLidar532 = .false., & 
-         ok_lidar_cfad_atlid = .false., &
-         lrttov_cleanUp   = .false.
+         ok_lidar_cfad_atlid = .false.,      &
+         lrttov_cleanUp   = .false.,         &
+         verbose = .false.
     real(wp),dimension(10) :: driver_time
     integer, dimension(:),allocatable    :: &
          rttov_Ichannel
@@ -408,6 +411,7 @@ CONTAINS
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
+    if (present(debug)) verbose = debug
     
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 1) Determine if using full inputs or subset
@@ -775,7 +779,7 @@ CONTAINS
        rttovIN%cldIce     => cospgridIN%cloudIce
        rttovIN%cldLiq     => cospgridIN%cloudLiq
        rttovIN%fl_rain    => cospgridIN%fl_rain ! JKS remove?
-       rttovIN%fl_snow    => cospgridIN%fl_snow ! JKS remove?       
+       rttovIN%fl_snow    => cospgridIN%fl_snow ! JKS remove?
     endif
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1538,7 +1542,6 @@ CONTAINS
         do i=1,cospIN%Ninst_rttov
            ! Allocate memory for the outputs - I won't need all of these in every situation.
            ! Only allocate clear-sky memory when PC-RTTOV is run.
-!           print*,'cospIN % cfg_rttov(i) % nchan_out:    ',cospIN % cfg_rttov(i) % nchan_out ! JKS
            allocate(rttov_Ichannel(cospIN % cfg_rttov(i) % nchan_out)) ! Channel indices
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
@@ -1579,7 +1582,8 @@ CONTAINS
                                         rad_clear=rttov_rad_clear,                     &
                                         rad_cloudy=rttov_rad_cloudy,                   & 
                                         refl_total=rttov_refl_total,                   & ! Reflectance Outputs
-                                        refl_clear=rttov_refl_clear)
+                                        refl_clear=rttov_refl_clear,                   &
+                                        debug=verbose)
                call cpu_time(driver_time(4))
            endif
 
@@ -1604,6 +1608,11 @@ CONTAINS
                   cospOUT % rttov_outputs(i) % rad_cloudy(ij:ik,:) = rttov_rad_cloudy
                if (associated(cospOUT % rttov_outputs(i) % refl_total))                  &
                   cospOUT % rttov_outputs(i) % refl_total(ij:ik,:) = rttov_refl_total
+               if (verbose) then
+                  print*,'associated(cospOUT % rttov_outputs(i) % bt_total):      ',associated(cospOUT % rttov_outputs(i) % bt_total)
+                  print*,'associated(cospOUT % rttov_outputs(i) % refl_total):    ',associated(cospOUT % rttov_outputs(i) % refl_total)
+                  print*,'associated(cospOUT % rttov_outputs(i) % refl_clear):    ',associated(cospOUT % rttov_outputs(i) % refl_clear)
+               end if
                if (associated(cospOUT % rttov_outputs(i) % refl_clear))                  &
                   cospOUT % rttov_outputs(i) % refl_clear(ij:ik,:) = rttov_refl_clear
            endif 
@@ -1841,7 +1850,7 @@ CONTAINS
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs, cloudsat_do_ray,          &
        isccp_top_height, isccp_top_height_direction, surface_radar, rcfg, lusevgrid,     &
        luseCSATvgrid, Nvgrid, Nlevels, cloudsat_micro_scheme,                            &
-       rttov_Ninstruments, rttov_instrument_namelists,rttov_configs,unitn)
+       rttov_Ninstruments, rttov_instrument_namelists,rttov_configs,unitn,debug)
 
     ! INPUTS
     logical,intent(in)    :: Lisccp,Lmodis,Lmisr,Lcloudsat,Lcalipso,LgrLidar532,Latlid,Lparasol
@@ -1875,10 +1884,15 @@ CONTAINS
     
     ! Optional args
     integer,intent(in),Optional :: unitn ! Used for io limits
+    logical,intent(in),Optional :: debug
+    logical :: verbose = .false.
 
     ! Local variables
     integer  :: i
     real(wp) :: zstep
+    
+    ! Init debug print statements:
+    if (present(debug)) verbose = debug
 
     ! Initialize MODIS optical-depth bin boundaries for joint-histogram. (defined in cosp_config.F90)
     if (.not. allocated(modis_histTau)) then
@@ -1919,23 +1933,21 @@ CONTAINS
     if (Lmodis) call cosp_modis_init()
     if (Lmisr)  call cosp_misr_init()
     
-    ! I think that I will try to store an object of rttov_init_objects here, 
-    
-    ! Could print diagnostic on timing here.
     if (Lrttov) then
         call cpu_time(driver_time(1))
-        print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists ! JKS test
+        if (verbose) print*,'rttov_instrument_namelists:    ',rttov_instrument_namelists
         if (present(unitn)) then
             call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
                                  rttov_instrument_namelists,        &
-                                 rttov_configs,unitn=unitn)
+                                 rttov_configs,unitn=unitn,         &
+                                 debug=verbose)
         else
             call cosp_rttov_init(Lrttov,Nlevels,rttov_Ninstruments, &
                                  rttov_instrument_namelists,        &
-                                 rttov_configs)
+                                 rttov_configs,debug=verbose)
         end if
         call cpu_time(driver_time(2))
-!        print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
+        if (verbose) print*,'Time to run cosp_rttov_init:     ',driver_time(2)-driver_time(1)
     endif
 
     if (Lcloudsat) call cosp_cloudsat_init(cloudsat_radar_freq,cloudsat_k2,              &
@@ -1952,7 +1964,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_cleanUp
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_cleanUp()
+  subroutine cosp_cleanUp()  
     deallocate(vgrid_zl,vgrid_zu,vgrid_z,dz)
   end subroutine cosp_cleanUp
 
@@ -3375,7 +3387,6 @@ CONTAINS
        if (any(cospgridIN%tca .lt. 0 .OR. cospgridIN%tca .gt. 1)) then ! tca on [0,1]
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tca contains values out of range'
-          print*,'cospgridIN%tca:    ',cospgridIN%tca
           Lrttov_column = .false.
           if (associated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument

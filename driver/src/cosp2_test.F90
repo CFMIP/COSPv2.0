@@ -53,7 +53,6 @@ program cosp2_test
                                  grLidar532_histBsct,atlid_histBsct,vgrid_zu,vgrid_zl,    & 
                                  Nlvgrid_local  => Nlvgrid,                               &
                                  vgrid_z,cloudsat_preclvl
-!                                 RTTOV_MAX_LOCALTIMES,RTTOV_MAX_CHANNELS
   use cosp_phys_constants, only: amw,amd,amO3,amCO2,amCH4,amN2O,amCO
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
@@ -138,8 +137,7 @@ program cosp2_test
                                     ! (0=ice-spheres/1=ice-non-spherical)
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
        isccp_topheight,           & ! ISCCP cloud top height
-       isccp_topheight_direction, & ! ISCCP cloud top height direction
-       rttov_Nlocaltime             ! RTTOV: Number of local times to be computed
+       isccp_topheight_direction    ! ISCCP cloud top height direction
   integer :: rttov_Ninstruments = 0
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
@@ -149,10 +147,6 @@ program cosp2_test
        csat_vgrid,                & ! CloudSat vertical grid? 
        use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
                                     ! algorithm 
-  logical :: Lrttov_localtime  = .false.             
-  real(wp),dimension(10) ::  &   ! JKS - reasonable limit at 10
-       rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
-       rttov_localtimewindow        ! Width of local time window (hrs).
   character(len=64) :: &
        cloudsat_micro_scheme        ! Microphysical scheme used in cloudsat radar simulator
   character(len=64) :: &
@@ -172,8 +166,7 @@ program cosp2_test
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_Ninstruments, rttov_instrument_namelists,                                   &
-       Lrttov_localtime, rttov_Nlocaltime, rttov_localtime, rttov_localtimewindow
+       rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -199,6 +192,7 @@ program cosp2_test
              Lptradarflag9,Lradarpia,                                                    &
              Lwr_occfreq,Lcfodd
   logical :: Lrttov_run        = .false.        
+  logical :: rttov_verbose     = .false.        
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -307,6 +301,7 @@ program cosp2_test
   close(10)
  
   ! Jonah namelist checking area
+  print*,'rttov_verbose:   ',rttov_verbose
   print*,'Lrttov_run:   ',Lrttov_run
   print*,'rttov_Ninstruments:    ',rttov_Ninstruments
 
@@ -420,7 +415,8 @@ program cosp2_test
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
        rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
-       rttov_Ninstruments, rttov_instrument_namelists_final, rttov_configs)
+       rttov_Ninstruments, rttov_instrument_namelists_final, rttov_configs,              &
+       debug=rttov_verbose)
   call cpu_time(driver_time(3))
     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -463,6 +459,7 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Determine indices for "chunking" (again, if necessary)
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     
      if (nChunks .eq. 1) then
         start_idx = 1
         end_idx   = nPoints
@@ -495,9 +492,11 @@ program cosp2_test
      ! surface-2-TOA, whereas COSP expects all fields to be ordered from TOA-2-SFC. So the
      ! vertical fields are flipped prior to storing to COSP input type.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     
      cospIN%emsfc_lw         = emsfc_lw
      cospIN%rcfg_cloudsat    = rcfg_cloudsat
      cospIN%cfg_rttov        => rttov_configs ! JKS - Not sure why the cloudsat isn't a pointer. The config files for RTTOV are large and I don't want them duplicated in memory
+     
      cospstateIN%hgt_matrix  = zlev(start_idx:end_idx,Nlevels:1:-1) ! km
      cospstateIN%sunlit      = sunlit(start_idx:end_idx)            ! 0-1
      cospstateIN%skt         = skt(start_idx:end_idx)               ! K
@@ -516,8 +515,8 @@ program cosp2_test
      
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
-     cospstateIN%emis_sfc = 0._wp
-     cospstateIN%refl_sfc = 0._wp     
+     cospstateIN%emis_sfc(:,:) = 0._wp
+     cospstateIN%refl_sfc(:,:) = 0._wp     
      
      ! Well-mixed gases are not provided in COSP offline input, so hardcoding them in.
      ! Units are kg/kg over moist air.
@@ -575,7 +574,7 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,.false.)
+     cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,rttov_verbose)
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
      end do
@@ -601,11 +600,17 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  if (rttov_verbose) print*,'Calling "destroy_cosp_outputs".'
   call destroy_cosp_outputs(cospOUT)
+  if (rttov_verbose) print*,'Calling "rttov_cleanup".'
+  call rttov_cleanup(cospIN)
+  if (rttov_verbose) print*,'Calling "destroy_cospIN".'
   call destroy_cospIN(cospIN)
-  deallocate(rttov_configs)
+  if (rttov_verbose) print*,'Calling "destroy_cospstateIN".'
   call destroy_cospstateIN(cospstateIN)
+  if (rttov_verbose) print*,'Calling "cosp_cleanUp".'
   call cosp_cleanUp()
+  if (rttov_verbose) print*,'all done.'
 
 contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
@@ -1426,22 +1431,8 @@ contains
         x % N_rttov_instruments = N_rttov_instruments
         allocate(x % rttov_outputs(N_rttov_instruments)) ! Need to allocate a pointer?
         do i=1,N_rttov_instruments
-            print*,'i:   ',i
-            print*,'rttov_configs(i) % nchan_out:         ',rttov_configs(i) % nchan_out
-            print*,'rttov_configs(i) % Lrttov_bt:         ',rttov_configs(i) % Lrttov_bt
-            print*,'rttov_configs(i) % Lrttov_rad:        ',rttov_configs(i) % Lrttov_rad
-            print*,'rttov_configs(i) % Lrttov_refl:       ',rttov_configs(i) % Lrttov_refl
-            print*,'rttov_configs(i) % Lrttov_cld:        ',rttov_configs(i) % Lrttov_cld
-            print*,'rttov_configs(i) % Lrttov_aer:        ',rttov_configs(i) % Lrttov_aer
-            print*,'rttov_configs(i) % Lrttov_pc:         ',rttov_configs(i) % Lrttov_pc
-            print*,'rttov_configs(i) % rttov_Nlocaltime:        ',rttov_configs(i) % rttov_Nlocaltime
-            print*,'rttov_configs(i) % rttov_localtime:         ',rttov_configs(i) % rttov_localtime
-            print*,'rttov_configs(i) % rttov_localtime_width:   ',rttov_configs(i) % rttov_localtime_width            
-
-            print*,'1.'
             x % rttov_outputs(i) % nchan_out = rttov_configs(i) % nchan_out
             if (rttov_configs(i) % Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
-                print*,'2a.'
                 allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
                 if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
                     allocate(x % rttov_outputs(i) % bt_total_pc(Npoints,rttov_configs(i) % nchan_out))
@@ -1453,7 +1444,6 @@ contains
         !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
                 end if  
             else
-                print*,'3a.'
                 allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
                 if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
                     allocate(x % rttov_outputs(i) % bt_total(Npoints,rttov_configs(i) % nchan_out))
@@ -1487,11 +1477,8 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospIN     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine destroy_cospIN(y)
-    use MOD_COSP_RTTOV_INTERFACE, only: DESTROY_RTTOV_CONFIG
-    
+  subroutine destroy_cospIN(y)    
     type(cosp_optical_inputs),intent(inout) :: y
-    integer :: i
     
     if (allocated(y%tau_067))             deallocate(y%tau_067)
     if (allocated(y%emiss_11))            deallocate(y%emiss_11)
@@ -1521,12 +1508,6 @@ contains
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
     if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
-    
-    if (size(y%cfg_rttov) .gt. 0) then
-        do i=1,y%Ninst_rttov
-            call destroy_rttov_config(y%cfg_rttov(i))
-        end do
-    end if
     
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1934,6 +1915,24 @@ contains
      end if
      
    end subroutine destroy_cosp_outputs
-  
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE destroy_cospIN     
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine rttov_cleanup(y)
+    use MOD_COSP_RTTOV_INTERFACE, only: DESTROY_RTTOV_CONFIG
+    
+    type(cosp_optical_inputs),intent(inout) :: y
+    integer :: i
+    
+    if (size(y%cfg_rttov) .gt. 0) then
+        do i=1,y%Ninst_rttov
+            call destroy_rttov_config(y%cfg_rttov(i))
+        end do
+    end if
+!    deallocate(y%cfg_rttov)
+    
+  end subroutine rttov_cleanup
+
  end program cosp2_test
 
