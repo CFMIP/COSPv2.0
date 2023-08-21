@@ -100,7 +100,7 @@ CONTAINS
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   SUBROUTINE COSP_RTTOV_INIT(Lrttov,Nlevels,Ninstruments,instrument_namelists,       &
-                             rttov_configs,unitn)
+                             rttov_configs,unitn,debug)
 
       logical,intent(inout) :: &
           Lrttov
@@ -112,6 +112,7 @@ CONTAINS
       type(rttov_cfg), dimension(:), intent(out), allocatable :: & ! intent(out)?
           rttov_configs
       integer,intent(in),Optional :: unitn ! Used for io limits
+      logical,intent(in),Optional :: debug
           
       Lrttov = .false.
       allocate(rttov_configs(Ninstruments))
@@ -141,12 +142,12 @@ CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
-                                 error)      
+                                 debug)      
 
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -154,47 +155,24 @@ CONTAINS
         rttovConfig
     logical,intent(in) :: &
         lCleanup   ! Flag to determine whether to deallocate RTTOV types
-    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so! 
+    character(len=128) :: &
+        error     ! Error messages (only populated if error encountered)         
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out),optional :: &
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
         rad_total,                         &        ! All-sky
         rad_clear,                         &        ! Clear-sky
         rad_cloudy,                        &        ! Cloudy-sky
         refl_total,                        &        ! All-sky
-        refl_clear                                  ! Clear-sky
-    character(len=128) :: &
-        error     ! Error messages (only populated if error encountered) 
+        refl_clear                                  ! Clear-sky        
+    logical,intent(in),optional :: &
+        debug        
 
     print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
              'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
     ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
-  
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_pc_rttov_simulate
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                     & ! Inputs
-                                    bt_total,rad_total,                               & ! Outputs
-                                    error)         
-
-      type(rttov_in),intent(in) :: &
-          rttovIN
-      type(rttov_cfg),intent(inout) :: &
-        rttovConfig   
-      logical,intent(in) :: &
-           lCleanup   ! Flag to determine whether to deallocate RTTOV types
-      real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so!
-          bt_total,                          &        ! All-sky
-          rad_total                                   ! All-sky
-      character(len=128) :: &
-          error     ! Error messages (only populated if error encountered)  
-  
-      print*,'Running COSP_PC_RTTOV_SIMULATE from STUB files.', &
-             'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
-  ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
-  
-  END SUBROUTINE COSP_PC_RTTOV_SIMULATE
   
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE
