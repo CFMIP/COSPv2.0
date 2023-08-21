@@ -1917,7 +1917,7 @@ contains
    end subroutine destroy_cosp_outputs
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE destroy_cospIN     
+  ! SUBROUTINE rttov_cleanup     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   subroutine rttov_cleanup(y)
     use MOD_COSP_RTTOV_INTERFACE, only: DESTROY_RTTOV_CONFIG
@@ -1930,7 +1930,7 @@ contains
             call destroy_rttov_config(y%cfg_rttov(i))
         end do
     end if
-!    deallocate(y%cfg_rttov)
+    nullify(y%cfg_rttov)
     
   end subroutine rttov_cleanup
 
