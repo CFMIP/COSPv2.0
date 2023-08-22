@@ -82,9 +82,9 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-!  rttov_Ninstruments=3,
-!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt',
-  rttov_Ninstruments=1,
-  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt',
+  rttov_Ninstruments=3,
+  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt',
+!  rttov_Ninstruments=1,
+!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt',
   rttov_verbose=.false.
 /

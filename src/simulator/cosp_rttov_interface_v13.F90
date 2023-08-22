@@ -116,17 +116,17 @@ MODULE MOD_COSP_RTTOV_INTERFACE
       integer             :: &
           nchan_out
       integer,pointer     :: &
-          channel_indices(:)
+          channel_indices(:) => null()
       real(wp),pointer    :: &
-          bt_total(:,:),    &
-          bt_clear(:,:),    &
-          rad_total(:,:),   &
-          rad_clear(:,:),   &
-          rad_cloudy(:,:),  &
-          refl_total(:,:),  &
-          refl_clear(:,:),  &
-          bt_total_pc(:,:), &
-          rad_total_pc(:,:)
+          bt_total(:,:)      => null(), &
+          bt_clear(:,:)      => null(), &
+          rad_total(:,:)     => null(), &
+          rad_clear(:,:)     => null(), &
+          rad_cloudy(:,:)    => null(), &
+          refl_total(:,:)    => null(), &
+          refl_clear(:,:)    => null(), &
+          bt_total_pc(:,:)   => null(), &
+          rad_total_pc(:,:)  => null()
   end type rttov_output    
 
 CONTAINS

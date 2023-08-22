@@ -1867,7 +1867,7 @@ contains
      endif
      
      ! RTTOV multi-instrument
-     if (associated(y%rttov_outputs)) then
+     if (allocated(y%rttov_outputs)) then
          do i=1,y % N_rttov_instruments ! Iterate over each instrument
              if (associated(y%rttov_outputs(i)%channel_indices)) then
                 deallocate(y%rttov_outputs(i)%channel_indices)
@@ -1911,7 +1911,6 @@ contains
              endif
          end do
          deallocate(y%rttov_outputs)
-         nullify(y%rttov_outputs)
      end if
      
    end subroutine destroy_cosp_outputs
