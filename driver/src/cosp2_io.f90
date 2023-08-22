@@ -86,7 +86,7 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! Define instrument channel indices for multiple RTTOV instruments
-    if (associated(cospOUT%rttov_outputs)) then
+    if (allocated(cospOUT%rttov_outputs)) then
         do i=1,Ninst_rttov
             write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
             status = nf90_def_dim(fileID,"RTTOV_CHAN_INST"//trim(i_str),cospOUT % rttov_outputs(i) % nchan_out,dimID(20+i)) ! Start at 100 for RTTOV output channel dimensions
@@ -1438,7 +1438,7 @@ contains
         
     ! Define instrument channel indices for multiple RTTOV instruments
     ii = 165 ! RTTOV variable indices start at 165
-    if (associated(cospOUT%rttov_outputs)) then
+    if (allocated(cospOUT%rttov_outputs)) then
         do i=1,Ninst_rttov
             write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'   
             if (associated(cospOUT%rttov_outputs(i)%channel_indices)) then
@@ -2033,7 +2033,7 @@ contains
     
     ! Define instrument channel indices for multiple RTTOV instruments
     ii = 165 ! RTTOV variable indices start at 166
-    if (associated(cospOUT%rttov_outputs)) then
+    if (allocated(cospOUT%rttov_outputs)) then
         do i=1,Ninst_rttov
             write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
             if (associated(cospOUT%rttov_outputs(i)%channel_indices)) then

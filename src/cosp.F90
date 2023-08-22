@@ -305,8 +305,8 @@ MODULE MOD_COSP
           wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
      integer                    :: &
          N_rttov_instruments
-     type(rttov_output),pointer :: &
-         rttov_outputs(:)
+     type(rttov_output),dimension(:),allocatable :: &
+         rttov_outputs
 
   end type cosp_outputs
 
@@ -512,7 +512,7 @@ CONTAINS
        Lparasol_subcolumn  = .true.
        
     ! RTTOV Column
-    if (associated(cospOUT%rttov_outputs)) then
+    if (allocated(cospOUT%rttov_outputs)) then
        Lrttov_column    = .true.
     endif
         
@@ -2698,7 +2698,7 @@ CONTAINS
        endif
        if (.not. alloc_status) then
           Lrttov_column     = .false.
-         if (associated(cospOUT%rttov_outputs)) then
+         if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -2809,7 +2809,7 @@ CONTAINS
           Lcloudsat_tcc    = .false.
           Lcloudsat_tcc2   = .false.
           Lcloudsat_modis_wr = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -2864,7 +2864,7 @@ CONTAINS
           Lisccp_subcolumn = .false.
           Lisccp_column    = .false.
           Lrttov_column    = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -2902,7 +2902,7 @@ CONTAINS
           Lrttov_column    = .false.
           Latlid_column    = .false.
           LgrLidar532_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -2992,7 +2992,7 @@ CONTAINS
           Lisccp_subcolumn = .false.
           Lisccp_column    = .false.
           Lrttov_column    = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3082,7 +3082,7 @@ CONTAINS
           Latlid_column       = .false.
           LgrLidar532_column = .false.
           Lcloudsat_modis_wr = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3130,7 +3130,7 @@ CONTAINS
           Lrttov_column    = .false.
           Lcalipso_column  = .false.
           Lparasol_column  = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3166,7 +3166,7 @@ CONTAINS
           Lisccp_subcolumn = .false.
           Lisccp_column    = .false.
           Lrttov_column    = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3198,7 +3198,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co2 contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3217,7 +3217,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%ch4 contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3236,7 +3236,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%n2o contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3255,7 +3255,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%co contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3274,7 +3274,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%o3 contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3293,7 +3293,7 @@ CONTAINS
 !          nError=nError+1
 !          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
 !          Lrttov_column = .false.
-!          if (associated(cospOUT%rttov_outputs)) then
+!          if (allocated(cospOUT%rttov_outputs)) then
 !             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
 !                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
 !                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3312,7 +3312,7 @@ CONTAINS
 !          nError=nError+1
 !          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%refl_sfc contains values out of range'
 !          Lrttov_column = .false.
-!          if (associated(cospOUT%rttov_outputs)) then
+!          if (allocated(cospOUT%rttov_outputs)) then
 !             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
 !                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
 !                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3331,7 +3331,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%u_sfc contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3350,7 +3350,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%v_sfc contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3369,7 +3369,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%lat contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
@@ -3388,7 +3388,7 @@ CONTAINS
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tca contains values out of range'
           Lrttov_column = .false.
-          if (associated(cospOUT%rttov_outputs)) then
+          if (allocated(cospOUT%rttov_outputs)) then
              do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
                  if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
                  if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
