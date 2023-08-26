@@ -317,7 +317,8 @@ contains
        Cloud_Top_Temperature_Total_Mean,  Cloud_Top_Nd_Total_Mean,           Cloud_top_LWP_Total_Mean,       & ! YQIN 01/18/23
        Cloud_top_Tau_Total_Mean,          Cloud_Top_Size_Total_Mean,                                         & ! YQIN 04/04/23
        Liquid_Water_Path_Mean,            Ice_Water_Path_Mean,                                               &    
-       Optical_Thickness_vs_Cloud_Top_Pressure,Optical_Thickness_vs_ReffIce,Optical_Thickness_vs_ReffLiq)
+       Optical_Thickness_vs_Cloud_Top_Pressure,Optical_Thickness_vs_ReffIce,Optical_Thickness_vs_ReffLiq,    & 
+       modis_CloudMask )
     
     ! INPUTS
     integer,intent(in) :: &
@@ -363,7 +364,9 @@ contains
     real(wp),intent(inout),dimension(nPoints,numMODISTauBins,numMODISReffIceBins) :: &    
          Optical_Thickness_vs_ReffIce
     real(wp),intent(inout),dimension(nPoints,numMODISTauBins,numMODISReffLiqBins) :: &    
-         Optical_Thickness_vs_ReffLiq         
+         Optical_Thickness_vs_ReffLiq
+    real(wp), dimension(nPoints,nSubCols) :: &
+        modis_CloudMask
 
     ! LOCAL VARIABLES
     real(wp), parameter :: &
@@ -547,6 +550,12 @@ contains
     where(Cloud_Fraction_High_Mean /= R_UNDEF)  Cloud_Fraction_High_Mean = Cloud_Fraction_High_Mean*100._wp
     where(Cloud_Fraction_Mid_Mean /= R_UNDEF)   Cloud_Fraction_Mid_Mean = Cloud_Fraction_Mid_Mean*100._wp
     where(Cloud_Fraction_Low_Mean /= R_UNDEF)   Cloud_Fraction_Low_Mean = Cloud_Fraction_Low_Mean*100._wp
+    
+    where(cloudMask) 
+        modis_CloudMask = 1._wp
+    elsewhere
+        modis_CloudMask = 0._wp
+    endwhere
 
   end subroutine modis_column
 

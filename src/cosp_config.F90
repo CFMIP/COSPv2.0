@@ -319,15 +319,18 @@ MODULE MOD_COSP_CONFIG
     ! CLOUDSAT and MODIS joint product information (2018.11.22)
     ! ####################################################################################
     ! @ COSP_DIAG_WARMRAIN:
-    integer, parameter :: CFODD_NCLASS  =    3 ! # of classes for CFODD (classified by MODIS Reff)
-    integer, parameter :: WR_NREGIME    =    3 ! # of warm-rain regimes (non-precip/drizzling/raining)
+    integer, parameter :: CFODD_NCLASS  =    9 ! # of classes for CFODD (classified by MODIS Reff )
+    integer, parameter :: WR_NREGIME    =    11 ! # of warm-rain regimes (1 non-precip/ 2 drizzling/ 3 raining - MODIS, 
+                                                ! 10  - MODIS/CALIPSO, not detected by MODIS/CloudSat
+                                                ! 11  - CALIPSO only
+    integer, parameter :: COT_NCLASS    =    12 ! # of classes for SLWC COT (10-12 are MODIS/CALIPSO-detected)
     integer, parameter :: SGCLD_CLR     =    0 ! sub-grid cloud ID (fracout): clear-sky
     integer, parameter :: SGCLD_ST      =    1 ! sub-grid cloud ID (fracout): stratiform
     integer, parameter :: SGCLD_CUM     =    2 ! sub-grid cloud ID (fracout): cumulus
     real(wp),parameter :: CWP_THRESHOLD = 0.00 ! cloud water path threshold
     real(wp),parameter :: COT_THRESHOLD = 0.30 ! cloud optical thickness threshold
-    real(wp),parameter,dimension(CFODD_NCLASS+1) :: &
-         CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
+    real(wp),parameter,dimension(4) :: &
+         CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 30.0e-6/) ! Reff bnds
     real(wp),parameter,dimension(2) :: &
          CFODD_BNDZE = (/-15.0, 0.0/)                        ! dBZe bnds (cloud/drizzle/precip)
     real(wp),parameter :: CFODD_DBZE_MIN    =  -30.0 ! Minimum value of CFODD dBZe bin
@@ -336,10 +339,16 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter :: CFODD_ICOD_MAX    =   60.0 ! Maximum value of CFODD ICOD bin
     real(wp),parameter :: CFODD_DBZE_WIDTH  =    2.0 ! Bin width (dBZe)
     real(wp),parameter :: CFODD_ICOD_WIDTH  =    2.0 ! Bin width (ICOD)
+    integer, parameter :: NOBSTYPE      =    3 ! # of obstype (all/clear/cloudy)
+    real(wp),parameter :: SLWC_COT_MIN = 0.0         ! Minimum value of SLWC COT bin
+    real(wp),parameter :: SLWC_COT_MAX = 100.0       ! Maximum value of SLWC COT bin
+    real(wp),parameter :: SLWC_COT_WIDTH = 2.0       ! Bin width (COT)
     integer,parameter :: &
          CFODD_NDBZE = INT( (CFODD_DBZE_MAX-CFODD_DBZE_MIN)/CFODD_DBZE_WIDTH ) ! Number of CFODD dBZe bins
     integer,parameter :: &
          CFODD_NICOD = INT( (CFODD_ICOD_MAX-CFODD_ICOD_MIN)/CFODD_ICOD_WIDTH ) ! Number of CFODD ICOD bins
+    integer,parameter :: &
+         SLWC_NCOT = INT( (SLWC_COT_MAX-SLWC_COT_MIN)/SLWC_COT_WIDTH         ) ! Number of SLWC COT bins
     real(wp),parameter,dimension(CFODD_NDBZE+1) :: &
          CFODD_HISTDBZE = (/int(CFODD_DBZE_MIN),(/(i, i=int(CFODD_DBZE_MIN+CFODD_DBZE_WIDTH), &
                            int(CFODD_DBZE_MIN+(CFODD_NDBZE-1)*CFODD_DBZE_WIDTH),              &
@@ -360,6 +369,16 @@ MODULE MOD_COSP_CONFIG
                                  shape = (/2,CFODD_NICOD/))
     real(wp),parameter,dimension(CFODD_NICOD) :: &
          CFODD_HISTICODcenters = (CFODD_HISTICODedges(1,:)+CFODD_HISTICODedges(2,:))/2._wp
+    real(wp),parameter,dimension(SLWC_NCOT+1) :: &
+         SLWC_HISTCOT = (/int(SLWC_COT_MIN),(/(i, i=int(SLWC_COT_MIN+SLWC_COT_WIDTH),     &
+                         int(SLWC_COT_MIN+(SLWC_NCOT-1)*SLWC_COT_WIDTH),                  &
+                         int(SLWC_COT_WIDTH))/),int(SLWC_COT_MAX)/)
+    real(wp),parameter,dimension(2,SLWC_NCOT) :: &
+         SLWC_HISTCOTedges = reshape(source=(/SLWC_HISTCOT(1),((SLWC_HISTCOT(k),l=1,2),   &
+                             k=2, SLWC_NCOT),SLWC_HISTCOT(SLWC_NCOT+1)/),                 &
+                             shape = (/2,SLWC_NCOT/))
+    real(wp),parameter,dimension(SLWC_NCOT) :: &
+        SLWC_HISTCOTcenters = (SLWC_HISTCOTedges(1,:)+SLWC_HISTCOTedges(2,:))/2._wp
 
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator

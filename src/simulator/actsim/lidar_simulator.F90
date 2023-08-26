@@ -275,7 +275,7 @@ contains
   subroutine lidar_column(npoints, ncol, nlevels, llm, max_bin, ntype, platform, pnorm, pmol,             &
        pplay, zlev, zlev_half, vgrid_z, ok_lidar_cfad, ncat, cfad2, lidarcld, cldlayer,  &
        ! Optional stuff below
-       tmp, pnorm_perp, surfelev,  lidarcldphase, lidarcldtype, cldtype, cldtypetemp, &
+       tmp, pnorm_perp, surfelev,  lidarcldphase, lidarcldflag, lidarcldflag_cs, lidarcldtype, cldtype, cldtypetemp, &
        cldtypemeanz, cldtypemeanzse, cldthinemis, cldlayerphase, lidarcldtmp)
 
     integer,parameter :: &
@@ -332,6 +332,10 @@ contains
          cldthinemis   ! Thin clouds emissivity computed from SR
     real(wp),intent(out),dimension(npoints,llm,nphase),optional :: &
          lidarcldphase ! 3D "lidar" phase cloud fraction
+    real(wp), intent(out),dimension(npoints,ncol,Nlevels),optional :: &
+         lidarcldflag  ! 3D lidar cloud flag
+    real(wp), intent(out),dimension(npoints,ncol),optional :: &
+         lidarcldflag_cs ! 2D lidar cloud flag
     real(wp),intent(out),dimension(npoints,llm,ntype+1),optional :: & 
          lidarcldtype ! 3D "lidar" OPAQ type fraction 
     real(wp),intent(out),dimension(npoints,40,5),optional :: &
@@ -410,12 +414,15 @@ contains
        if (lcalipso) then
           ! Diagnose cloud fractions for subcolumn lidar scattering ratios
           CALL COSP_CLDFRAC(npoints,ncol,llm,ncat,nphase,tmpFlip,x3d,pnormFlip,pnorm_perpFlip,&
-               pplayFlip,S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,&
+               pplayFlip,S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,lidarcldflag,&
                cldlayerphase,lidarcldtmp)                         
 
           ! Calipso opaque cloud diagnostics
           CALL COSP_OPAQ(npoints,ncol,llm,ntype,tmpFlip,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
                cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z,surfelev)
+               
+          ! CMB Collapse 3D Lidar cloud flag
+          lidarcldflag_cs(:,:) = MAXVAL(lidarcldflag,DIM=3)
        endif
        if (latlid) then
           CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,llm,ncat,x3d,pnormFlip,pplayFlip,  &
@@ -438,11 +445,14 @@ contains
        if (lcalipso) then
           ! Diagnose cloud fractions for subcolumn lidar scattering ratios
           CALL COSP_CLDFRAC(npoints,ncol,nlevels,ncat,nphase,tmp,x3d,pnorm,pnorm_perp,pplay,&
-               S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,  &
+               S_att,S_cld,S_cld_att,R_UNDEF,lidarcld,cldlayer,lidarcldphase,lidarcldflag, &
                cldlayerphase,lidarcldtmp)
           ! Calipso opaque cloud diagnostics
           CALL COSP_OPAQ(npoints,ncol,nlevels,ntype,tmp,x3d,S_att,S_cld,R_UNDEF,lidarcldtype, &
                cldtype,cldtypetemp,cldtypemeanz,cldtypemeanzse,cldthinemis,vgrid_z,surfelev)
+          
+          ! CMB Collapse 3D Lidar cloud flag
+          lidarcldflag_cs(:,:) = MAXVAL(lidarcldflag,DIM=3)
        endif
        if (latlid) then
           CALL COSP_CLDFRAC_NOPHASE(npoints,ncol,nlevels,ncat,x3d,pnorm,pplay,  &
@@ -547,7 +557,7 @@ contains
     ! ####################################################################################
     SUBROUTINE COSP_CLDFRAC(Npoints,Ncolumns,Nlevels,Ncat,Nphase,tmp,x,ATB,ATBperp,      &
                                pplay,S_att,S_cld,S_cld_att,undef,lidarcld,cldlayer,      &
-                               lidarcldphase,cldlayerphase,lidarcldtemp)
+                               lidarcldphase,lidarcldflag,cldlayerphase,lidarcldtemp)
     ! Parameters
     integer,parameter :: Ntemp=40 ! indice of the temperature vector
     real(wp),parameter,dimension(Ntemp+1) :: &
@@ -594,6 +604,8 @@ contains
        lidarcldtemp  ! 3D Temperature 1=tot,2=ice,3=liq,4=undef,5=ice/ice+liq
     real(wp),intent(out),dimension(Npoints,Nlevels,Nphase) :: &
        lidarcldphase ! 3D cloud phase fraction
+    real(wp),intent(out),dimension(Npoints,Ncolumns,Nlevels) :: &
+       lidarcldflag ! 3D cloud flag at subcolumns
     real(wp),intent(out),dimension(Npoints,Nlevels) :: &
        lidarcld      ! 3D cloud fraction
     real(wp),intent(out),dimension(Npoints,Ncat) :: &
@@ -632,6 +644,7 @@ contains
     nsublay               = 0._wp
     ATBperp_tmp           = 0._wp
     lidarcldphase(:,:,:)  = 0._wp
+    lidarcldflag(:,:,:)   = 0._wp
     cldlayphase(:,:,:,:)  = 0._wp
     cldlayerphase(:,:,:)  = 0._wp
     tmpi(:,:,:)           = 0._wp
@@ -761,6 +774,7 @@ contains
                    if(tmp(i,nlev) .gt. 273.15) then ! Temperature above 273,15 K
                      ! Liquid: False ice corrected by the temperature to Liquid
                       lidarcldphase(i,nlev,2) = lidarcldphase(i,nlev,2)+1._wp ! False ice detection ==> added to Liquid
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                                     
                       tmpl(i,ncol,nlev)       = tmp(i,nlev)
                       lidarcldphase(i,nlev,5) = lidarcldphase(i,nlev,5)+1._wp ! Keep the information "temperature criterium used"                      
@@ -787,6 +801,7 @@ contains
                    else
                       ! ICE with temperature below 273,15°K
                       lidarcldphase(i,nlev,1) = lidarcldphase(i,nlev,1)+1._wp
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                       tmpi(i,ncol,nlev)       = tmp(i,nlev)
                       cldlayphase(i,ncol,4,1) = 1._wp ! tot cloud 
                       ! High cloud
@@ -807,6 +822,7 @@ contains
                    ! Liquid with temperature above 231,15°K
                    if(tmp(i,nlev) .gt. 231.15_wp) then
                       lidarcldphase(i,nlev,2) = lidarcldphase(i,nlev,2)+1._wp
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                       tmpl(i,ncol,nlev)       = tmp(i,nlev)
                       cldlayphase(i,ncol,4,2) = 1._wp ! tot cloud
                       ! High cloud
@@ -824,6 +840,7 @@ contains
                       tmpi(i,ncol,nlev)       = tmp(i,nlev)
                       lidarcldphase(i,nlev,1) = lidarcldphase(i,nlev,1)+1._wp ! false liquid detection ==> added to ice
                       lidarcldphase(i,nlev,4) = lidarcldphase(i,nlev,4)+1._wp
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                       cldlayphase(i,ncol,4,4) = 1._wp ! tot cloud
                       ! High cloud
                       if (p1 .gt. 0. .and. p1 .lt. (440._wp*100._wp)) then
@@ -872,6 +889,7 @@ contains
                       lidarcldphase(i,nlev,2) = lidarcldphase(i,nlev,2)+1._wp ! false ice ==> liq
                       tmpl(i,ncol,nlev)       = tmp(i,nlev)
                       lidarcldphase(i,nlev,5) = lidarcldphase(i,nlev,5)+1._wp
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                       cldlayphase(i,ncol,4,2) = 1._wp ! tot cloud
                       ! High cloud
                       if (p1 .gt. 0. .and. p1 .lt. (440._wp*100._wp)) then 
@@ -898,6 +916,7 @@ contains
                    else
                       ! ICE with temperature below 273,15°K
                       lidarcldphase(i,nlev,1) = lidarcldphase(i,nlev,1)+1._wp
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                      tmpi(i,ncol,nlev)       = tmp(i,nlev)
                       cldlayphase(i,ncol,4,1) = 1._wp ! tot cloud
                       ! High cloud
@@ -919,6 +938,7 @@ contains
                    ! Liquid with temperature above 231,15°K
                    if(tmp(i,nlev) .gt. 231.15)then
                       lidarcldphase(i,nlev,2) = lidarcldphase(i,nlev,2)+1._wp
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                       tmpl(i,ncol,nlev)       = tmp(i,nlev)
                       cldlayphase(i,ncol,4,2) = 1._wp ! tot cloud
                       ! High cloud
@@ -936,6 +956,7 @@ contains
                       tmpi(i,ncol,nlev)       = tmp(i,nlev)
                       lidarcldphase(i,nlev,1) = lidarcldphase(i,nlev,1)+1._wp ! false liq ==> ice
                       lidarcldphase(i,nlev,4) = lidarcldphase(i,nlev,4)+1._wp ! false liq ==> ice
+                      lidarcldflag(i,ncol,nlev) = 1._wp
                       cldlayphase(i,ncol,4,4) = 1._wp ! tot cloud
                       ! High cloud
                       if (p1 .gt. 0. .and. p1 .lt. (440._wp*100._wp)) then
@@ -981,6 +1002,7 @@ contains
                 p1 = pplay(i,nlev)
                 if(cldy(i,ncol,nlev).eq.1.)then
                    lidarcldphase(i,nlev,3) = lidarcldphase(i,nlev,3)+1._wp
+                   lidarcldflag(i,ncol,nlev) = 1._wp
                    tmpu(i,ncol,nlev)       = tmp(i,nlev)
                    cldlayphase(i,ncol,4,3) = 1._wp ! tot cloud
                    ! High cloud
