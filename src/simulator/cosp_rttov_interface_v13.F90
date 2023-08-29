@@ -29,6 +29,7 @@
 ! History
 ! May 2015 - D. Swales - Original version
 ! Apr 2015 - D. Swales - Modified for RTTOVv11.3
+! Aug 2023 - J. Shaw   - Modified for RTTOV v13
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,       ONLY: wp
