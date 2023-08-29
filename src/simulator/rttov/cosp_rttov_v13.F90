@@ -9,7 +9,7 @@
 !    conditions and the following disclaimer.
 !
 ! 2. Redistributions in binary form must reproduce the above copyright notice, this list
-!    of conditions and the following disclaimer in the documentation and/or other 
+!    of conditions and the following disclaimer in the documentation and/or other
 !    materials provided with the distribution.
 !
 ! 3. Neither the name of the copyright holder nor the names of its contributors may be 
@@ -128,7 +128,6 @@ module mod_cosp_rttov
   ! TYPE rttov_in
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
-  ! JKS - add additional COSP inputs here.
   type rttov_IN
      integer(kind=jpim),pointer :: & ! JKS trying this
           nPoints,      & ! Number of profiles to simulate
@@ -140,18 +139,18 @@ module mod_cosp_rttov
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
      real(wp),dimension(:),pointer :: &
-          h_surf,       & ! Surface height
-          u_surf,       & ! U component of surface wind
-          v_surf,       & ! V component of surface wind
-          t_skin,       & ! Surface skin temperature
-          p_surf,       & ! Surface pressure
-          t2m,          & ! 2 m Temperature
-          q2m,          & ! 2 m Specific humidity
-          lsmask,       & ! land-sea mask
-          latitude,     & ! Latitude (degrees)
-          longitude,    & ! Longitude (degrees)
-          seaice,       & ! Sea-ice? 
-          time_frac       ! Fractional UTC time [0-1] 
+          h_surf,        & ! Surface height
+          u_surf,        & ! U component of surface wind
+          v_surf,        & ! V component of surface wind
+          t_skin,        & ! Surface skin temperature
+          p_surf,        & ! Surface pressure
+          t2m => null(), & ! 2 m Temperature
+          q2m => null(), & ! 2 m Specific humidity
+          sfcmask,       & ! sea-land-ice mask (0=sea, 1=land, 2=seaice)
+          latitude,      & ! Latitude (degrees)
+          longitude,     & ! Longitude (degrees)
+          time_frac,     & ! Fractional UTC time [0-1]
+          sza => null()    ! Solar zenith angle (deg)
      real(wp),dimension(:,:),pointer :: &
           p,            & ! Pressure @ model levels
           ph,           & ! Pressure @ model half levels
@@ -650,21 +649,34 @@ contains
           profiles(j)%longitude     = rttovIN%longitude(i)
           profiles(j)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
 
-          ! Solar angles. JKS - get this from COSP/CESM? Doesn't seem to be passed in.
-          profiles(j)%sunzenangle   = 0. ! hard-coded in rttov9 int
-          profiles(j)%sunazangle    = 0. ! hard-coded in rttov9 int
-
-          ! surface type
-          ! land-sea mask (lsmask) indicates proportion of land in grid
-          if (rttovIN%lsmask(i) < 0.5) then
-            profiles(j)%skin%surftype  = surftype_sea
+          ! Solar angles.
+          if (associated(rttovIN%sza)) then
+             profiles(j)%sunzenangle   = rttovIN%sza(i) ! SZA in degrees
           else
-            profiles(j)%skin%surftype  = surftype_land
-          endif
+             print*,'No solar zenith angle passed. Setting to zero.'
+             profiles(j)%sunzenangle   = 0.
+          end if
+          profiles(j)%sunazangle    = 0. ! hard-coded in like rttov9
+
+          ! surface type. sfcmask is 0 for ocean, 1 for land, and 2 for sea ice
+          if (rttovIN%sfcmask(i) .lt. 0.5) then
+             profiles(j)%skin%surftype  = surftype_land
+          else if (rttovIN%sfcmask(i) .lt. 1.5) then
+             profiles(j)%skin%surftype  = surftype_sea
+          else
+             profiles(j)%skin%surftype  = surftype_seaice
+          end if
+          
+          ! land-sea mask (lsmask) indicates proportion of land in grid (not in CESM implementation! just a binary mask there)
+!          if (rttovIN%lsmask(i) < 0.5) then
+!            profiles(j)%skin%surftype  = surftype_sea
+!          else
+!            profiles(j)%skin%surftype  = surftype_land
+!          endif
           ! sea-ice fraction
-          if (rttovIN%seaice(i) >= 0.5) then
-            profiles(j)%skin%surftype  = surftype_seaice
-          endif
+!          if (rttovIN%icefrac(i) >= 0.5) then
+!            profiles(j)%skin%surftype  = surftype_seaice
+!          endif
 
           ! dar: hard-coded to 1 (=ocean water) in rttov 9 int
           profiles(j)%skin%watertype = 1
@@ -672,6 +684,15 @@ contains
           !profiles(j) %ish         = 0. ! Depreciated?
       end if 
     end do     
+        
+!    if (verbose) then
+!        print*,'profiles(1)%p(:):     ',profiles(1)%p(:)
+!        print*,'profiles(1)%t(:):     ',profiles(1)%t(:)
+!        print*,'profiles(1)%q(:):     ',profiles(1)%q(:)
+!        print*,'profiles(1)%co2(:):   ',profiles(1)%co2(:)
+!        print*,'profiles(1)%skin%t:   ',profiles(1)%skin%t
+!        print*,'profiles(1)%s2m%t:    ',profiles(1)%s2m%t
+!    end if
         
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in profile initialization' , lalloc = .false.)

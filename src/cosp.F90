@@ -105,26 +105,29 @@ MODULE MOD_COSP
                                  ! Last level contains the bottom of the surface layer.
 
      real(wp),allocatable,dimension(:) :: &
-          land,                & ! Land/Sea mask                          (0-1)
+          land,                & ! Land/Sea mask                          (0 for ocean, 1 for land)
           skt,                 & ! Surface temperature                    (K)
-          surfelev               ! Surface Elevation                      (m)
+          surfelev,            & ! Surface Elevation                      (m)
+          rttov_sfcmask          ! Mask for RTTOV surface types (0 for ocean, 1 for land, 2 for sea ice)
      ! Fields used ONLY by RTTOV
      integer,allocatable,dimension(:) :: &
           month                  ! Month for surface emissivty atlas      (1-12)
      real(wp),allocatable,dimension(:) :: &
           u_sfc,               & ! Surface u-wind                         (m/s)
           v_sfc,               & ! Surface v-wind                         (m/s)
-          seaice,              & ! Sea-ice fraction                       (0-1)
+          t2m,                 & ! 2-meter temperature                    (K)
+          q2m,                 & ! 2-meter specific humidity              (kg/kg)
           lat,                 & ! Latitude                               (deg)
           lon,                 & ! Longitude                              (deg)
-          time_frac              ! Time (UTC) expressed as a fraction on [0,1]
+          time_frac,           & ! Time (UTC) expressed as a fraction on [0,1]
+          sza                    ! Solar Zenith Angle in degrees
      real(wp),allocatable,dimension(:,:) :: &
-          emis_sfc,            & ! Surface emissivity                     (1)
-          refl_sfc,            & ! Surface reflectance                    (1)
           o3,                  & ! Ozone                                  (kg/kg)
           tca,                 & ! Total layer cloud fraction             (0-1)
           cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
           cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
+          emis_sfc,            & ! Surface emissivity (point,channel)     (1)
+          refl_sfc,            & ! Surface reflectance (point,channel)    (1)          
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
           fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
   end type cosp_column_inputs
@@ -761,12 +764,20 @@ CONTAINS
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
        rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
-       rttovIN%q2m        => cospgridIN%qv(:,cospIN%Nlevels)
-       rttovIN%t2m        => cospgridIN%at(:,cospIN%Nlevels)
-       rttovIN%lsmask     => cospgridIN%land
+       if (allocated(cospgridIN%q2m)) then
+          rttovIN%q2m    => cospgridIN%q2m(:)
+       else
+          rttovIN%q2m    => cospgridIN%qv(:,cospIN%Nlevels)
+       end if
+       if (allocated(cospgridIN%t2m)) then
+          rttovIN%t2m    => cospgridIN%t2m(:)
+       else
+          rttovIN%t2m    => cospgridIN%at(:,cospIN%Nlevels)
+       end if       
+       rttovIN%sfcmask    => cospgridIN%rttov_sfcmask
        rttovIN%latitude   => cospgridIN%lat
        rttovIN%longitude  => cospgridIN%lon
-       rttovIN%seaice     => cospgridIN%seaice
+!       rttovIN%seaice     => cospgridIN%seaice
        rttovIN%p          => cospgridIN%pfull
        rttovIN%ph         => cospgridIN%phalf
        rttovIN%t          => cospgridIN%at
@@ -775,6 +786,7 @@ CONTAINS
        ! Below only needed for all-sky RTTOV calculation
        rttovIN%month      => cospgridIN%month
        rttovIN%time_frac  => cospgridIN%time_frac
+       rttovIN%sza        => cospgridIN%sza ! JKS make optional? Defeats the purpose of the "associated" check in cosp_rttov_v13.
        rttovIN%tca        => cospgridIN%tca
        rttovIN%cldIce     => cospgridIN%cloudIce
        rttovIN%cldLiq     => cospgridIN%cloudLiq
@@ -2626,9 +2638,9 @@ CONTAINS
           errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%at has not been allocated'
           alloc_status = .false.
        endif
-       if (.not. allocated(cospgridIN%land)) then
+       if (.not. allocated(cospgridIN%rttov_sfcmask)) then
           nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%land has not been allocated'
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV simulator): cospgridIN%rttov_sfcmask has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%lat)) then
@@ -2639,11 +2651,6 @@ CONTAINS
        if (.not. allocated(cospgridIN%lon)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%lon has not been allocated'
-          alloc_status = .false.
-       endif
-       if (.not. allocated(cospgridIN%seaice)) then
-          nError=nError+1
-          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%seaice has not been allocated'
           alloc_status = .false.
        endif
        if (.not. allocated(cospgridIN%pfull)) then
@@ -2676,6 +2683,21 @@ CONTAINS
           errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%tca has not been allocated'
           alloc_status = .false.
        endif
+       if (.not. allocated(cospgridIN%month)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%month has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%time_frac)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%time_frac has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%sza)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%sza has not been allocated'
+          alloc_status = .false.
+       endif        
        if (.not. allocated(cospgridIN%cloudIce)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%cloudIce has not been allocated'
@@ -3327,6 +3349,25 @@ CONTAINS
 !             end do
 !          end if
 !       endif
+       if (any(cospgridIN%rttov_sfcmask .lt. 0 .or. cospgridIN%rttov_sfcmask .gt. 2)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%rttov_sfcmask contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif
        if (any(cospgridIN%u_sfc .lt. -100. .OR. cospgridIN%u_sfc .gt. 100.)) then
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%u_sfc contains values out of range'
@@ -3384,6 +3425,25 @@ CONTAINS
              end do
           end if
        endif
+       if (any(cospgridIN%lon .lt. -180 .OR. cospgridIN%lon .gt. 360)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%lon contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif       
        if (any(cospgridIN%tca .lt. 0 .OR. cospgridIN%tca .gt. 1)) then ! tca on [0,1]
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%tca contains values out of range'
@@ -3402,7 +3462,45 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
              end do
           end if
-       endif       
+       endif 
+       if (any(cospgridIN%month .lt. 1 .OR. cospgridIN%month .gt. 12)) then ! month on [1,12]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%month contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif          
+       if (any(cospgridIN%time_frac .lt. 0 .OR. cospgridIN%time_frac .gt. 1)) then ! time_frac on [0,1]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%time_frac contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif        
     endif
 
     ! COSP_INPUTS
@@ -4195,10 +4293,9 @@ CONTAINS
            size(cospgridIN%v_sfc)             .ne. cospIN%Npoints .OR. &
            size(cospgridIN%skt)               .ne. cospIN%Npoints .OR. &
            size(cospgridIN%phalf,1)           .ne. cospIN%Npoints .OR. &
-           size(cospgridIN%seaice)            .ne. cospIN%Npoints .OR. &
            size(cospgridIN%cloudIce,1)        .ne. cospIN%Npoints .OR. &
            size(cospgridIN%cloudLiq,1)        .ne. cospIN%Npoints .OR. &
-           size(cospgridIN%land)              .ne. cospIN%Npoints .OR. &
+           size(cospgridIN%rttov_sfcmask)     .ne. cospIN%Npoints .OR. &
            size(cospgridIN%lon)               .ne. cospIN%Npoints .OR. &
            size(cospgridIN%lat)               .ne. cospIN%Npoints) then
           Lrttov_column    = .false.

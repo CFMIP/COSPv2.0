@@ -530,7 +530,7 @@ program cosp2_test
      ! Time information
      cospstateIN%month       = month(start_idx:end_idx)
      cospstateIN%time_frac   = (60*hour(start_idx:end_idx) + minute(start_idx:end_idx)) / (24*60) ! Time (UTC) expressed as a fraction on [0,1]
-     !deallocate(month,hour,minute) ! JKS - helpful?
+     cospstateIN%sza         = 0._wp ! => null() didn't work. ! JKS nothing passed in the UKMO input.
 
      ! From the data input file
      cospstateIN%u_sfc  = u_wind(start_idx:end_idx)
@@ -552,7 +552,7 @@ program cosp2_test
                            fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1)
 
      ! Inputs not supplied in the UKMO test data
-     cospstateIN%seaice(:)    = 0._wp
+     cospstateIN%rttov_sfcmask = landmask(start_idx:end_idx)       ! (0=ocn,1=land,2=seaice). No sea ice in UKMO input here.
 
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
@@ -1096,14 +1096,14 @@ contains
     allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
-             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),                             &
+             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%rttov_sfcmask(nPoints),    &
              y%co(npoints,nlevels),y%n2o(npoints,nlevels),y%ch4(npoints,nlevels),        &
              y%co2(npoints,nlevels), &             
 !             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
-             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
-             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
-             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels),                  &
-             y%month(nPoints),y%time_frac(nPoints))
+             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(nPoints),&
+             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
+             y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
+             y%month(nPoints),y%time_frac(nPoints),y%sza(nPoints))
 
   end subroutine construct_cospstateIN
 
@@ -1519,6 +1519,7 @@ contains
     if (allocated(y%sunlit))          deallocate(y%sunlit)
     if (allocated(y%skt))             deallocate(y%skt)
     if (allocated(y%land))            deallocate(y%land)
+    if (allocated(y%rttov_sfcmask))   deallocate(y%rttov_sfcmask)
     if (allocated(y%at))              deallocate(y%at)
     if (allocated(y%pfull))           deallocate(y%pfull)
     if (allocated(y%phalf))           deallocate(y%phalf)
@@ -1528,6 +1529,7 @@ contains
     if (allocated(y%surfelev))        deallocate(y%surfelev)
     if (allocated(y%month))           deallocate(y%month)
     if (allocated(y%time_frac))       deallocate(y%time_frac)
+    if (allocated(y%sza))             deallocate(y%sza)
     if (allocated(y%co2))             deallocate(y%co2)
     if (allocated(y%ch4))             deallocate(y%ch4)
     if (allocated(y%n2o))             deallocate(y%n2o)
@@ -1541,11 +1543,9 @@ contains
     if (allocated(y%refl_sfc))        deallocate(y%refl_sfc)
     if (allocated(y%cloudIce))        deallocate(y%cloudIce)
     if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
-    if (allocated(y%seaice))          deallocate(y%seaice)
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
-    if (allocated(y%time_frac))       deallocate(y%time_frac)
     
   end subroutine destroy_cospstateIN
   
