@@ -167,6 +167,8 @@ module mod_cosp_rttov
           tca,          & ! Cloud fraction
           cldIce,       & ! Cloud ice
           cldLiq,       & ! Cloud liquid
+          DeffLiq,      & ! Cloud liquid effective diameter
+          DeffIce,      & ! Cloud ice effective diameter
           fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
           fl_snow         ! Precipitation flux (stratiform+convective snow)
   end type rttov_IN
@@ -706,8 +708,8 @@ contains
       ! Set cloud mass mixing ratio units
       profiles(:)%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
 
-      profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types
-    !    profiles%clwde_scheme = 1. ! Not implemented?
+      profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types but requires an effective diameter value
+    !    profiles(:)%clwde_scheme = 1. ! Scheme for cloud liquid water cotent to effective diameter. User guide says do not change.
       profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
       profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
         
@@ -721,6 +723,9 @@ contains
             profiles(j)%cfrac(:)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
             profiles(j)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
             profiles(j)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
+
+            profiles(j)%clwde = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter
+            profiles(j)%icede = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter
 
         ! Example UKMO input has effective radii for multiple cloud types, making identification of a single
         ! liquid droplet or ice crystal effective diameter difficult.

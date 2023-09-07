@@ -126,6 +126,8 @@ MODULE MOD_COSP
           tca,                 & ! Total layer cloud fraction             (0-1)
           cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
           cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
+          DeffLiq,             & ! Cloud liquid effective diameter        (um)
+          DeffIce,             & ! Cloud ice effective diameter           (um)
           emis_sfc,            & ! Surface emissivity (point,channel)     (1)
           refl_sfc,            & ! Surface reflectance (point,channel)    (1)          
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
@@ -758,7 +760,6 @@ CONTAINS
        rttovIN%co         => cospgridIN%co
 !       rttovIN%surfem     => cospgridIN%emis_sfc
 !       rttovIN%refl_sfc     => cospgridIN%refl_sfc
-!       rttovIN%h_surf     => cospgridIN%hgt_matrix_half(:,cospIN%Nlevels)
        rttovIN%h_surf     => cospgridIN%surfelev
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
@@ -777,7 +778,6 @@ CONTAINS
        rttovIN%sfcmask    => cospgridIN%rttov_sfcmask
        rttovIN%latitude   => cospgridIN%lat
        rttovIN%longitude  => cospgridIN%lon
-!       rttovIN%seaice     => cospgridIN%seaice
        rttovIN%p          => cospgridIN%pfull
        rttovIN%ph         => cospgridIN%phalf
        rttovIN%t          => cospgridIN%at
@@ -788,8 +788,10 @@ CONTAINS
        rttovIN%time_frac  => cospgridIN%time_frac
        rttovIN%sza        => cospgridIN%sza ! JKS make optional? Defeats the purpose of the "associated" check in cosp_rttov_v13.
        rttovIN%tca        => cospgridIN%tca
-       rttovIN%cldIce     => cospgridIN%cloudIce
        rttovIN%cldLiq     => cospgridIN%cloudLiq
+       rttovIN%cldIce     => cospgridIN%cloudIce
+       rttovIN%DeffLiq    => cospgridIN%DeffLiq
+       rttovIN%DeffIce    => cospgridIN%DeffIce
        rttovIN%fl_rain    => cospgridIN%fl_rain ! JKS remove?
        rttovIN%fl_snow    => cospgridIN%fl_snow ! JKS remove?
     endif
