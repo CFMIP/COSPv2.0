@@ -63,18 +63,18 @@ MODULE MOD_COSP_RTTOV
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
      real(wp),dimension(:),pointer :: &
-          h_surf,       & ! Surface height
-          u_surf,       & ! U component of surface wind
-          v_surf,       & ! V component of surface wind
-          t_skin,       & ! Surface skin temperature
-          p_surf,       & ! Surface pressure
-          t2m,          & ! 2 m Temperature
-          q2m,          & ! 2 m Specific humidity
-          lsmask,       & ! land-sea mask
-          latitude,     & ! Latitude (degrees)
-          longitude,    & ! Longitude (degrees)
-          seaice,       & ! Sea-ice? 
-          time_frac       ! Fractional UTC time [0-1] 
+          h_surf,        & ! Surface height
+          u_surf,        & ! U component of surface wind
+          v_surf,        & ! V component of surface wind
+          t_skin,        & ! Surface skin temperature
+          p_surf,        & ! Surface pressure
+          t2m => null(), & ! 2 m Temperature
+          q2m => null(), & ! 2 m Specific humidity
+          sfcmask,       & ! sea-land-ice mask (0=sea, 1=land, 2=seaice)
+          latitude,      & ! Latitude (degrees)
+          longitude,     & ! Longitude (degrees)
+          time_frac,     & ! Fractional UTC time [0-1]
+          sza => null()    ! Solar zenith angle (deg)
      real(wp),dimension(:,:),pointer :: &
           p,            & ! Pressure @ model levels
           ph,           & ! Pressure @ model half levels
@@ -91,6 +91,8 @@ MODULE MOD_COSP_RTTOV
           tca,          & ! Cloud fraction
           cldIce,       & ! Cloud ice
           cldLiq,       & ! Cloud liquid
+          DeffIce,      & ! Cloud ice effective diameter (um)
+          DeffLiq,      & ! Cloud liquid effective diameter (um)
           fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
           fl_snow         ! Precipitation flux (stratiform+convective snow)
   end type rttov_IN

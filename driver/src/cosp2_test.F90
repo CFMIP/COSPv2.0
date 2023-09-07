@@ -541,11 +541,46 @@ program cosp2_test
      cospstateIN%o3  = mr_ozone(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%tca = tca(start_idx:end_idx,Nlevels:1:-1)
           
-     ! Combine large-scale and convective cloud mixing ratios for RTTOV
+     ! Combine large-scale and convective cloud mixing ratios for RTTOV [kg/kg]
      cospstateIN%cloudIce = mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%cloudLiq = mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)     
+        
+     ! Combine large-scale and convective cloud effective radii into effective diameters for RTTOV
+     ! Reff(Npoints,Nlevels,N_HYDRO)
+     ! The weighted Reff is given by: Reff_net = (M_1 + M_2) / (M_1/Reff_1 + M_2/Reff_2)
+     cospstateIN%DeffLiq(:,:) = 0._wp ! Initialize for zero everywhere.
+     where ((mr_lsliq(:,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(:,Nlevels:1:-1) .gt. 0._wp))
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
+     elsewhere (mr_lsliq(:,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ)
+     elsewhere (mr_ccliq(:,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ)
+     end where
+     
+     cospstateIN%DeffIce(:,:) = 0._wp ! Initialize for zero everywhere.
+     where ((mr_lsice(:,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(:,Nlevels:1:-1) .gt. 0._wp))
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
+     elsewhere (mr_lsice(:,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE)
+     elsewhere (mr_ccice(:,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE)
+     end where     
           
-     ! RTTOV doesn't consider precip flux, but I think it was used previously.
+!     print*,'Reff(9,Nlevels:1:-1,I_CVCLIQ):   ',Reff(9,Nlevels:1:-1,I_CVCLIQ)
+!     print*,'Reff(9,Nlevels:1:-1,I_LSCLIQ):   ',Reff(9,Nlevels:1:-1,I_LSCLIQ)     
+!     print*,'mr_lsliq(9,Nlevels:1:-1):   ',mr_lsliq(9,Nlevels:1:-1)
+!     print*,'mr_ccliq(9,Nlevels:1:-1):   ',mr_ccliq(9,Nlevels:1:-1)
+     
+!     print*,'cospstateIN%DeffLiq(9,:):   ',cospstateIN%DeffLiq(9,:)
+         
+!     print*,'Reff(2:4,Nlevels:1:-1,I_CVCICE):   ',Reff(2:4,Nlevels:1:-1,I_CVCICE)
+!     print*,'Reff(2:4,Nlevels:1:-1,I_LSCICE):   ',Reff(2:4,Nlevels:1:-1,I_LSCICE)
+!     print*,'mr_lsice(2:4,Nlevels:1:-1):   ',mr_lsice(2:4,Nlevels:1:-1)
+!     print*,'mr_ccice(2:4,Nlevels:1:-1):   ',mr_ccice(2:4,Nlevels:1:-1)
+     
+!     print*,'cospstateIN%DeffIce(2:4,:):   ',cospstateIN%DeffIce(2:4,:)
+     
+     ! RTTOV doesn't consider precip flux for longwave, but it could be used when simulating MW instruments.
      ! Graupel goes in the snow category, arbitrarily
      cospstateIN%fl_rain = fl_lsrain(start_idx:end_idx,Nlevels:1:-1) + fl_ccrain(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%fl_snow = fl_lssnow(start_idx:end_idx,Nlevels:1:-1) + fl_ccsnow(start_idx:end_idx,Nlevels:1:-1) + &
@@ -1101,6 +1136,7 @@ contains
              y%co2(npoints,nlevels), &             
 !             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(nPoints),&
+             y%DeffLiq(nPoints,nLevels),y%DeffIce(nPoints,nLevels),                      &
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
              y%month(nPoints),y%time_frac(nPoints),y%sza(nPoints))
@@ -1543,6 +1579,8 @@ contains
     if (allocated(y%refl_sfc))        deallocate(y%refl_sfc)
     if (allocated(y%cloudIce))        deallocate(y%cloudIce)
     if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
+    if (allocated(y%DeffLiq))         deallocate(y%DeffLiq)
+    if (allocated(y%DeffIce))         deallocate(y%DeffIce)
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
