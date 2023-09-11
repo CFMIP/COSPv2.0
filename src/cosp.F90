@@ -128,8 +128,8 @@ MODULE MOD_COSP
           cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
           DeffLiq,             & ! Cloud liquid effective diameter        (um)
           DeffIce,             & ! Cloud ice effective diameter           (um)
-          emis_sfc,            & ! Surface emissivity (point,channel)     (1)
-          refl_sfc,            & ! Surface reflectance (point,channel)    (1)          
+          emis_in,             & ! Surface emissivity (point,channel)     (1)
+          refl_in,             & ! Surface reflectance (point,channel)    (1)          
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
           fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
   end type cosp_column_inputs
@@ -145,6 +145,8 @@ MODULE MOD_COSP
           Npart,               & ! Number of cloud meteors for LIDAR simulators.
           Nrefl,               & ! Number of reflectances for PARASOL simulator
           Ninst_rttov            ! Number of RTTOV instruments
+     real(wp),pointer :: &
+          emis_grey => null()    ! Greybody (spectrally flat) emissivity value for RTTOV          
      real(wp) :: &
           emsfc_lw               ! Surface emissivity @ 11micron
      real(wp),allocatable,dimension(:,:,:) :: &
@@ -758,13 +760,14 @@ CONTAINS
        rttovIN%ch4        => cospgridIN%ch4
        rttovIN%n2o        => cospgridIN%n2o
        rttovIN%co         => cospgridIN%co
-!       rttovIN%surfem     => cospgridIN%emis_sfc
-!       rttovIN%refl_sfc     => cospgridIN%refl_sfc
        rttovIN%h_surf     => cospgridIN%surfelev
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
        rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
+       if (associated(cospIN%emis_grey)) rttovIN%emis_grey  => cospIN%emis_grey
+!       rttovIN%surfem     => cospgridIN%emis_in
+!       rttovIN%refl_in     => cospgridIN%refl_in       
        if (allocated(cospgridIN%q2m)) then
           rttovIN%q2m    => cospgridIN%q2m(:)
        else
@@ -2595,14 +2598,14 @@ CONTAINS
     ! RTTOV
     if (Lrttov_column) then
        alloc_status = .true.
-!       if (.not. allocated(cospgridIN%emis_sfc)) then
+!       if (.not. allocated(cospgridIN%emis_in)) then
 !          nError=nError+1
-!          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%emis_sfc has not been allocated'
+!          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%emis_in has not been allocated'
 !          alloc_status = .false.
 !       endif
-!       if (.not. allocated(cospgridIN%refl_sfc)) then
+!       if (.not. allocated(cospgridIN%refl_in)) then
 !          nError=nError+1
-!          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%refl_sfc has not been allocated'
+!          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%refl_in has not been allocated'
 !          alloc_status = .false.
 !       endif
        if (.not. allocated(cospgridIN%hgt_matrix_half)) then
@@ -3313,9 +3316,9 @@ CONTAINS
              end do
           end if
        endif
-!       if (any(cospgridIN%emis_sfc .lt. 0. .OR. cospgridIN%emis_sfc .gt. 1)) then
+!       if (any(cospgridIN%emis_in .lt. 0. .OR. cospgridIN%emis_in .gt. 1)) then
 !          nError=nError+1
-!          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_sfc contains values out of range'
+!          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%emis_in contains values out of range'
 !          Lrttov_column = .false.
 !          if (allocated(cospOUT%rttov_outputs)) then
 !             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
@@ -3332,9 +3335,9 @@ CONTAINS
 !             end do
 !          end if
 !       endif
-!       if (any(cospgridIN%refl_sfc .lt. 0. .OR. cospgridIN%refl_sfc .gt. 1)) then
+!       if (any(cospgridIN%refl_in .lt. 0. .OR. cospgridIN%refl_in .gt. 1)) then
 !          nError=nError+1
-!          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%refl_sfc contains values out of range'
+!          errorMessage(nError) = 'ERROR: COSP input variable: cospgridIN%refl_in contains values out of range'
 !          Lrttov_column = .false.
 !          if (allocated(cospOUT%rttov_outputs)) then
 !             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument

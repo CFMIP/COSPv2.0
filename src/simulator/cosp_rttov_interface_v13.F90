@@ -723,9 +723,16 @@ CONTAINS
                                        verbose)
                                        
     call cpu_time(driver_time(3))
+    
     if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
-    call cosp_rttov_setup_emissivity_reflectance() ! Config agnostic after allocate step.
+    if (associated(rttovIN % emis_grey)) then
+        call cosp_rttov_setup_emissivity_reflectance(emis_grey = rttovIN % emis_grey) ! Config agnostic after allocate step.
+    else
+        call cosp_rttov_setup_emissivity_reflectance() ! Config agnostic after allocate step.
+    end if
     call cpu_time(driver_time(4))
+    
+    if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
     call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
                                 rttovConfig % opts,                   &
                                 rttovConfig % coefs)    

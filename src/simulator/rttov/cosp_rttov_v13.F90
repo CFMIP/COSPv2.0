@@ -133,6 +133,8 @@ module mod_cosp_rttov
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols        ! Number of subcolumns
+     real(kind=wp),pointer :: &
+          emis_grey => null()
      integer(kind=jpim),dimension(:),pointer :: &
           month
 !     real(wp),dimension(:),pointer :: &
@@ -776,12 +778,29 @@ contains
   ! ------------------------------------------------------
   ! From RTTOV example files. Will need to be expanded on to pass in values.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_rttov_setup_emissivity_reflectance()
-    
+!  subroutine cosp_rttov_setup_emissivity_reflectance(emis_in,refl_in)
+        
+!    real(kind=jprb),intent(in),dimension(Npoints,Nchan),optional :: &
+!        emis_in,   & ! User input emissivities
+!        refl_in      ! User input reflectivities
+                
+!    real(kind=jprb),intent(in),optional    :: emis_in(SIZE(emissivity % emis_in))
+!    real(kind=jprb),intent(in),optional    :: refl_in(SIZE(reflectance % refl_in))    
+
+    ! Set emissivities/reflectivites here.
+!    if (present(emis_in)) emissivity(:) % emis_in  = emis_in
+!    if (present(refl_in)) reflectance(:) % refl_in = refl_in
+
+  subroutine cosp_rttov_setup_emissivity_reflectance(emis_grey)
+ 
+    real(kind=wp),intent(in),pointer,optional :: emis_grey
+ 
     ! In this example we have no values for input emissivities or reflectances
     ! so we initialise all inputs to zero
     call rttov_init_emis_refl(emissivity, reflectance)
     call rttov_error('error for emissivity/reflectance initialization' , lalloc = .true.)
+
+    if (present(emis_grey)) emissivity(:) % emis_in  = emis_grey ! Use greybody emissivity.
 
     ! Calculate emissivity within RTTOV where the input emissivity value is
     ! zero or less (all channels in this case)
