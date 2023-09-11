@@ -326,6 +326,11 @@ program cosp2_test
            frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),month(Npoints),          &
            hour(Npoints),minute(Npoints))
 
+  ! Set some fields to masked values if the COSP offline driver outputs are inconsistent
+  month(:)  = R_UNDEF
+  hour(:)   = R_UNDEF
+  minute(:) = R_UNDEF
+
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
@@ -474,13 +479,17 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Construct COSP input types
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     print*,'1.'
      if (iChunk .eq. 1) then
+!        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=0.2_wp)
         call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
+        print*,'1.a'
         call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)
      endif
      if (iChunk .eq. nChunks) then
         call destroy_cospIN(cospIN)
         call destroy_cospstateIN(cospstateIN)
+!        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=0.2_wp)
         call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
         call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)    
      endif
@@ -492,6 +501,7 @@ program cosp2_test
      ! surface-2-TOA, whereas COSP expects all fields to be ordered from TOA-2-SFC. So the
      ! vertical fields are flipped prior to storing to COSP input type.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     print*,'2.'
      
      cospIN%emsfc_lw         = emsfc_lw
      cospIN%rcfg_cloudsat    = rcfg_cloudsat
@@ -515,8 +525,8 @@ program cosp2_test
      
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
-     cospstateIN%emis_sfc(:,:) = 0._wp
-     cospstateIN%refl_sfc(:,:) = 0._wp     
+     cospstateIN%emis_in(:,:) = 1._wp
+     cospstateIN%refl_in(:,:) = 1._wp     
      
      ! Well-mixed gases are not provided in COSP offline input, so hardcoding them in.
      ! Units are kg/kg over moist air.
@@ -526,6 +536,25 @@ program cosp2_test
      cospstateIN%n2o(:,:)   = 4.665e-07
      cospstateIN%co(:,:)    = 2.098e-07
      cospstateIN%so2(:,:)   = 2.0e-11
+
+     if (any(month(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input month field are masked. Replacing with 1 so RTTOV will run.'
+         where (month(start_idx:end_idx) .lt. 0._wp) 
+             month(start_idx:end_idx) = 1
+         end where
+     end if
+     if (any(hour(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input hour field are masked. Replacing with 1 so RTTOV will run.'
+         where (hour(start_idx:end_idx) .lt. 0._wp) 
+             hour(start_idx:end_idx) = 1._wp
+         end where
+     end if
+     if (any(minute(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input minute field are masked. Replacing with 1 so RTTOV will run.'
+         where (minute(start_idx:end_idx) .lt. 0._wp) 
+             minute(start_idx:end_idx) = 1._wp
+         end where
+     end if 
 
      ! Time information
      cospstateIN%month       = month(start_idx:end_idx)
@@ -549,20 +578,20 @@ program cosp2_test
      ! Reff(Npoints,Nlevels,N_HYDRO)
      ! The weighted Reff is given by: Reff_net = (M_1 + M_2) / (M_1/Reff_1 + M_2/Reff_2)
      cospstateIN%DeffLiq(:,:) = 0._wp ! Initialize for zero everywhere.
-     where ((mr_lsliq(:,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(:,Nlevels:1:-1) .gt. 0._wp))
+     where ((mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
          cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
-     elsewhere (mr_lsliq(:,Nlevels:1:-1) .gt. 0._wp)
+     elsewhere (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ)
-     elsewhere (mr_ccliq(:,Nlevels:1:-1) .gt. 0._wp)
+     elsewhere (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ)
      end where
      
      cospstateIN%DeffIce(:,:) = 0._wp ! Initialize for zero everywhere.
-     where ((mr_lsice(:,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(:,Nlevels:1:-1) .gt. 0._wp))
+     where ((mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
-     elsewhere (mr_lsice(:,Nlevels:1:-1) .gt. 0._wp)
+     elsewhere (mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE)
-     elsewhere (mr_ccice(:,Nlevels:1:-1) .gt. 0._wp)
+     elsewhere (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE)
      end where     
           
@@ -609,6 +638,7 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     print*,'3.'
      cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,rttov_verbose)
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
@@ -1049,7 +1079,7 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine construct_cospIN(npoints,ncolumns,nlevels,ninst_rttov,y)
+  subroutine construct_cospIN(npoints,ncolumns,nlevels,ninst_rttov,y,emis_grey)
     ! Inputs
     integer,intent(in) :: &
          npoints,  & ! Number of horizontal gridpoints
@@ -1058,7 +1088,10 @@ contains
          ninst_rttov ! Number of RTTOV instruments
     ! Outputs 
     type(cosp_optical_inputs),intent(out) :: y
-    
+
+    real(kind=wp),intent(in),target, optional :: &
+         emis_grey
+         
     ! Dimensions
     y%Npoints     = Npoints
     y%Ncolumns    = Ncolumns
@@ -1067,6 +1100,8 @@ contains
     y%Npart       = 4
     y%Nrefl       = PARASOL_NREFL
     allocate(y%frac_out(npoints,       ncolumns,nlevels))
+    
+    if (present(emis_grey)) y%emis_grey => emis_grey
     
     if (Lmodis .or. Lmisr .or. Lisccp) then
        allocate(y%tau_067(npoints,        ncolumns,nlevels),&
@@ -1125,6 +1160,11 @@ contains
     integer,intent(in) :: &
          npoints, & ! Number of horizontal gridpoints
          nlevels    ! Number of vertical levels
+!         N_rttov_instruments
+          
+!     type(rttov_cfg), dimension(N_rttov_instruments),intent(in) :: &
+!         rttov_configs         
+         
     ! Outputs
     type(cosp_column_inputs),intent(out) :: y         
     
@@ -1134,12 +1174,16 @@ contains
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%rttov_sfcmask(nPoints),    &
              y%co(npoints,nlevels),y%n2o(npoints,nlevels),y%ch4(npoints,nlevels),        &
              y%co2(npoints,nlevels), &             
-!             y%emis_sfc(npoints,nchan),y%refl_sfc(npoints,nchan),                        &
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(nPoints),&
              y%DeffLiq(nPoints,nLevels),y%DeffIce(nPoints,nLevels),                      &
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
              y%month(nPoints),y%time_frac(nPoints),y%sza(nPoints))
+             
+    ! JKS - I should make this optional to save space.
+!    do i=1,N_rttov_instruments
+!        allocate(y%emis_in(npoints,rttov_configs(i) % nchan_out),y%refl_in(npoints,rttov_configs(i) % nchan_out))
+!    end do
 
   end subroutine construct_cospstateIN
 
@@ -1575,8 +1619,8 @@ contains
     if (allocated(y%v_sfc))           deallocate(y%v_sfc)
     if (allocated(y%lat))             deallocate(y%lat)
     if (allocated(y%lon))             deallocate(y%lon)
-    if (allocated(y%emis_sfc))        deallocate(y%emis_sfc)
-    if (allocated(y%refl_sfc))        deallocate(y%refl_sfc)
+    if (allocated(y%emis_in))         deallocate(y%emis_in)
+    if (allocated(y%refl_in))         deallocate(y%refl_in)
     if (allocated(y%cloudIce))        deallocate(y%cloudIce)
     if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
     if (allocated(y%DeffLiq))         deallocate(y%DeffLiq)
