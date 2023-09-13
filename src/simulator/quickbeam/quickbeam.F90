@@ -123,10 +123,8 @@ contains
     ! LOCAL VARIABLES
     integer :: k,pr,start_gate,end_gate,d_gate
     real(wp),dimension(nprof,ngate) :: &
-         Ze_ray,        & ! Rayleigh reflectivity (dBZ)
          g_to_vol,      & ! Gaseous atteunation, radar to vol (dB)
-         a_to_vol,      & ! Hydromets attenuation, radar to vol (dB) 
-         z_ray            ! Reflectivity factor, Rayleigh only (mm^6/m^3)
+         a_to_vol         ! Hydromets attenuation, radar to vol (dB) 
 
     ! Load scaling matricies from disk -- but only the first time this subroutine is called
     if(rcfg%load_scale_LUTs) then
@@ -205,17 +203,7 @@ contains
        enddo   ! End loop over pr (profile)
     enddo ! End loop of k (range gate)
     
-    ! Compute Rayleigh reflectivity, and full, attenuated reflectivity
-    if(rcfg%do_ray == 1) then
-       where(z_ray(1:nprof,1:ngate) > 0._wp)
-          Ze_ray(1:nprof,1:ngate) = 10._wp*log10(z_ray(1:nprof,1:ngate))
-       elsewhere
-          Ze_Ray(1:nprof,1:ngate) = 0._wp
-       endwhere
-    else 
-      Ze_ray(1:nprof,1:ngate) = R_UNDEF
-    end if
-
+    ! Compute full and attenuated reflectivity
     where(z_vol(1:nprof,1:ngate) > 0._wp) 
       Ze_non(1:nprof,1:ngate) = 10._wp*log10(z_vol(1:nprof,1:ngate))
       dBZe(1:nprof,1:ngate) = Ze_non(1:nprof,1:ngate)-a_to_vol(1:nprof,1:ngate)-g_to_vol(1:nprof,1:ngate)
