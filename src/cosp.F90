@@ -4306,6 +4306,19 @@ CONTAINS
           Lrttov_column    = .false.
           nError=nError+1
           errorMessage(nError) = 'ERROR(rttov_simulator): The number of points in the input fields are inconsistent'
+          print*,'size(cospgridIN%pfull,1):   ',size(cospgridIN%pfull,1)
+          print*,'size(cospgridIN%at,1):   ',size(cospgridIN%at,1)
+          print*,'size(cospgridIN%qv,1):   ',size(cospgridIN%qv,1)
+          print*,'size(cospgridIN%hgt_matrix_half,1):   ',size(cospgridIN%hgt_matrix_half,1)
+          print*,'size(cospgridIN%u_sfc):   ',size(cospgridIN%u_sfc)
+          print*,'size(cospgridIN%v_sfc):   ',size(cospgridIN%v_sfc)
+          print*,'size(cospgridIN%skt):   ',size(cospgridIN%skt)
+          print*,'size(cospgridIN%phalf,1):   ',size(cospgridIN%phalf,1)
+          print*,'size(cospgridIN%cloudIce,1):   ',size(cospgridIN%cloudIce,1)
+          print*,'size(cospgridIN%cloudLiq,1):   ',size(cospgridIN%cloudLiq,1)
+          print*,'size(cospgridIN%rttov_sfcmask):   ',size(cospgridIN%rttov_sfcmask)
+          print*,'size(cospgridIN%lon):   ',size(cospgridIN%lon)
+          print*,'size(cospgridIN%lat):   ',size(cospgridIN%lat)
        endif
        if (size(cospgridIN%pfull,2)           .ne. cospIN%Nlevels   .OR. &
            size(cospgridIN%at,2)              .ne. cospIN%Nlevels   .OR. &

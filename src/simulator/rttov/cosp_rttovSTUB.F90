@@ -57,6 +57,8 @@ MODULE MOD_COSP_RTTOV
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols        ! Number of subcolumns
+     real(kind=wp),pointer :: &
+          emis_grey => null()          
      integer,dimension(:),pointer :: &
           month
 !     real(wp),dimension(:),pointer :: &

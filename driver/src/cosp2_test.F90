@@ -479,11 +479,9 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Construct COSP input types
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     print*,'1.'
      if (iChunk .eq. 1) then
 !        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=0.2_wp)
         call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
-        print*,'1.a'
         call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)
      endif
      if (iChunk .eq. nChunks) then
@@ -501,7 +499,6 @@ program cosp2_test
      ! surface-2-TOA, whereas COSP expects all fields to be ordered from TOA-2-SFC. So the
      ! vertical fields are flipped prior to storing to COSP input type.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     print*,'2.'
      
      cospIN%emsfc_lw         = emsfc_lw
      cospIN%rcfg_cloudsat    = rcfg_cloudsat
@@ -638,7 +635,6 @@ program cosp2_test
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     print*,'3.'
      cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,rttov_verbose)
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
@@ -1088,7 +1084,7 @@ contains
          ninst_rttov ! Number of RTTOV instruments
     ! Outputs 
     type(cosp_optical_inputs),intent(out) :: y
-
+    ! Optional input
     real(kind=wp),intent(in),target, optional :: &
          emis_grey
          
