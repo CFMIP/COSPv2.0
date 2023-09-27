@@ -75,6 +75,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           Lrttov_cld,          &
           Lrttov_aer,          &
           Lrttov_pc,           &
+          Lrttov_solar,        &
           user_tracegas_input
       character(len=256)           :: &
           rttov_srcDir,        &
@@ -213,6 +214,7 @@ CONTAINS
     logical         :: Lrttov_cldparam
     logical         :: Lrttov_aerparam
     logical         :: Lrttov_pc
+    logical         :: Lrttov_solar
     logical         :: Lchannel_filepath
     logical         :: user_tracegas_input 
     logical         :: SO2_data
@@ -260,6 +262,7 @@ CONTAINS
     Lrttov_cldparam     = .false.
     Lrttov_aerparam     = .false.
     Lrttov_pc           = .false.
+    Lrttov_solar        = .false.
     Lchannel_filepath   = .false.
     SO2_data            = .false. 
     N2O_data            = .false. 
@@ -273,7 +276,7 @@ CONTAINS
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
-                         Lrttov_pc,nchannels_rec,Lchannel_filepath,              &
+                         Lrttov_pc,Lrttov_solar,nchannels_rec,Lchannel_filepath, &
                          channel_filepath,rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          PC_coef_filepath,                                       &
@@ -393,7 +396,8 @@ CONTAINS
     rttov_config % opts % rt_mw % supply_foam_fraction = .false.
 
     ! UV/visible/IR-only radiative transfer options
-    rttov_config % opts % rt_ir % addsolar                = .false.
+    rttov_config % opts % rt_ir % addsolar                = Lrttov_solar
+    rttov_config % Lrttov_solar                           = Lrttov_solar
     rttov_config % opts % rt_ir % rayleigh_max_wavelength = 2._wp ! 2um 
     rttov_config % opts % rt_ir % rayleigh_min_pressure   = 0._wp ! 0 hPa
     rttov_config % opts % rt_ir % rayleigh_single_scatt   = .true.
@@ -416,7 +420,7 @@ CONTAINS
     rttov_config % opts % rt_ir % cloud_overlap           = 1 ! Maximum-random overlap
     rttov_config % opts % rt_ir % cc_low_cloud_top        = 750_wp ! 750 hPa. Only applies when cloud_overlap=2.
     rttov_config % opts % rt_ir % ir_scatt_model          = 2
-    rttov_config % opts % rt_ir % vis_scatt_model         = 1
+    rttov_config % opts % rt_ir % vis_scatt_model         = 1 ! Scattering model to use for solar source term: 1 => DOM; 2 => single-scattering; 3 => MFASIS-LUT; 4 => MFASIS-NN (default = 1); only applies when addclouds or addaerosl is true and addsolar is true. JKS note, DOM is the most expensive, MFASIS-NN might be a better option
     rttov_config % opts % rt_ir % dom_nstreams            = 8
     rttov_config % opts % rt_ir % dom_accuracy            = 0._wp ! only applies when addclouds or addaerosl is true and DOM is selected as a scattering solver.
     rttov_config % opts % rt_ir % dom_opdep_threshold     = 0._wp
@@ -554,6 +558,7 @@ CONTAINS
         print*,'rttov_config % Lrttov_cld:        ',rttov_config % Lrttov_cld
         print*,'rttov_config % Lrttov_aer:        ',rttov_config % Lrttov_aer
         print*,'rttov_config % Lrttov_pc:         ',rttov_config % Lrttov_pc
+        print*,'rttov_config % Lrttov_solar:      ',rttov_config % Lrttov_solar
         print*,'rttov_config % rttov_Nlocaltime:        ',rttov_config % rttov_Nlocaltime
         print*,'rttov_config % rttov_localtime:         ',rttov_config % rttov_localtime
         print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width            
@@ -705,6 +710,7 @@ CONTAINS
     call cosp_rttov_construct_profiles(rttovIN,                                &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
+                                       rttovConfig % Lrttov_solar,             &
                                        rttovConfig % user_tracegas_input,      &
                                        rttovConfig % opts % rt_all % CO2_data, &
                                        rttovConfig % opts % rt_all % CH4_data, &
@@ -833,6 +839,7 @@ CONTAINS
     call cosp_rttov_construct_profiles(rttovIN,                                &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
+                                       rttovConfig % Lrttov_solar,             &
                                        rttovConfig % user_tracegas_input,      &
                                        rttovConfig % opts % rt_all % CO2_data, &
                                        rttovConfig % opts % rt_all % CH4_data, &

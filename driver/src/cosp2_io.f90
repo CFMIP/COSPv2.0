@@ -2137,7 +2137,8 @@ contains
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                                emsfc_lw,mode,Nlon,Nlat,surfelev,month,hour,minute)
+                                emsfc_lw,mode,Nlon,Nlat,surfelev,year,month,day,         &
+                                hour,minute,seconds)
      
     ! Arguments
     character(len=512),intent(in) :: fname ! File name
@@ -2147,7 +2148,8 @@ contains
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
-    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev,minute,month,hour
+    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev, &
+                                             year,month,day,hour,minute,seconds
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
     
@@ -2494,12 +2496,24 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=sunlit)
           endif
+       case ('year')
+          if (Lpoint) then
+             year(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=year)
+          endif
        case ('month')
           if (Lpoint) then
              month(1:Npoints) = x1(1:Npoints)
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=month)
           endif
+       case ('day')
+          if (Lpoint) then
+             day(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=day)
+          endif          
        case ('hour')
           if (Lpoint) then
              hour(1:Npoints) = x1(1:Npoints)
@@ -2511,7 +2525,13 @@ contains
              minute(1:Npoints) = x1(1:Npoints)
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=minute)
-          endif          
+          endif  
+       case ('second')
+          if (Lpoint) then
+             seconds(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=seconds)
+          endif            
        end select
        ! Free memory
        if (vrank == 1) deallocate(x1)

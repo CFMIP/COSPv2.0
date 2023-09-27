@@ -89,10 +89,13 @@ program cosp2_test
        u_wind,    & ! U-component of wind (m/s)
        v_wind,    & ! V-component of wind (m/s)
        sunlit     ! Sunlit flag
-  real(wp),dimension(:),allocatable          :: &
+  real(wp),dimension(:),allocatable          :: & ! JKS change to target?
+       year,      & ! Year (CE)
        month,     & ! Month  [1,12]
+       day,       & ! Day    [1,31]
        hour,      & ! Hour   [0,24]
-       minute       ! Minute [0,60]
+       minute,    & ! Minute [0,60]
+       seconds      ! Second [0,60]
   real(wp),dimension(:,:),allocatable,target :: &
        p,         & ! Model pressure levels (pa)
        ph,        & ! Moddel pressure @ half levels (pa)
@@ -323,20 +326,24 @@ program cosp2_test
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
-           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),month(Npoints),          &
-           hour(Npoints),minute(Npoints))
+           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),year(Npoints),           &
+           month(Npoints),day(Npoints),hour(Npoints),minute(Npoints),seconds(Npoints))
 
   ! Set some fields to masked values if the COSP offline driver outputs are inconsistent
-  month(:)  = R_UNDEF
-  hour(:)   = R_UNDEF
-  minute(:) = R_UNDEF
+  year(:)    = R_UNDEF
+  month(:)   = R_UNDEF
+  day(:)     = R_UNDEF
+  hour(:)    = R_UNDEF
+  minute(:)  = R_UNDEF
+  seconds(:) = R_UNDEF
 
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
                           dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat,surfelev,month,hour,minute)
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev,year,month,day,hour,       &
+                          minute,seconds)
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -534,12 +541,24 @@ program cosp2_test
      cospstateIN%co(:,:)    = 2.098e-07
      cospstateIN%so2(:,:)   = 2.0e-11
 
+     if (any(year(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input year field are masked. Replacing with 1 so RTTOV will run.'
+         where (year(start_idx:end_idx) .lt. 0._wp) 
+             year(start_idx:end_idx) = 1
+         end where
+     end if
      if (any(month(start_idx:end_idx) .lt. 0._wp)) then
          print*,'Some of values of the input month field are masked. Replacing with 1 so RTTOV will run.'
          where (month(start_idx:end_idx) .lt. 0._wp) 
              month(start_idx:end_idx) = 1
          end where
      end if
+     if (any(day(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input day field are masked. Replacing with 1 so RTTOV will run.'
+         where (day(start_idx:end_idx) .lt. 0._wp) 
+             day(start_idx:end_idx) = 1
+         end where
+     end if     
      if (any(hour(start_idx:end_idx) .lt. 0._wp)) then
          print*,'Some of values of the input hour field are masked. Replacing with 1 so RTTOV will run.'
          where (hour(start_idx:end_idx) .lt. 0._wp) 
@@ -552,10 +571,26 @@ program cosp2_test
              minute(start_idx:end_idx) = 1._wp
          end where
      end if 
+     if (any(seconds(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input minute field are masked. Replacing with 1 so RTTOV will run.'
+         where (seconds(start_idx:end_idx) .lt. 0._wp) 
+             seconds(start_idx:end_idx) = 1._wp
+         end where
+     end if      
 
-     ! Time information
+     ! Time information (should depreciate soon)
      cospstateIN%month       = month(start_idx:end_idx)
      cospstateIN%time_frac   = (60*hour(start_idx:end_idx) + minute(start_idx:end_idx)) / (24*60) ! Time (UTC) expressed as a fraction on [0,1]
+     
+     ! Read in date and time objects for RTTOV
+     cospstateIN%rttov_date(:,1)  = year(start_idx:end_idx)
+     cospstateIN%rttov_date(:,2)  = month(start_idx:end_idx)
+     cospstateIN%rttov_date(:,3)  = day(start_idx:end_idx)
+     
+     cospstateIN%rttov_time(:,1)  = hour(start_idx:end_idx)
+     cospstateIN%rttov_time(:,2)  = minute(start_idx:end_idx)
+     cospstateIN%rttov_time(:,3)  = seconds(start_idx:end_idx) 
+          
      cospstateIN%sza         = 0._wp ! => null() didn't work. ! JKS nothing passed in the UKMO input.
 
      ! From the data input file
@@ -1174,6 +1209,7 @@ contains
              y%DeffLiq(nPoints,nLevels),y%DeffIce(nPoints,nLevels),                      &
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
+             y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),                            &
              y%month(nPoints),y%time_frac(nPoints),y%sza(nPoints))
              
     ! JKS - I should make this optional to save space.
@@ -1603,6 +1639,8 @@ contains
     if (allocated(y%hgt_matrix))      deallocate(y%hgt_matrix)
     if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
     if (allocated(y%surfelev))        deallocate(y%surfelev)
+    if (allocated(y%rttov_date))      deallocate(y%rttov_date)
+    if (allocated(y%rttov_time))      deallocate(y%rttov_time)
     if (allocated(y%month))           deallocate(y%month)
     if (allocated(y%time_frac))       deallocate(y%time_frac)
     if (allocated(y%sza))             deallocate(y%sza)
