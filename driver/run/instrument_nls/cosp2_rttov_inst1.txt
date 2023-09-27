@@ -34,6 +34,7 @@
   Lrttov_cldparam=.false.,          ! Use user input cloud optical parameters
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
   Lrttov_pc=.false.,                ! Run with PC-RTTOV
+  Lrttov_solar=.true.,              ! Do solar calculations  
   !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
   nchannels_rec=0, ! 2300
   !-------------- RTTOV Filepaths 

@@ -128,6 +128,8 @@ MODULE MOD_COSP
           cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
           DeffLiq,             & ! Cloud liquid effective diameter        (um)
           DeffIce,             & ! Cloud ice effective diameter           (um)
+          rttov_date,          & ! Date of the profile as year (e.g. 2013), month (1-12), and day (1-31)
+          rttov_time,          & ! Time of profile as hour, minute, second.
           emis_in,             & ! Surface emissivity (point,channel)     (1)
           refl_in,             & ! Surface reflectance (point,channel)    (1)          
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
@@ -789,6 +791,8 @@ CONTAINS
        ! Below only needed for all-sky RTTOV calculation
        rttovIN%month      => cospgridIN%month
        rttovIN%time_frac  => cospgridIN%time_frac
+       rttovIN%rttov_date => cospgridIN%rttov_date
+       rttovIN%rttov_time => cospgridIN%rttov_time
        rttovIN%sza        => cospgridIN%sza ! JKS make optional? Defeats the purpose of the "associated" check in cosp_rttov_v13.
        rttovIN%tca        => cospgridIN%tca
        rttovIN%cldLiq     => cospgridIN%cloudLiq
@@ -2723,6 +2727,16 @@ CONTAINS
           errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%fl_snow has not been allocated'
           alloc_status = .false.
        endif
+       if (.not. allocated(cospgridIN%rttov_date)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%rttov_date has not been allocated'
+          alloc_status = .false.
+       endif
+       if (.not. allocated(cospgridIN%rttov_time)) then
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable (RTTOV): cospgridIN%rttov_time has not been allocated'
+          alloc_status = .false.
+       endif       
        if (.not. alloc_status) then
           Lrttov_column     = .false.
          if (allocated(cospOUT%rttov_outputs)) then
@@ -3504,8 +3518,122 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
              end do
+          end if          
+       endif  
+       if (any(cospgridIN%rttov_time(:,1) .lt. 0 .OR. cospgridIN%rttov_time(:,1) .gt. 24)) then ! rttov_time(1), hour on [0,24]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_time(1) contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
           end if
-       endif        
+       endif
+       if (any(cospgridIN%rttov_time(:,2) .lt. 0 .OR. cospgridIN%rttov_time(:,2) .gt. 60)) then ! rttov_time(2), minute on [0,60]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_time(2) contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif 
+       if (any(cospgridIN%rttov_time(:,3) .lt. 0 .OR. cospgridIN%rttov_time(:,3) .gt. 60)) then ! rttov_time(3), second on [0,60]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_time(3) contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif   
+       if (any(cospgridIN%rttov_date(:,1) .lt. 0)) then ! rttov_date(1), year on [0,60]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_date(1) contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif
+       if (any(cospgridIN%rttov_date(:,2) .lt. 0 .OR. cospgridIN%rttov_date(:,2) .gt. 12)) then ! rttov_date(2), month on [0,12]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_date(2) contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif
+       if (any(cospgridIN%rttov_date(:,3) .lt. 0 .OR. cospgridIN%rttov_date(:,3) .gt. 366)) then ! rttov_date(3), day on [0,366]
+          nError=nError+1
+          errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_date(3) contains values out of range'
+          Lrttov_column = .false.
+          if (allocated(cospOUT%rttov_outputs)) then
+             do i=1,cospOUT % N_rttov_instruments ! Iterate over each instrument
+                 if (associated(cospOUT%rttov_outputs(i)%channel_indices))      cospOUT%rttov_outputs(i)%channel_indices(:)  = 0
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total))             cospOUT%rttov_outputs(i)%bt_total(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear))             cospOUT%rttov_outputs(i)%bt_clear(:,:)       = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total))            cospOUT%rttov_outputs(i)%rad_total(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear))            cospOUT%rttov_outputs(i)%rad_clear(:,:)      = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_cloudy))           cospOUT%rttov_outputs(i)%rad_cloudy(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+             end do
+          end if
+       endif       
     endif
 
     ! COSP_INPUTS

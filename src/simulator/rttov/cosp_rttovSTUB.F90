@@ -87,9 +87,10 @@ MODULE MOD_COSP_RTTOV
           ch4,          & ! Methane 
           n2o,          & ! n2o 
           co,           & ! Carbon monoxide
-          so2             ! Sulfur dioxide
+          so2,          & ! Sulfur dioxide
+          rttov_date,   & ! Date of the profile as year (e.g. 2013), month (1-12), and day (1-31)
+          rttov_time,   & ! Time of profile as hour, minute, second.            
      ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
-     real(wp),dimension(:,:),pointer :: &
           tca,          & ! Cloud fraction
           cldIce,       & ! Cloud ice
           cldLiq,       & ! Cloud liquid

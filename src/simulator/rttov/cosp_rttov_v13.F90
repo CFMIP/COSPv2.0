@@ -34,8 +34,6 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module mod_cosp_rttov
-  use rttov_const,         only : errorstatus_success, errorstatus_fatal,                &
-                                  platform_name,inst_name
 ! Use RTTOV v13 types here, more may be needed
   use rttov_types,         only : rttov_options,rttov_coefs,rttov_profile,                &
                                   rttov_transmission,rttov_radiance,rttov_chanprof,       &
@@ -88,7 +86,7 @@ module mod_cosp_rttov
 #include "rttov_bpr_calc.interface"
 #include "rttov_bpr_dealloc.interface"
 #include "rttov_legcoef_calc.interface"
-
+#include "rttov_calc_solar_angles.interface"
 
   ! Module parameters
   integer, parameter :: maxlim =  10000
@@ -103,8 +101,6 @@ module mod_cosp_rttov
 
   ! module-wides variables for input
   !====================
-  integer(kind=jpim) :: dosolar
-
   TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
   LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
   TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
@@ -163,9 +159,10 @@ module mod_cosp_rttov
           ch4,          & ! Methane 
           n2o,          & ! n2o 
           co,           & ! Carbon monoxide
-          so2             ! Sulfur dioxide
+          so2,          & ! Sulfur dioxide
+          rttov_date,   & ! Date of the profile as year (e.g. 2013), month (1-12), and day (1-31)
+          rttov_time,   & ! Time of profile as hour, minute, second.          
      ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
-     real(wp),dimension(:,:),pointer :: &
           tca,          & ! Cloud fraction
           cldIce,       & ! Cloud ice
           cldLiq,       & ! Cloud liquid
@@ -521,6 +518,7 @@ contains
   subroutine cosp_rttov_construct_profiles(rttovIN,        &
                                            Lrttov_cld,     &
                                            Lrttov_aer,     &
+                                           Lrttov_solar,   &
                                            Luser_tracegas, &
                                            Ldo_co2,        &
                                            Ldo_ch4,        &
@@ -543,6 +541,7 @@ contains
     logical,intent(in)        :: &
         Lrttov_cld,       &
         Lrttov_aer,       &
+        Lrttov_solar,     &
         Luser_tracegas,   & ! Use user-supplied trace gas columns from instrument namelists. 
         Ldo_co2,          &
         Ldo_ch4,          &
@@ -757,14 +756,42 @@ contains
     if (Lrttov_aer) then
     
       ! Set aerosol mass mixing ratio units
-      profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
-        
+      profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)       
       ! Read in aerosol profiles
-!      do i = 1, rttovIN%nPoints
-!      profiles(i)%aerosols(naertyp,nlayers) = ! Aerosols in different modes (see User Guide pg 80)
-!
+!      j = 0 ! Initialize input
+!      do i = 1,rttovIN%nPoints
+!        if (inst_swath_mask(i)) then ! only added masked columns to profiles
+!            j = j + 1 ! Increment profile counter   
+!            profiles(j)%aerosols(naertyp,nlayers) = rttovIN%aerosols ! Aerosols in different modes (see User Guide pg 80)
+!        end if
 !      end do
-    endif
+    end if
+        
+    if (Lrttov_solar) then
+
+      print*,'rttovIN%sza(:):   ',rttovIN%sza(:)
+
+      ! Populate longitude, latitude, time, and date profile fields
+      ! Read in aerosol profiles
+      j = 0 ! Initialize input
+      do i = 1,rttovIN%nPoints
+        if (inst_swath_mask(i)) then ! only added masked columns to profiles
+            j = j + 1 ! Increment profile counter   
+            profiles(j)%date(:) = rttovIN%rttov_date(i,:)
+            profiles(j)%time(:) = rttovIN%rttov_time(i,:)
+        end if
+      end do
+
+      ! Call functions to calculate the appropriate solar zenith and azimuthal angles.
+      call RTTOV_CALC_SOLAR_ANGLES(errorstatus, profiles)
+      call rttov_error('Error when calling RTTOV_CALC_SOLAR_ANGLES', lalloc = .false.)
+    
+      !call RTTOV_CALC_GEO_SAT_ANGLES
+      
+      print*,'profiles(:))%sunzenangle:    ',profiles(:)%sunzenangle
+      print*,'profiles(:))%sunazangle:     ',profiles(:)%sunazangle      
+      
+    end if
     
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in aerosol profile initialization' , lalloc = .true.)
