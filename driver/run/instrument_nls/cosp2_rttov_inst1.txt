@@ -28,7 +28,7 @@
   !-------------- Logical for constructing outputs and determining settings
   Lrttov_bt=.true.,                 ! Calculate RTTOV brightness temps
   Lrttov_rad=.true.,                ! Calculate RTTOV radiances
-  Lrttov_refl=.false.,              ! Calculate RTTOV reflectivities
+  Lrttov_refl=.true.,               ! Calculate RTTOV reflectivities
   Lrttov_cld=.true.,                ! Calculate RTTOV all-sky + cloudy-sky values
   Lrttov_aer=.true.,                ! Calculate RTTOV all-sky + cloudy-sky values
   Lrttov_cldparam=.false.,          ! Use user input cloud optical parameters
