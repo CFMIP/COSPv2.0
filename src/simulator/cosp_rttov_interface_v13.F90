@@ -44,7 +44,9 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   ! rttov_types contains definitions of all RTTOV data types
   USE rttov_types, ONLY :     &
          rttov_options,       &
-         rttov_coefs
+         rttov_options_scatt, &
+         rttov_coefs,         &
+         rttov_scatt_coef
 
   ! jpim, jprb and jplm are the RTTOV integer, real and logical KINDs
   USE parkind1, ONLY : jpim, jprb, jplm
@@ -52,6 +54,12 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   USE rttov_unix_env, ONLY : rttov_exit
                               
   IMPLICIT NONE
+
+#include "rttov_scatt.interface"
+#include "rttov_parallel_scatt.interface"
+#include "rttov_read_scattcoeffs.interface"
+#include "rttov_dealloc_scattcoeffs.interface"
+#include "rttov_scatt_setupindex.interface"
 
 #include "rttov_read_coefs.interface"
 #include "rttov_user_options_checkinput.interface"
@@ -76,6 +84,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           Lrttov_aer,          &
           Lrttov_pc,           &
           Lrttov_solar,        &
+          Lrttov_mwscatt,      &
           user_tracegas_input
       character(len=256)           :: &
           rttov_srcDir,        &
@@ -108,6 +117,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           rttov_localtime_width(:) 
       type(rttov_options)          :: &
           opts                               ! RTTOV options structure
+      type(rttov_options_scatt)    :: &
+          opts_scatt
       type(rttov_coefs)            :: &
           coefs                              ! RTTOV coefficients structure
       logical(KIND=jplm), allocatable  :: &
@@ -471,25 +482,25 @@ CONTAINS
     
     ! JKS To-do: include opts_scatt settings (user guide pg 161)
     if (rttov_config % Lrttov_mwscatt) then
-        opts_scatt%config%do_checkinput = .true.
-        opts_scatt%config%apply_reg_limits = .false.
-        opts_scatt%config%verbose = .true.
-        opts_scatt%ozone_data = .false.  ! Default
-        opts_scatt%use_t2m_opdep = .true.
-        opts_scatt%use_q2m = .true.
-        opts_scatt%use_tskin_eff = .false.
-        opts_scatt%addrefrac = .true.
-        opts_scatt%rad_down_lin_tau = .false. ! Recommended
-        opts_scatt%interp_mode = 1 ! Default
-        opts_scatt%lgradp = .false.
-        opts_scatt%fastem_version = 6 ! Default
-        opts_scatt %supply_foam_fraction = .false.
-        opts_scatt%lusercfrac = .false. ! User supplied cloud fraction in rttov_profile_cloud. Maybe set to true? pg 164
-        opts_scatt%cc_threshold = 0.001_wp ! Default
-!        opts_scatt%pol_mode = 
-!        opts_scatt%ice_polarisation =
-        opts_scatt%hydro_cfrac_tlad = .true. ! Default
-        opts_scatt%zero_hydro_tlad = .false. ! Default
+        rttov_config % opts_scatt % config % do_checkinput = .true.
+        rttov_config % opts_scatt % config % apply_reg_limits = .false.
+        rttov_config % opts_scatt % config % verbose = .true.
+        rttov_config % opts_scatt % ozone_data = .false.  ! Default
+        rttov_config % opts_scatt % use_t2m_opdep = .true.
+        rttov_config % opts_scatt % use_q2m = .true.
+        rttov_config % opts_scatt % use_tskin_eff = .false.
+        rttov_config % opts_scatt % addrefrac = .true.
+        rttov_config % opts_scatt % rad_down_lin_tau = .false. ! Recommended
+        rttov_config % opts_scatt % interp_mode = 1 ! Default
+        rttov_config % opts_scatt % lgradp = .false.
+        rttov_config % opts_scatt % fastem_version = 6 ! Default
+        rttov_config % opts_scatt % supply_foam_fraction = .false.
+        rttov_config % opts_scatt % lusercfrac = .false. ! User supplied cloud fraction in rttov_profile_cloud. Maybe set to true? pg 164
+        rttov_config % opts_scatt % cc_threshold = 0.001_wp ! Default
+!        rttov_config % opts_scatt % pol_mode = 
+!        rttov_config % opts_scatt % ice_polarisation =
+        rttov_config % opts_scatt % hydro_cfrac_tlad = .true. ! Default
+        rttov_config % opts_scatt % zero_hydro_tlad = .false. ! Default
     end if
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
