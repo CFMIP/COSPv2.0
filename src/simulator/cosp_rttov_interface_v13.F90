@@ -470,6 +470,27 @@ CONTAINS
     endif
     
     ! JKS To-do: include opts_scatt settings (user guide pg 161)
+    if (rttov_config % Lrttov_mwscatt) then
+        opts_scatt%config%do_checkinput = .true.
+        opts_scatt%config%apply_reg_limits = .false.
+        opts_scatt%config%verbose = .true.
+        opts_scatt%ozone_data = .false.  ! Default
+        opts_scatt%use_t2m_opdep = .true.
+        opts_scatt%use_q2m = .true.
+        opts_scatt%use_tskin_eff = .false.
+        opts_scatt%addrefrac = .true.
+        opts_scatt%rad_down_lin_tau = .false. ! Recommended
+        opts_scatt%interp_mode = 1 ! Default
+        opts_scatt%lgradp = .false.
+        opts_scatt%fastem_version = 6 ! Default
+        opts_scatt %supply_foam_fraction = .false.
+        opts_scatt%lusercfrac = .false. ! User supplied cloud fraction in rttov_profile_cloud. Maybe set to true? pg 164
+        opts_scatt%cc_threshold = 0.001_wp ! Default
+!        opts_scatt%pol_mode = 
+!        opts_scatt%ice_polarisation =
+        opts_scatt%hydro_cfrac_tlad = .true. ! Default
+        opts_scatt%zero_hydro_tlad = .false. ! Default
+    end if
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2. Read coefficients (from RTTOV example files)
@@ -495,8 +516,8 @@ CONTAINS
         if (nchannels_rec > rttov_config % coefs % coef % fmv_chn) then
             nchannels_rec = rttov_config % coefs % coef % fmv_chn
             print*,'nchannels_rec cap hit'
-        endif            
-    endif   
+        end if            
+    end if   
                           
     ! We aren't checking an allocation steps so this seems more appropriate.
     call rttov_error('fatal error reading coefficients' , lalloc = .false.)

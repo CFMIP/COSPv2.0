@@ -652,11 +652,11 @@ contains
           profiles(j)%longitude     = rttovIN%longitude(i)
           profiles(j)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
 
-          ! Solar angles.
+          ! Solar angles. This is overwritten in the solar code now.
           if (associated(rttovIN%sza)) then
              profiles(j)%sunzenangle   = rttovIN%sza(i) ! SZA in degrees
           else
-             print*,'No solar zenith angle passed. Setting to zero.'
+             if (verbose) print*,'No solar zenith angle passed. Setting to zero.'
              profiles(j)%sunzenangle   = 0.
           end if
           profiles(j)%sunazangle    = 0. ! hard-coded in like rttov9
@@ -769,8 +769,6 @@ contains
         
     if (Lrttov_solar) then
 
-      print*,'rttovIN%sza(:):   ',rttovIN%sza(:)
-
       ! Populate longitude, latitude, time, and date profile fields
       ! Read in aerosol profiles
       j = 0 ! Initialize input
@@ -787,10 +785,12 @@ contains
       call rttov_error('Error when calling RTTOV_CALC_SOLAR_ANGLES', lalloc = .false.)
     
       !call RTTOV_CALC_GEO_SAT_ANGLES
-      
-      print*,'profiles(:))%sunzenangle:    ',profiles(:)%sunzenangle
-      print*,'profiles(:))%sunazangle:     ',profiles(:)%sunazangle      
-      
+      if (verbose) then
+        print*,'profiles(:))%sunzenangle:    ',profiles(:)%sunzenangle
+        print*,'profiles(:))%sunazangle:     ',profiles(:)%sunazangle      
+        print*,'profiles(:))%zenangle:       ',profiles(:)%zenangle      
+        print*,'profiles(:))%azangle:        ',profiles(:)%azangle      
+      end if
     end if
     
     ! JKS - nothing to check here, this will never trigger.
