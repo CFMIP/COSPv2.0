@@ -326,7 +326,7 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     integer  :: kctop, kcbtm
     integer  :: icls
     integer  :: iregime
-    real     :: cmxdbz
+    real(wp) :: cmxdbz
     real(wp) :: diagcgt   !! diagnosed cloud geometric thickness [m]
     real(wp) :: diagicod  !! diagnosed in-cloud optical depth
     real(wp) :: cbtmh     !! diagnosed in-cloud optical depth
