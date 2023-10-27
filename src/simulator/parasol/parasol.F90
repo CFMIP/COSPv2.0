@@ -168,8 +168,8 @@ contains
        parasolrefl(:,k) = parasolrefl(:,k) / float(ncol)
        ! if land=1 -> parasolrefl=R_UNDEF
        ! if land=0 -> parasolrefl=parasolrefl
-       parasolrefl(:,k) = parasolrefl(:,k) * MAX(1._wp-land(:),0.0) &
-            + (1._wp - MAX(1._wp-land(:),0.0))*R_UNDEF
+       parasolrefl(:,k) = parasolrefl(:,k) * MAX(1._wp-land(:),0.0_wp) &
+            + (1._wp - MAX(1._wp-land(:),0.0_wp))*R_UNDEF
     enddo
   end subroutine parasol_column
 
