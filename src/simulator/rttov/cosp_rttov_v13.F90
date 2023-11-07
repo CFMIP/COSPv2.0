@@ -131,8 +131,6 @@ module mod_cosp_rttov
           nSubCols        ! Number of subcolumns
      real(kind=wp),pointer :: &
           emis_grey => null()
-     integer(kind=jpim),dimension(:),pointer :: &
-          month
 !     real(wp),dimension(:),pointer :: &
 !          surfem           ! Surface emissivities for the channels
 !          refl,         & ! Surface reflectances for the channels
@@ -147,7 +145,6 @@ module mod_cosp_rttov
           sfcmask,       & ! sea-land-ice mask (0=sea, 1=land, 2=seaice)
           latitude,      & ! Latitude (degrees)
           longitude,     & ! Longitude (degrees)
-          time_frac,     & ! Fractional UTC time [0-1]
           sza => null()    ! Solar zenith angle (deg)
      real(wp),dimension(:,:),pointer :: &
           p,            & ! Pressure @ model levels
@@ -258,7 +255,7 @@ contains
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
             ! Calculate the central longitude for each gridcell and orbit
-            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%time_frac * 24.0)) 
+            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%rttov_time(:,1) + rttovIN%rttov_time(:,2) / 60))
             ! Calculate distance (in degrees) from each grid cell to the satellite central long
             dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
             ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
@@ -408,7 +405,7 @@ contains
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
             ! Calculate the central longitude for each gridcell and orbit
-            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%time_frac * 24.0)) 
+            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%rttov_time(:,1) + rttovIN%rttov_time(:,2) / 60))
             ! Calculate distance (in degrees) from each grid cell to the satellite central long
             dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
             ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
@@ -579,14 +576,6 @@ contains
     ! set to false."
 
     profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
-    
-    if (verbose) then
-        print*,'shape(rttovIN%co2):    ',shape(rttovIN%co2)
-        print*,'shape(rttovIN%n2o):    ',shape(rttovIN%n2o)
-        print*,'rttovIN%co2(1,:):    ',rttovIN%co2(1,1:10)
-        print*,'rttovIN%n2o(1,:):    ',rttovIN%n2o(1,1:10)
-!        print*,'rttovIN%t_skin:   ',rttovIN%t_skin
-    end if
     
     ! Iterate over all columns
     j = 0 ! Initialize input
@@ -784,13 +773,12 @@ contains
       call RTTOV_CALC_SOLAR_ANGLES(errorstatus, profiles)
       call rttov_error('Error when calling RTTOV_CALC_SOLAR_ANGLES', lalloc = .false.)
     
-      !call RTTOV_CALC_GEO_SAT_ANGLES
-      if (verbose) then
-        print*,'profiles(:))%sunzenangle:    ',profiles(:)%sunzenangle
-        print*,'profiles(:))%sunazangle:     ',profiles(:)%sunazangle      
-        print*,'profiles(:))%zenangle:       ',profiles(:)%zenangle      
-        print*,'profiles(:))%azangle:        ',profiles(:)%azangle      
-      end if
+!      if (verbose) then
+!        print*,'profiles(:))%sunzenangle:    ',profiles(:)%sunzenangle
+!        print*,'profiles(:))%sunazangle:     ',profiles(:)%sunazangle      
+!        print*,'profiles(:))%zenangle:       ',profiles(:)%zenangle      
+!        print*,'profiles(:))%azangle:        ',profiles(:)%azangle      
+!      end if
     end if
     
     ! JKS - nothing to check here, this will never trigger.
@@ -884,7 +872,6 @@ contains
         print*,'shape(chanprof%chan):      ',shape(chanprof%chan)
         print*,'shape(profiles):           ',shape(profiles)
 !    print*,'shape(profiles(:)%q):         ',shape(profiles(:)%q)
-!    print*,'shape(bt_total):   ',shape(bt_total)
     end if
     
     
