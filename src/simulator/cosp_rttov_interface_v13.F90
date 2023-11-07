@@ -526,7 +526,7 @@ CONTAINS
         ! Ensure input number of channels is not higher than number stored in coefficient file
         if (nchannels_rec > rttov_config % coefs % coef % fmv_chn) then
             nchannels_rec = rttov_config % coefs % coef % fmv_chn
-            print*,'nchannels_rec cap hit'
+            if (verbose) print*,'nchannels_rec cap hit'
         end if            
     end if   
                           
@@ -723,7 +723,7 @@ CONTAINS
     call cpu_time(driver_time(1))
     if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
     allocate(rttovConfig % swath_mask(rttovIN % nPoints))
-    if (verbose) print*,'Beginning "cosp_rttov_allocate".'
+!    if (verbose) print*,'Beginning "cosp_rttov_allocate".'
     call cosp_rttov_allocate(rttovIN,                             &
                              rttovConfig % nChannels_rec,         &
                              rttovConfig % opts,                  &
@@ -737,8 +737,7 @@ CONTAINS
                              rttovConfig % swath_mask)    
         
     call cpu_time(driver_time(2))
-    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
- 
+!    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN,                                &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
@@ -762,7 +761,7 @@ CONTAINS
                                        
     call cpu_time(driver_time(3))
     
-    if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
+!    if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
     if (associated(rttovIN % emis_grey)) then
         call cosp_rttov_setup_emissivity_reflectance(emis_grey = rttovIN % emis_grey) ! Config agnostic after allocate step.
     else
@@ -770,14 +769,14 @@ CONTAINS
     end if
     call cpu_time(driver_time(4))
     
-    if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
+!    if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
     call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
                                 rttovConfig % opts,                   &
                                 rttovConfig % coefs)    
     
     call cpu_time(driver_time(5))
     
-    if (verbose) print*,'Beginning "cosp_rttov_save_output".'
+!    if (verbose) print*,'Beginning "cosp_rttov_save_output".'
     call cosp_rttov_save_output(rttovIN % nPoints,                      &
                                 rttovConfig % nchan_out,                &
                                 rttovConfig % swath_mask,               &
@@ -791,7 +790,7 @@ CONTAINS
                                 refl_total,refl_clear)
 
     call cpu_time(driver_time(6))                                        
-    if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
+!    if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
     call cosp_rttov_deallocate_profiles(rttovConfig % nprof,           &
                                         rttovConfig % nchanprof,       &
                                         rttovIN % nLevels,               &
@@ -854,6 +853,7 @@ CONTAINS
     call cpu_time(driver_time(1))
     if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
     allocate(rttovConfig % swath_mask(rttovIN % nPoints))
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_allocate".'
     call cosp_pc_rttov_allocate(rttovIN, &
                                 rttovConfig % PC_coef_filepath,              &
                                 rttovConfig % coefs,                         &
@@ -868,6 +868,7 @@ CONTAINS
                                 rttovConfig % iChannel_out,                  &
                                 rttovConfig % swath_mask)
     call cpu_time(driver_time(2))
+!    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN,                                &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
@@ -891,6 +892,7 @@ CONTAINS
     call cpu_time(driver_time(3))
     call cosp_pc_rttov_setup_emissivity()
     call cpu_time(driver_time(4))
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_call_direct".'
     call cosp_pc_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
                                    rttovConfig % opts,                   &
                                    rttovConfig % coefs,                  &
@@ -898,6 +900,7 @@ CONTAINS
                                    rttovConfig % iChannel_out) ! iChannel_out should have been updated
 
     call cpu_time(driver_time(5))
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_save_output".'
     call cosp_pc_rttov_save_output(rttovIN % nPoints,                       &
                                    rttovConfig % nchannels_rec,             &
                                    rttovConfig % swath_mask,                &
@@ -907,6 +910,7 @@ CONTAINS
                                    rad_clear)
 
     call cpu_time(driver_time(6))                                           
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_deallocate_profiles".'
     call cosp_pc_rttov_deallocate_profiles(rttovConfig % nprof,           &
                                            rttovConfig % nchanprof,       &
                                            rttovIN % nlevels,             &

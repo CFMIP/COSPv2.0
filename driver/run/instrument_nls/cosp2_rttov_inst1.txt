@@ -72,7 +72,7 @@
   npcscores=100,  ! Determine how many principal components are used (greater accuracy, greater cost)
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
-  rttov_nthreads=16,
+  rttov_nthreads=1,
   rttov_ZenAng=0.0,               ! Satellite Zenith Angle 
   ! Set local time sampling with swath widths
   rttov_Nlocaltime=0,                ! Number of local times to sample at

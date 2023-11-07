@@ -31,9 +31,9 @@ LDFLAGS  += $(NC_LIB) -lnetcdff
 
 LDFLAGS += -L. -lcosp -lsubcol
 
-# Need additional load flags from Makefile.rttov when linking to RTTOV
+# Need additional load flags from Makefile.rttov when linking to RTTOV. May remove with improved linking.
 ifdef RTTOV
-LDFLAGS += $(LIBS) $(LLIBS) $(LDFLAGS_NETCDF) $(LDFLAGS_HDF5) $(LDFLAGS_ARCH) $(LDFLAGS_LAPACK)
+LDFLAGS += $(LLIBS) $(LDFLAGS_NETCDF) $(LDFLAGS_HDF5) $(LDFLAGS_ARCH) $(LDFLAGS_LAPACK)
 endif
 
 # Rules
@@ -72,6 +72,7 @@ endif
 
 LIBRARY = libcosp.a
 
+# Jonah tried to link in RTTOV to libcosp.a rather than cosp2_test. It didn't work.
 $(LIBRARY): $(COSP_OBJS)
 	ar -rvs $(LIBRARY) $(COSP_OBJS)
 
