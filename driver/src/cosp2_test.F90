@@ -577,10 +577,6 @@ program cosp2_test
              seconds(start_idx:end_idx) = 1._wp
          end where
      end if      
-
-     ! Time information (should depreciate soon)
-     cospstateIN%month       = month(start_idx:end_idx)
-     cospstateIN%time_frac   = (60*hour(start_idx:end_idx) + minute(start_idx:end_idx)) / (24*60) ! Time (UTC) expressed as a fraction on [0,1]
      
      ! Read in date and time objects for RTTOV
      cospstateIN%rttov_date(:,1)  = year(start_idx:end_idx)
@@ -1209,8 +1205,7 @@ contains
              y%DeffLiq(nPoints,nLevels),y%DeffIce(nPoints,nLevels),                      &
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
-             y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),                            &
-             y%month(nPoints),y%time_frac(nPoints),y%sza(nPoints))
+             y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),y%sza(nPoints))
              
     ! JKS - I should make this optional to save space.
 !    do i=1,N_rttov_instruments
@@ -1641,8 +1636,6 @@ contains
     if (allocated(y%surfelev))        deallocate(y%surfelev)
     if (allocated(y%rttov_date))      deallocate(y%rttov_date)
     if (allocated(y%rttov_time))      deallocate(y%rttov_time)
-    if (allocated(y%month))           deallocate(y%month)
-    if (allocated(y%time_frac))       deallocate(y%time_frac)
     if (allocated(y%sza))             deallocate(y%sza)
     if (allocated(y%co2))             deallocate(y%co2)
     if (allocated(y%ch4))             deallocate(y%ch4)
