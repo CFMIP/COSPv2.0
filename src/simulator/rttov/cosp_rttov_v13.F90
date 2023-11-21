@@ -873,7 +873,10 @@ contains
         print*,'shape(profiles):           ',shape(profiles)
 !    print*,'shape(profiles(:)%q):         ',shape(profiles(:)%q)
     end if
-    
+
+!    print*,'NTHRDS tests'
+!    print*,'profiles(:)%s2m%p:    ',profiles(:)%s2m%p
+!    print*,'profiles(1)%p_surf:         ',profiles(1)%p    
     
     if (inst_nthreads <= 1) then
       if (verbose) print*,'Calling rttov_direct'

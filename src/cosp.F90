@@ -750,7 +750,6 @@ CONTAINS
        endif
     endif
 
-    ! JKS: Will need to add cloud liquid and ice parameter (r_eff)
     if (Lrttov_column) then
        rttovIN%nPoints    => Npoints
        rttovIN%nLevels    => cospIN%nLevels
@@ -1837,6 +1836,16 @@ CONTAINS
        if (allocated(modisIN%notSunlit)) deallocate(modisIN%notSunlit)
        if (allocated(modisIN%pres))      deallocate(modisIN%pres)
     endif
+    
+    if (Lrttov_column) then
+       nullify(rttovIN%nPoints,rttovIN%nLevels,rttovIN%nSubCols,rttovIN%co2,rttovIN%ch4, &
+               rttovIN%n2o,rttovIN%co,rttovIN%h_surf,rttovIN%u_surf,rttovIN%v_surf,      &
+               rttovIN%t_skin,rttovIN%p_surf,rttovIN%sfcmask,rttovIN%latitude,           &
+               rttovIN%longitude,rttovIN%p,rttovIN%ph,rttovIN%q2m,rttovIN%t2m,rttovIN%t, &
+               rttovIN%q,rttovIN%o3,rttovIN%rttov_date,rttovIN%rttov_time,rttovIN%tca,   &
+               rttovIN%cldLiq,rttovIN%cldIce,rttovIN%DeffLiq,rttovIN%DeffIce,            &
+               rttovIN%fl_rain,rttovIN%fl_snow)
+    endif    
 
     if (allocated(calipso_beta_tot))      deallocate(calipso_beta_tot)
     if (allocated(grLidar532_beta_tot))  deallocate(grLidar532_beta_tot)
