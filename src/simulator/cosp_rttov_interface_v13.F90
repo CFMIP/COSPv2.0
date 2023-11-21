@@ -735,7 +735,9 @@ CONTAINS
                              rttovConfig % nchanprof,             &
                              rttovConfig % nprof,                 &
                              rttovConfig % swath_mask)    
-        
+    ! Could shortcut out if all values are swathed out
+!    if (rttovConfig % nprof .eq. 0) then print*,'swathed chunk'
+    
     call cpu_time(driver_time(2))
 !    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN,                                &
