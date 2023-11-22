@@ -64,7 +64,6 @@ module mod_cosp_rttov
   
   implicit none
 
-
 ! New includes for v13 (will need to clean up others)
 #include "rttov_direct.interface"
 #include "rttov_parallel_direct.interface"
@@ -87,27 +86,17 @@ module mod_cosp_rttov
 #include "rttov_bpr_dealloc.interface"
 #include "rttov_legcoef_calc.interface"
 #include "rttov_calc_solar_angles.interface"
-
-  ! Module parameters
-  integer, parameter :: maxlim =  10000
-  real(wp),parameter :: eps    =  0.622
-
-  ! Initialization parameters
        
   ! Scattering coefficients (read in once during initialization)
 ! JKS - KISS
 !  type(rttov_scatt_coef) :: &
 !       coef_scatt      
 
-  ! module-wides variables for input
+  ! module-wides variables for input. Not sure if unsafe for threading.
   !====================
   
-  INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
+  INTEGER(KIND=jpim) :: errorstatus              ! Return error status of RTTOV subroutine calls
   INTEGER(KIND=jpim) :: alloc_status(60)
-  
-  ! JKS additional variables used in PC-RTTOV
-  INTEGER(KIND=jpim), POINTER :: predictindex(:)
-  INTEGER(KIND=jpim) :: nchannels_comp, npcscores, npred_pc ! npred to go here
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE rttov_in
@@ -351,7 +340,8 @@ contains
                                     inst_chanprof,                                          &
                                     inst_nchanprof,inst_nprof,inst_iChannel_out,            &
                                     inst_swath_mask,inst_transmission,inst_radiance,        &
-                                    inst_calcemis,inst_emissivity,inst_pccomp,debug)
+                                    inst_calcemis,inst_emissivity,inst_pccomp,              &
+                                    inst_predictindex,debug)
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -390,7 +380,9 @@ contains
     type(rttov_emissivity),pointer,intent(out) :: &
         inst_emissivity(:)        
     type(rttov_pccomp),intent(inout) :: &
-        inst_pccomp     ! Output PC structure        
+        inst_pccomp     ! Output PC structure
+    integer(kind=jpim),pointer,intent(inout) :: &
+        inst_predictindex(:)
     logical,intent(in),optional :: &
         debug
 
@@ -421,8 +413,8 @@ contains
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    nullify(predictindex)
-    call rttov_get_pc_predictindex(errorstatus, inst_opts, predictindex, file_pccoef=inst_PC_coef_filepath)
+    nullify(inst_predictindex)
+    call rttov_get_pc_predictindex(errorstatus, inst_opts, inst_predictindex, file_pccoef=inst_PC_coef_filepath)
     call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)        
 
     ! Handle swathing here. Initial code from Genevieve with minor changes.
@@ -459,8 +451,7 @@ contains
     ! Determine the total number of radiances to simulate (nchanprof).
     inst_nprof     = count(inst_swath_mask)
 
-    ! npred_pc is only used in the pc_rttov_allocate step so I can remove the global definition later
-    inst_npred_pc  = SIZE(predictindex)
+    inst_npred_pc  = SIZE(inst_predictindex)
     inst_nchanprof = inst_npred_pc * inst_nprof  ! Size of chanprof array is total number of predictors over all profiles
     
     if (verbose) then
@@ -520,12 +511,12 @@ contains
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    ! Populate chanprof using the channel list obtained above in predictindex(:)
+    ! Populate chanprof using the channel list obtained above in inst_predictindex(:)
     do j = 1, inst_nprof
       lo = (j - 1) * inst_npred_pc + 1
       hi = lo + inst_npred_pc - 1
       inst_chanprof(lo:hi)%prof = j
-      inst_chanprof(lo:hi)%chan = predictindex(:)
+      inst_chanprof(lo:hi)%chan = inst_predictindex(:)
     end do
         
   end subroutine cosp_pc_rttov_allocate
@@ -589,7 +580,7 @@ contains
         debug
     
     ! Loop variables
-    integer(kind=jpim) :: i, j ! Use i to iterate over profile, j for swath_mask.
+    integer(kind=jpim) :: i, j           ! Use i to iterate over profile, j for swath_mask.
     logical :: verbose = .false.
           
     if (present(debug)) verbose = debug
@@ -934,6 +925,8 @@ contains
         inst_reflectance(:)        
     logical,intent(in),optional     :: &
         debug
+
+    ! Local variables
     logical :: verbose = .false.
     
     if (present(debug)) verbose = debug
@@ -953,7 +946,7 @@ contains
       if (verbose) print*,'Calling rttov_direct'
       call rttov_direct(                &
               errorstatus,              &! out   error flag
-              inst_chanprof,                 &! in    channel and profile index structure
+              inst_chanprof,            &! in    channel and profile index structure
               inst_opts,                &! in    options structure
               inst_profiles,            &! in    profile array
               inst_coefs,               &! in    coefficients structure
@@ -1287,7 +1280,7 @@ contains
         inst_calcrefl(:)
     type(rttov_reflectance),pointer,intent(inout) :: &
         inst_reflectance(:)          
-        
+
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &
         errorstatus,             &
@@ -1327,7 +1320,8 @@ contains
                                                inst_radiance,         &
                                                inst_calcemis,         &
                                                inst_emissivity,       &
-                                               inst_pccomp)
+                                               inst_pccomp,           &
+                                               inst_predictindex)
  
     integer(kind=jpim),intent(in)  :: &
         inst_nprof,      &
@@ -1352,9 +1346,11 @@ contains
         inst_emissivity(:)       
     type(rttov_pccomp),intent(inout) :: &
         inst_pccomp     ! Output PC structure  
+    integer(kind=jpim),pointer,intent(inout) :: &
+        inst_predictindex(:)        
         
-    if (ASSOCIATED(predictindex)) deallocate (predictindex, stat=alloc_status(10))
-    call rttov_error('mem dellocation error for "predictindex"', lalloc = .true.)
+    if (ASSOCIATED(inst_predictindex)) deallocate (inst_predictindex, stat=alloc_status(10))
+    call rttov_error('mem dellocation error for "inst_predictindex"', lalloc = .true.)
     
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &

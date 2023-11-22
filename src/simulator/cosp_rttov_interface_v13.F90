@@ -73,11 +73,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 #include "rttov_print_opts.interface"
 #include "rttov_get_pc_predictindex.interface"
   
-  ! RTTOV variables/structures. Should not be global to make thread-safe.
+  ! RTTOV variables/structures.
   !====================
-  INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
-
-  INTEGER(KIND=jpim) :: alloc_status(60)
 
   ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
   type rttov_cfg
@@ -266,6 +263,8 @@ CONTAINS
     ! JKS for checking errors in filenames.
     character(len=256) :: imsg  !<-- some suitable length, say XX=256      
     integer            :: erro
+    integer(kind=jplm) :: errorstatus              ! Return error status of RTTOV subroutine calls
+    integer(kind=jpim) :: alloc_status(60)
                
     logical :: verbose = .false.
     if (present(debug)) verbose = debug
@@ -645,7 +644,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
+  RECURSIVE SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
@@ -907,7 +906,8 @@ CONTAINS
     type(rttov_emissivity),  pointer :: emissivity(:)  => NULL() ! Input/output surface emissivity
     logical(kind=jplm),      pointer :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
     type(rttov_reflectance), pointer :: reflectance(:) => NULL() ! Input/output surface BRDF
-    type(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
+    type(rttov_chanprof),    pointer :: chanprof(:)    => NULL() ! Input channel/profile list
+    integer(KIND=jpim),      pointer :: predictindex(:)
     
     logical,intent(in) :: verbose
     real(wp),dimension(10) :: driver_time
@@ -936,7 +936,8 @@ CONTAINS
                                 radiance,                                    &
                                 calcemis,                                    &
                                 emissivity,                                  &
-                                rttovConfig % pccomp)
+                                rttovConfig % pccomp,                        &
+                                predictindex)
     call cpu_time(driver_time(2))
 !    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN,                                &
@@ -1003,7 +1004,8 @@ CONTAINS
                                            radiance,                      &
                                            calcemis,                      &
                                            emissivity,                    &
-                                           rttovConfig % pccomp)
+                                           rttovConfig % pccomp,          &
+                                           predictindex)
                                            
     call cpu_time(driver_time(7))
     
