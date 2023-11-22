@@ -101,19 +101,8 @@ module mod_cosp_rttov
 
   ! module-wides variables for input
   !====================
-  TYPE(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
-  LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
-  TYPE(rttov_emissivity),  POINTER :: emissivity(:)  => NULL() ! Input/output surface emissivity
-  LOGICAL(KIND=jplm),      POINTER :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
-  TYPE(rttov_reflectance), POINTER :: reflectance(:) => NULL() ! Input/output surface BRDF
-  TYPE(rttov_profile),     POINTER :: profiles(:)    => NULL() ! Input profiles
-  TYPE(rttov_transmission)         :: transmission             ! Output transmittances
-  TYPE(rttov_radiance)             :: radiance                 ! Output radiances
-  TYPE(rttov_pccomp)               :: pccomp                    ! Output PC structure
-  INTEGER(KIND=jpim),      POINTER :: channels_rec(:) => NULL() ! Reconstructed radiance channel list
   
   INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
-
   INTEGER(KIND=jpim) :: alloc_status(60)
   
   ! JKS additional variables used in PC-RTTOV
@@ -195,13 +184,17 @@ contains
   ! SUBROUTINE rttov_allocate - JKS
   ! ------------------------------------------------------
   ! 3. Allocate RTTOV input and output structures
-  ! 4. Build the list of profile/channel indices in chanprof
+  ! 4. Build the list of profile/channel indices in inst_chanprof
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,      &
-                                 inst_coefs,inst_iChannel,rttov_Nlocaltime, &
-                                 rttov_localtime,rttov_localtime_width,     &
-                                 inst_nchanprof,inst_nprof,swath_mask,debug)
+  subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,inst_coefs, &
+                                 inst_profiles, inst_iChannel,rttov_Nlocaltime,   &
+                                 rttov_localtime,rttov_localtime_width,           &
+                                 inst_chanprof,                                   &
+                                 inst_nchanprof,inst_nprof,inst_swath_mask,       &
+                                 inst_transmission,inst_radiance,inst_calcemis,   &
+                                 inst_emissivity,inst_calcrefl,inst_reflectance,  &
+                                 debug)
                            
     type(rttov_in),intent(in)      :: &
         rttovIN
@@ -211,6 +204,8 @@ contains
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
+    type(rttov_profile),pointer,intent(out) :: &
+        inst_profiles(:)  
     integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
         inst_iChannel
     integer(KIND=jpim),intent(in)           :: &
@@ -218,11 +213,25 @@ contains
     real(kind=jprb), dimension(rttov_Nlocaltime), intent(in)    :: &
         rttov_localtime,       &
         rttov_localtime_width
+    type(rttov_chanprof),pointer,intent(inout) :: &
+        inst_chanprof(:)    
     integer(kind=jpim),intent(inout) :: &
         inst_nchanprof, &
         inst_nprof          ! Now accounting for orbits
     logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
-        swath_mask
+        inst_swath_mask
+    type(rttov_transmission),intent(out) :: &
+        inst_transmission
+    type(rttov_radiance),intent(out) :: &
+        inst_radiance
+    logical(kind=jplm),pointer,intent(out) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(out) :: &
+        inst_emissivity(:)
+    logical(kind=jplm),pointer,intent(out) :: &
+        inst_calcrefl(:)
+    type(rttov_reflectance),pointer,intent(out) :: &
+        inst_reflectance(:)
     logical,intent(in),optional :: &
         debug
         
@@ -271,17 +280,17 @@ contains
         end do
 
         ! Collapse along the Nlocaltimes dimension and shift to logicals
-        swath_mask(:) = .false. ! Initialize to false
+        inst_swath_mask(:) = .false. ! Initialize to false
         do j = 1,rttovIN % nPoints
             if ( ANY( swath_mask_all(j,:) .eq. 1) ) then
-                swath_mask(j) = .true.
+                inst_swath_mask(j) = .true.
             end if
         end do
     else
-        swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
+        inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
     end if
     ! Determine the total number of radiances to simulate (nchanprof).
-    inst_nprof     = count(swath_mask)
+    inst_nprof     = count(inst_swath_mask)
     inst_nchanprof = inst_nChannels_rec * inst_nprof
     
     if (verbose) then
@@ -297,16 +306,16 @@ contains
         inst_nprof,              &
         inst_nchanprof,          &
         rttovIN%nLevels,         &
-        chanprof,                &
+        inst_chanprof,           &
         inst_opts,               &
-        profiles,                &
+        inst_profiles,           &
         inst_coefs,              &
-        transmission,            &
-        radiance,                &
-        calcemis=calcemis,       &
-        emissivity=emissivity,   &
-        calcrefl=calcrefl,       &
-        reflectance=reflectance, &
+        inst_transmission,       &
+        inst_radiance,           &
+        calcemis=inst_calcemis,       &
+        emissivity=inst_emissivity,   &
+        calcrefl=inst_calcrefl,       &
+        reflectance=inst_reflectance, &
         init=.TRUE._jplm)
     call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
 
@@ -320,8 +329,8 @@ contains
     do j = 1, inst_nprof
       do jch = 1, inst_nChannels_rec ! nChannels
         nch = nch + 1_jpim
-        chanprof(nch)%prof = j
-        chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
+        inst_chanprof(nch)%prof = j
+        inst_chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
       end do
     end do
     if (verbose) print*,'Done with "cosp_rttov_allocate"'
@@ -336,11 +345,13 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   subroutine cosp_pc_rttov_allocate(rttovIN,inst_PC_coef_filepath,                          &
-                                    inst_coefs,inst_opts,                                   &
+                                    inst_coefs,inst_opts,inst_profiles,                     &
                                     inst_nchannels_rec,inst_iChannel_in,                    &
                                     rttov_Nlocaltime,rttov_localtime,rttov_localtime_width, &
-                                    inst_nchanprof,inst_nprof,inst_iChannel_out,swath_mask, &
-                                    debug)
+                                    inst_chanprof,                                          &
+                                    inst_nchanprof,inst_nprof,inst_iChannel_out,            &
+                                    inst_swath_mask,inst_transmission,inst_radiance,        &
+                                    inst_calcemis,inst_emissivity,inst_pccomp,debug)
                            
     type(rttov_in),intent(in) :: &
         rttovIN
@@ -350,6 +361,8 @@ contains
         inst_coefs        
     type(rttov_options),intent(inout) :: &
         inst_opts
+    type(rttov_profile),pointer,intent(out) :: &
+        inst_profiles(:)        
     integer(kind=jpim),intent(inout) :: &
         inst_nchannels_rec
     integer(kind=jpim),intent(in),dimension(inst_nchannels_rec)     :: &
@@ -358,14 +371,26 @@ contains
         rttov_Nlocaltime    
     real(kind=jprb), dimension(rttov_Nlocaltime), intent(in)    :: &
         rttov_localtime,       &
-        rttov_localtime_width        
+        rttov_localtime_width
+    type(rttov_chanprof),pointer,intent(inout) :: &
+        inst_chanprof(:)
     integer(kind=jpim),intent(inout) :: &
         inst_nchanprof,        &
         inst_nprof
     integer(kind=jpim),intent(inout),allocatable  :: &
         inst_iChannel_out(:)      ! Passing out the channel indices
     logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
-        swath_mask
+        inst_swath_mask
+    type(rttov_transmission),intent(out) :: &
+        inst_transmission
+    type(rttov_radiance),intent(out) :: &
+        inst_radiance        
+    logical(kind=jplm),pointer,intent(out) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(out) :: &
+        inst_emissivity(:)        
+    type(rttov_pccomp),intent(inout) :: &
+        inst_pccomp     ! Output PC structure        
     logical,intent(in),optional :: &
         debug
 
@@ -421,18 +446,18 @@ contains
         end do
 
         ! Collapse along the Nlocaltimes dimension and shift to logicals
-        swath_mask(:) = .false. ! Initialize to false
+        inst_swath_mask(:) = .false. ! Initialize to false
         do j = 1,rttovIN % nPoints
             if ( ANY( swath_mask_all(j,:) .eq. 1) ) then
-                swath_mask(j) = .true.
+                inst_swath_mask(j) = .true.
             end if
         end do
         ! Determine the total number of radiances to simulate (nchanprof).
     else
-        swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
+        inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
     end if
     ! Determine the total number of radiances to simulate (nchanprof).
-    inst_nprof     = count(swath_mask)
+    inst_nprof     = count(inst_swath_mask)
 
     ! npred_pc is only used in the pc_rttov_allocate step so I can remove the global definition later
     inst_npred_pc  = SIZE(predictindex)
@@ -475,17 +500,17 @@ contains
           inst_nprof,                                    &
           inst_nchanprof,                                &
           rttovIN%nLevels,                               &
-          chanprof,                                      & ! Make this instrument-specific? The rttov_config DDT would then be assigned to this value. Allocation difficulties?
+          inst_chanprof,                                 & ! Make this instrument-specific? The rttov_config DDT would then be assigned to this value. Allocation difficulties?
           inst_opts,                                     &
-          profiles,                                      &
+          inst_profiles,                                 &
           inst_coefs,                                    &
-          transmission,                                  &
-          radiance,                                      &
-          calcemis=calcemis,                             &
-          emissivity=emissivity,                         &
+          inst_transmission,                             &
+          inst_radiance,                                 &
+          calcemis=inst_calcemis,                        &
+          emissivity=inst_emissivity,                    &
           npcscores=inst_opts%rt_ir%pc%npcscores * inst_nprof,         &
           nchannels_rec=inst_nchannels_rec * inst_nprof, &
-          pccomp=pccomp,                                 &
+          pccomp=inst_pccomp,                            &
           init=.TRUE._jplm)
     call rttov_error('allocation error for rttov_direct structures (PC-RTTOV)' , lalloc = .true.)
 
@@ -499,8 +524,8 @@ contains
     do j = 1, inst_nprof
       lo = (j - 1) * inst_npred_pc + 1
       hi = lo + inst_npred_pc - 1
-      chanprof(lo:hi)%prof = j
-      chanprof(lo:hi)%chan = predictindex(:)
+      inst_chanprof(lo:hi)%prof = j
+      inst_chanprof(lo:hi)%chan = predictindex(:)
     end do
         
   end subroutine cosp_pc_rttov_allocate
@@ -513,6 +538,7 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   subroutine cosp_rttov_construct_profiles(rttovIN,        &
+                                           inst_profiles,  &
                                            Lrttov_cld,     &
                                            Lrttov_aer,     &
                                            Lrttov_solar,   &
@@ -533,8 +559,10 @@ contains
                                            inst_swath_mask,&
                                            debug)
 
-    type(rttov_in),intent(in) :: & ! What is the best way to do this? Should rttovIN be a module-wide DDT? Yes.
+    type(rttov_in),intent(in) :: &
         rttovIN
+    type(rttov_profile),pointer,intent(inout) :: &    
+        inst_profiles(:)
     logical,intent(in)        :: &
         Lrttov_cld,       &
         Lrttov_aer,       &
@@ -575,115 +603,115 @@ contains
     ! ozone_data, co2_data and so on in the options structure should be 
     ! set to false."
 
-    profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
-    
+    inst_profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
+        
     ! Iterate over all columns
     j = 0 ! Initialize input
     do i = 1, rttovIN%nPoints
         
       if (inst_swath_mask(i)) then ! only added masked columns to profiles
           j = j + 1 ! Increment first
-      
+            
           ! Initialize trace gas concentrations from user input.
           if (Luser_tracegas) then
-              if (Ldo_co2) profiles(j)%co2(:)        = inst_co2_mr
-              if (Ldo_n2o) profiles(j)%n2o(:)        = inst_n2o_mr
-              if (Ldo_co)  profiles(j)%co(:)         = inst_co_mr
-              if (Ldo_ch4) profiles(j)%ch4(:)        = inst_ch4_mr
-              if (Ldo_so2) profiles(j)%so2(:)        = inst_so2_mr
-              if (Ldo_o3)  profiles(j)%o3(:)         = rttovIN%o3(i, :) ! no O3 user input set up
+              if (Ldo_co2) inst_profiles(j)%co2(:)        = inst_co2_mr
+              if (Ldo_n2o) inst_profiles(j)%n2o(:)        = inst_n2o_mr
+              if (Ldo_co)  inst_profiles(j)%co(:)         = inst_co_mr
+              if (Ldo_ch4) inst_profiles(j)%ch4(:)        = inst_ch4_mr
+              if (Ldo_so2) inst_profiles(j)%so2(:)        = inst_so2_mr
+              if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :) ! no O3 user input set up
           else
               ! For when trace gas columns are supplied by the model. Units must match (kg/kg over moist air)
-              if (Ldo_co2) profiles(j)%co2(:)        = rttovIN%co2(i,:)
-              if (Ldo_n2o) profiles(j)%n2o(:)        = rttovIN%n2o(i,:)
-              if (Ldo_co)  profiles(j)%co(:)         = rttovIN%co(i,:)
-              if (Ldo_ch4) profiles(j)%ch4(:)        = rttovIN%ch4(i,:)
-              if (Ldo_so2) profiles(j)%so2(:)        = rttovIN%so2(i,:)
-              if (Ldo_o3)  profiles(j)%o3(:)         = rttovIN%o3(i, :)
+              if (Ldo_co2) inst_profiles(j)%co2(:)        = rttovIN%co2(i,:)
+              if (Ldo_n2o) inst_profiles(j)%n2o(:)        = rttovIN%n2o(i,:)
+              if (Ldo_co)  inst_profiles(j)%co(:)         = rttovIN%co(i,:)
+              if (Ldo_ch4) inst_profiles(j)%ch4(:)        = rttovIN%ch4(i,:)
+              if (Ldo_so2) inst_profiles(j)%so2(:)        = rttovIN%so2(i,:)
+              if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
           end if
           
           ! Initialize column pressure, temperature, and humidity
-          profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
-          profiles(j)%t(:) =  rttovIN%t(i, :)
-          profiles(j)%q(:) =  rttovIN%q(i, :)
+          inst_profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
+          inst_profiles(j)%t(:) =  rttovIN%t(i, :)
+          inst_profiles(j)%q(:) =  rttovIN%q(i, :)
 
           ! q coefficient limit is 0.1e-10
-          where(profiles(j)%q(:) < 0.1e-10)
-             profiles(j)%q(:) = 0.11e-10
+          where(inst_profiles(j)%q(:) < 0.1e-10)
+             inst_profiles(j)%q(:) = 0.11e-10
           end where
 
-          ! Gas profiles
-          profiles(j)%o3         =  rttovIN%o3(i, :)
+          ! Gas inst_profiles
+          inst_profiles(j)%o3         =  rttovIN%o3(i, :)
 
           ! 2m parameters
-          profiles(j)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
-          profiles(j)%s2m%t      =  rttovIN%t2m(i)
-          profiles(j)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
-          profiles(j)%s2m%u      =  rttovIN%u_surf(i)
-          profiles(j)%s2m%v      =  rttovIN%v_surf(i)
-          profiles(j)%s2m%wfetc  =  10000. ! only used by sea surface solar BRDF model.
+          inst_profiles(j)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
+          inst_profiles(j)%s2m%t      =  rttovIN%t2m(i)
+          inst_profiles(j)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
+          inst_profiles(j)%s2m%u      =  rttovIN%u_surf(i)
+          inst_profiles(j)%s2m%v      =  rttovIN%v_surf(i)
+          inst_profiles(j)%s2m%wfetc  =  10000. ! only used by sea surface solar BRDF model.
 
           ! skin variables for emissivity calculations
-          profiles(j)%skin%t          =  rttovIN%t_skin(i)
+          inst_profiles(j)%skin%t          =  rttovIN%t_skin(i)
           
           ! fastem coefficients - for mw calculations
-          profiles(j)%skin%fastem(1)  =  3.0
-          profiles(j)%skin%fastem(2)  =  5.0
-          profiles(j)%skin%fastem(3)  =  15.0
-          profiles(j)%skin%fastem(4)  =  0.1
-          profiles(j)%skin%fastem(5)  =  0.3
+          inst_profiles(j)%skin%fastem(1)  =  3.0
+          inst_profiles(j)%skin%fastem(2)  =  5.0
+          inst_profiles(j)%skin%fastem(3)  =  15.0
+          inst_profiles(j)%skin%fastem(4)  =  0.1
+          inst_profiles(j)%skin%fastem(5)  =  0.3
 
           ! Viewing angles
-          profiles(j)%zenangle      = inst_zenang ! pass in from cosp
-          profiles(j)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
+          inst_profiles(j)%zenangle      = inst_zenang ! pass in from cosp
+          inst_profiles(j)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
 
-          profiles(j)%latitude      = rttovIN%latitude(i)
-          profiles(j)%longitude     = rttovIN%longitude(i)
-          profiles(j)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
+          inst_profiles(j)%latitude      = rttovIN%latitude(i)
+          inst_profiles(j)%longitude     = rttovIN%longitude(i)
+          inst_profiles(j)%elevation     = rttovIN%h_surf(i) * 1e-3 ! Convert m to km
 
           ! Solar angles. This is overwritten in the solar code now.
           if (associated(rttovIN%sza)) then
-             profiles(j)%sunzenangle   = rttovIN%sza(i) ! SZA in degrees
+             inst_profiles(j)%sunzenangle   = rttovIN%sza(i) ! SZA in degrees
           else
              if (verbose) print*,'No solar zenith angle passed. Setting to zero.'
-             profiles(j)%sunzenangle   = 0.
+             inst_profiles(j)%sunzenangle   = 0.
           end if
-          profiles(j)%sunazangle    = 0. ! hard-coded in like rttov9
+          inst_profiles(j)%sunazangle    = 0. ! hard-coded in like rttov9
 
           ! surface type. sfcmask is 0 for ocean, 1 for land, and 2 for sea ice
           if (rttovIN%sfcmask(i) .lt. 0.5) then
-             profiles(j)%skin%surftype  = surftype_land
+             inst_profiles(j)%skin%surftype  = surftype_land
           else if (rttovIN%sfcmask(i) .lt. 1.5) then
-             profiles(j)%skin%surftype  = surftype_sea
+             inst_profiles(j)%skin%surftype  = surftype_sea
           else
-             profiles(j)%skin%surftype  = surftype_seaice
+             inst_profiles(j)%skin%surftype  = surftype_seaice
           end if
           
           ! land-sea mask (lsmask) indicates proportion of land in grid (not in CESM implementation! just a binary mask there)
 !          if (rttovIN%lsmask(i) < 0.5) then
-!            profiles(j)%skin%surftype  = surftype_sea
+!            inst_profiles(j)%skin%surftype  = surftype_sea
 !          else
-!            profiles(j)%skin%surftype  = surftype_land
+!            inst_profiles(j)%skin%surftype  = surftype_land
 !          endif
           ! sea-ice fraction
 !          if (rttovIN%icefrac(i) >= 0.5) then
-!            profiles(j)%skin%surftype  = surftype_seaice
+!            inst_profiles(j)%skin%surftype  = surftype_seaice
 !          endif
 
           ! dar: hard-coded to 1 (=ocean water) in rttov 9 int
-          profiles(j)%skin%watertype = 1
-          !profiles(j) %idg         = 0. ! Depreciated?
-          !profiles(j) %ish         = 0. ! Depreciated?
+          inst_profiles(j)%skin%watertype = 1
+          !inst_profiles(j) %idg         = 0. ! Depreciated?
+          !inst_profiles(j) %ish         = 0. ! Depreciated?
       end if 
-    end do     
-        
+    end do    
+            
 !    if (verbose) then
-!        print*,'profiles(1)%p(:):     ',profiles(1)%p(:)
-!        print*,'profiles(1)%t(:):     ',profiles(1)%t(:)
-!        print*,'profiles(1)%q(:):     ',profiles(1)%q(:)
-!        print*,'profiles(1)%co2(:):   ',profiles(1)%co2(:)
-!        print*,'profiles(1)%skin%t:   ',profiles(1)%skin%t
-!        print*,'profiles(1)%s2m%t:    ',profiles(1)%s2m%t
+!        print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
+!        print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
+!        print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
+!        print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
+!        print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
+!        print*,'inst_profiles(1)%s2m%t:    ',inst_profiles(1)%s2m%t
 !    end if
         
     ! JKS - nothing to check here, this will never trigger.
@@ -696,12 +724,12 @@ contains
     if (Lrttov_cld) then
 
       ! Set cloud mass mixing ratio units
-      profiles(:)%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
+      inst_profiles(:)%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
 
-      profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types but requires an effective diameter value
-    !    profiles(:)%clwde_scheme = 1. ! Scheme for cloud liquid water cotent to effective diameter. User guide says do not change.
-      profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
-      profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
+      inst_profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types but requires an effective diameter value
+    !    inst_profiles(:)%clwde_scheme = 1. ! Scheme for cloud liquid water cotent to effective diameter. User guide says do not change.
+      inst_profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
+      inst_profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
         
       j = 0 ! Initialize input
       do i = 1,rttovIN%nPoints
@@ -710,30 +738,30 @@ contains
             j = j + 1 ! Increment profile counter      
             
             ! Cloud scheme stuff
-            profiles(j)%cfrac(:)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
-            profiles(j)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
-            profiles(j)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
+            inst_profiles(j)%cfrac(:)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
+            inst_profiles(j)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
+            inst_profiles(j)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
 
-            profiles(j)%clwde = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter
-            profiles(j)%icede = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter
+            inst_profiles(j)%clwde = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter
+            inst_profiles(j)%icede = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter
 
         ! Example UKMO input has effective radii for multiple cloud types, making identification of a single
         ! liquid droplet or ice crystal effective diameter difficult.
         ! I opt to let RTTOV decide on the effective radius values, but more complex implementation
         ! could do a more thorough conversion between UKMO output and RTTOV input
-    !    profiles(j)%clwde = ! Cloud water effective diameter
-    !    profiles(j)%icede = ! Cloud ice effective diameter
+    !    inst_profiles(j)%clwde = ! Cloud water effective diameter
+    !    inst_profiles(j)%icede = ! Cloud ice effective diameter
 
         ! Old code for simple cloud schemes only
-    !    profiles(j)%cfraction  =  0.
-    !    profiles(j)%ctp        =  500.
+    !    inst_profiles(j)%cfraction  =  0.
+    !    inst_profiles(j)%ctp        =  500.
 
         ! Other options not implemented
-!        profiles(j)%clw        = ! Cloud liquid water (kg/kg) – MW only,
+!        inst_profiles(j)%clw        = ! Cloud liquid water (kg/kg) – MW only,
         end if
       end do
     end if
-    
+        
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in cloud profile initialization' , lalloc = .false.)
     
@@ -745,13 +773,13 @@ contains
     if (Lrttov_aer) then
     
       ! Set aerosol mass mixing ratio units
-      profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)       
+      inst_profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)       
       ! Read in aerosol profiles
 !      j = 0 ! Initialize input
 !      do i = 1,rttovIN%nPoints
 !        if (inst_swath_mask(i)) then ! only added masked columns to profiles
 !            j = j + 1 ! Increment profile counter   
-!            profiles(j)%aerosols(naertyp,nlayers) = rttovIN%aerosols ! Aerosols in different modes (see User Guide pg 80)
+!            inst_profiles(j)%aerosols(naertyp,nlayers) = rttovIN%aerosols ! Aerosols in different modes (see User Guide pg 80)
 !        end if
 !      end do
     end if
@@ -764,20 +792,20 @@ contains
       do i = 1,rttovIN%nPoints
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
             j = j + 1 ! Increment profile counter   
-            profiles(j)%date(:) = rttovIN%rttov_date(i,:)
-            profiles(j)%time(:) = rttovIN%rttov_time(i,:)
+            inst_profiles(j)%date(:) = rttovIN%rttov_date(i,:)
+            inst_profiles(j)%time(:) = rttovIN%rttov_time(i,:)
         end if
       end do
 
       ! Call functions to calculate the appropriate solar zenith and azimuthal angles.
-      call RTTOV_CALC_SOLAR_ANGLES(errorstatus, profiles)
+      call RTTOV_CALC_SOLAR_ANGLES(errorstatus, inst_profiles)
       call rttov_error('Error when calling RTTOV_CALC_SOLAR_ANGLES', lalloc = .false.)
     
 !      if (verbose) then
-!        print*,'profiles(:))%sunzenangle:    ',profiles(:)%sunzenangle
-!        print*,'profiles(:))%sunazangle:     ',profiles(:)%sunazangle      
-!        print*,'profiles(:))%zenangle:       ',profiles(:)%zenangle      
-!        print*,'profiles(:))%azangle:        ',profiles(:)%azangle      
+!        print*,'inst_profiles(:))%sunzenangle:    ',inst_profiles(:)%sunzenangle
+!        print*,'inst_profiles(:))%sunazangle:     ',inst_profiles(:)%sunazangle      
+!        print*,'inst_profiles(:))%zenangle:       ',inst_profiles(:)%zenangle      
+!        print*,'inst_profiles(:))%azangle:        ',inst_profiles(:)%azangle      
 !      end if
     end if
     
@@ -806,24 +834,37 @@ contains
 !    if (present(emis_in)) emissivity(:) % emis_in  = emis_in
 !    if (present(refl_in)) reflectance(:) % refl_in = refl_in
 
-  subroutine cosp_rttov_setup_emissivity_reflectance(emis_grey)
+  subroutine cosp_rttov_setup_emissivity_reflectance(inst_calcemis,      &
+                                                     inst_emissivity,    &
+                                                     inst_calcrefl,      &
+                                                     inst_reflectance,   &
+                                                     emis_grey)
+ 
+    logical(kind=jplm),pointer,intent(inout) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(inout) :: &
+        inst_emissivity(:)
+    logical(kind=jplm),pointer,intent(inout) :: &
+        inst_calcrefl(:)
+    type(rttov_reflectance),pointer,intent(inout) :: &
+        inst_reflectance(:)
  
     real(kind=wp),intent(in),pointer,optional :: emis_grey
  
     ! In this example we have no values for input emissivities or reflectances
     ! so we initialise all inputs to zero
-    call rttov_init_emis_refl(emissivity, reflectance)
+    call rttov_init_emis_refl(inst_emissivity, inst_reflectance)
     call rttov_error('error for emissivity/reflectance initialization' , lalloc = .true.)
 
-    if (present(emis_grey)) emissivity(:) % emis_in  = emis_grey ! Use greybody emissivity.
+    if (present(emis_grey)) inst_emissivity(:) % emis_in  = emis_grey ! Use greybody emissivity.
 
     ! Calculate emissivity within RTTOV where the input emissivity value is
     ! zero or less (all channels in this case)
-    calcemis(:) = (emissivity(:) % emis_in <= 0._jprb)
+    inst_calcemis(:) = (inst_emissivity(:) % emis_in <= 0._jprb)
     
     ! Calculate reflectances within RTTOV where the input BRDF value is zero or
     ! less (all channels in this case)
-    calcrefl(:) = (reflectance(:) % refl_in <= 0._jprb)  
+    inst_calcrefl(:) = (inst_reflectance(:) % refl_in <= 0._jprb)  
   
   end subroutine cosp_rttov_setup_emissivity_reflectance
 
@@ -833,12 +874,18 @@ contains
   ! ------------------------------------------------------
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine cosp_pc_rttov_setup_emissivity()
-    
+  subroutine cosp_pc_rttov_setup_emissivity(inst_calcemis,    &
+                                            inst_emissivity)
+
+    logical(kind=jplm),pointer,intent(inout) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(inout) :: &
+        inst_emissivity(:)
+
     ! PC-RTTOV requires using RTTOV to calculate the surface emissivities.
     ! Reflectances are never calculated for hyper-spectral IR sounders
-    call rttov_init_emis_refl(emissivity)
-    calcemis(:) = .TRUE.
+    call rttov_init_emis_refl(inst_emissivity)
+    inst_calcemis(:) = .TRUE.
     call rttov_error('error for emissivity initialization (PC-RTTOV)' , lalloc = .true.)
   
   end subroutine cosp_pc_rttov_setup_emissivity
@@ -850,17 +897,41 @@ contains
   ! From RTTOV example files.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
   
-  subroutine cosp_rttov_call_direct(inst_nthreads,   &
-                                    inst_opts,       &
-                                    inst_coefs,      &
+  subroutine cosp_rttov_call_direct(inst_nthreads,      &
+                                    inst_opts,          &
+                                    inst_profiles,      &
+                                    inst_coefs,         &
+                                    inst_chanprof,      &
+                                    inst_transmission,  &
+                                    inst_radiance,      &
+                                    inst_calcemis,      &
+                                    inst_emissivity,    &
+                                    inst_calcrefl,      &
+                                    inst_reflectance,   &
                                     debug)
   
     integer(KIND=jpim),intent(in)   :: &
         inst_nthreads
     type(rttov_options),intent(in)  :: &
         inst_opts
+    type(rttov_profile),pointer,intent(in) :: &
+        inst_profiles(:)
     type(rttov_coefs),intent(in)    :: &
         inst_coefs
+    type(rttov_chanprof),pointer,intent(in) :: &
+        inst_chanprof(:)
+    type(rttov_transmission),intent(inout) :: &
+        inst_transmission
+    type(rttov_radiance),intent(inout) :: &
+        inst_radiance
+    logical(kind=jplm),pointer,intent(in) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(in) :: &
+        inst_emissivity(:)
+    logical(kind=jplm),pointer,intent(in) :: &
+        inst_calcrefl(:)
+    type(rttov_reflectance),pointer,intent(in) :: &
+        inst_reflectance(:)        
     logical,intent(in),optional     :: &
         debug
     logical :: verbose = .false.
@@ -868,44 +939,44 @@ contains
     if (present(debug)) verbose = debug
     
     if (verbose) then
-        print*,'shape(chanprof%prof):      ',shape(chanprof%prof)
-        print*,'shape(chanprof%chan):      ',shape(chanprof%chan)
-        print*,'shape(profiles):           ',shape(profiles)
-!    print*,'shape(profiles(:)%q):         ',shape(profiles(:)%q)
+        print*,'shape(inst_chanprof%prof):      ',shape(inst_chanprof%prof)
+        print*,'shape(inst_chanprof%chan):      ',shape(inst_chanprof%chan)
+        print*,'shape(inst_profiles):           ',shape(inst_profiles)
+!    print*,'shape(inst_profiles(:)%q):         ',shape(inst_profiles(:)%q)
     end if
 
 !    print*,'NTHRDS tests'
-!    print*,'profiles(:)%s2m%p:    ',profiles(:)%s2m%p
-!    print*,'profiles(1)%p_surf:         ',profiles(1)%p    
+!    print*,'inst_profiles(:)%s2m%p:    ',inst_profiles(:)%s2m%p
+!    print*,'inst_profiles(1)%p_surf:         ',inst_profiles(1)%p    
     
     if (inst_nthreads <= 1) then
       if (verbose) print*,'Calling rttov_direct'
       call rttov_direct(                &
               errorstatus,              &! out   error flag
-              chanprof,                 &! in    channel and profile index structure
+              inst_chanprof,                 &! in    channel and profile index structure
               inst_opts,                &! in    options structure
-              profiles,                 &! in    profile array
+              inst_profiles,            &! in    profile array
               inst_coefs,               &! in    coefficients structure
-              transmission,             &! inout computed transmittances
-              radiance,                 &! inout computed radiances
-              calcemis    = calcemis,   &! in    flag for internal emissivity calcs
-              emissivity  = emissivity, &! inout input/output emissivities per channel
-              calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
-              reflectance = reflectance) ! inout input/output BRDFs per channel
+              inst_transmission,        &! inout computed transmittances
+              inst_radiance,            &! inout computed radiances
+              calcemis    = inst_calcemis,   &! in    flag for internal emissivity calcs
+              emissivity  = inst_emissivity, &! inout input/output emissivities per channel
+              calcrefl    = inst_calcrefl,   &! in    flag for internal BRDF calcs
+              reflectance = inst_reflectance) ! inout input/output BRDFs per channel
     else
       if (verbose) print*,'Calling rttov_parallel_direct'
       call rttov_parallel_direct(       &
               errorstatus,              &! out   error flag
-              chanprof,                 &! in    channel and profile index structure
+              inst_chanprof,                 &! in    channel and profile index structure
               inst_opts,                &! in    options structure
-              profiles,                 &! in    profile array
+              inst_profiles,            &! in    profile array
               inst_coefs,               &! in    coefficients structure
-              transmission,             &! inout computed transmittances
-              radiance,                 &! inout computed radiances
-              calcemis    = calcemis,   &! in    flag for internal emissivity calcs
-              emissivity  = emissivity, &! inout input/output emissivities per channel
-              calcrefl    = calcrefl,   &! in    flag for internal BRDF calcs
-              reflectance = reflectance,&! inout input/output BRDFs per channel
+              inst_transmission,        &! inout computed transmittances
+              inst_radiance,            &! inout computed radiances
+              calcemis    = inst_calcemis,   &! in    flag for internal emissivity calcs
+              emissivity  = inst_emissivity, &! inout input/output emissivities per channel
+              calcrefl    = inst_calcrefl,   &! in    flag for internal BRDF calcs
+              reflectance = inst_reflectance,&! inout input/output BRDFs per channel
               nthreads    = inst_nthreads)    ! in    number of threads to use
     endif
     call rttov_error('rttov_direct error', lalloc = .true.)
@@ -920,21 +991,43 @@ contains
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
   subroutine cosp_pc_rttov_call_direct(inst_nthreads,                &
                                        inst_opts,                    &
+                                       inst_profiles,                &
                                        inst_coefs,                   &
+                                       inst_chanprof,                &
+                                       inst_transmission,            &
                                        inst_nchannels_rec,           &
                                        inst_channels_rec,            &
+                                       inst_radiance,                &
+                                       inst_calcemis,                &
+                                       inst_emissivity,              &
+                                       inst_pccomp,                  &
                                        debug)
   
     integer(KIND=jpim),intent(in)   :: &
         inst_nthreads
     type(rttov_options),intent(in) :: &
         inst_opts
+    type(rttov_profile),pointer,intent(in) :: &
+        inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
+    type(rttov_chanprof),pointer,intent(in) :: &
+        inst_chanprof(:)
+    type(rttov_transmission),intent(inout) :: &
+        inst_transmission        
     integer(jpim),intent(in) :: &
         inst_nchannels_rec
     integer(jpim),dimension(inst_nchannels_rec),intent(in)  :: &
         inst_channels_rec
+    type(rttov_radiance),intent(inout) :: &
+        inst_radiance
+    logical(kind=jplm),pointer,intent(in) :: &
+        inst_calcemis(:)        
+    type(rttov_emissivity),pointer,intent(in) :: &
+        inst_emissivity(:)       
+    type(rttov_pccomp),intent(inout) :: &
+        inst_pccomp     ! Output PC structure  
+        
     logical,intent(in),optional :: &
         debug
     logical :: verbose = .false.
@@ -945,29 +1038,29 @@ contains
       if (verbose) print*,'Calling rttov_direct (PC-RTTOV)'
       call rttov_direct(                 &
               errorstatus,               &! out   error flag
-              chanprof,                  &! in    channel and profile index structure
+              inst_chanprof,             &! in    channel and profile index structure
               inst_opts,                 &! in    options structure
-              profiles,                  &! in    profile array
+              inst_profiles,             &! in    profile array
               inst_coefs,                &! in    coefficients structure
-              transmission,              &! inout computed transmittances
-              radiance,                  &! inout computed radiances
-              calcemis     = calcemis,   &! in    flag for internal emissivity calcs
-              emissivity   = emissivity, &! inout input/output emissivities per channel
-              pccomp       = pccomp,     &! inout computed PC scores
+              inst_transmission,         &! inout computed transmittances
+              inst_radiance,             &! inout computed radiances
+              calcemis     = inst_calcemis,   &! in    flag for internal emissivity calcs
+              emissivity   = inst_emissivity, &! inout input/output emissivities per channel
+              pccomp       = inst_pccomp,&! inout computed PC scores
               channels_rec = inst_channels_rec) ! in    reconstructed channel list
     else
       if (verbose) print*,'Calling rttov_parallel_direct (PC-RTTOV)'
       call rttov_parallel_direct(         &
               errorstatus,                &! out   error flag
-              chanprof,                   &! in    channel and profile index structure
+              inst_chanprof,              &! in    channel and profile index structure
               inst_opts,                  &! in    options structure
-              profiles,                   &! in    profile array
+              inst_profiles,              &! in    profile array
               inst_coefs,                 &! in    coefficients structure
-              transmission,               &! inout computed transmittances
-              radiance,                   &! inout computed radiances
-              calcemis     = calcemis,    &! in    flag for internal emissivity calcs
-              emissivity   = emissivity,  &! inout input/output emissivities per channel
-              pccomp       = pccomp,      &! inout computed PC scores
+              inst_transmission,          &! inout computed transmittances
+              inst_radiance,              &! inout computed radiances
+              calcemis     = inst_calcemis,    &! in    flag for internal emissivity calcs
+              emissivity   = inst_emissivity,  &! inout input/output emissivities per channel
+              pccomp       = inst_pccomp, &! inout computed PC scores
               channels_rec = inst_channels_rec,&! in    reconstructed channel list
               nthreads     = inst_nthreads)     ! in    number of threads to use
     endif
@@ -981,7 +1074,7 @@ contains
   
   subroutine cosp_rttov_save_output(nPoints,inst_nchan_out,inst_swath_mask, &
                                     Lrttov_bt,Lrttov_rad,Lrttov_refl,       &
-                                    Lrttov_cld,Lrttov_aer,                  &
+                                    Lrttov_cld,Lrttov_aer,inst_radiance,    &
                                     bt_total,bt_clear,                      &
                                     rad_total,rad_clear,rad_cloudy,         &
                                     refl_total,refl_clear)
@@ -996,6 +1089,8 @@ contains
         Lrttov_refl,     &
         Lrttov_cld,      &
         Lrttov_aer
+    type(rttov_radiance),intent(in) :: &
+        inst_radiance
     real(wp),dimension(nPoints,inst_nchan_out),intent(inout) :: &
         bt_total,       &
         bt_clear,       &
@@ -1014,54 +1109,54 @@ contains
     if (count(inst_swath_mask) .eq. nPoints) then ! No swathing, save all output
         if (Lrttov_bt) then
             bt_total(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%bt(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
+                transpose(reshape(inst_radiance%bt(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
         if (Lrttov_bt .and. (Lrttov_cld .or. Lrttov_aer)) then
             bt_clear(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%bt_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
+                transpose(reshape(inst_radiance%bt_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
 
         if (Lrttov_rad) then
             rad_total(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%total(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
+                transpose(reshape(inst_radiance%total(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
         if (Lrttov_rad .and. (Lrttov_cld .or. Lrttov_aer)) then
             rad_clear(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) )) 
+                transpose(reshape(inst_radiance%clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) )) 
             rad_cloudy(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%cloudy(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))   
+                transpose(reshape(inst_radiance%cloudy(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))   
         end if
 
         if (Lrttov_refl) then
             refl_total(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%refl(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
+                transpose(reshape(inst_radiance%refl(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
         if (Lrttov_refl .and. (Lrttov_cld .or. Lrttov_aer)) then
             refl_clear(1:nPoints, 1:inst_nchan_out) = &
-                transpose(reshape(radiance%refl_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
+                transpose(reshape(inst_radiance%refl_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
     else ! If swathing is occurring, assign the outputs appropriately
         j = 0
         do i=1,nPoints
           if (inst_swath_mask(i)) then ! only added masked columns to profiles
             if (Lrttov_bt) then
-              bt_total(i, 1:inst_nchan_out) = radiance%bt(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              bt_total(i, 1:inst_nchan_out) = inst_radiance%bt(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
             end if
             if (Lrttov_bt .and. (Lrttov_cld .or. Lrttov_aer)) then
-              bt_clear(i, 1:inst_nchan_out) = radiance%bt_clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              bt_clear(i, 1:inst_nchan_out) = inst_radiance%bt_clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
             end if            
             if (Lrttov_rad) then
-              rad_total(i, 1:inst_nchan_out) = radiance%total(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              rad_total(i, 1:inst_nchan_out) = inst_radiance%total(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
             end if
             if (Lrttov_rad .and. (Lrttov_cld .or. Lrttov_aer)) then
-              rad_clear(i, 1:inst_nchan_out) = radiance%clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
-              rad_cloudy(i, 1:inst_nchan_out) = radiance%cloudy(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              rad_clear(i, 1:inst_nchan_out) = inst_radiance%clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              rad_cloudy(i, 1:inst_nchan_out) = inst_radiance%cloudy(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
             end if
             if (Lrttov_refl) then
-              refl_total(i, 1:inst_nchan_out) = radiance%refl(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              refl_total(i, 1:inst_nchan_out) = inst_radiance%refl(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
             end if
             if (Lrttov_refl .and. (Lrttov_cld .or. Lrttov_aer)) then
-              refl_clear(i, 1:inst_nchan_out) = radiance%refl_clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
+              refl_clear(i, 1:inst_nchan_out) = inst_radiance%refl_clear(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
             end if            
             j = j + 1 ! Increment profile counter afterwards
           end if
@@ -1080,6 +1175,7 @@ contains
   subroutine cosp_pc_rttov_save_output(nPoints,              &
                                        inst_nchannels_rec,   &
                                        inst_swath_mask,      &
+                                       inst_pccomp,          &
                                        Lrttov_bt,            &
                                        Lrttov_rad,           &
                                        bt_clear,             &
@@ -1091,12 +1187,14 @@ contains
         inst_nchannels_rec
     logical,dimension(nPoints),intent(in) :: &
         inst_swath_mask        
+    type(rttov_pccomp),intent(in) :: &
+        inst_pccomp     ! Output PC structure          
     logical,intent(in)        :: &
         Lrttov_bt,      &
         Lrttov_rad
     real(wp),dimension(nPoints,inst_nchannels_rec),intent(inout) :: & ! Can I do this? I guess so!
         bt_clear,       &
-        rad_clear
+        rad_clear          
     logical,intent(in),optional :: &
         debug
     
@@ -1111,8 +1209,8 @@ contains
         print*,'shape(rad_total):  ',shape(rad_clear)
         print*,'nPoints:   ',nPoints
         print*,'inst_nchannels_rec: ',inst_nchannels_rec
-        print*,'size(pccomp%bt_pccomp):   ',size(pccomp%bt_pccomp)
-        print*,'size(pccomp%total_pccomp):   ',size(pccomp%total_pccomp)
+        print*,'size(inst_pccomp%bt_pccomp):   ',size(inst_pccomp%bt_pccomp)
+        print*,'size(inst_pccomp%total_pccomp):   ',size(inst_pccomp%total_pccomp)
         print*,'inst_nchannels_rec * nPoints:   ',inst_nchannels_rec * nPoints
     end if
 
@@ -1122,21 +1220,21 @@ contains
     if (count(inst_swath_mask) .eq. nPoints) then ! No swathing, save all output  
       if (Lrttov_bt) then
           bt_clear(1:nPoints, 1:inst_nchannels_rec) = &
-              transpose(reshape(pccomp%bt_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
+              transpose(reshape(inst_pccomp%bt_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
       end if
       if (Lrttov_rad) then
           rad_clear(1:nPoints, 1:inst_nchannels_rec) = &
-              transpose(reshape(pccomp%total_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
+              transpose(reshape(inst_pccomp%total_pccomp(1:(inst_nchannels_rec * nPoints)), (/ inst_nchannels_rec, nPoints/) ))
       end if
     else ! If swathing is occurring, assign the outputs appropriately
       j = 0
       do i=1,nPoints
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
           if (Lrttov_bt) then
-            bt_clear(i, 1:inst_nchannels_rec) = pccomp%bt_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
+            bt_clear(i, 1:inst_nchannels_rec) = inst_pccomp%bt_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
           end if          
           if (Lrttov_rad) then
-            rad_clear(i, 1:inst_nchannels_rec) = pccomp%total_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
+            rad_clear(i, 1:inst_nchannels_rec) = inst_pccomp%total_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
           end if       
           j = j + 1 ! Increment profile counter afterwards
         end if
@@ -1155,7 +1253,15 @@ contains
                                             inst_nchanprof,       &
                                             nLevels,              &
                                             inst_opts,            &
-                                            inst_coefs)
+                                            inst_profiles,        &
+                                            inst_coefs,           &
+                                            inst_chanprof,        &
+                                            inst_transmission,    &
+                                            inst_radiance,        &
+                                            inst_calcemis,        &
+                                            inst_emissivity,      &
+                                            inst_calcrefl,        &
+                                            inst_reflectance)
 
     integer(kind=jpim),intent(in) :: &
         inst_nprof,        &
@@ -1163,9 +1269,24 @@ contains
         nLevels
     type(rttov_options),intent(in) :: &
         inst_opts
+    type(rttov_profile),pointer,intent(in) :: &
+        inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
-
+    type(rttov_chanprof),pointer,intent(inout) :: &
+        inst_chanprof(:)
+    type(rttov_transmission),intent(inout) :: &
+        inst_transmission
+    type(rttov_radiance),intent(inout) :: &
+        inst_radiance
+    logical(kind=jplm),pointer,intent(inout) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(inout) :: &
+        inst_emissivity(:)
+    logical(kind=jplm),pointer,intent(inout) :: &
+        inst_calcrefl(:)
+    type(rttov_reflectance),pointer,intent(inout) :: &
+        inst_reflectance(:)          
         
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &
@@ -1174,16 +1295,16 @@ contains
         inst_nprof,              &
         inst_nchanprof,          & 
         nLevels,                 &
-        chanprof,                & ! JKS
+        inst_chanprof,           &
         inst_opts,               &
-        profiles,                &
+        inst_profiles,           &
         inst_coefs,              &
-        transmission,            &
-        radiance,                &
-        calcemis=calcemis,       &
-        emissivity=emissivity,   &
-        calcrefl=calcrefl,       &
-        reflectance=reflectance)
+        inst_transmission,       &
+        inst_radiance,           &
+        calcemis=inst_calcemis,       &
+        emissivity=inst_emissivity,   &
+        calcrefl=inst_calcrefl,       &
+        reflectance=inst_reflectance)
     call rttov_error('deallocation error for rttov_direct structures', lalloc = .true.)
 
   end subroutine cosp_rttov_deallocate_profiles
@@ -1199,7 +1320,14 @@ contains
                                                nlevels,               &
                                                inst_nChannels_rec,    &
                                                inst_opts,             &
-                                               inst_coefs)
+                                               inst_profiles,         &
+                                               inst_coefs,            &
+                                               inst_chanprof,         &
+                                               inst_transmission,     &
+                                               inst_radiance,         &
+                                               inst_calcemis,         &
+                                               inst_emissivity,       &
+                                               inst_pccomp)
  
     integer(kind=jpim),intent(in)  :: &
         inst_nprof,      &
@@ -1208,14 +1336,25 @@ contains
         inst_nChannels_rec
     type(rttov_options),intent(in) :: &
         inst_opts
+    type(rttov_profile),pointer,intent(in) :: &
+        inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
+    type(rttov_chanprof),pointer,intent(inout) :: &
+        inst_chanprof(:)
+    type(rttov_transmission),intent(inout) :: &
+        inst_transmission        
+    type(rttov_radiance),intent(inout) :: &
+        inst_radiance
+    logical(kind=jplm),pointer,intent(inout) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(inout) :: &
+        inst_emissivity(:)       
+    type(rttov_pccomp),intent(inout) :: &
+        inst_pccomp     ! Output PC structure  
         
     if (ASSOCIATED(predictindex)) deallocate (predictindex, stat=alloc_status(10))
     call rttov_error('mem dellocation error for "predictindex"', lalloc = .true.)
-
-    if (ASSOCIATED(channels_rec)) deallocate (channels_rec, stat=alloc_status(11))
-    call rttov_error('mem dellocation error for "channels_rec"', lalloc = .true.)
     
     ! Deallocate structures for rttov_direct
     call rttov_alloc_direct(     &
@@ -1224,17 +1363,17 @@ contains
         inst_nprof,              &
         inst_nchanprof,          &
         nLevels,                 &
-        chanprof,                &
+        inst_chanprof,           &
         inst_opts,               &
-        profiles,                &
+        inst_profiles,           &
         inst_coefs,              &
-        transmission,            &
-        radiance,                &
-        calcemis=calcemis,       &
-        emissivity=emissivity,   &
+        inst_transmission,       &
+        inst_radiance,           &
+        calcemis=inst_calcemis,       &
+        emissivity=inst_emissivity,   &
         npcscores=inst_opts%rt_ir%pc%npcscores * inst_nprof,         &
         nchannels_rec=inst_nChannels_rec * inst_nprof, &
-        pccomp=pccomp)
+        pccomp=inst_pccomp)
     call rttov_error('deallocation error for rttov_direct structures (PC-RTTOV)', lalloc = .true.)
 
   end subroutine cosp_pc_rttov_deallocate_profiles

@@ -46,7 +46,14 @@ MODULE MOD_COSP_RTTOV_INTERFACE
          rttov_options,       &
          rttov_options_scatt, &
          rttov_coefs,         &
-         rttov_scatt_coef
+         rttov_scatt_coef,    &
+         rttov_pccomp,        &
+         rttov_radiance,      &
+         rttov_transmission,  &
+         rttov_profile,       &
+         rttov_emissivity,    &
+         rttov_reflectance,   &
+         rttov_chanprof
 
   ! jpim, jprb and jplm are the RTTOV integer, real and logical KINDs
   USE parkind1, ONLY : jpim, jprb, jplm
@@ -66,10 +73,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
 #include "rttov_print_opts.interface"
 #include "rttov_get_pc_predictindex.interface"
   
-  ! RTTOV variables/structures
+  ! RTTOV variables/structures. Should not be global to make thread-safe.
   !====================
-  LOGICAL(KIND=jplm),      POINTER :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
-  LOGICAL(KIND=jplm),      POINTER :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
   INTEGER(KIND=jpim)               :: errorstatus              ! Return error status of RTTOV subroutine calls
 
   INTEGER(KIND=jpim) :: alloc_status(60)
@@ -121,6 +126,8 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           opts_scatt
       type(rttov_coefs)            :: &
           coefs                              ! RTTOV coefficients structure
+      type(rttov_pccomp)           :: &
+          pccomp
       logical(KIND=jplm), allocatable  :: &
           swath_mask(:)
   end type rttov_cfg
@@ -715,6 +722,17 @@ CONTAINS
         refl_clear                                  ! Clear-sky
     character(len=128),intent(inout) :: &
         error     ! Error messages (only populated if error encountered)
+        
+    ! Local variables
+    type(rttov_radiance)         :: radiance
+    type(rttov_transmission)     :: transmission
+    type(rttov_profile),     pointer :: profiles(:)    => NULL() ! Input profiles
+    logical(kind=jplm),      pointer :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
+    type(rttov_emissivity),  pointer :: emissivity(:)  => NULL() ! Input/output surface emissivity
+    logical(kind=jplm),      pointer :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
+    type(rttov_reflectance), pointer :: reflectance(:) => NULL() ! Input/output surface BRDF
+    type(rttov_chanprof),    pointer :: chanprof(:)    => NULL() ! Input channel/profile list
+
     logical,intent(in) :: verbose
 
     real(wp),dimension(10) :: driver_time
@@ -723,24 +741,33 @@ CONTAINS
     call cpu_time(driver_time(1))
     if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
     allocate(rttovConfig % swath_mask(rttovIN % nPoints))
-!    if (verbose) print*,'Beginning "cosp_rttov_allocate".'
+    !if (verbose) print*,'Beginning "cosp_rttov_allocate".'
     call cosp_rttov_allocate(rttovIN,                             &
                              rttovConfig % nChannels_rec,         &
                              rttovConfig % opts,                  &
                              rttovConfig % coefs,                 &
+                             profiles,                            &
                              rttovConfig % iChannel,              &
                              rttovConfig % rttov_Nlocaltime,      &
                              rttovConfig % rttov_localtime,       &
                              rttovConfig % rttov_localtime_width, &
+                             chanprof,                            &
                              rttovConfig % nchanprof,             &
                              rttovConfig % nprof,                 &
-                             rttovConfig % swath_mask)    
+                             rttovConfig % swath_mask,            &
+                             transmission,                        &
+                             radiance,                            &
+                             calcemis,                            &
+                             emissivity,                          &
+                             calcrefl,                            &
+                             reflectance)    
     ! Could shortcut out if all values are swathed out
 !    if (rttovConfig % nprof .eq. 0) then print*,'swathed chunk'
     
     call cpu_time(driver_time(2))
-!    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
+    !if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN,                                &
+                                       profiles,                               &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
                                        rttovConfig % Lrttov_solar,             &
@@ -763,22 +790,37 @@ CONTAINS
                                        
     call cpu_time(driver_time(3))
     
-!    if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
+    !if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
     if (associated(rttovIN % emis_grey)) then
-        call cosp_rttov_setup_emissivity_reflectance(emis_grey = rttovIN % emis_grey) ! Config agnostic after allocate step.
+        call cosp_rttov_setup_emissivity_reflectance(calcemis,    &
+                                                     emissivity,  &
+                                                     calcrefl,    &
+                                                     reflectance, &
+                                                     emis_grey = rttovIN % emis_grey) ! Config agnostic after allocate step.
     else
-        call cosp_rttov_setup_emissivity_reflectance() ! Config agnostic after allocate step.
+        call cosp_rttov_setup_emissivity_reflectance(calcemis,    &
+                                                     emissivity,  &
+                                                     calcrefl,    &
+                                                     reflectance)
     end if
     call cpu_time(driver_time(4))
     
-!    if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
+    !if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
     call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
                                 rttovConfig % opts,                   &
-                                rttovConfig % coefs)    
+                                profiles,                             &
+                                rttovConfig % coefs,                  &
+                                chanprof,                             &
+                                transmission,                         &
+                                radiance,                             &
+                                calcemis,                             &
+                                emissivity,                           &
+                                calcrefl,                             &
+                                reflectance)                                    
     
     call cpu_time(driver_time(5))
     
-!    if (verbose) print*,'Beginning "cosp_rttov_save_output".'
+    !if (verbose) print*,'Beginning "cosp_rttov_save_output".'
     call cosp_rttov_save_output(rttovIN % nPoints,                      &
                                 rttovConfig % nchan_out,                &
                                 rttovConfig % swath_mask,               &
@@ -786,18 +828,27 @@ CONTAINS
                                 rttovConfig % Lrttov_rad,               &
                                 rttovConfig % Lrttov_refl,              &
                                 rttovConfig % Lrttov_cld,               &
-                                rttovConfig % Lrttov_aer,               &                                
+                                rttovConfig % Lrttov_aer,               &
+                                radiance,                               &
                                 bt_total,bt_clear,                      &
                                 rad_total,rad_clear,rad_cloudy,         &
                                 refl_total,refl_clear)
 
     call cpu_time(driver_time(6))                                        
-!    if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
+    !if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
     call cosp_rttov_deallocate_profiles(rttovConfig % nprof,           &
                                         rttovConfig % nchanprof,       &
-                                        rttovIN % nLevels,               &
+                                        rttovIN % nLevels,             &
                                         rttovConfig % opts,            &
-                                        rttovConfig % coefs)                                        
+                                        profiles,                      &
+                                        rttovConfig % coefs,           &
+                                        chanprof,                      &
+                                        transmission,                  &
+                                        radiance,                      &
+                                        calcemis,                      &
+                                        emissivity,                    &
+                                        calcrefl,                      &
+                                        reflectance)                                         
     call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
@@ -846,9 +897,19 @@ CONTAINS
         bt_clear,                          &        ! All-sky
         rad_clear                                   ! All-sky
     character(len=128),intent(inout) :: &
-        error     ! Error messages (only populated if error encountered)  
-    logical,intent(in) :: verbose
+        error     ! Error messages (only populated if error encountered)
 
+    ! Local variables
+    type(rttov_radiance) :: radiance
+    type(rttov_transmission) :: transmission
+    type(rttov_profile),     pointer :: profiles(:)    => NULL() ! Input profiles
+    logical(kind=jplm),      pointer :: calcemis(:)    => NULL() ! Flag to indicate calculation of emissivity within RTTOV
+    type(rttov_emissivity),  pointer :: emissivity(:)  => NULL() ! Input/output surface emissivity
+    logical(kind=jplm),      pointer :: calcrefl(:)    => NULL() ! Flag to indicate calculation of BRDF within RTTOV
+    type(rttov_reflectance), pointer :: reflectance(:) => NULL() ! Input/output surface BRDF
+    type(rttov_chanprof),    POINTER :: chanprof(:)    => NULL() ! Input channel/profile list
+    
+    logical,intent(in) :: verbose
     real(wp),dimension(10) :: driver_time
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
@@ -860,18 +921,26 @@ CONTAINS
                                 rttovConfig % PC_coef_filepath,              &
                                 rttovConfig % coefs,                         &
                                 rttovConfig % opts,                          &
+                                profiles,                                    &
                                 rttovConfig % nchannels_rec,                 &
                                 rttovConfig % iChannel,                      &
                                 rttovConfig % rttov_Nlocaltime,              &
                                 rttovConfig % rttov_localtime,               &
                                 rttovConfig % rttov_localtime_width,         &
+                                chanprof,                                    &
                                 rttovConfig % nchanprof,                     &
                                 rttovConfig % nprof,                         &
                                 rttovConfig % iChannel_out,                  &
-                                rttovConfig % swath_mask)
+                                rttovConfig % swath_mask,                    &
+                                transmission,                                &
+                                radiance,                                    &
+                                calcemis,                                    &
+                                emissivity,                                  &
+                                rttovConfig % pccomp)
     call cpu_time(driver_time(2))
 !    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
     call cosp_rttov_construct_profiles(rttovIN,                                &
+                                       profiles,                               &
                                        rttovConfig % Lrttov_cld,               &
                                        rttovConfig % Lrttov_aer,               &
                                        rttovConfig % Lrttov_solar,             &
@@ -892,20 +961,29 @@ CONTAINS
                                        rttovConfig % swath_mask,               &
                                        verbose)
     call cpu_time(driver_time(3))
-    call cosp_pc_rttov_setup_emissivity()
+    call cosp_pc_rttov_setup_emissivity(calcemis,   &
+                                        emissivity)
     call cpu_time(driver_time(4))
 !    if (verbose) print*,'Beginning "cosp_pc_rttov_call_direct".'
     call cosp_pc_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
                                    rttovConfig % opts,                   &
+                                   profiles,                             &
                                    rttovConfig % coefs,                  &
+                                   chanprof,                             &
+                                   transmission,                         &
                                    rttovConfig % nchannels_rec,          &
-                                   rttovConfig % iChannel_out) ! iChannel_out should have been updated
+                                   rttovConfig % iChannel_out,           &
+                                   radiance,                             &
+                                   calcemis,                             &
+                                   emissivity,                           &
+                                   rttovConfig % pccomp)
 
     call cpu_time(driver_time(5))
 !    if (verbose) print*,'Beginning "cosp_pc_rttov_save_output".'
     call cosp_pc_rttov_save_output(rttovIN % nPoints,                       &
                                    rttovConfig % nchannels_rec,             &
                                    rttovConfig % swath_mask,                &
+                                   rttovConfig % pccomp,                    &
                                    rttovConfig % Lrttov_bt,                 &
                                    rttovConfig % Lrttov_rad,                &
                                    bt_clear,                                &
@@ -918,7 +996,14 @@ CONTAINS
                                            rttovIN % nlevels,             &
                                            rttovConfig % nChannels_rec,   &
                                            rttovConfig % opts,            &
-                                           rttovConfig % coefs)
+                                           profiles,                      &
+                                           rttovConfig % coefs,           &
+                                           chanprof,                      &
+                                           transmission,                  &
+                                           radiance,                      &
+                                           calcemis,                      &
+                                           emissivity,                    &
+                                           rttovConfig % pccomp)
                                            
     call cpu_time(driver_time(7))
     
