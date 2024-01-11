@@ -572,9 +572,10 @@ CONTAINS
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in channel indices, emissivities, and reflectivities from .csv if file is passed
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
+    
+    allocate(rttov_config % iChannel(rttov_config % nchan_out)) ! There is a need for these variables to be separate somewhere...
+    allocate(rttov_config % iChannel_out(rttov_config % nchan_out))
     if (Lchannel_filepath) then
-        allocate(rttov_config % iChannel(rttov_config % nchan_out))
         allocate(rttov_config % emisChannel(rttov_config % nchan_out))
         allocate(rttov_config % reflChannel(rttov_config % nchan_out))
     
@@ -583,9 +584,10 @@ CONTAINS
             read(18,*) rttov_config % iChannel(i), rttov_config % emisChannel(i), rttov_config % reflChannel(i)
         end do
         close(18)
+        rttov_config % iChannel_out = rttov_config % iChannel
     else ! If nothing is passed, compute the first "nchan_out" channels. Ignore emissivity and reflectivity for now.
-        allocate(rttov_config % iChannel(rttov_config % nchan_out))
         rttov_config % iChannel(:) = (/ (i, i = 1, rttov_config % nchan_out) /)
+        rttov_config % iChannel_out = rttov_config % iChannel
     endif
     
     if (verbose) then

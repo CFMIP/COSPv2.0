@@ -1440,10 +1440,10 @@ contains
     ii = 165 ! RTTOV variable indices start at 165
     if (allocated(cospOUT%rttov_outputs)) then
         do i=1,Ninst_rttov
-            write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'   
+            write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
             if (associated(cospOUT%rttov_outputs(i)%channel_indices)) then
                ii = ii + 1
-               status = nf90_def_var(fileID,"rttov_ichannel_inst"//trim(i_str),nf90_float, (/dimID(20+i)/),varID(ii))
+               status = nf90_def_var(fileID,"RTTOV_CHAN_INST"//trim(i_str),nf90_float, (/dimID(20+i)/),varID(ii))
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Channel Indices")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
