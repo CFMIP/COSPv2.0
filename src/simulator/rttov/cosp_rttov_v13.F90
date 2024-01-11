@@ -733,8 +733,8 @@ contains
             inst_profiles(j)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
             inst_profiles(j)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
 
-            inst_profiles(j)%clwde = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter
-            inst_profiles(j)%icede = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter
+            inst_profiles(j)%clwde = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter (um)
+            inst_profiles(j)%icede = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter (um)
 
         ! Example UKMO input has effective radii for multiple cloud types, making identification of a single
         ! liquid droplet or ice crystal effective diameter difficult.
