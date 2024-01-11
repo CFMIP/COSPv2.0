@@ -20,10 +20,15 @@
 
 
 # RTTOVDIR=../../
-RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV
+# Cheyenne version (with HDF5)
+# RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV
+
+# Derecho version (without HDF5). Note: You need a copy of Makefile.local in the RTTOVDIR directory in a build/ subdirectory
+RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV/alt_build
 
 FC=gfortran
-FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp -ffree-line-length-none
+#FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp -ffree-line-length-none
+FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp
 LDFLAGS_ARCH=-fopenmp
 
 
