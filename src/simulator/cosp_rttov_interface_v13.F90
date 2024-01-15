@@ -302,7 +302,6 @@ CONTAINS
                          user_tracegas_input,                                    &
                          CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
-!                         rttov_nthreads,rttov_ZenAng
                          rttov_nthreads,rttov_ZenAng,rttov_Nlocaltime,           &
                          rttov_localtime,rttov_localtime_width
 
@@ -629,6 +628,7 @@ CONTAINS
   
   
   SUBROUTINE DESTROY_RTTOV_CONFIG(rttovConfig)
+      use mod_cosp_rttov,             only:   cosp_rttov_deallocate_coefs
   
       type(rttov_cfg),intent(inout) :: &
           rttovConfig
@@ -640,24 +640,24 @@ CONTAINS
       if (allocated(rttovConfig % rttov_localtime))       deallocate(rttovConfig % rttov_localtime)
       if (allocated(rttovConfig % rttov_localtime_width)) deallocate(rttovConfig % rttov_localtime_width)
       if (allocated(rttovConfig % swath_mask))            deallocate(rttovConfig % swath_mask)
+  
+      call cosp_rttov_deallocate_coefs(rttovConfig % coefs)
 
   END SUBROUTINE DESTROY_RTTOV_CONFIG
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  RECURSIVE SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
-                                 bt_total,bt_clear,                                & ! Brightness Temp Outputs
-                                 rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
-                                 refl_total,refl_clear,                            & ! Reflectance Outputs
-                                 debug)
+  RECURSIVE SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,error,                       & ! Inputs
+                                           bt_total,bt_clear,                                & ! Brightness Temp Outputs
+                                           rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
+                                           refl_total,refl_clear,                            & ! Reflectance Outputs
+                                           debug)
 
     type(rttov_in),intent(in) :: &
         rttovIN
     type(rttov_cfg),intent(inout) :: &
         rttovConfig
-    logical,intent(in) :: &
-        lCleanup   ! Flag to determine whether to deallocate RTTOV types
     character(len=128),intent(inout) :: &
         error     ! Error messages (only populated if error encountered)         
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out),optional :: & ! Can I do this? I guess so! 
@@ -676,11 +676,11 @@ CONTAINS
 
     ! Check options to determine if the principal component approach should be run
     if (rttovConfig % opts % rt_ir % pc % addpc) then
-        call COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                     &
+        call COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,                              &
                                     bt_clear,rad_clear,                               &
                                     error,verbose)                                
     else
-        call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                    &
+        call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,                             &
                                      bt_total,bt_clear,                               &
                                      rad_total,rad_clear,rad_cloudy,                  &
                                      refl_total,refl_clear,                           &
@@ -692,7 +692,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_reg_rttov_simulate - Call regular subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
+  SUBROUTINE COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,                              & ! Inputs
                                      bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                      rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                      refl_total,refl_clear,                            & ! Reflectance Outputs
@@ -704,15 +704,12 @@ CONTAINS
         cosp_rttov_setup_emissivity_reflectance, &
         cosp_rttov_call_direct,                  &
         cosp_rttov_save_output,                  &
-        cosp_rttov_deallocate_profiles,          &
-        cosp_rttov_deallocate_coefs
+        cosp_rttov_deallocate_profiles
   
     type(rttov_in),intent(in) :: &
         rttovIN
     type(rttov_cfg),intent(inout) :: &
         rttovConfig
-    logical,intent(in) :: &
-         lCleanup   ! Flag to determine whether to deallocate RTTOV types
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & 
         bt_total,                          &        ! All-sky
         bt_clear,                          &        ! Clear-sky
@@ -858,15 +855,6 @@ CONTAINS
 !    print*,'Time to run "cosp_rttov_call_direct":     ',                 driver_time(5)-driver_time(4)
 !    print*,'Time to run "cosp_rttov_save_output":     ',                 driver_time(6)-driver_time(5)
 !    print*,'Time to run "cosp_rttov_deallocate_profiles":     ',         driver_time(7)-driver_time(6)
-    
-    ! Deallocate the coefficient files if directed
-    if (lCleanup) then
-        call cpu_time(driver_time(8))
-        call cosp_rttov_deallocate_coefs(rttovConfig % coefs)
-        call cpu_time(driver_time(9))
-!        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(9)-driver_time(8)
-    endif
-
 !    print*,'Total RTTOV run time:     ',driver_time(8)-driver_time(1)
 
   END SUBROUTINE COSP_REG_RTTOV_SIMULATE
@@ -875,7 +863,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_pc_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,                  & ! Inputs
+  SUBROUTINE COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,                           & ! Inputs
                                     bt_clear,rad_clear,                            & ! Outputs
                                     error,verbose)                                              
   
@@ -885,15 +873,12 @@ CONTAINS
         cosp_pc_rttov_setup_emissivity,     &
         cosp_pc_rttov_call_direct,          &
         cosp_pc_rttov_save_output,          &
-        cosp_pc_rttov_deallocate_profiles,  &
-        cosp_rttov_deallocate_coefs
+        cosp_pc_rttov_deallocate_profiles
   
     type(rttov_in),intent(in) :: &
         rttovIN
     type(rttov_cfg),intent(inout) :: &
         rttovConfig        
-    logical,intent(in) :: &
-         lCleanup   ! Flag to determine whether to deallocate RTTOV types
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out) :: & ! Can I do this? I guess so!
         bt_clear,                          &        ! All-sky
         rad_clear                                   ! All-sky
@@ -1017,14 +1002,6 @@ CONTAINS
 !    print*,'Time to run "cosp_pc_rttov_call_direct":     ',                 driver_time(5)-driver_time(4)
 !    print*,'Time to run "cosp_pc_rttov_save_output":     ',                 driver_time(6)-driver_time(5)
 !    print*,'Time to run "cosp_pc_rttov_deallocate_profiles":     ',         driver_time(7)-driver_time(6)
-    
-    ! Deallocate the coefficient files if directed
-    if (lCleanup) then
-        call cpu_time(driver_time(8))
-!        call cosp_rttov_deallocate_coefs(rttovConfig % coefs) ! JKS this again with PC-RTTOV...
-        call cpu_time(driver_time(9))
-!        print*,'Time to run "cosp_rttov_deallocate_coefs":     ',driver_time(9)-driver_time(8)
-    endif
 
   END SUBROUTINE COSP_PC_RTTOV_SIMULATE
 
