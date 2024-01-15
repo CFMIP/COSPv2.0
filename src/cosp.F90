@@ -377,7 +377,6 @@ CONTAINS
          ok_lidar_cfad    = .false.,         &
          ok_lidar_cfad_grLidar532 = .false., & 
          ok_lidar_cfad_atlid = .false.,      &
-         lrttov_cleanUp   = .false.,         &
          verbose = .false.
     real(wp),dimension(10) :: driver_time
     integer, dimension(:),allocatable    :: &
@@ -522,8 +521,6 @@ CONTAINS
        Lrttov_column    = .true.
     endif
         
-    ! Set flag to deallocate rttov types (only done on final call to simulator)
-    if (size(cospOUT%isccp_meantb) .eq. stop_idx) lrttov_cleanUp = .true.
 
     ! ISCCP column
     if (associated(cospOUT%isccp_fq)                                       .or.          &
@@ -1566,7 +1563,7 @@ CONTAINS
                rttov_rad_clear(:,:) = R_UNDEF
                ! Run simulator
                call cpu_time(driver_time(3))
-               call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,    & ! Inputs
+               call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),                   & ! Inputs
                                         cosp_simulator(nError+1),                      & ! Error message holder
                                         bt_clear=rttov_bt_clear,                       & ! Clear-sky BT
                                         rad_clear=rttov_rad_clear)                       ! Clear-sky radiance
@@ -1589,7 +1586,7 @@ CONTAINS
                rttov_refl_clear(:,:) = R_UNDEF               
                ! Run simulator
                call cpu_time(driver_time(3))
-               call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),Lrttov_cleanUp,    & ! Inputs
+               call cosp_rttov_simulate(rttovIN,cospIN%cfg_rttov(i),                   & ! Inputs
                                         cosp_simulator(nError+1),                      & ! Error message holder
                                         bt_total=rttov_bt_total,                       & ! Brightness Temp Outputs
                                         bt_clear=rttov_bt_clear,                       &
