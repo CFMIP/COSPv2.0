@@ -143,7 +143,7 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,lCleanup,error,               & ! Inputs
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,error,                        & ! Inputs
                                  bt_total,bt_clear,                                & ! Brightness Temp Outputs
                                  rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
@@ -153,8 +153,6 @@ CONTAINS
         rttovIN
     type(rttov_cfg),intent(inout) :: &
         rttovConfig
-    logical,intent(in) :: &
-        lCleanup   ! Flag to determine whether to deallocate RTTOV types
     character(len=128) :: &
         error     ! Error messages (only populated if error encountered)         
     real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out),optional :: &
