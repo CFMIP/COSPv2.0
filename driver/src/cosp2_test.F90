@@ -164,12 +164,42 @@ program cosp2_test
        rttov_instrument_namelists          ! Input of paths to RTTOV instrument namelists
   character(len=256), allocatable   :: & 
        rttov_instrument_namelists_final(:) ! Array of paths to RTTOV instrument namelists
+
+  ! Inputs for orbit swathing
+  integer :: N_SWATHS_ISCCP     = 0       ! Number of ISCCP swaths
+  integer :: N_SWATHS_MISR      = 0       ! Number of MISR swaths
+  integer :: N_SWATHS_MODIS     = 0       ! Number of MODIS swaths
+  integer :: N_SWATHS_CALIPSO   = 0       ! Number of CALIPSO swaths
+  integer :: N_SWATHS_PARASOL   = 0       ! Number of PARASOL swaths
+  integer :: N_SWATHS_ClOUDSAT  = 0       ! Number of CLOUDSAT swaths
+  integer :: N_SWATHS_ATLID     = 0       ! Number of ATLID swaths
+  real(wp),dimension(10) ::       & ! Arbitrary limit of 10 swaths seems reasonable.
+       SWATH_LOCALTIMES_ISCCP,    & ! Local time of ISCCP satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_MISR,     & ! Local time of MISR satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_MODIS,    & ! Local time of MODIS satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_CALIPSO,  & ! Local time of CALIPSO satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_PARASOL,  & ! Local time of PARASOL satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_ClOUDSAT, & ! Local time of CLOUDSAT satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_ATLID,    & ! Local time of ATLID satellite overpasses (hrs GMT)
+       SWATH_WIDTHS_ISCCP,        & ! Width in km of ISCCP satellite overpasses
+       SWATH_WIDTHS_MISR,         & ! Width in km of MISR satellite overpasses
+       SWATH_WIDTHS_MODIS,        & ! Width in km of MODIS satellite overpasses
+       SWATH_WIDTHS_CALIPSO,      & ! Width in km of CALIPSO satellite overpasses
+       SWATH_WIDTHS_PARASOL,      & ! Width in km of PARASOL satellite overpasses
+       SWATH_WIDTHS_ClOUDSAT,     & ! Width in km of CLOUDSAT satellite overpasses
+       SWATH_WIDTHS_ATLID           ! Width in km of ATLID satellite overpasses
        
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose
+       rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,                    &
+       N_SWATHS_ISCCP, SWATH_LOCALTIMES_ISCCP, SWATH_WIDTHS_ISCCP, N_SWATHS_MISR,        &
+       SWATH_LOCALTIMES_MISR, SWATH_WIDTHS_MISR, N_SWATHS_MODIS, SWATH_LOCALTIMES_MODIS, &
+       SWATH_WIDTHS_MODIS, N_SWATHS_CALIPSO, SWATH_LOCALTIMES_CALIPSO,                   &
+       SWATH_WIDTHS_CALIPSO, N_SWATHS_PARASOL, SWATH_LOCALTIMES_PARASOL,                 &
+       SWATH_WIDTHS_PARASOL, N_SWATHS_ClOUDSAT, SWATH_LOCALTIMES_ClOUDSAT,               &
+       SWATH_WIDTHS_ClOUDSAT, N_SWATHS_ATLID, SWATH_LOCALTIMES_ATLID, SWATH_WIDTHS_ATLID       
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -285,6 +315,14 @@ program cosp2_test
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
        
+  ! Local variables for orbit swathing
+  real(wp),dimension(:),allocatable :: &
+       cosp_localtime, &
+       cosp_localtime_width
+
+  logical,dimension(:),allocatable :: &
+       swath_mask_out    ! Mask of reals over all local times       
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -622,20 +660,6 @@ program cosp2_test
      elsewhere (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE)
      end where     
-          
-!     print*,'Reff(9,Nlevels:1:-1,I_CVCLIQ):   ',Reff(9,Nlevels:1:-1,I_CVCLIQ)
-!     print*,'Reff(9,Nlevels:1:-1,I_LSCLIQ):   ',Reff(9,Nlevels:1:-1,I_LSCLIQ)     
-!     print*,'mr_lsliq(9,Nlevels:1:-1):   ',mr_lsliq(9,Nlevels:1:-1)
-!     print*,'mr_ccliq(9,Nlevels:1:-1):   ',mr_ccliq(9,Nlevels:1:-1)
-     
-!     print*,'cospstateIN%DeffLiq(9,:):   ',cospstateIN%DeffLiq(9,:)
-         
-!     print*,'Reff(2:4,Nlevels:1:-1,I_CVCICE):   ',Reff(2:4,Nlevels:1:-1,I_CVCICE)
-!     print*,'Reff(2:4,Nlevels:1:-1,I_LSCICE):   ',Reff(2:4,Nlevels:1:-1,I_LSCICE)
-!     print*,'mr_lsice(2:4,Nlevels:1:-1):   ',mr_lsice(2:4,Nlevels:1:-1)
-!     print*,'mr_ccice(2:4,Nlevels:1:-1):   ',mr_ccice(2:4,Nlevels:1:-1)
-     
-!     print*,'cospstateIN%DeffIce(2:4,:):   ',cospstateIN%DeffIce(2:4,:)
      
      ! RTTOV doesn't consider precip flux for longwave, but it could be used when simulating MW instruments.
      ! Graupel goes in the snow category, arbitrarily
@@ -673,6 +697,186 @@ program cosp2_test
      
      call cpu_time(driver_time(7))
   end do
+
+  ! ######################################################################################
+  ! Set un-observed scenes to fill value to implement satellite orbit swathing.
+  ! ######################################################################################
+
+  !------------------ ISCCP ------------------!
+  if (N_SWATHS_ISCCP .gt. 0) then
+    allocate(swath_mask_out(Npoints))
+
+    ! print*,'N_SWATHS_ISCCP:  ',N_SWATHS_ISCCP
+    ! print*,'SWATH_LOCALTIMES_ISCCP:  ',SWATH_LOCALTIMES_ISCCP
+    ! print*,'SWATH_WIDTHS_ISCCP:  ',SWATH_WIDTHS_ISCCP
+
+    call compute_orbitmasks(Npoints,N_SWATHS_ISCCP,SWATH_LOCALTIMES_ISCCP,SWATH_WIDTHS_ISCCP,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),       &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! 1-D
+    where ( swath_mask_out )
+      cospOUT%isccp_totalcldarea(1:Npoints)  = R_UNDEF
+      cospOUT%isccp_meanptop(1:Npoints)      = R_UNDEF
+      cospOUT%isccp_meantaucld(1:Npoints)    = R_UNDEF
+      cospOUT%isccp_meanalbedocld(1:Npoints) = R_UNDEF
+      cospOUT%isccp_meantb(1:Npoints)        = R_UNDEF
+      cospOUT%isccp_meantbclr(1:Npoints)     = R_UNDEF
+    end where
+    ! 2-D
+    call mask_outputs_2d(Npoints,Ncolumns,swath_mask_out,cospOUT%isccp_boxtau)
+    call mask_outputs_2d(Npoints,Ncolumns,swath_mask_out,cospOUT%isccp_boxptop)
+    ! 3D
+    call mask_outputs_3d(Npoints,numISCCPTauBins,numISCCPPresBins,swath_mask_out,cospOUT%isccp_fq)
+    deallocate(swath_mask_out)
+  end if
+
+  !------------------ MISR ------------------!
+  if (N_SWATHS_MISR .gt. 0) then
+    allocate(swath_mask_out(Npoints))
+
+    call compute_orbitmasks(Npoints,N_SWATHS_MISR,SWATH_LOCALTIMES_MISR,SWATH_WIDTHS_MISR,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),  &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! 1-D
+    where ( swath_mask_out )
+      cospOUT%misr_meanztop(1:Npoints)     = R_UNDEF
+      cospOUT%misr_cldarea(1:Npoints)      = R_UNDEF
+    end where
+    ! 2-D
+    call mask_outputs_2d(Npoints,numMISRHgtBins,swath_mask_out,cospOUT%misr_dist_model_layertops)
+    ! 3D
+    call mask_outputs_3d(Npoints,numMISRTauBins,numISCCPPresBins,swath_mask_out,cospOUT%misr_fq)                        
+    deallocate(swath_mask_out)  
+  end if
+
+  !------------------ MODIS ------------------!
+  if (N_SWATHS_MODIS .gt. 0) then
+
+    call compute_orbitmasks(Npoints,N_SWATHS_MODIS,SWATH_LOCALTIMES_MODIS,SWATH_WIDTHS_MODIS,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),  &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! 1-D
+    where ( swath_mask_out )
+      cospOUT%modis_Cloud_Fraction_Total_Mean(1:Npoints)          = R_UNDEF
+      cospOUT%modis_Cloud_Fraction_Water_Mean(1:Npoints)          = R_UNDEF
+      cospOUT%modis_Cloud_Fraction_Ice_Mean(1:Npoints)            = R_UNDEF
+      cospOUT%modis_Cloud_Fraction_High_Mean(1:Npoints)           = R_UNDEF
+      cospOUT%modis_Cloud_Fraction_Mid_Mean(1:Npoints)            = R_UNDEF
+      cospOUT%modis_Cloud_Fraction_Low_Mean(1:Npoints)            = R_UNDEF
+      cospOUT%modis_Optical_Thickness_Total_Mean(1:Npoints)       = R_UNDEF
+      cospOUT%modis_Optical_Thickness_Water_Mean(1:Npoints)       = R_UNDEF
+      cospOUT%modis_Optical_Thickness_Ice_Mean(1:Npoints)         = R_UNDEF
+      cospOUT%modis_Optical_Thickness_Total_LogMean(1:Npoints)    = R_UNDEF
+      cospOUT%modis_Optical_Thickness_Water_LogMean(1:Npoints)    = R_UNDEF
+      cospOUT%modis_Optical_Thickness_Ice_LogMean(1:Npoints)      = R_UNDEF
+      cospOUT%modis_Cloud_Particle_Size_Water_Mean(1:Npoints)     = R_UNDEF
+      cospOUT%modis_Cloud_Particle_Size_Ice_Mean(1:Npoints)       = R_UNDEF
+      cospOUT%modis_Cloud_Top_Pressure_Total_Mean(1:Npoints)      = R_UNDEF
+      cospOUT%modis_Liquid_Water_Path_Mean(1:Npoints)             = R_UNDEF
+      cospOUT%modis_Ice_Water_Path_Mean(1:Npoints)                = R_UNDEF
+    end where
+    ! 3D
+    call mask_outputs_3d(Npoints,numModisTauBins,numMODISPresBins,swath_mask_out,cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)
+    call mask_outputs_3d(Npoints,numMODISReffIceBins,numMODISPresBins,swath_mask_out,cospOUT%modis_Optical_Thickness_vs_ReffICE)
+    call mask_outputs_3d(Npoints,numMODISReffLiqBins,numMODISPresBins,swath_mask_out,cospOUT%modis_Optical_Thickness_vs_ReffLIQ)
+    deallocate(cosp_localtime_width,cosp_localtime,swath_mask_out)  
+  end if
+
+  !------------------ CALIPSO ------------------!
+  if (N_SWATHS_CALIPSO .gt. 0) then
+
+    call compute_orbitmasks(Npoints,N_SWATHS_CALIPSO,SWATH_LOCALTIMES_CALIPSO,SWATH_WIDTHS_CALIPSO,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),  &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! 1-D
+    where ( swath_mask_out )
+      cospOUT%calipso_cldthinemis(1:Npoints)  = R_UNDEF
+    end where
+    ! 2-D
+    call mask_outputs_2d(Npoints,Nlevels,swath_mask_out,cospOUT%calipso_beta_mol)
+    call mask_outputs_2d(Npoints,Nlevels,swath_mask_out,cospOUT%calipso_temp_tot)
+    call mask_outputs_2d(Npoints,Nlvgrid,swath_mask_out,cospOUT%calipso_lidarcld)
+    call mask_outputs_2d(Npoints,LIDAR_NCAT,swath_mask_out,cospOUT%calipso_cldlayer)
+    call mask_outputs_2d(Npoints,LIDAR_NTYPE,swath_mask_out,cospOUT%calipso_cldtype)
+    call mask_outputs_2d(Npoints,LIDAR_NTYPE,swath_mask_out,cospOUT%calipso_cldtypetemp)
+    call mask_outputs_2d(Npoints,2,swath_mask_out,cospOUT%calipso_cldtypemeanz)
+    call mask_outputs_2d(Npoints,3,swath_mask_out,cospOUT%calipso_cldtypemeanzse)
+    ! 3D
+    call mask_outputs_3d(Npoints,Ncolumns,Nlevels,swath_mask_out,cospOUT%calipso_betaperp_tot)
+    call mask_outputs_3d(Npoints,Ncolumns,Nlevels,swath_mask_out,cospOUT%calipso_beta_tot)
+    call mask_outputs_3d(Npoints,Ncolumns,Nlevels,swath_mask_out,cospOUT%calipso_tau_tot)
+    call mask_outputs_3d(Npoints,Nlvgrid,6,swath_mask_out,cospOUT%calipso_lidarcldphase)
+    call mask_outputs_3d(Npoints,Nlvgrid,LIDAR_NTYPE+1,swath_mask_out,cospOUT%calipso_lidarcldtype)
+    call mask_outputs_3d(Npoints,LIDAR_NCAT,6,swath_mask_out,cospOUT%calipso_cldlayerphase)
+    call mask_outputs_3d(Npoints,LIDAR_NTEMP,5,swath_mask_out,cospOUT%calipso_lidarcldtmp)
+    call mask_outputs_3d(Npoints,SR_BINS,Nlvgrid,swath_mask_out,cospOUT%calipso_cfad_sr)
+    deallocate(cosp_localtime_width,cosp_localtime,swath_mask_out)  
+  end if
+
+  !------------------ PARASOL ------------------!
+  if (N_SWATHS_PARASOL .gt. 0) then
+
+    call compute_orbitmasks(Npoints,N_SWATHS_PARASOL,SWATH_LOCALTIMES_PARASOL,SWATH_WIDTHS_PARASOL,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),  &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! 2-D
+    call mask_outputs_2d(Npoints,PARASOL_NREFL,swath_mask_out,cospOUT%parasolGrid_refl)
+    ! 3D
+    call mask_outputs_3d(Npoints,Ncolumns,PARASOL_NREFL,swath_mask_out,cospOUT%parasolPix_refl)
+    deallocate(cosp_localtime_width,cosp_localtime,swath_mask_out)  
+  end if
+
+  !------------------ CLOUDSAT ------------------!
+  if (N_SWATHS_ClOUDSAT .gt. 0) then 
+
+    call compute_orbitmasks(Npoints,N_SWATHS_ClOUDSAT,SWATH_LOCALTIMES_ClOUDSAT,SWATH_WIDTHS_ClOUDSAT,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),  &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! 1-D
+    where ( swath_mask_out )
+      cospOUT%cloudsat_tcc(1:Npoints)  = R_UNDEF
+      cospOUT%cloudsat_tcc2(1:Npoints)  = R_UNDEF
+      cospOUT%radar_lidar_tcc(1:Npoints)  = R_UNDEF
+      cospOUT%cloudsat_pia(1:Npoints)  = R_UNDEF
+    end where      
+    ! 2-D
+    call mask_outputs_2d(Npoints,Nlevels,swath_mask_out,cospOUT%lidar_only_freq_cloud)
+    call mask_outputs_2d(Npoints,cloudsat_DBZE_BINS,swath_mask_out,cospOUT%cloudsat_precip_cover)
+    ! 3D
+    call mask_outputs_3d(Npoints,Ncolumns,Nlevels,swath_mask_out,cospOUT%cloudsat_Ze_tot)
+    call mask_outputs_3d(Npoints,cloudsat_DBZE_BINS,Nlevels,swath_mask_out,cospOUT%cloudsat_cfad_ze)
+
+    !---------- Joint CloudSat+MODIS simulators outputs ----------!
+    ! 2-D
+    call mask_outputs_2d(Npoints,WR_NREGIME,swath_mask_out,cospOUT%wr_occfreq_ntotal)
+    ! 4-D
+    call mask_outputs_4d(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS,swath_mask_out,cospOUT%cfodd_ntotal)
+    deallocate(cosp_localtime_width,cosp_localtime,swath_mask_out)  
+  end if
+
+  !------------------ ATLID Lidar ------------------!
+  if (N_SWATHS_ATLID .gt. 0) then
+
+    call compute_orbitmasks(Npoints,N_SWATHS_ATLID,SWATH_LOCALTIMES_ATLID,SWATH_WIDTHS_ATLID,  &
+                            cospstateIN%lat,cospstateIN%lon,cospstateIN%rttov_time(:,1),  &
+                            cospstateIN%rttov_time(:,2),swath_mask_out)
+    ! Mask out areas that are not observed. Need different statements for outputs of different dimensionality because apparently fortran is dumb at broadcasting :(
+    ! The "atlid_srbval" variable doesn't have a spatial dimension so it is excluded here.   
+    ! 2-D
+    call mask_outputs_2d(Npoints,Nlvgrid,swath_mask_out,cospOUT%atlid_lidarcld)
+    call mask_outputs_2d(Npoints,LIDAR_NCAT,swath_mask_out,cospOUT%atlid_cldlayer)
+    call mask_outputs_2d(Npoints,Nlevels,swath_mask_out,cospOUT%atlid_beta_mol)
+    ! 3D
+    call mask_outputs_3d(Npoints,Ncolumns,Nlevels,swath_mask_out,cospOUT%atlid_beta_tot)
+    call mask_outputs_3d(Npoints,SR_BINS,Nlvgrid,swath_mask_out,cospOUT%atlid_cfad_sr)
+    deallocate(cosp_localtime_width,cosp_localtime,swath_mask_out)  
+  end if
   
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to initialize:       ',driver_time(3)-driver_time(2)
@@ -1102,7 +1306,144 @@ contains
             Np,Reff)
     endif
   end subroutine subsample_and_optics
-  
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE compute_orbitmasks
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  subroutine compute_orbitmasks(Npoints,Nlocaltimes,localtimes,localtime_widths,      &
+                                lat,lon,hour,minute,swath_mask_out)
+
+    ! Inputs
+    integer,intent(in) :: &
+       Npoints,         &
+       Nlocaltimes
+
+    real(wp),dimension(Nlocaltimes),intent(in) :: &
+       localtimes,        &
+       localtime_widths
+
+    real(wp),dimension(Npoints),intent(in) :: &
+       lat,     &
+       lon,     &
+       hour,    &
+       minute
+
+    ! Output
+    logical,dimension(Npoints),intent(out) :: &
+       swath_mask_out    ! Mask of reals over all gridcells
+
+    ! Local variables
+    integer :: i ! iterators
+
+    real(wp),parameter                     :: &
+       pi = 4.D0*DATAN(1.D0),  &  ! yum
+       radius = 6371.0            ! Earth's radius in km (mean volumetric)
+ 
+    real(wp),dimension(Npoints,Nlocaltimes) :: &
+       sat_lon,        & ! Central longitude of the instrument.
+       dlon,           & ! distance to satellite longitude in degrees
+       dx                ! distance to satellite longitude in km?       
+ 
+    logical,dimension(Npoints,Nlocaltimes) :: &
+       swath_mask_all    ! Mask of logicals over all local times, gridcells  
+
+    ! Iterate over local times
+    swath_mask_all(:,:) = 0
+    do i=1,Nlocaltimes
+       ! Calculate the central longitude for each gridcell and orbit
+       sat_lon(:,i) = 15.0 * (localtimes(i) - (hour + minute / 60))
+       ! Calculate distance (in degrees) from each grid cell to the satellite central long
+       dlon(:,i) = mod((lon - sat_lon(:,i) + 180.0), 360.0) - 180.0             
+       ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
+       dx(:,i)   = dlon(:,i) * (pi/180.0) * COS(lat * pi / 180) * radius
+       ! Determine if a gridcell falls in the swath width
+       where (abs(dx(:,i))<(localtime_widths(i)*0.5))
+          swath_mask_all(:,i) = .true.
+       end where        
+    end do
+
+    ! Mask is true where values should be masked to R_UNDEF
+    swath_mask_out = ALL( swath_mask_all(:,:) .eq. .false.,2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
+
+  end subroutine compute_orbitmasks
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE mask_outputs_2d - Mask out a 2d array
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  subroutine mask_outputs_2d(dim1,dim2,mask,data_array)
+    ! Inputs
+    integer,intent(in) :: &
+      dim1,   &
+      dim2
+    logical,dimension(dim1),intent(in) :: &
+      mask
+    real(wp),dimension(dim1,dim2),intent(inout) :: &
+      data_array
+
+    ! Local variables
+    integer :: i   ! iterator
+
+    do i=1,dim2
+      where ( mask ) data_array(1:dim1,i) = R_UNDEF
+    end do  
+
+  end subroutine mask_outputs_2d
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE mask_outputs_3d - Mask out a 3d array
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  subroutine mask_outputs_3d(dim1,dim2,dim3,mask,data_array)
+
+    ! Inputs
+    integer,intent(in) :: &
+      dim1,   &
+      dim2,   &
+      dim3
+    logical,dimension(dim1),intent(in) :: &
+      mask      
+    real(wp),dimension(dim1,dim2,dim3),intent(inout) :: &
+      data_array
+
+    ! Local variables
+    integer :: i,j   ! iterator
+
+    do i=1,dim2
+      do j=1,dim3
+         where ( mask ) data_array(1:dim1,i,j) = R_UNDEF
+      end do
+    end do  
+
+  end subroutine mask_outputs_3d
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE mask_outputs_4d - Mask out a 3d array
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  subroutine mask_outputs_4d(dim1,dim2,dim3,dim4,mask,data_array)
+
+    ! Inputs
+    integer,intent(in) :: &
+      dim1,   &
+      dim2,   &
+      dim3,   &
+      dim4
+    logical,dimension(dim1),intent(in) :: &
+      mask      
+    real(wp),dimension(dim1,dim2,dim3,dim4),intent(inout) :: &
+      data_array
+
+    ! Local variables
+    integer :: i,j,k   ! iterator
+
+    do i=1,dim2
+      do j=1,dim3
+        do k=1,dim4
+          where ( mask ) data_array(1:dim1,i,j,k) = R_UNDEF
+        end do
+      end do
+    end do  
+
+  end subroutine mask_outputs_4d  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

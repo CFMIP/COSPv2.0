@@ -82,7 +82,7 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-rttov_Ninstruments=3,
+  rttov_Ninstruments=3,
   rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst5_PREFIRE_CESM2.txt','instrument_nls/cosp2_rttov_inst6_AIRS_CESM2_bin.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
 !  rttov_Ninstruments=7,
 !  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt','instrument_nls/cosp2_rttov_inst4.txt','instrument_nls/cosp2_rttov_inst5_PREFIRE_CESM2.txt','instrument_nls/cosp2_rttov_inst6_AIRS_CESM2_bin.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
@@ -93,4 +93,28 @@ rttov_Ninstruments=3,
 !  rttov_Ninstruments=1,
 !  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt',
   rttov_verbose=.true.
+  !----------------------------------------------------------------------------------
+  !-------------- Swathing inputs
+  !----------------------------------------------------------------------------------
+  N_SWATHS_ISCCP=2,
+  SWATH_LOCALTIMES_ISCCP=1,10,
+  SWATH_WIDTHS_ISCCP=1000,1200,
+  N_SWATHS_MISR=0,
+  SWATH_LOCALTIMES_MISR=1,10,
+  SWATH_WIDTHS_MISR=1000,1200,
+  N_SWATHS_MODIS=0,
+  SWATH_LOCALTIMES_MODIS=1,10,
+  SWATH_WIDTHS_MODIS=1000,1200,
+  N_SWATHS_CALIPSO=0,
+  SWATH_LOCALTIMES_CALIPSO=1,10,
+  SWATH_WIDTHS_CALIPSO=1000,1200,
+  N_SWATHS_PARASOL=0,
+  SWATH_LOCALTIMES_PARASOL=1,10,
+  SWATH_WIDTHS_PARASOL=1000,1200,
+  N_SWATHS_ClOUDSAT=0,
+  SWATH_LOCALTIMES_ClOUDSAT=1,10,
+  SWATH_WIDTHS_ClOUDSAT=1000,1200,
+  N_SWATHS_ATLID=0,
+  SWATH_LOCALTIMES_ATLID=1,10,
+  SWATH_WIDTHS_ATLID=1000,1200,
 /
