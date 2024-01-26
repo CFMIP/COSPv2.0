@@ -248,7 +248,7 @@ contains
     ! Largely from RTTOV documentation.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    ! Handle swathing here. Initial code from Genevieve with minor changes.
+    ! Handle swathing here. Initial code from Genevieve with implementation changes.
     if (rttov_Nlocaltime .gt. 0) then
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
@@ -960,7 +960,7 @@ contains
       if (verbose) print*,'Calling rttov_parallel_direct'
       call rttov_parallel_direct(       &
               errorstatus,              &! out   error flag
-              inst_chanprof,                 &! in    channel and profile index structure
+              inst_chanprof,            &! in    channel and profile index structure
               inst_opts,                &! in    options structure
               inst_profiles,            &! in    profile array
               inst_coefs,               &! in    coefficients structure

@@ -24,13 +24,24 @@
 # RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV
 
 # Derecho version (without HDF5). Note: You need a copy of Makefile.local in the RTTOVDIR directory in a build/ subdirectory
-RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV/alt_build
+#RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV/alt_build
 
-FC=gfortran
+#FC=gfortran
 #FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp -ffree-line-length-none
+#FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp
+#LDFLAGS_ARCH=-fopenmp
+
+# Original Derecho settings
+#RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV/alt_build
+#FC=gfortran
+#FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp
+#LDFLAGS_ARCH=-fopenmp
+
+# Derecho with debug changes (01/23/2024)
+RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV2
+FC=ifort
 FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp
 LDFLAGS_ARCH=-fopenmp
-
 
 RTTOV_VERSION=13
 EXT_BIN=.exe
