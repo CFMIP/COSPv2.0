@@ -648,11 +648,11 @@ CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_simulate - Call subroutines in mod_cosp_rttov to run RTTOV
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  RECURSIVE SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,error,                       & ! Inputs
-                                           bt_total,bt_clear,                                & ! Brightness Temp Outputs
-                                           rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
-                                           refl_total,refl_clear,                            & ! Reflectance Outputs
-                                           debug)
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,error,                        & ! Inputs
+                                 bt_total,bt_clear,                                & ! Brightness Temp Outputs
+                                 rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
+                                 refl_total,refl_clear,                            & ! Reflectance Outputs
+                                 debug)
 
     type(rttov_in),intent(in) :: &
         rttovIN
