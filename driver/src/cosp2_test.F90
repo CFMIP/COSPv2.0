@@ -169,24 +169,21 @@ program cosp2_test
   integer :: N_SWATHS_ISCCP     = 0       ! Number of ISCCP swaths
   integer :: N_SWATHS_MISR      = 0       ! Number of MISR swaths
   integer :: N_SWATHS_MODIS     = 0       ! Number of MODIS swaths
-  integer :: N_SWATHS_CALIPSO   = 0       ! Number of CALIPSO swaths
   integer :: N_SWATHS_PARASOL   = 0       ! Number of PARASOL swaths
-  integer :: N_SWATHS_ClOUDSAT  = 0       ! Number of CLOUDSAT swaths
+  integer :: N_SWATHS_CSCAL     = 0       ! Number of CLOUDSAT+CALIPSO swaths
   integer :: N_SWATHS_ATLID     = 0       ! Number of ATLID swaths
   real(wp),dimension(10),target ::  & ! Arbitrary limit of 10 swaths seems reasonable.
        SWATH_LOCALTIMES_ISCCP,    & ! Local time of ISCCP satellite overpasses (hrs GMT)
        SWATH_LOCALTIMES_MISR,     & ! Local time of MISR satellite overpasses (hrs GMT)
        SWATH_LOCALTIMES_MODIS,    & ! Local time of MODIS satellite overpasses (hrs GMT)
-       SWATH_LOCALTIMES_CALIPSO,  & ! Local time of CALIPSO satellite overpasses (hrs GMT)
        SWATH_LOCALTIMES_PARASOL,  & ! Local time of PARASOL satellite overpasses (hrs GMT)
-       SWATH_LOCALTIMES_ClOUDSAT, & ! Local time of CLOUDSAT satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_CSCAL,    & ! Local time of CLOUDSAT+CALIPSO satellite overpasses (hrs GMT)
        SWATH_LOCALTIMES_ATLID,    & ! Local time of ATLID satellite overpasses (hrs GMT)
        SWATH_WIDTHS_ISCCP,        & ! Width in km of ISCCP satellite overpasses
        SWATH_WIDTHS_MISR,         & ! Width in km of MISR satellite overpasses
        SWATH_WIDTHS_MODIS,        & ! Width in km of MODIS satellite overpasses
-       SWATH_WIDTHS_CALIPSO,      & ! Width in km of CALIPSO satellite overpasses
        SWATH_WIDTHS_PARASOL,      & ! Width in km of PARASOL satellite overpasses
-       SWATH_WIDTHS_ClOUDSAT,     & ! Width in km of CLOUDSAT satellite overpasses
+       SWATH_WIDTHS_CSCAL,        & ! Width in km of CLOUDSAT+CALIPSO satellite overpasses
        SWATH_WIDTHS_ATLID           ! Width in km of ATLID satellite overpasses
        
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
@@ -196,10 +193,9 @@ program cosp2_test
        rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,                    &
        N_SWATHS_ISCCP, SWATH_LOCALTIMES_ISCCP, SWATH_WIDTHS_ISCCP, N_SWATHS_MISR,        &
        SWATH_LOCALTIMES_MISR, SWATH_WIDTHS_MISR, N_SWATHS_MODIS, SWATH_LOCALTIMES_MODIS, &
-       SWATH_WIDTHS_MODIS, N_SWATHS_CALIPSO, SWATH_LOCALTIMES_CALIPSO,                   &
-       SWATH_WIDTHS_CALIPSO, N_SWATHS_PARASOL, SWATH_LOCALTIMES_PARASOL,                 &
-       SWATH_WIDTHS_PARASOL, N_SWATHS_ClOUDSAT, SWATH_LOCALTIMES_ClOUDSAT,               &
-       SWATH_WIDTHS_ClOUDSAT, N_SWATHS_ATLID, SWATH_LOCALTIMES_ATLID, SWATH_WIDTHS_ATLID       
+       SWATH_WIDTHS_MODIS, N_SWATHS_PARASOL, SWATH_LOCALTIMES_PARASOL,                   &
+       SWATH_WIDTHS_PARASOL, N_SWATHS_CSCAL, SWATH_LOCALTIMES_CSCAL,                     &
+       SWATH_WIDTHS_CSCAL, N_SWATHS_ATLID, SWATH_LOCALTIMES_ATLID, SWATH_WIDTHS_ATLID       
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -355,28 +351,25 @@ program cosp2_test
   rttov_instrument_namelists_final(:) = rttov_instrument_namelists(1:rttov_Ninstruments)
 
   ! Read orbital swathing inputs into structure:
-  ! Indexing order is ISCCP, MISR, CALIPSO, ATLID, PARASOL, CLOUDSAT, MODIS
+  ! Indexing order is ISCCP, MISR, CLOUDSAT-CALIPSO, ATLID, PARASOL, MODIS
   cospswathsIN(1) % N_inst_swaths = N_SWATHS_ISCCP
   cospswathsIN(1) % inst_localtimes => SWATH_LOCALTIMES_ISCCP(1:N_SWATHS_ISCCP)
   cospswathsIN(1) % inst_localtime_widths => SWATH_WIDTHS_ISCCP(1:N_SWATHS_ISCCP)
   cospswathsIN(2) % N_inst_swaths = N_SWATHS_MISR
   cospswathsIN(2) % inst_localtimes => SWATH_LOCALTIMES_MISR(1:N_SWATHS_MISR)
   cospswathsIN(2) % inst_localtime_widths => SWATH_WIDTHS_MISR(1:N_SWATHS_MISR)
-  cospswathsIN(3) % N_inst_swaths = N_SWATHS_CALIPSO
-  cospswathsIN(3) % inst_localtimes => SWATH_LOCALTIMES_CALIPSO(1:N_SWATHS_CALIPSO)
-  cospswathsIN(3) % inst_localtime_widths => SWATH_WIDTHS_CALIPSO(1:N_SWATHS_CALIPSO)
+  cospswathsIN(3) % N_inst_swaths = N_SWATHS_CSCAL
+  cospswathsIN(3) % inst_localtimes => SWATH_LOCALTIMES_CSCAL(1:N_SWATHS_CSCAL)
+  cospswathsIN(3) % inst_localtime_widths => SWATH_WIDTHS_CSCAL(1:N_SWATHS_CSCAL)
   cospswathsIN(4) % N_inst_swaths = N_SWATHS_ATLID
   cospswathsIN(4) % inst_localtimes => SWATH_LOCALTIMES_ATLID(1:N_SWATHS_ATLID)
   cospswathsIN(4) % inst_localtime_widths => SWATH_WIDTHS_ATLID(1:N_SWATHS_ATLID)
   cospswathsIN(5) % N_inst_swaths = N_SWATHS_PARASOL
   cospswathsIN(5) % inst_localtimes => SWATH_LOCALTIMES_PARASOL(1:N_SWATHS_PARASOL)
   cospswathsIN(5) % inst_localtime_widths => SWATH_WIDTHS_PARASOL(1:N_SWATHS_PARASOL)
-  cospswathsIN(6) % N_inst_swaths = N_SWATHS_CLOUDSAT
-  cospswathsIN(6) % inst_localtimes => SWATH_LOCALTIMES_CLOUDSAT(1:N_SWATHS_CLOUDSAT)
-  cospswathsIN(6) % inst_localtime_widths => SWATH_WIDTHS_CLOUDSAT(1:N_SWATHS_CLOUDSAT)
-  cospswathsIN(7) % N_inst_swaths = N_SWATHS_MODIS
-  cospswathsIN(7) % inst_localtimes => SWATH_LOCALTIMES_MODIS(1:N_SWATHS_MODIS)
-  cospswathsIN(7) % inst_localtime_widths => SWATH_WIDTHS_MODIS(1:N_SWATHS_MODIS)
+  cospswathsIN(6) % N_inst_swaths = N_SWATHS_MODIS
+  cospswathsIN(6) % inst_localtimes => SWATH_LOCALTIMES_MODIS(1:N_SWATHS_MODIS)
+  cospswathsIN(6) % inst_localtime_widths => SWATH_WIDTHS_MODIS(1:N_SWATHS_MODIS)
      
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
@@ -531,7 +524,11 @@ program cosp2_test
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
   ! nChunks = # Points to Process (nPoints) / # Points per COSP iteration (nPoints_it)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  nChunks = nPoints/nPoints_it+1
+  if (MOD(nPoints,nPoints_it) .eq. 0) then ! JKS - do not run an extra iteration if Npoints_it divides Npoints cleanly
+     nChunks = Npoints/Npoints_it
+  else 
+     nChunks = nPoints/nPoints_it+1
+  endif 
   if (nPoints .eq. nPoints_it) nChunks = 1
   do iChunk=1,nChunks
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -727,7 +724,6 @@ program cosp2_test
      call cpu_time(driver_time(7))
   end do
 
-  
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to initialize:       ',driver_time(3)-driver_time(2)
   print*,'Time to construct types:  ',driver_time(4)-driver_time(3)
@@ -1161,66 +1157,6 @@ contains
             Np,Reff)
     endif
   end subroutine subsample_and_optics
-
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE compute_orbitmasks
-  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine compute_orbitmasks(Npoints,Nlocaltimes,localtimes,localtime_widths,      &
-                                lat,lon,hour,minute,swath_mask_out)
-
-    ! Inputs
-    integer,intent(in) :: &
-       Npoints,         &
-       Nlocaltimes
-
-    real(wp),dimension(Nlocaltimes),intent(in) :: &
-       localtimes,        &
-       localtime_widths
-
-    real(wp),dimension(Npoints),intent(in) :: &
-       lat,     &
-       lon,     &
-       hour,    &
-       minute
-
-    ! Output
-    logical,dimension(Npoints),intent(out) :: &
-       swath_mask_out    ! Mask of reals over all gridcells
-
-    ! Local variables
-    integer :: i ! iterators
-
-    real(wp),parameter                     :: &
-       pi = 4.D0*DATAN(1.D0),  &  ! yum
-       radius = 6371.0            ! Earth's radius in km (mean volumetric)
- 
-    real(wp),dimension(Npoints,Nlocaltimes) :: &
-       sat_lon,        & ! Central longitude of the instrument.
-       dlon,           & ! distance to satellite longitude in degrees
-       dx                ! distance to satellite longitude in km?       
- 
-    logical,dimension(Npoints,Nlocaltimes) :: &
-       swath_mask_all    ! Mask of logicals over all local times, gridcells  
-
-    ! Iterate over local times
-    swath_mask_all(:,:) = 0
-    do i=1,Nlocaltimes
-       ! Calculate the central longitude for each gridcell and orbit
-       sat_lon(:,i) = 15.0 * (localtimes(i) - (hour + minute / 60))
-       ! Calculate distance (in degrees) from each grid cell to the satellite central long
-       dlon(:,i) = mod((lon - sat_lon(:,i) + 180.0), 360.0) - 180.0             
-       ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
-       dx(:,i)   = dlon(:,i) * (pi/180.0) * COS(lat * pi / 180) * radius
-       ! Determine if a gridcell falls in the swath width
-       where (abs(dx(:,i))<(localtime_widths(i)*0.5))
-          swath_mask_all(:,i) = .true.
-       end where        
-    end do
-
-    ! Mask is true where values should be masked to R_UNDEF
-    swath_mask_out = ALL( swath_mask_all(:,:) .eq. .false.,2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
-
-  end subroutine compute_orbitmasks
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospIN
