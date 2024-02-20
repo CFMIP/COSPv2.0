@@ -433,18 +433,24 @@ CONTAINS
     logical,dimension(:),allocatable :: & ! Mask of reals over all local times
          ISCCP_SWATH_MASK,    &
          MISR_SWATH_MASK,     &
-         CALIPSO_SWATH_MASK,  &
-         CLOUDSAT_SWATH_MASK, &
+         CSCAL_SWATH_MASK,    &
          MODIS_SWATH_MASK,    &
          PARASOL_SWATH_MASK,  &
-         ATLID_SWATH_MASK  
-
+         ATLID_SWATH_MASK,    &
+         MODIS_CSCAL_SWATH_MASK  
+    integer,dimension(:),allocatable :: & ! Arrays containing the indices of the swath masks
+         ISCCP_MASK_INDICES,    &
+         MISR_MASK_INDICES,     &
+         CSCAL_MASK_INDICES,    &
+         MODIS_MASK_INDICES,    &
+         PARASOL_MASK_INDICES,  &
+         ATLID_MASK_INDICES,    &
+         MODIS_CSCAL_MASK_INDICES
     integer        :: j
     integer,target :: & ! Number of gridcell points to computer on after swathing
          N_ISCCP_SWATHED,     &
          N_MISR_SWATHED,      &
-         N_CALIPSO_SWATHED,   &
-         N_CLOUDSAT_SWATHED,  &
+         N_CSCAL_SWATHED,     &
          N_MODIS_SWATHED,     &
          N_PARASOL_SWATHED,   &
          N_ATLID_SWATHED
@@ -457,7 +463,9 @@ CONTAINS
          temp_isccp_meanptop,       &
          temp_isccp_meantaucld,     &
          temp_isccp_totalcldarea,   &
-         temp_isccp_meantb
+         temp_isccp_meantb,         &
+         temp_modis_localtimes,     &
+         temp_modis_localtime_widths
     real(wp),dimension(:,:),target,allocatable :: &
          temp_isccp_qv,       &         
          temp_isccp_at,       &
@@ -471,46 +479,79 @@ CONTAINS
     ! MISR swathing variables
     integer,dimension(:),target,allocatable :: &
          temp_misr_sunlit
+    real(wp),dimension(:),target,allocatable :: &
+         temp_misr_cldarea, &
+         temp_misr_meanztop
     real(wp),dimension(:,:),target,allocatable :: &
          temp_misr_zfull,   &
          temp_misr_at
     real(wp),dimension(:,:,:),target,allocatable :: &
-         temp_misr_dtau
+         temp_misr_dtau,    &
+         temp_misr_fq
     ! CALIPSO swathing variables
+    real(wp),dimension(:),target,allocatable :: &
+         temp_calipso_cldthinemis
     real(wp),dimension(:,:),target,allocatable :: &
          temp_beta_mol_calipso,    &
-         temp_tau_mol_calipso
+         temp_tau_mol_calipso,     &
+         temp_calipso_lidarcld,    &
+         temp_calipso_cldlayer,    &
+         temp_calipso_cldtype,     &
+         temp_calipso_cldtypetemp, &
+         temp_calipso_cldtypemeanz,&
+         temp_calipso_cldtypemeanzse
     real(wp),dimension(:,:,:),target,allocatable :: &
          temp_betatot_calipso,         &
          temp_tautot_calipso,          &
          temp_betatot_liq_calipso,     &
          temp_tautot_liq_calipso,      &
          temp_betatot_ice_calipso,     &
-         temp_tautot_ice_calipso
+         temp_tautot_ice_calipso,      &
+         temp_calipso_cfad_sr,         &
+         temp_calipso_lidarcldphase,   &
+         temp_calipso_lidarcldtype,    &
+         temp_calipso_cldlayerphase,   &
+         temp_calipso_lidarcldtmp
     ! ATLID swathing variables
     real(wp),dimension(:,:),target,allocatable :: &
          temp_beta_mol_atlid,          &
-         temp_tau_mol_atlid
+         temp_tau_mol_atlid,           &
+         temp_atlid_lidarcld,          &
+         temp_atlid_cldlayer            
     real(wp),dimension(:,:,:),target,allocatable :: &
          temp_betatot_atlid,           &
-         temp_tautot_atlid
+         temp_tautot_atlid,            &
+         temp_atlid_cfad_sr
     ! PARASOL swathing variables
     real(wp),dimension(:,:),target,allocatable :: &
         temp_tautot_S_liq,             &
-        temp_tautot_S_ice
+        temp_tautot_S_ice,             &
+        temp_parasolGrid_refl
     ! CLOUDSAT swathing variables
+    real(wp),dimension(:),target,allocatable :: &
+        temp_cloudsat_pia
     real(wp),dimension(:,:),target,allocatable :: &
-        temp_hgt_matrix
+        temp_hgt_matrix,       &
+        temp_cloudsat_precip_cover
     real(wp),dimension(:,:,:),target,allocatable :: &
         temp_z_vol_cloudsat,   &
         temp_kr_vol_cloudsat,  &
-        temp_g_vol_cloudsat
+        temp_g_vol_cloudsat,   &
+        temp_cloudsat_cfad_ze        
     ! MODIS swathing variables.
     real(wp),dimension(:,:,:),target,allocatable :: &
         temp_modis_liqFrac,            &
         temp_modis_tau,                &
         temp_modis_g,                  &
         temp_modis_w0
+    real(wp),dimension(:,:),allocatable :: &
+        modis_boxptop,                 &
+        modis_boxttop,                 &
+        modis_boxtau
+    integer,dimension(:,:),allocatable :: &
+        modisLEVMATCH
+    real(wp),dimension(:),target,allocatable :: &
+        modis_meantbclr
 
     ! Initialize error reporting for output
     cosp_simulator(:)=''
@@ -750,7 +791,7 @@ CONTAINS
     print*,'cospIN % cospswathsIN(1) % N_inst_swaths:    ',cospIN % cospswathsIN(1) % N_inst_swaths
     print*,'cospIN % cospswathsIN(1) % inst_localtime_widths:   ',cospIN % cospswathsIN(1) % inst_localtime_widths
     print*,'cospIN % cospswathsIN(1) % inst_localtimes:   ',cospIN % cospswathsIN(1) % inst_localtimes
-  ! Indexing order is ISCCP, MISR, CALIPSO, ATLID, PARASOL, CLOUDSAT, MODIS
+  ! Indexing order is ISCCP, MISR, CLOUDSAT-CALIPSO, ATLID, PARASOL, MODIS
 
     if (Lisccp_subcolumn .or. Lmodis_subcolumn) then
        if (cospIN % cospswathsIN(1) % N_inst_swaths .gt. 0) then
@@ -762,36 +803,30 @@ CONTAINS
                                   cospIN % cospswathsIN(1) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  ISCCP_SWATH_MASK) ! Output: logical mask array
-    
-          N_ISCCP_SWATHED = COUNT(ISCCP_SWATH_MASK) ! number of points to actually operate on
-    
-          print*,'N_ISCCP_SWATHED:   ',N_ISCCP_SWATHED
+                                  ISCCP_SWATH_MASK,N_ISCCP_SWATHED) ! Output: logical mask array
+          isccpIN%Npoints  => N_ISCCP_SWATHED
+          ISCCP_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = ISCCP_SWATH_MASK)
+          print*,'isccpIN%Npoints:   ',isccpIN%Npoints
           print*,'ISCCP_SWATH_MASK:   ',ISCCP_SWATH_MASK
           ! Allocate swathed arrays.
-          allocate(temp_isccp_skt(N_ISCCP_SWATHED),temp_isccp_qv(N_ISCCP_SWATHED,cospIN%Nlevels),temp_isccp_at(N_ISCCP_SWATHED,cospIN%Nlevels),              &
-                   temp_isccp_frac_out(N_ISCCP_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),temp_isccp_tau_067(N_ISCCP_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),   &
-                   temp_isccp_emiss_11(N_ISCCP_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),temp_isccp_phalf(N_ISCCP_SWATHED,cospIN%Nlevels+1),                   &
-                   temp_isccp_pfull(N_ISCCP_SWATHED,cospIN%Nlevels),temp_isccp_sunlit(N_ISCCP_SWATHED))
-
+          allocate(temp_isccp_skt(isccpIN%Npoints),temp_isccp_qv(isccpIN%Npoints,cospIN%Nlevels),temp_isccp_at(isccpIN%Npoints,cospIN%Nlevels),              &
+                   temp_isccp_frac_out(isccpIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),temp_isccp_tau_067(isccpIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                   temp_isccp_emiss_11(isccpIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),temp_isccp_phalf(isccpIN%Npoints,cospIN%Nlevels+1),                   &
+                   temp_isccp_pfull(isccpIN%Npoints,cospIN%Nlevels),temp_isccp_sunlit(isccpIN%Npoints))
           ! Encode step: Read only appropriate values into the new temp arrays. 
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (ISCCP_SWATH_MASK(i)) then
-                j = j + 1 ! Increment first
-                temp_isccp_skt(j)          = cospgridIN%skt(i)
-                temp_isccp_qv(j,:)         = cospgridIN%qv(i,:)
-                temp_isccp_at(j,:)         = cospgridIN%at(i,:)
-                temp_isccp_frac_out(j,:,:) = cospIN%frac_out(i,:,:)
-                temp_isccp_tau_067(j,:,:)  = cospIN%tau_067(i,:,:)
-                temp_isccp_emiss_11(j,:,:) = cospIN%emiss_11(i,:,:)
-                temp_isccp_phalf(j,:)      = cospgridIN%phalf(i,:)
-                temp_isccp_pfull(j,:)      = cospgridIN%pfull(i,:)
-                temp_isccp_sunlit(j)       = cospgridIN%sunlit(i)
-             end if
-          end do
+          temp_isccp_skt(:)          = cospgridIN%skt(int(ISCCP_MASK_INDICES))
+          temp_isccp_qv(:,:)         = cospgridIN%qv(int(ISCCP_MASK_INDICES),:)
+          temp_isccp_at(:,:)         = cospgridIN%at(int(ISCCP_MASK_INDICES),:)
+          temp_isccp_frac_out(:,:,:) = cospIN%frac_out(int(ISCCP_MASK_INDICES),:,:)
+          temp_isccp_tau_067(:,:,:)  = cospIN%tau_067(int(ISCCP_MASK_INDICES),:,:)
+          temp_isccp_emiss_11(:,:,:) = cospIN%emiss_11(int(ISCCP_MASK_INDICES),:,:)
+          temp_isccp_phalf(:,:)      = cospgridIN%phalf(int(ISCCP_MASK_INDICES),:)
+          temp_isccp_pfull(:,:)      = cospgridIN%pfull(int(ISCCP_MASK_INDICES),:)
+          temp_isccp_sunlit(:)       = cospgridIN%sunlit(int(ISCCP_MASK_INDICES))
 
-          isccpIN%Npoints  => N_ISCCP_SWATHED
+         !  print*,'int(ISCCP_MASK_INDICES):  ',int(ISCCP_MASK_INDICES)
+         !  print*,'temp_isccp_sunlit:  ',temp_isccp_sunlit
+         !  print*,'cospgridIN%sunlit:  ',cospgridIN%sunlit
           isccpIN%Ncolumns => cospIN%Ncolumns
           isccpIN%Nlevels  => cospIN%Nlevels
           isccpIN%emsfc_lw => cospIN%emsfc_lw
@@ -823,6 +858,7 @@ CONTAINS
 
     if (Lmisr_subcolumn) then
        if (cospIN % cospswathsIN(2) % N_inst_swaths .gt. 0) then
+          print*,'MISR SWATHING'
           allocate(MISR_SWATH_MASK(Npoints))
           ! Do swathing to figure out which cells to simulate on
           call compute_orbitmasks(Npoints,                                                &
@@ -831,28 +867,22 @@ CONTAINS
                                   cospIN % cospswathsIN(2) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  MISR_SWATH_MASK) ! Output: logical mask array
-    
-          N_MISR_SWATHED = COUNT(MISR_SWATH_MASK) ! number of points to actually operate on
-    
-          ! Allocate swathed arrays.
-          allocate(temp_misr_dtau(N_MISR_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),   &
-                   temp_misr_sunlit(N_MISR_SWATHED),                                &
-                   temp_misr_zfull(N_MISR_SWATHED,cospIN%Nlevels),                  &
-                   temp_misr_at(N_MISR_SWATHED,cospIN%Nlevels))
-
-          ! Encode step: Read only appropriate values into the new temp arrays. 
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (MISR_SWATH_MASK(i)) then
-                j = j + 1 ! Increment first                   
-                temp_misr_dtau(j,:,:)     = cospIN%tau_067(i,:,:)
-                temp_misr_at(j,:)         = cospgridIN%at(i,:)
-                temp_misr_zfull(j,:)      = cospgridIN%hgt_matrix(i,:)
-                temp_misr_sunlit(j)       = cospgridIN%sunlit(i)
-             end if
-          end do
+                                  MISR_SWATH_MASK,N_MISR_SWATHED) ! Output: logical mask array
           misrIN%Npoints  => N_MISR_SWATHED
+          MISR_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = MISR_SWATH_MASK)
+          print*,'misrIN%Npoints:   ',misrIN%Npoints
+          print*,'MISR_SWATH_MASK:   ',MISR_SWATH_MASK
+          ! Allocate swathed arrays.
+          allocate(temp_misr_dtau(misrIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                   temp_misr_sunlit(misrIN%Npoints),                                &
+                   temp_misr_zfull(misrIN%Npoints,cospIN%Nlevels),                  &
+                   temp_misr_at(misrIN%Npoints,cospIN%Nlevels))
+          ! Encode step: Read only appropriate values into the new temp arrays. 
+          temp_misr_dtau(:,:,:)     = cospIN%tau_067(int(MISR_MASK_INDICES),:,:)
+          temp_misr_at(:,:)         = cospgridIN%at(int(MISR_MASK_INDICES),:)
+          temp_misr_zfull(:,:)      = cospgridIN%hgt_matrix(int(MISR_MASK_INDICES),:)
+          temp_misr_sunlit(:)       = cospgridIN%sunlit(int(MISR_MASK_INDICES))
+
           misrIN%Ncolumns => cospIN%Ncolumns
           misrIN%Nlevels  => cospIN%Nlevels
           misrIN%dtau     => temp_misr_dtau
@@ -871,8 +901,9 @@ CONTAINS
     endif
 
     if (Lcalipso_subcolumn) then
-       if (cospIN % cospswathsIN(1) % N_inst_swaths .gt. 0) then
-          allocate(CALIPSO_SWATH_MASK(Npoints))
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then
+          print*,'CALIPSO SWATHING'
+          allocate(CSCAL_SWATH_MASK(Npoints))
           ! Do swathing to figure out which cells to simulate on
           call compute_orbitmasks(Npoints,                                                &
                                   cospIN % cospswathsIN(3) % N_inst_swaths,               &
@@ -880,43 +911,39 @@ CONTAINS
                                   cospIN % cospswathsIN(3) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  CALIPSO_SWATH_MASK) ! Output: logical mask array    
-          N_CALIPSO_SWATHED = COUNT(CALIPSO_SWATH_MASK) ! number of points to actually operate on
+                                  CSCAL_SWATH_MASK, N_CSCAL_SWATHED) ! Output: logical mask array    
+          calipsoIN%Npoints     => N_CSCAL_SWATHED
+          CSCAL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = CSCAL_SWATH_MASK)
+          print*,'calipsoIN%Npoints:   ',calipsoIN%Npoints
+          print*,'CSCAL_SWATH_MASK:   ',CSCAL_SWATH_MASK
           ! Allocate swathed arrays.
-          allocate(temp_beta_mol_calipso(N_CALIPSO_SWATHED,cospIN%Nlevels),                        &
-                   temp_tau_mol_calipso(N_CALIPSO_SWATHED,cospIN%Nlevels),                         &
-                   temp_betatot_calipso(N_CALIPSO_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),         &
-                   temp_tautot_calipso(N_CALIPSO_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),          &
-                   temp_betatot_liq_calipso(N_CALIPSO_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),     &
-                   temp_tautot_liq_calipso(N_CALIPSO_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),      &
-                   temp_betatot_ice_calipso(N_CALIPSO_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),     &
-                   temp_tautot_ice_calipso(N_CALIPSO_SWATHED,cospIN%Ncolumns,cospIN%Nlevels))
+          allocate(temp_beta_mol_calipso(calipsoIN%Npoints,cospIN%Nlevels),                        &
+                   temp_tau_mol_calipso(calipsoIN%Npoints,cospIN%Nlevels),                         &
+                   temp_betatot_calipso(calipsoIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),         &
+                   temp_tautot_calipso(calipsoIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),          &
+                   temp_betatot_liq_calipso(calipsoIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),     &
+                   temp_tautot_liq_calipso(calipsoIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),      &
+                   temp_betatot_ice_calipso(calipsoIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),     &
+                   temp_tautot_ice_calipso(calipsoIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels))
           ! Encode step: Read only appropriate values into the new temp arrays.
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (CALIPSO_SWATH_MASK(i)) then
-                j = j + 1
-                temp_beta_mol_calipso(j,:)         = cospIN%beta_mol_calipso(i,:)
-                temp_tau_mol_calipso(j,:)          = cospIN%tau_mol_calipso(i,:)
-                temp_betatot_calipso(j,:,:)        = cospIN%betatot_calipso(i,:,:)
-                temp_tautot_calipso(j,:,:)         = cospIN%tautot_calipso(i,:,:)
-                temp_betatot_liq_calipso(j,:,:)    = cospIN%betatot_liq_calipso(i,:,:)
-                temp_tautot_liq_calipso(j,:,:)     = cospIN%tautot_liq_calipso(i,:,:)
-                temp_betatot_ice_calipso(j,:,:)    = cospIN%betatot_ice_calipso(i,:,:)
-                temp_tautot_ice_calipso(j,:,:)     = cospIN%tautot_ice_calipso(i,:,:)                     
-             end if
-          end do
-          calipsoIN%Npoints     => N_CALIPSO_SWATHED
+          temp_beta_mol_calipso(:,:)         = cospIN%beta_mol_calipso(int(CSCAL_MASK_INDICES),:)
+          temp_tau_mol_calipso(:,:)          = cospIN%tau_mol_calipso(int(CSCAL_MASK_INDICES),:)
+          temp_betatot_calipso(:,:,:)        = cospIN%betatot_calipso(int(CSCAL_MASK_INDICES),:,:)
+          temp_tautot_calipso(:,:,:)         = cospIN%tautot_calipso(int(CSCAL_MASK_INDICES),:,:)
+          temp_betatot_liq_calipso(:,:,:)    = cospIN%betatot_liq_calipso(int(CSCAL_MASK_INDICES),:,:)
+          temp_tautot_liq_calipso(:,:,:)     = cospIN%tautot_liq_calipso(int(CSCAL_MASK_INDICES),:,:)
+          temp_betatot_ice_calipso(:,:,:)    = cospIN%betatot_ice_calipso(int(CSCAL_MASK_INDICES),:,:)
+          temp_tautot_ice_calipso(:,:,:)     = cospIN%tautot_ice_calipso(int(CSCAL_MASK_INDICES),:,:)
           calipsoIN%Ncolumns    => cospIN%Ncolumns
           calipsoIN%Nlevels     => cospIN%Nlevels
-          calipsoIN%beta_mol    => cospIN%beta_mol_calipso
-          calipsoIN%betatot     => cospIN%betatot_calipso
-          calipsoIN%betatot_liq => cospIN%betatot_liq_calipso
-          calipsoIN%betatot_ice => cospIN%betatot_ice_calipso
-          calipsoIN%tau_mol     => cospIN%tau_mol_calipso
-          calipsoIN%tautot      => cospIN%tautot_calipso
-          calipsoIN%tautot_liq  => cospIN%tautot_liq_calipso
-          calipsoIN%tautot_ice  => cospIN%tautot_ice_calipso          
+          calipsoIN%beta_mol    => temp_beta_mol_calipso
+          calipsoIN%betatot     => temp_betatot_calipso
+          calipsoIN%betatot_liq => temp_betatot_liq_calipso
+          calipsoIN%betatot_ice => temp_betatot_ice_calipso
+          calipsoIN%tau_mol     => temp_tau_mol_calipso
+          calipsoIN%tautot      => temp_tautot_calipso
+          calipsoIN%tautot_liq  => temp_tautot_liq_calipso
+          calipsoIN%tautot_ice  => temp_tautot_ice_calipso
        else 
           calipsoIN%Npoints     => Npoints
           calipsoIN%Ncolumns    => cospIN%Ncolumns
@@ -944,6 +971,7 @@ CONTAINS
     
     if (Latlid_subcolumn) then 
        if (cospIN % cospswathsIN(4) % N_inst_swaths .gt. 0) then
+          print*,'ATLID SWATHING'
           allocate(ATLID_SWATH_MASK(Npoints))
           ! Do swathing to figure out which cells to simulate on
           call compute_orbitmasks(Npoints,                                                &
@@ -952,26 +980,21 @@ CONTAINS
                                   cospIN % cospswathsIN(4) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  ATLID_SWATH_MASK) ! Output: logical mask array
-    
-          N_ATLID_SWATHED = COUNT(ATLID_SWATH_MASK) ! number of points to actually operate on
-          ! Allocate swathed arrays.
-          allocate(temp_beta_mol_atlid(N_ATLID_SWATHED,cospIN%Nlevels),                  &
-                   temp_betatot_atlid(N_ATLID_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),   &
-                   temp_tau_mol_atlid(N_ATLID_SWATHED,cospIN%Nlevels),                   &
-                   temp_tautot_atlid(N_ATLID_SWATHED,cospIN%Ncolumns,cospIN%Nlevels))
-          ! Encode step: Read only appropriate values into the new temp arrays. 
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (ATLID_SWATH_MASK(i)) then
-                j = j + 1
-                temp_beta_mol_atlid(j,:)          = cospIN%beta_mol_atlid(i,:)
-                temp_tau_mol_atlid(j,:)           = cospIN%tau_mol_atlid(i,:)
-                temp_betatot_atlid(j,:,:)         = cospIN%betatot_atlid(i,:,:)
-                temp_tautot_atlid(j,:,:)          = cospIN%tautot_atlid(i,:,:)
-             end if
-          end do
+                                  ATLID_SWATH_MASK, N_ATLID_SWATHED) ! Output: logical mask array
           atlidIN%Npoints        => N_ATLID_SWATHED
+          ATLID_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = ATLID_SWATH_MASK)
+          print*,'atlidIN%Npoints:   ',atlidIN%Npoints
+          print*,'ATLID_SWATH_MASK:   ',ATLID_SWATH_MASK          
+          ! Allocate swathed arrays.
+          allocate(temp_beta_mol_atlid(atlidIN%Npoints,cospIN%Nlevels),                  &
+                   temp_betatot_atlid(atlidIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                   temp_tau_mol_atlid(atlidIN%Npoints,cospIN%Nlevels),                   &
+                   temp_tautot_atlid(atlidIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels))
+          ! Encode step: Read only appropriate values into the new temp arrays. 
+          temp_beta_mol_atlid(:,:)          = cospIN%beta_mol_atlid(int(ATLID_MASK_INDICES),:)
+          temp_tau_mol_atlid(:,:)           = cospIN%tau_mol_atlid(int(ATLID_MASK_INDICES),:)
+          temp_betatot_atlid(:,:,:)         = cospIN%betatot_atlid(int(ATLID_MASK_INDICES),:,:)
+          temp_tautot_atlid(:,:,:)          = cospIN%tautot_atlid(int(ATLID_MASK_INDICES),:,:)
           atlidIN%Ncolumns       => cospIN%Ncolumns
           atlidIN%Nlevels        => cospIN%Nlevels
           atlidIN%beta_mol_atlid => temp_beta_mol_atlid
@@ -991,6 +1014,7 @@ CONTAINS
     
     if (Lparasol_subcolumn) then
        if (cospIN % cospswathsIN(5) % N_inst_swaths .gt. 0) then
+          print*,'PARASOL SWATHING'
           allocate(PARASOL_SWATH_MASK(Npoints))
           ! Do swathing to figure out which cells to simulate on
           call compute_orbitmasks(Npoints,                                                &
@@ -999,21 +1023,17 @@ CONTAINS
                                   cospIN % cospswathsIN(5) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  PARASOL_SWATH_MASK) ! Output: logical mask array
-          N_PARASOL_SWATHED = COUNT(PARASOL_SWATH_MASK) ! number of points to actually operate on
-          ! Allocate swathed arrays.
-          allocate(temp_tautot_S_liq(N_PARASOL_SWATHED,cospIN%Ncolumns),                  &
-                   temp_tautot_S_ice(N_PARASOL_SWATHED,cospIN%Ncolumns))
-          ! Encode step: Read only appropriate values into the new temp arrays. 
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (PARASOL_SWATH_MASK(i)) then
-                j = j + 1
-                temp_tautot_S_liq(j,:)          = cospIN%tautot_S_liq(i,:)
-                temp_tautot_S_ice(j,:)          = cospIN%tautot_S_ice(i,:)
-             end if
-          end do
+                                  PARASOL_SWATH_MASK, N_PARASOL_SWATHED) ! Output: logical mask array
           parasolIN%Npoints      => N_PARASOL_SWATHED
+          PARASOL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = PARASOL_SWATH_MASK)
+          print*,'parasolIN%Npoints:   ',parasolIN%Npoints
+          print*,'PARASOL_SWATH_MASK:   ',PARASOL_SWATH_MASK             
+          ! Allocate swathed arrays.
+          allocate(temp_tautot_S_liq(parasolIN%Npoints,cospIN%Ncolumns),                  &
+                   temp_tautot_S_ice(parasolIN%Npoints,cospIN%Ncolumns))
+          ! Encode step: Read only appropriate values into the new temp arrays.
+          temp_tautot_S_liq(:,:)          = cospIN%tautot_S_liq(int(PARASOL_MASK_INDICES),:)
+          temp_tautot_S_ice(:,:)          = cospIN%tautot_S_ice(int(PARASOL_MASK_INDICES),:)                    
           parasolIN%Nlevels      => cospIN%Nlevels
           parasolIN%Ncolumns     => cospIN%Ncolumns
           parasolIN%Nrefl        => cospIN%Nrefl
@@ -1030,41 +1050,44 @@ CONTAINS
     endif
 
     if (Lcloudsat_subcolumn) then
-       if (cospIN % cospswathsIN(6) % N_inst_swaths .gt. 0) then
-          allocate(CLOUDSAT_SWATH_MASK(Npoints))
-          ! Do swathing to figure out which cells to simulate on
-          call compute_orbitmasks(Npoints,                                                &
-                                  cospIN % cospswathsIN(6) % N_inst_swaths,               &
-                                  cospIN % cospswathsIN(6) % inst_localtimes,             &
-                                  cospIN % cospswathsIN(6) % inst_localtime_widths,       &
-                                  cospgridIN%lat, cospgridIN%lon,                         &
-                                  cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  CLOUDSAT_SWATH_MASK) ! Output: logical mask array
-          N_CLOUDSAT_SWATHED = COUNT(CLOUDSAT_SWATH_MASK) ! number of points to actually operate on
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then
+          print*,'CLOUDSAT SWATHING'
+          if (.not. allocated(CSCAL_SWATH_MASK)) then 
+             allocate(CSCAL_SWATH_MASK(Npoints))
+             ! Do swathing to figure out which cells to simulate on
+             call compute_orbitmasks(Npoints,                                                &
+                                     cospIN % cospswathsIN(3) % N_inst_swaths,               &
+                                     cospIN % cospswathsIN(3) % inst_localtimes,             &
+                                     cospIN % cospswathsIN(3) % inst_localtime_widths,       &
+                                     cospgridIN%lat, cospgridIN%lon,                         &
+                                     cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
+                                     CSCAL_SWATH_MASK, N_CSCAL_SWATHED) ! Output: logical mask array
+             cloudsatIN%Npoints    => N_CSCAL_SWATHED
+             if (.not. allocated(CSCAL_MASK_INDICES)) allocate(CSCAL_MASK_INDICES(cloudsatIN%Npoints))
+             CSCAL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = CSCAL_SWATH_MASK)
+          else
+             cloudsatIN%Npoints    => N_CSCAL_SWATHED
+          end if
+          print*,'cloudsatIN%Npoints:   ',cloudsatIN%Npoints
+          print*,'CSCAL_SWATH_MASK:   ',CSCAL_SWATH_MASK
           ! Allocate swathed arrays.
-          allocate(temp_z_vol_cloudsat(N_CLOUDSAT_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),   &
-                   temp_kr_vol_cloudsat(N_CLOUDSAT_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),  &
-                   temp_g_vol_cloudsat(N_CLOUDSAT_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),   &
-                   temp_hgt_matrix(N_CLOUDSAT_SWATHED,cospIN%Nlevels))
+          allocate(temp_z_vol_cloudsat(cloudsatIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                   temp_kr_vol_cloudsat(cloudsatIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),  &
+                   temp_g_vol_cloudsat(cloudsatIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                   temp_hgt_matrix(cloudsatIN%Npoints,cospIN%Nlevels))
           ! Encode step: Read only appropriate values into the new temp arrays. 
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (CLOUDSAT_SWATH_MASK(i)) then
-                j = j + 1
-                temp_z_vol_cloudsat(j,:,:)      = cospIN%z_vol_cloudsat(i,:,:)
-                temp_kr_vol_cloudsat(j,:,:)     = cospIN%kr_vol_cloudsat(i,:,:)
-                temp_g_vol_cloudsat(j,:,:)      = cospIN%g_vol_cloudsat(i,:,:)
-                temp_hgt_matrix(j,:)            = cospgridIN%hgt_matrix(i,:)
-             end if
-          end do
-          cloudsatIN%Npoints    => N_CLOUDSAT_SWATHED
+          temp_z_vol_cloudsat      = cospIN%z_vol_cloudsat(int(CSCAL_MASK_INDICES),:,:)
+          temp_kr_vol_cloudsat     = cospIN%kr_vol_cloudsat(int(CSCAL_MASK_INDICES),:,:)
+          temp_g_vol_cloudsat      = cospIN%g_vol_cloudsat(int(CSCAL_MASK_INDICES),:,:)
+          temp_hgt_matrix          = cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES),:)
+          ! Reassign swathed values.  
           cloudsatIN%Nlevels    => cospIN%Nlevels
           cloudsatIN%Ncolumns   => cospIN%Ncolumns
           cloudsatIN%z_vol      => temp_z_vol_cloudsat
           cloudsatIN%kr_vol     => temp_kr_vol_cloudsat
           cloudsatIN%g_vol      => temp_g_vol_cloudsat
           cloudsatIN%rcfg       => cospIN%rcfg_cloudsat
-          cloudsatIN%hgt_matrix => temp_hgt_matrix
+          cloudsatIN%hgt_matrix => temp_hgt_matrix          
        else  
           cloudsatIN%Npoints    => Npoints
           cloudsatIN%Nlevels    => cospIN%Nlevels
@@ -1078,47 +1101,48 @@ CONTAINS
     endif
 
     if (Lmodis_subcolumn) then
-       if (cospIN % cospswathsIN(7) % N_inst_swaths .gt. 0) then
+       if (cospIN % cospswathsIN(6) % N_inst_swaths .gt. 0) then
+          print*,'MODIS SWATHING'
           allocate(MODIS_SWATH_MASK(Npoints))
-          ! Do swathing to figure out which cells to simulate on
+         !  ! Do swathing to figure out which cells to simulate on
           call compute_orbitmasks(Npoints,                                                &
-                                  cospIN % cospswathsIN(7) % N_inst_swaths,               &
-                                  cospIN % cospswathsIN(7) % inst_localtimes,             &
-                                  cospIN % cospswathsIN(7) % inst_localtime_widths,       &
+                                  cospIN % cospswathsIN(6) % N_inst_swaths,               &
+                                  cospIN % cospswathsIN(6) % inst_localtimes,             &
+                                  cospIN % cospswathsIN(6) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
-                                  MODIS_SWATH_MASK) ! Output: logical mask array
-          N_MODIS_SWATHED = COUNT(MODIS_SWATH_MASK) ! number of points to actually operate on
-          ! Allocate swathed arrays.
-          allocate(temp_modis_liqFrac(N_MODIS_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),   &
-                   temp_modis_tau(N_MODIS_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),       &
-                   temp_modis_g(N_MODIS_SWATHED,cospIN%Ncolumns,cospIN%Nlevels),         &
-                   temp_modis_w0(N_MODIS_SWATHED,cospIN%Ncolumns,cospIN%Nlevels))
-          ! Encode step: Read only appropriate values into the new temp arrays. 
-          j = 0 ! Initialize input
-          do i=1,Npoints
-             if (MODIS_SWATH_MASK(i)) then
-                j = j + 1
-                temp_modis_liqFrac(j,:,:)      = cospIN%fracLiq(i,:,:)
-                temp_modis_tau(j,:,:)          = cospIN%tau_067(i,:,:)
-                temp_modis_g(j,:,:)            = cospIN%asym(i,:,:)
-                temp_modis_w0(j,:,:)           = cospIN%ss_alb(i,:,:)
-             end if
-          end do
-          modisIN%Npoints   => N_MODIS_SWATHED
+                                  MODIS_SWATH_MASK, N_MODIS_SWATHED) ! Output: logical mask array          
+
+          ! Operate a little differently with MODIS because there is already some swathing at play.
+          ! modisIN is over all variables rather than just swathed variables
           modisIN%Ncolumns  => cospIN%Ncolumns
           modisIN%Nlevels   => cospIN%Nlevels
-          modisIN%liqFrac   => temp_modis_liqFrac
-          modisIN%tau       => temp_modis_tau
-          modisIN%g         => temp_modis_g
-          modisIN%w0        => temp_modis_w0
-          modisIN%Nsunlit   = count(cospgridIN%sunlit > 0 .and. MODIS_SWATH_MASK)
+          modisIN%Npoints   => Npoints
+          modisIN%liqFrac   => cospIN%fracLiq
+          modisIN%tau       => cospIN%tau_067
+          modisIN%g         => cospIN%asym
+          modisIN%w0        => cospIN%ss_alb
+
+          allocate(modisIN%pres(modisIN%Npoints,cospIN%Nlevels+1)) ! Moving this outside of the sunlit statements for consistency with the other variables
+          modisIN%pres      = cospgridIN%phalf          
+          modisIN%Nsunlit   = count((cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK) ! Sunlit mask and indices array will just include swathing as well
           if (modisIN%Nsunlit .gt. 0) then
-             allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
-             modisIN%sunlit    = pack((/ (i, i = 1, N_MODIS_SWATHED ) /),mask = (cospgridIN%sunlit > 0 .and. (MODIS_SWATH_MASK)))
-             modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:) ! Indexes just the masked locations 
-             ! I need to figure out the complementary masking here.        
-          endif
+             allocate(modisIN%sunlit(modisIN%Nsunlit))
+             modisIN%sunlit    = pack((/ (i, i = 1, modisIN%Npoints ) /),mask = ((cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK)) ! Indices of columns to operate on in modisIN
+             print*,'modisIN%sunlit:   ',modisIN%sunlit
+          endif          
+          if (modisIN%Npoints - modisIN%Nsunlit .gt. 0) then ! If more than zero tiles are not sunlit and swathed, create array to mask out these gridcells in cospOUT
+             allocate(modisIN%notSunlit(modisIN%Npoints - modisIN%Nsunlit))
+             modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),mask = (.not. ((cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK))) ! Create an array with the indices of the non-sunlit tiles
+          endif  
+          ! Create a CSCAL-MODIS joint mask for the combined product.
+          if (allocated(CSCAL_SWATH_MASK)) then
+             allocate(MODIS_CSCAL_SWATH_MASK(Npoints))
+             MODIS_CSCAL_SWATH_MASK = (.not. (MODIS_SWATH_MASK .and. CSCAL_SWATH_MASK)) ! Gridcells not seen by both MODIS and CSCAL should be set to zero
+             MODIS_CSCAL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = MODIS_CSCAL_SWATH_MASK)
+         ! else
+         !    MODIS_CSCAL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = .not. MODIS_SWATH_MASK)
+          end if
        else  
           modisIN%Ncolumns  => cospIN%Ncolumns
           modisIN%Nlevels   => cospIN%Nlevels
@@ -1127,15 +1151,21 @@ CONTAINS
           modisIN%tau       => cospIN%tau_067
           modisIN%g         => cospIN%asym
           modisIN%w0        => cospIN%ss_alb
+          allocate(modisIN%pres(modisIN%Npoints,cospIN%Nlevels+1)) ! Moving this outside of the sunlit statements for consistency with the other variables
+          modisIN%pres      = cospgridIN%phalf          
           modisIN%Nsunlit   = count(cospgridIN%sunlit > 0)
+         !  if (modisIN%Nsunlit .gt. 0) then
+         !     allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
+         !     modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
+         !     modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:) ! JKS no reason to have this structure differently, right? Memory?
+         !  endif
           if (modisIN%Nsunlit .gt. 0) then
-             allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
+             allocate(modisIN%sunlit(modisIN%Nsunlit))
              modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
-             modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:)
-          endif
-          if (count(cospgridIN%sunlit <= 0) .gt. 0) then
+          endif          
+          if (count(cospgridIN%sunlit <= 0) .gt. 0) then ! If more than zero tiles are not sunlit a.k.a. if there are dark tiles
              allocate(modisIN%notSunlit(count(cospgridIN%sunlit <= 0)))
-             modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),mask = .not. cospgridIN%sunlit > 0)
+             modisIN%notSunlit = pack((/ (i, i = 1, Npoints ) /),mask = .not. cospgridIN%sunlit > 0) ! Create an array with the indices of the non-sunlit tiles
           endif               
        end if    
     endif
@@ -1193,14 +1223,16 @@ CONTAINS
 
     ! ISCCP (icarus) subcolumn simulator
     if (Lisccp_subcolumn .or. Lmodis_subcolumn) then
-       if (cospIN % cospswathsIN(1) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
-          ! Allocate space for local variables
-          allocate(isccpLEVMATCH(N_ISCCP_SWATHED,isccpIN%Ncolumns),  &
-                   isccp_boxttop(N_ISCCP_SWATHED,isccpIN%Ncolumns),  &
-                   isccp_boxptop(N_ISCCP_SWATHED,isccpIN%Ncolumns),  &
-                   isccp_boxtau(N_ISCCP_SWATHED,isccpIN%Ncolumns),   &
-                   isccp_meantbclr(N_ISCCP_SWATHED))
+       print*,'ISCCP Subcol'
+       ! Allocate space for local variables
+       allocate(isccpLEVMATCH(isccpIN%Npoints,isccpIN%Ncolumns),  &
+                isccp_boxttop(isccpIN%Npoints,isccpIN%Ncolumns),  &
+                isccp_boxptop(isccpIN%Npoints,isccpIN%Ncolumns),  &
+                isccp_boxtau(isccpIN%Npoints,isccpIN%Ncolumns),   &
+                isccp_meantbclr(isccpIN%Npoints))       
+       if (cospIN % cospswathsIN(1) % N_inst_swaths .gt. 0) then ! MODIS and ISCCP
           ! Call simulator
+         !  print*,'ISCCP Subcol-1'
           call icarus_subcolumn(isccpIN%npoints,isccpIN%ncolumns,isccpIN%nlevels,           &
                                isccpIN%sunlit,isccpIN%dtau,isccpIN%dem,isccpIN%skt,        &
                                isccpIN%emsfc_lw,isccpIN%qv,isccpIN%at,isccpIN%pfull,       &
@@ -1208,31 +1240,21 @@ CONTAINS
                                isccp_boxtau(:,:),isccp_boxptop(:,:),                       &
                                isccp_boxttop(:,:),isccp_meantbclr(:))
           ! Decode outputs from swaths when reading into cospOUT fields
-          cospOUT%isccp_boxtau(:,:) = R_UNDEF
-          cospOUT%isccp_boxptop(:,:) = R_UNDEF
-          cospOUT%isccp_meantbclr(:) = R_UNDEF
-          j = 0
-          do i=ij,ik ! Index ranges on outputs
-             if (ISCCP_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                j = j + 1
-                if (associated(cospOUT%isccp_boxtau)) cospOUT%isccp_boxtau(i,:) = isccp_boxtau(j,:)
-                if (associated(cospOUT%isccp_boxptop)) cospOUT%isccp_boxptop(i,:) = isccp_boxptop(j,:)
-                if (associated(cospOUT%isccp_meantbclr)) cospOUT%isccp_meantbclr(i) = isccp_meantbclr(j)
-             end if
-          end do
-         !  print*,'isccp_boxtau:   ',isccp_boxtau
-         !  print*,'cospOUT%isccp_boxtau:   ',cospOUT%isccp_boxtau
+          cospOUT%isccp_boxtau(ij:ik,:) = R_UNDEF
+          cospOUT%isccp_boxptop(ij:ik,:) = R_UNDEF
+          cospOUT%isccp_meantbclr(ij:ik) = R_UNDEF
+          !  print*,'ISCCP Subcol-2'
+          if (associated(cospOUT%isccp_boxtau)) cospOUT%isccp_boxtau(ij+int(ISCCP_MASK_INDICES)-1,:) = isccp_boxtau(:,:)
+          if (associated(cospOUT%isccp_boxptop)) cospOUT%isccp_boxptop(ij+int(ISCCP_MASK_INDICES)-1,:) = isccp_boxptop(:,:) ! This is used by MODIS as well.
+          if (associated(cospOUT%isccp_meantbclr)) cospOUT%isccp_meantbclr(ij+int(ISCCP_MASK_INDICES)-1) = isccp_meantbclr(:)          
+         !  print*,'ISCCP Subcol-3'
           deallocate(temp_isccp_skt,temp_isccp_qv,temp_isccp_at,   &
                      temp_isccp_frac_out,temp_isccp_tau_067,       &
                      temp_isccp_emiss_11,temp_isccp_phalf,         &
                      temp_isccp_pfull) ! some of these pointers might be needed later!
+         !  print*,'ISCCP Subcol-4'
        else ! Proceed normally
-          ! Allocate space for local variables
-          allocate(isccpLEVMATCH(Npoints,isccpIN%Ncolumns),                                 &
-                   isccp_boxttop(Npoints,isccpIN%Ncolumns),                                 &
-                   isccp_boxptop(Npoints,isccpIN%Ncolumns),                                 &
-                   isccp_boxtau(Npoints,isccpIN%Ncolumns), isccp_meantbclr(Npoints))
-          ! Call simulator
+          ! Call simulator        
           call icarus_subcolumn(isccpIN%npoints,isccpIN%ncolumns,isccpIN%nlevels,           &
                                isccpIN%sunlit,isccpIN%dtau,isccpIN%dem,isccpIN%skt,        &
                                isccpIN%emsfc_lw,isccpIN%qv,isccpIN%at,isccpIN%pfull,       &
@@ -1254,31 +1276,25 @@ CONTAINS
 
    ! MISR subcolumn simulator
     if (Lmisr_subcolumn) then
+       print*,'MISR Subcol-0'
+       ! Allocate space for local variables. 
+       allocate(misr_boxztop(misrIN%Npoints,misrIN%Ncolumns),                                   &
+                misr_boxtau(misrIN%Npoints,misrIN%Ncolumns),                                    &
+                misr_dist_model_layertops(misrIN%Npoints,numMISRHgtBins))      
        if (cospIN % cospswathsIN(2) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
-          ! Allocate space for local variables
-          allocate(misr_boxztop(N_MISR_SWATHED,misrIN%Ncolumns),                                   &
-                   misr_boxtau(N_MISR_SWATHED,misrIN%Ncolumns),                                    &
-                   misr_dist_model_layertops(N_MISR_SWATHED,numMISRHgtBins))
+          ! Allocate space for local variables. 
+         !  print*,'MISR Subcol-1'
           ! Call simulator
-          call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
+         call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                               misrIN%zfull,misrIN%at,misrIN%sunlit,misr_boxtau,             &
                               misr_dist_model_layertops,misr_boxztop)
           ! Decode outputs from swaths when reading into cospOUT fields
-          cospOUT%misr_dist_model_layertops(:,:) = R_UNDEF
-          j = 0
-          do i=ij,ik ! Index ranges on outputs
-             if (MISR_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                j = j + 1
-                if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(i,:) = misr_dist_model_layertops(j,:)
-             end if
-          end do                                
-          deallocate(temp_misr_sunlit,temp_misr_zfull,temp_misr_at,temp_misr_dtau)
-          deallocate(MISR_SWATH_MASK)       
+         !  print*,'MISR Subcol-3'
+          cospOUT%misr_dist_model_layertops(ij:ik,:) = R_UNDEF
+          if (associated(cospOUT%misr_dist_model_layertops)) cospOUT%misr_dist_model_layertops(ij+int(MISR_MASK_INDICES)-1,:) = misr_dist_model_layertops(:,:)                             
+         !  print*,'MISR Subcol-4'
+          deallocate(temp_misr_zfull,temp_misr_at,temp_misr_dtau)
        else
-          ! Allocate space for local variables
-          allocate(misr_boxztop(Npoints,misrIN%Ncolumns),                                   &
-                   misr_boxtau(Npoints,misrIN%Ncolumns),                                    &
-                   misr_dist_model_layertops(Npoints,numMISRHgtBins))
           ! Call simulator
           call misr_subcolumn(misrIN%Npoints,misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,    &
                                misrIN%zfull,misrIN%at,misrIN%sunlit,misr_boxtau,             &
@@ -1292,11 +1308,13 @@ CONTAINS
 
     ! Calipso subcolumn simulator
     if (Lcalipso_subcolumn) then
+       print*,'CALIPSO Subcol-1'
        ! Allocate space for local variables
        allocate(calipso_beta_mol(calipsoIN%Npoints,calipsoIN%Nlevels),                   &
                 calipso_beta_tot(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels),&
                 calipso_betaperp_tot(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels))
        ! Call simulator
+       print*,'CALIPSO Subcol-2'
        call lidar_subcolumn(calipsoIN%npoints, calipsoIN%ncolumns, calipsoIN%nlevels, .false., &
                   calipsoIN%beta_mol, calipsoIN%tau_mol, calipsoIN%betatot, calipsoIN%tautot,  &
                   calipso_beta_mol(:,:), calipso_beta_tot(:,:,:), calipsoIN%betatot_ice,       &
@@ -1304,22 +1322,17 @@ CONTAINS
                   calipso_betaperp_tot(:,:,:))                      
        if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
           ! Decode outputs from swaths when reading into cospOUT fields
-          cospOUT%calipso_beta_mol(:,:)       = R_UNDEF
-          cospOUT%calipso_beta_tot(:,:,:)     = R_UNDEF
-          cospOUT%calipso_betaperp_tot(:,:,:) = R_UNDEF
-          j = 0
-          do i=ij,ik ! Index ranges on outputs
-             if (CALIPSO_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                j = j + 1
-                if (associated(cospOUT%calipso_beta_mol))     cospOUT%calipso_beta_mol(i,:)     = calipso_beta_mol(j,:)
-                if (associated(cospOUT%calipso_beta_tot))     cospOUT%calipso_beta_tot(i,:,:)     = calipso_beta_tot(j,:,:)
-                if (associated(cospOUT%calipso_betaperp_tot)) cospOUT%calipso_betaperp_tot(i,:,:) = calipso_betaperp_tot(j,:,:)                
-             end if
-          end do            
+          print*,'CALIPSO Subcol-3'
+          cospOUT%calipso_beta_mol(ij:ik,:)       = R_UNDEF
+          cospOUT%calipso_beta_tot(ij:ik,:,:)     = R_UNDEF
+          cospOUT%calipso_betaperp_tot(ij:ik,:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_beta_mol))     cospOUT%calipso_beta_mol(ij+int(CSCAL_MASK_INDICES)-1,calipsoIN%Nlevels:1:-1)     = calipso_beta_mol(:,:)
+          if (associated(cospOUT%calipso_beta_tot))     cospOUT%calipso_beta_tot(ij+int(CSCAL_MASK_INDICES)-1,:,calipsoIN%Nlevels:1:-1)     = calipso_beta_tot(:,:,:)
+          if (associated(cospOUT%calipso_betaperp_tot)) cospOUT%calipso_betaperp_tot(ij+int(CSCAL_MASK_INDICES)-1,:,:) = calipso_betaperp_tot(:,:,:)         
+          print*,'CALIPSO Subcol-4'
           deallocate(temp_beta_mol_calipso,temp_tau_mol_calipso,temp_betatot_calipso,temp_tautot_calipso,          &
                      temp_betatot_liq_calipso,temp_tautot_liq_calipso,temp_betatot_ice_calipso,temp_tautot_ice_calipso)
-          deallocate(CALIPSO_SWATH_MASK)
-       else ! Proceed normally
+       else ! Proceed normally 
           ! Store output (if requested)
           if (associated(cospOUT%calipso_beta_mol))                                         &
                 cospOUT%calipso_beta_mol(ij:ik,calipsoIN%Nlevels:1:-1) = calipso_beta_mol
@@ -1348,6 +1361,7 @@ CONTAINS
 
     ! ATLID subcolumn simulator
     if (Latlid_subcolumn) then
+       print*,'ATLID Subcol-0'
        ! Allocate space for local variables
        allocate(atlid_beta_mol(atlidIN%Npoints,atlidIN%Nlevels),                      & 
                 atlid_beta_tot(atlidIN%Npoints,atlidIN%Ncolumns,atlidIN%Nlevels)) 
@@ -1357,18 +1371,13 @@ CONTAINS
             atlidIN%tautot_atlid, atlid_beta_mol(:,:), atlid_beta_tot(:,:,:))
        ! Decode outputs from swaths when reading into cospOUT fields
        if (cospIN % cospswathsIN(4) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
-          cospOUT%atlid_beta_mol(:,:)   = R_UNDEF
-          cospOUT%atlid_beta_tot(:,:,:) = R_UNDEF
-          j = 0
-          do i=ij,ik ! Index ranges on outputs
-             if (ATLID_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                j = j + 1
-                if (associated(cospOUT%atlid_beta_mol))     cospOUT%atlid_beta_mol(i,atlidIN%Nlevels:1:-1)     = atlid_beta_mol(j,:)
-                if (associated(cospOUT%atlid_beta_tot))     cospOUT%atlid_beta_tot(i,:,atlidIN%Nlevels:1:-1)   = atlid_beta_tot(j,:,:)
-             end if
-          end do       
+          print*,'ATLID Subcol-1'
+          cospOUT%atlid_beta_mol(ij:ik,:)   = R_UNDEF
+          cospOUT%atlid_beta_tot(ij:ik,:,:) = R_UNDEF
+          if (associated(cospOUT%atlid_beta_mol))     cospOUT%atlid_beta_mol(ij+int(ATLID_MASK_INDICES)-1,atlidIN%Nlevels:1:-1)     = atlid_beta_mol(:,:)
+          if (associated(cospOUT%atlid_beta_tot))     cospOUT%atlid_beta_tot(ij+int(ATLID_MASK_INDICES)-1,:,atlidIN%Nlevels:1:-1)   = atlid_beta_tot(:,:,:)    
+          print*,'ATLID Subcol-2'
           deallocate(temp_beta_mol_atlid,temp_betatot_atlid,temp_tau_mol_atlid,temp_tautot_atlid)
-          deallocate(ATLID_SWATH_MASK)
        else
           ! Store output (if requested)
           if (associated(cospOUT%atlid_beta_mol))                                        & 
@@ -1380,6 +1389,7 @@ CONTAINS
 
     ! PARASOL subcolumn simulator
     if (Lparasol_subcolumn) then
+       print*,'PARASOL Subcol-0'
        ! Allocate space for local variables
        allocate(parasolPix_refl(parasolIN%Npoints,parasolIN%Ncolumns,PARASOL_NREFL))
        ! Call simulator
@@ -1390,16 +1400,8 @@ CONTAINS
                                  parasolPix_refl(:,icol,1:PARASOL_NREFL))
           ! Store output (if requested)
           if (cospIN % cospswathsIN(5) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
-             cospOUT%parasolPix_refl(:,:,:) = R_UNDEF
-             j = 0
-             do i=ij,ik ! Index ranges on outputs
-                if (PARASOL_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                   j = j + 1
-                   if (associated(cospOUT%parasolPix_refl))     cospOUT%parasolPix_refl(i,icol,1:PARASOL_NREFL)     = parasolPix_refl(j,icol,1:PARASOL_NREFL)
-                end if
-             end do       
-             deallocate(temp_tautot_S_liq,temp_tautot_S_ice)
-             deallocate(PARASOL_SWATH_MASK)          
+             cospOUT%parasolPix_refl(ij:ik,icol,1:PARASOL_NREFL) = R_UNDEF
+             if (associated(cospOUT%parasolPix_refl))     cospOUT%parasolPix_refl(ij+int(PARASOL_MASK_INDICES)-1,icol,1:PARASOL_NREFL)     = parasolPix_refl(:,icol,1:PARASOL_NREFL)    
           else
              if (associated(cospOUT%parasolPix_refl)) then
                 cospOUT%parasolPix_refl(ij:ik,icol,1:PARASOL_NREFL) =                          &
@@ -1407,13 +1409,17 @@ CONTAINS
              endif
           endif
        enddo
+       if (allocated(temp_tautot_S_liq)) deallocate(temp_tautot_S_liq)
+       if (allocated(temp_tautot_S_ice)) deallocate(temp_tautot_S_ice)
     endif
 
     ! Cloudsat (quickbeam) subcolumn simulator
     if (Lcloudsat_subcolumn) then
        ! Allocate space for local variables
+       print*,'CLOUDSAT Subcol-0'
        allocate(cloudsatDBZe(cloudsatIN%Npoints,cloudsatIN%Ncolumns,cloudsatIN%Nlevels), &
                 cloudsatZe_non(cloudsatIN%Npoints,cloudsatIN%Ncolumns,cloudsatIN%Nlevels))
+       print*,'CLOUDSAT Subcol-0.5'
        do icol=1,cloudsatIN%ncolumns
           call quickbeam_subcolumn(cloudsatIN%rcfg,cloudsatIN%Npoints,cloudsatIN%Nlevels,&
                                    cloudsatIN%hgt_matrix/1000._wp,                       &
@@ -1421,44 +1427,66 @@ CONTAINS
                                    cloudsatIN%kr_vol(:,icol,:),                          &
                                    cloudsatIN%g_vol(:,1,:),cloudsatDBze(:,icol,:),cloudsatZe_non(:,icol,:))
        enddo
+       print*,'CLOUDSAT Subcol-1'
        ! Store output (if requested)
-       if (cospIN % cospswathsIN(6) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
-          cospOUT%cloudsat_Ze_tot(:,:,:) = R_UNDEF
-          j = 0
-          do i=ij,ik ! Index ranges on outputs
-             if (CLOUDSAT_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                j = j + 1
-                if (associated(cospOUT%cloudsat_Ze_tot))     cospOUT%cloudsat_Ze_tot(i,:,1:cloudsatIN%Nlevels)     = cloudsatDBZe(j,:,1:cloudsatIN%Nlevels)
-             end if
-          end do       
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+          print*,'CLOUDSAT Subcol-2'
+          cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = R_UNDEF
+          if (associated(cospOUT%cloudsat_Ze_tot))     cospOUT%cloudsat_Ze_tot(ij+int(CSCAL_MASK_INDICES)-1,:,1:cloudsatIN%Nlevels)     = cloudsatDBZe(:,:,1:cloudsatIN%Nlevels)    
+          print*,'CLOUDSAT Subcol-4'
           deallocate(temp_hgt_matrix,temp_z_vol_cloudsat,temp_kr_vol_cloudsat,temp_g_vol_cloudsat)
-          deallocate(CLOUDSAT_SWATH_MASK)
        else
           if (associated(cospOUT%cloudsat_Ze_tot)) then
              cospOUT%cloudsat_Ze_tot(ij:ik,:,:) = cloudsatDBZe(:,:,1:cloudsatIN%Nlevels)
           endif
        endif
     endif
-
     if (Lmodis_subcolumn) then
-       if(modisiN%nSunlit > 0) then
+       if (modisiN%nSunlit > 0) then
           ! Allocate space for local variables
+          print*,'MODIS Subcol-0'
           allocate(modisRetrievedTau(modisIN%nSunlit,modisIN%nColumns),                  &
                    modisRetrievedSize(modisIN%nSunlit,modisIN%nColumns),                 &
                    modisRetrievedPhase(modisIN%nSunlit,modisIN%nColumns),                &
                    modisRetrievedCloudTopPressure(modisIN%nSunlit,modisIN%nColumns))
-          ! Call simulator
-          do i = 1, modisIN%nSunlit
-             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,modisIN%pres(i,:),    &
+          print*,'MODIS Subcol-1'
+          if (allocated(ISCCP_SWATH_MASK)) then ! If ISCCP is swathed must run ICARUS separately for MODIS
+             allocate(modisLEVMATCH(modisIN%Npoints,modisIN%Ncolumns),     &
+                      modis_boxptop(modisIN%Npoints,modisIN%Ncolumns),     &
+                      modis_boxttop(modisIN%Npoints,modisIN%Ncolumns),     &
+                      modis_boxtau(modisIN%Npoints,modisIN%Ncolumns),      &
+                      modis_meantbclr(modisIN%Npoints))
+             if (.not. allocated(MODIS_SWATH_MASK)) then
+                allocate(MODIS_SWATH_MASK(Npoints))
+                MODIS_SWATH_MASK(:) = .true.
+             end if
+             call icarus_subcolumn(modisIN%npoints,modisIN%ncolumns,modisIN%nlevels,                &
+                                   int(MERGE(1,0,MASK=(cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK)), &
+                                  modisIN%tau,cospIN%emiss_11,cospgridIN%skt,                       &
+                                  cospIN%emsfc_lw,cospgridIN%qv,cospgridIN%at,cospgridIN%pfull,     &
+                                  modisIN%pres,cospIN%frac_out,modisLEVMATCH,                       &    
+                                  modis_boxtau(:,:),modis_boxptop(:,:),                             &
+                                  modis_boxttop(:,:),modis_meantbclr(:))
+             deallocate(modis_boxtau,modis_boxttop,modis_meantbclr,modisLEVMATCH)
+          else ! If ISCCP runs fully, just use the cospOUT field indexed appropriately
+             allocate(modis_boxptop(modisIN%Npoints,modisIN%Ncolumns))
+             modis_boxptop = cospOUT%isccp_boxptop(ij:ik,:)
+          end if
+          ! Call simulator one column at a time on sunlit columns
+          do i = 1, modisIN%nSunlit ! Just run on the sunlit columns, even though the modisIN DDT includes everything orbit swathed
+             call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,                      &
+                                  modisIN%pres(int(modisIN%sunlit(i)),:),                &
                                   modisIN%tau(int(modisIN%sunlit(i)),:,:),               &
                                   modisIN%liqFrac(int(modisIN%sunlit(i)),:,:),           &
                                   modisIN%g(int(modisIN%sunlit(i)),:,:),                 &
                                   modisIN%w0(int(modisIN%sunlit(i)),:,:),                &
-                                  isccp_boxptop(int(modisIN%sunlit(i)),:),               &
+                                  modis_boxptop(int(modisIN%sunlit(i)),:),               &
                                   modisRetrievedPhase(i,:),                              &
                                   modisRetrievedCloudTopPressure(i,:),                   &
-                                  modisRetrievedTau(i,:),modisRetrievedSize(i,:))
+                                  modisRetrievedTau(i,:),modisRetrievedSize(i,:))                      
           end do
+          deallocate(modis_boxptop)
+          print*,'MODIS Subcol-2'
        endif
     endif
 
@@ -1497,19 +1525,12 @@ CONTAINS
        ! Call simulator
        if (cospIN % cospswathsIN(1) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
           ! Operate at the masked format.
-          allocate(temp_isccp_fq(N_ISCCP_SWATHED,numISCCPTauBins,numISCCPPresBins),   &
-                   temp_isccp_meanalbedocld(N_ISCCP_SWATHED),                         &
-                   temp_isccp_meanptop(N_ISCCP_SWATHED),                              &
-                   temp_isccp_meantaucld(N_ISCCP_SWATHED),                            &
-                   temp_isccp_totalcldarea(N_ISCCP_SWATHED),                          &
-                   temp_isccp_meantb(N_ISCCP_SWATHED))
-         !  print*,'cospIN%npoints:  ',cospIN%npoints
-         !  print*,'isccpIN%npoints:  ',isccpIN%npoints
-         !  print*,'N_ISCCP_SWATHED:  ',N_ISCCP_SWATHED                   
-         !  print*,'isccp_boxtau(:    ,:):   ',isccp_boxtau
-         !  print*,'isccp_boxptop(:    ,:):   ',isccp_boxptop
-         !  print*,'isccpIN%sunlit(:    ,:):   ',isccpIN%sunlit
-         !  print*,'isccp_boxttop(:    ,:):   ',isccp_boxttop
+          allocate(temp_isccp_fq(isccpIN%Npoints,numISCCPTauBins,numISCCPPresBins),   &
+                   temp_isccp_meanalbedocld(isccpIN%Npoints),                         &
+                   temp_isccp_meanptop(isccpIN%Npoints),                              &
+                   temp_isccp_meantaucld(isccpIN%Npoints),                            &
+                   temp_isccp_totalcldarea(isccpIN%Npoints),                          &
+                   temp_isccp_meantb(isccpIN%Npoints))
 
           call icarus_column(isccpIN%npoints, isccpIN%ncolumns,isccp_boxtau(:,:),     &
                              isccp_boxptop(:,:)/100._wp,isccpIN%sunlit,isccp_boxttop(:,:), &
@@ -1524,26 +1545,14 @@ CONTAINS
           cospOUT%isccp_meantaucld(ij:ik) = R_UNDEF
           cospOUT%isccp_totalcldarea(ij:ik) = R_UNDEF
           cospOUT%isccp_meantb(ij:ik) = R_UNDEF
-          j = 0
-          !  print*,'temp_isccp_totalcldarea:   ',temp_isccp_totalcldarea
-          do i=ij,ik ! Index ranges on outputs
-             if (ISCCP_SWATH_MASK(i - ij + 1)) then ! Convert back to an index for the swath mask
-                j = j + 1
-                if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(i,:,:)        = temp_isccp_fq(j,:,:)
-                if (associated(cospOUT%isccp_meanalbedocld)) cospOUT%isccp_meanalbedocld(i) = temp_isccp_meanalbedocld(j)
-                if (associated(cospOUT%isccp_meanptop))      cospOUT%isccp_meanptop(i)      = temp_isccp_meanptop(j)
-                if (associated(cospOUT%isccp_meantaucld))    cospOUT%isccp_meantaucld(i)    = temp_isccp_meantaucld(j)
-                if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(i)  = temp_isccp_totalcldarea(j)
-                if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(i)        = temp_isccp_meantb(j)
-             end if
-          end do
-          deallocate(ISCCP_SWATH_MASK,temp_isccp_fq,temp_isccp_meanalbedocld,temp_isccp_meanptop,temp_isccp_meantaucld,temp_isccp_totalcldarea,temp_isccp_meantb,temp_isccp_sunlit)
-         !  print*,'cospOUT%isccp_totalcldarea:  ',cospOUT%isccp_totalcldarea
+          if (associated(cospOUT%isccp_fq))            cospOUT%isccp_fq(ij+int(ISCCP_MASK_INDICES)-1,:,:)        = temp_isccp_fq(:,:,:)
+          if (associated(cospOUT%isccp_meanalbedocld)) cospOUT%isccp_meanalbedocld(ij+int(ISCCP_MASK_INDICES)-1) = temp_isccp_meanalbedocld(:)
+          if (associated(cospOUT%isccp_meanptop))      cospOUT%isccp_meanptop(ij+int(ISCCP_MASK_INDICES)-1)      = temp_isccp_meanptop(:)
+          if (associated(cospOUT%isccp_meantaucld))    cospOUT%isccp_meantaucld(ij+int(ISCCP_MASK_INDICES)-1)    = temp_isccp_meantaucld(:)
+          if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(ij+int(ISCCP_MASK_INDICES)-1)  = temp_isccp_totalcldarea(:)
+          if (associated(cospOUT%isccp_meantb))        cospOUT%isccp_meantb(ij+int(ISCCP_MASK_INDICES)-1)        = temp_isccp_meantb(:)
+          deallocate(ISCCP_SWATH_MASK,ISCCP_MASK_INDICES,temp_isccp_fq,temp_isccp_meanalbedocld,temp_isccp_meanptop,temp_isccp_meantaucld,temp_isccp_totalcldarea,temp_isccp_meantb)
        else
-         !  print*,'isccp_boxtau(124:153,:):   ',isccp_boxtau(124:153,:)
-         !  print*,'isccp_boxptop(124:153,:):   ',isccp_boxptop(124:153,:)
-         !  print*,'isccpIN%sunlit(124:153):   ',isccpIN%sunlit(124:153)
-         !  print*,'isccp_boxttop(124:153,:):   ',isccp_boxttop(124:153,:)
           call icarus_column(isccpIN%npoints, isccpIN%ncolumns,isccp_boxtau(:,:),           &
                              isccp_boxptop(:,:)/100._wp, isccpIN%sunlit,isccp_boxttop(:,:), &
                              cospOUT%isccp_fq(ij:ik,:,:),                                   &
@@ -1565,6 +1574,7 @@ CONTAINS
        if (allocated(isccp_boxtau))    deallocate(isccp_boxtau)
        if (allocated(isccp_meantbclr)) deallocate(isccp_meantbclr)
        if (allocated(isccpLEVMATCH))   deallocate(isccpLEVMATCH)
+       if (allocated(temp_isccp_sunlit)) deallocate(temp_isccp_sunlit)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
           nullify(cospOUT%isccp_meanalbedocld)
@@ -1589,6 +1599,7 @@ CONTAINS
           deallocate(out1D_6)
           nullify(cospOUT%isccp_fq)
        endif
+       ! Clear up memory for ISCCP swath variables
     endif
 
     ! MISR
@@ -1605,13 +1616,34 @@ CONTAINS
        if (.not. associated(cospOUT%misr_fq)) then
           allocate(out1D_3(Npoints*numMISRTauBins*numMISRHgtBins))
           cospOUT%misr_fq(ij:ik,1:numMISRTauBins,1:numMISRHgtBins) => out1D_3
-        endif
+       endif
 
        ! Call simulator
-        call misr_column(misrIN%Npoints,misrIN%Ncolumns,misr_boxztop,misrIN%sunlit,&
-                         misr_boxtau,cospOUT%misr_cldarea(ij:ik),                  &
-                         cospOUT%misr_meanztop(ij:ik),cospOUT%misr_fq(ij:ik,:,:))
-
+       if (cospIN % cospswathsIN(2) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+         !  print*,'MISR'
+          ! Operate at the masked format.
+          allocate(temp_misr_cldarea(misrIN%Npoints),   &
+                   temp_misr_meanztop(misrIN%Npoints),                         &
+                   temp_misr_fq(misrIN%Npoints,numMISRTauBins,numMISRHgtBins))
+         !  print*,'MISR-1'
+          call misr_column(misrIN%Npoints,misrIN%Ncolumns,misr_boxztop,misrIN%sunlit,&
+                           misr_boxtau,temp_misr_cldarea(:),                  &
+                           temp_misr_meanztop(:),temp_misr_fq(:,:,:))                  
+         !  print*,'MISR-2'
+          ! Decode back to the cospOUT shapes
+          cospOUT%misr_cldarea(ij:ik) = R_UNDEF
+          cospOUT%misr_meanztop(ij:ik) = R_UNDEF
+          cospOUT%misr_fq(ij:ik,:,:) = R_UNDEF
+          if (associated(cospOUT%misr_cldarea))    cospOUT%misr_cldarea(ij+int(MISR_MASK_INDICES)-1)    = temp_misr_cldarea(:)
+          if (associated(cospOUT%misr_meanztop))   cospOUT%misr_meanztop(ij+int(MISR_MASK_INDICES)-1)   = temp_misr_meanztop(:)
+          if (associated(cospOUT%misr_fq))         cospOUT%misr_fq(ij+int(MISR_MASK_INDICES)-1,:,:)     = temp_misr_fq(:,:,:)          
+         !  print*,'MISR-3'
+          deallocate(MISR_SWATH_MASK,MISR_MASK_INDICES,temp_misr_sunlit,temp_misr_cldarea,temp_misr_meanztop,temp_misr_fq)
+       else
+          call misr_column(misrIN%Npoints,misrIN%Ncolumns,misr_boxztop,misrIN%sunlit,&
+                           misr_boxtau,cospOUT%misr_cldarea(ij:ik),                  &
+                           cospOUT%misr_meanztop(ij:ik),cospOUT%misr_fq(ij:ik,:,:))
+       endif
        ! Clear up memory
        if (allocated(misr_boxtau))               deallocate(misr_boxtau)
        if (allocated(misr_boxztop))              deallocate(misr_boxztop)
@@ -1683,21 +1715,82 @@ CONTAINS
        endif
        
        ! Call simulator
-       ok_lidar_cfad=.true.
-       call lidar_column(calipsoIN%Npoints, calipsoIN%Ncolumns, calipsoIN%Nlevels,       &
-            Nlvgrid, SR_BINS, LIDAR_NTYPE, 'calipso',calipso_beta_tot(:,:,:), calipso_beta_mol(:,:),&
-            cospgridIN%phalf(:,2:calipsoIN%Nlevels+1),cospgridIN%hgt_matrix,             &
-            cospgridIN%hgt_matrix_half, vgrid_z(:), ok_lidar_cfad, LIDAR_NCAT,           &
-            cospOUT%calipso_cfad_sr(ij:ik,:,:), cospOUT%calipso_lidarcld(ij:ik,:),       &
-            cospOUT%calipso_cldlayer(ij:ik,:),                                           &
-            cospgridIN%at(:,:), calipso_betaperp_tot(:,:,:), cospgridIN%surfelev,        & 
-            cospOUT%calipso_lidarcldphase(ij:ik,:,:),                       &
-            cospOUT%calipso_lidarcldtype(ij:ik,:,:),  cospOUT%calipso_cldtype(ij:ik,:),  &
-            cospOUT%calipso_cldtypetemp(ij:ik,:), cospOUT%calipso_cldtypemeanz(ij:ik,:), & 
-            cospOUT%calipso_cldtypemeanzse(ij:ik,:), cospOUT%calipso_cldthinemis(ij:ik), &
-            cospOUT%calipso_cldlayerphase(ij:ik,:,:), cospOUT%calipso_lidarcldtmp(ij:ik,:,:))
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+          ! Operate at the masked format.
+          print*,'CALIPSO'
+          allocate(temp_calipso_cfad_sr(calipsoIN%Npoints,SR_BINS,Nlvgrid),              &
+                   temp_calipso_lidarcld(calipsoIN%Npoints,Nlvgrid),                     &
+                   temp_calipso_cldlayer(calipsoIN%Npoints,LIDAR_NCAT),                  &
+                   temp_calipso_lidarcldphase(calipsoIN%Npoints,Nlvgrid,6),              &
+                   temp_calipso_lidarcldtype(calipsoIN%Npoints,Nlvgrid,LIDAR_NTYPE+1),   &
+                   temp_calipso_cldtype(calipsoIN%Npoints,LIDAR_NTYPE),                  &
+                   temp_calipso_cldtypetemp(calipsoIN%Npoints,LIDAR_NTYPE),              &
+                   temp_calipso_cldtypemeanz(calipsoIN%Npoints,2),                       &
+                   temp_calipso_cldtypemeanzse(calipsoIN%Npoints,3),                     &
+                   temp_calipso_cldthinemis(calipsoIN%Npoints),                          &
+                   temp_calipso_cldlayerphase(calipsoIN%Npoints,LIDAR_NCAT,6),           &
+                   temp_calipso_lidarcldtmp(calipsoIN%Npoints,LIDAR_NTEMP,5))
+          ok_lidar_cfad=.true.
+          print*,'CALIPSO-1'
+          call lidar_column(calipsoIN%Npoints, calipsoIN%Ncolumns, calipsoIN%Nlevels,       &
+               Nlvgrid, SR_BINS, LIDAR_NTYPE, 'calipso',calipso_beta_tot(:,:,:), calipso_beta_mol(:,:),&
+               cospgridIN%phalf(int(CSCAL_MASK_INDICES),2:calipsoIN%Nlevels+1),cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES),:),             & ! JKS issues here, add ij - 1?
+               cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES),:), vgrid_z(:), ok_lidar_cfad, LIDAR_NCAT,           & ! JKS issues here
+               temp_calipso_cfad_sr(:,:,:), temp_calipso_lidarcld(:,:),       &
+               temp_calipso_cldlayer(:,:),                                           &
+               cospgridIN%at(int(CSCAL_MASK_INDICES),:), calipso_betaperp_tot(:,:,:), cospgridIN%surfelev(int(CSCAL_MASK_INDICES)),        &  ! JKS issues here
+               temp_calipso_lidarcldphase(:,:,:),                       &
+               temp_calipso_lidarcldtype(:,:,:),  temp_calipso_cldtype(:,:),  &
+               temp_calipso_cldtypetemp(:,:), temp_calipso_cldtypemeanz(:,:), & 
+               temp_calipso_cldtypemeanzse(:,:), temp_calipso_cldthinemis(:), &
+               temp_calipso_cldlayerphase(:,:,:), temp_calipso_lidarcldtmp(:,:,:))
+          ! Decode back to the cospOUT shapes
+          print*,'CALIPSO-2'
+          cospOUT%calipso_cfad_sr(ij:ik,:,:) = R_UNDEF
+          cospOUT%calipso_lidarcld(ij:ik,:) = R_UNDEF
+          cospOUT%calipso_cldlayer(ij:ik,:) = R_UNDEF
+          cospOUT%calipso_lidarcldphase(ij:ik,:,:) = R_UNDEF
+          cospOUT%calipso_lidarcldtype(ij:ik,:,:) = R_UNDEF
+          cospOUT%calipso_cldtype(ij:ik,:) = R_UNDEF
+          cospOUT%calipso_cldtypetemp(ij:ik,:) = R_UNDEF
+          cospOUT%calipso_cldtypemeanz(ij:ik,:) = R_UNDEF
+          cospOUT%calipso_cldtypemeanzse(ij:ik,:) = R_UNDEF
+          cospOUT%calipso_cldthinemis(ij:ik) = R_UNDEF
+          cospOUT%calipso_cldlayerphase(ij:ik,:,:) = R_UNDEF
+          cospOUT%calipso_lidarcldtmp(ij:ik,:,:) = R_UNDEF
+          if (associated(cospOUT%calipso_cfad_sr))          cospOUT%calipso_cfad_sr(ij+int(CSCAL_MASK_INDICES)-1,:,:)         = temp_calipso_cfad_sr(:,:,:) ! JKS indexing correct?
+          if (associated(cospOUT%calipso_lidarcld))         cospOUT%calipso_lidarcld(ij+int(CSCAL_MASK_INDICES)-1,:)          = temp_calipso_lidarcld(:,:)
+          if (associated(cospOUT%calipso_cldlayer))         cospOUT%calipso_cldlayer(ij+int(CSCAL_MASK_INDICES)-1,:)          = temp_calipso_cldlayer(:,:)
+          if (associated(cospOUT%calipso_lidarcldphase))    cospOUT%calipso_lidarcldphase(ij+int(CSCAL_MASK_INDICES)-1,:,:)   = temp_calipso_lidarcldphase(:,:,:)
+          if (associated(cospOUT%calipso_lidarcldtype))     cospOUT%calipso_lidarcldtype(ij+int(CSCAL_MASK_INDICES)-1,:,:)    = temp_calipso_lidarcldtype(:,:,:)
+          if (associated(cospOUT%calipso_cldtype))          cospOUT%calipso_cldtype(ij+int(CSCAL_MASK_INDICES)-1,:)           = temp_calipso_cldtype(:,:)
+          if (associated(cospOUT%calipso_cldtypetemp))      cospOUT%calipso_cldtypetemp(ij+int(CSCAL_MASK_INDICES)-1,:)       = temp_calipso_cldtypetemp(:,:)
+          if (associated(cospOUT%calipso_cldtypemeanz))     cospOUT%calipso_cldtypemeanz(ij+int(CSCAL_MASK_INDICES)-1,:)      = temp_calipso_cldtypemeanz(:,:)
+          if (associated(cospOUT%calipso_cldtypemeanzse))   cospOUT%calipso_cldtypemeanzse(ij+int(CSCAL_MASK_INDICES)-1,:)    = temp_calipso_cldtypemeanzse(:,:)
+          if (associated(cospOUT%calipso_cldthinemis))      cospOUT%calipso_cldthinemis(ij+int(CSCAL_MASK_INDICES)-1)         = temp_calipso_cldthinemis(:)
+          if (associated(cospOUT%calipso_cldlayerphase))    cospOUT%calipso_cldlayerphase(ij+int(CSCAL_MASK_INDICES)-1,:,:)   = temp_calipso_cldlayerphase(:,:,:)
+          if (associated(cospOUT%calipso_lidarcldtmp))      cospOUT%calipso_lidarcldtmp(ij+int(CSCAL_MASK_INDICES)-1,:,:)     = temp_calipso_lidarcldtmp(:,:,:)
+          print*,'CALIPSO-3'
+          deallocate(CSCAL_SWATH_MASK,temp_calipso_cfad_sr,temp_calipso_lidarcld,temp_calipso_cldlayer,temp_calipso_lidarcldphase,   &
+                     temp_calipso_lidarcldtype,temp_calipso_cldtype,temp_calipso_cldtypetemp,temp_calipso_cldtypemeanz,                &
+                     temp_calipso_cldtypemeanzse,temp_calipso_cldthinemis,temp_calipso_cldlayerphase,temp_calipso_lidarcldtmp)
+       else    
+          ok_lidar_cfad=.true.
+          call lidar_column(calipsoIN%Npoints, calipsoIN%Ncolumns, calipsoIN%Nlevels,       &
+               Nlvgrid, SR_BINS, LIDAR_NTYPE, 'calipso',calipso_beta_tot(:,:,:), calipso_beta_mol(:,:),&
+               cospgridIN%phalf(:,2:calipsoIN%Nlevels+1),cospgridIN%hgt_matrix,             &
+               cospgridIN%hgt_matrix_half, vgrid_z(:), ok_lidar_cfad, LIDAR_NCAT,           &
+               cospOUT%calipso_cfad_sr(ij:ik,:,:), cospOUT%calipso_lidarcld(ij:ik,:),       &
+               cospOUT%calipso_cldlayer(ij:ik,:),                                           &
+               cospgridIN%at(:,:), calipso_betaperp_tot(:,:,:), cospgridIN%surfelev,        & 
+               cospOUT%calipso_lidarcldphase(ij:ik,:,:),                       &
+               cospOUT%calipso_lidarcldtype(ij:ik,:,:),  cospOUT%calipso_cldtype(ij:ik,:),  &
+               cospOUT%calipso_cldtypetemp(ij:ik,:), cospOUT%calipso_cldtypemeanz(ij:ik,:), & 
+               cospOUT%calipso_cldtypemeanzse(ij:ik,:), cospOUT%calipso_cldthinemis(ij:ik), &
+               cospOUT%calipso_cldlayerphase(ij:ik,:,:), cospOUT%calipso_lidarcldtmp(ij:ik,:,:))
+       endif 
 
-         if (associated(cospOUT%calipso_srbval)) cospOUT%calipso_srbval = calipso_histBsct
+       if (associated(cospOUT%calipso_srbval)) cospOUT%calipso_srbval = calipso_histBsct
 
        ! Free up memory (if necessary)
        if (allocated(out1D_1)) then
@@ -1809,16 +1902,38 @@ CONTAINS
           allocate(out1D_3(Npoints*LIDAR_NCAT))                 
           cospOUT%atlid_cldlayer(ij:ik,1:LIDAR_NCAT) => out1D_3 
        endif                                                      
-       
        ! Call simulator                                                             
        ok_lidar_cfad_atlid=.true.
-       call lidar_column(atlidIN%Npoints, atlidIN%Ncolumns, atlidIN%Nlevels,       &
-            Nlvgrid, SR_BINS, LIDAR_NTYPE, 'atlid',atlid_beta_tot(:,:,:),     &
-            atlid_beta_mol(:,:), cospgridIN%phalf(:,2:atlidIN%Nlevels+1),            &
-            cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half, vgrid_z(:),         &
-            ok_lidar_cfad_atlid, LIDAR_NCAT, cospOUT%atlid_cfad_sr(ij:ik,:,:),     &
-            cospOUT%atlid_lidarcld(ij:ik,:), cospOUT%atlid_cldlayer(ij:ik,:))
-       
+       if (cospIN % cospswathsIN(4) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+          print*,'ATLID'
+          allocate(temp_atlid_cfad_sr(atlidIN%Npoints,SR_BINS,Nlvgrid), &
+                   temp_atlid_lidarcld(atlidIN%Npoints,Nlvgrid),        &
+                   temp_atlid_cldlayer(atlidIN%Npoints,LIDAR_NCAT))
+          print*,'ATLID-1'
+          call lidar_column(atlidIN%Npoints, atlidIN%Ncolumns, atlidIN%Nlevels,   &
+              Nlvgrid, SR_BINS, LIDAR_NTYPE, 'atlid',atlid_beta_tot(:,:,:),       &
+              atlid_beta_mol(:,:), cospgridIN%phalf(int(ATLID_MASK_INDICES),2:atlidIN%Nlevels+1),       & 
+              cospgridIN%hgt_matrix(int(ATLID_MASK_INDICES),:), cospgridIN%hgt_matrix_half(int(ATLID_MASK_INDICES),:), vgrid_z(:),      &
+              ok_lidar_cfad_atlid, LIDAR_NCAT, temp_atlid_cfad_sr(:,:,:),     &
+              temp_atlid_lidarcld(:,:), temp_atlid_cldlayer(:,:))
+          ! Decode back to the cospOUT shapes
+          print*,'ATLID-2'
+          cospOUT%atlid_cfad_sr(ij:ik,:,:) = R_UNDEF ! JKS move within associated statement for all of these?
+          cospOUT%atlid_lidarcld(ij:ik,:) = R_UNDEF
+          cospOUT%atlid_cldlayer(ij:ik,:) = R_UNDEF
+          if (associated(cospOUT%atlid_cfad_sr))          cospOUT%atlid_cfad_sr(ij+int(ATLID_MASK_INDICES)-1,:,:)         = temp_atlid_cfad_sr(:,:,:)
+          if (associated(cospOUT%atlid_lidarcld))         cospOUT%atlid_lidarcld(ij+int(ATLID_MASK_INDICES)-1,:)          = temp_atlid_lidarcld(:,:)
+          if (associated(cospOUT%atlid_cldlayer))         cospOUT%atlid_cldlayer(ij+int(ATLID_MASK_INDICES)-1,:)          = temp_atlid_cldlayer(:,:)
+          print*,'ATLID-3'
+          deallocate(ATLID_SWATH_MASK,ATLID_MASK_INDICES,temp_atlid_cfad_sr,temp_atlid_lidarcld,temp_atlid_cldlayer)
+       else
+          call lidar_column(atlidIN%Npoints, atlidIN%Ncolumns, atlidIN%Nlevels,       &
+              Nlvgrid, SR_BINS, LIDAR_NTYPE, 'atlid',atlid_beta_tot(:,:,:),     &
+              atlid_beta_mol(:,:), cospgridIN%phalf(:,2:atlidIN%Nlevels+1),            &
+              cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half, vgrid_z(:),         &
+              ok_lidar_cfad_atlid, LIDAR_NCAT, cospOUT%atlid_cfad_sr(ij:ik,:,:),     &
+              cospOUT%atlid_lidarcld(ij:ik,:), cospOUT%atlid_cldlayer(ij:ik,:))
+       endif
        if (associated(cospOUT%atlid_srbval)) cospOUT%atlid_srbval = atlid_histBsct 
 
        ! Free up memory (if necessary)        
@@ -1839,10 +1954,28 @@ CONTAINS
 
     ! PARASOL
     if (Lparasol_column) then
-       call parasol_column(parasolIN%Npoints,PARASOL_NREFL,parasolIN%Ncolumns,           &
-                            cospgridIN%land(:),parasolPix_refl(:,:,:),                   &
-                            cospOUT%parasolGrid_refl(ij:ik,:))
-       if (allocated(parasolPix_refl)) deallocate(parasolPix_refl)
+       if (cospIN % cospswathsIN(5) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+          print*,'PARASOL'
+          allocate(temp_parasolGrid_refl(parasolIN%Npoints,PARASOL_NREFL))
+          print*,'PARASOL-1'
+          call parasol_column(parasolIN%Npoints,PARASOL_NREFL,parasolIN%Ncolumns,           &
+                              cospgridIN%land(int(PARASOL_MASK_INDICES)),parasolPix_refl(:,:,:),                    &
+                              temp_parasolGrid_refl(:,:))
+          ! Decode back to the cospOUT shapes
+          print*,'PARASOL-2'
+         !  print*,'temp_parasolGrid_refl:   ',temp_parasolGrid_refl
+          cospOUT%parasolGrid_refl(ij:ik,:) = R_UNDEF
+          if (associated(cospOUT%parasolGrid_refl))   cospOUT%parasolGrid_refl(ij+int(PARASOL_MASK_INDICES)-1,:)   = temp_parasolGrid_refl(:,:)
+          deallocate(PARASOL_SWATH_MASK,temp_parasolGrid_refl)                              
+       else
+          call parasol_column(parasolIN%Npoints,PARASOL_NREFL,parasolIN%Ncolumns,           &
+                               cospgridIN%land(:),parasolPix_refl(:,:,:),                   &
+                               cospOUT%parasolGrid_refl(ij:ik,:))
+         !  print*,'cospOUT%parasolGrid_refl:   ',cospOUT%parasolGrid_refl ! Values not zeroed here.
+       endif
+       if (allocated(parasolPix_refl))      deallocate(parasolPix_refl)
+       if (allocated(PARASOL_SWATH_MASK))   deallocate(PARASOL_SWATH_MASK)
+       if (allocated(PARASOL_MASK_INDICES)) deallocate(PARASOL_MASK_INDICES)        
     endif
 
     ! CLOUDSAT
@@ -1863,12 +1996,37 @@ CONTAINS
        endif
           
        ! Call simulator
-       call quickbeam_column(cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,&
-            Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,       &
-            cospgridIN%land(:), cospgridIN%surfelev(:), cospgridIN%at(:,cospIN%Nlevels), &
-            cospIN%fracPrecipIce, cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,     &
-            cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover,          &
-            cospOUT%cloudsat_pia)
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+          print*,'CLOUDSAT'
+          allocate(temp_cloudsat_cfad_ze(cloudsatIN%Npoints,cloudsat_DBZE_BINS,Nlvgrid),    &
+                   temp_cloudsat_precip_cover(cloudsatIN%Npoints,cloudsat_DBZE_BINS),       &
+                   temp_cloudsat_pia(cloudsatIN%Npoints))
+          print*,'CLOUDSAT-1'
+          call quickbeam_column(cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,&
+               Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,       &
+               cospgridIN%land(int(CSCAL_MASK_INDICES)), cospgridIN%surfelev(int(CSCAL_MASK_INDICES)), cospgridIN%at(int(CSCAL_MASK_INDICES),cospIN%Nlevels), & ! JKS
+               cospIN%fracPrecipIce(int(CSCAL_MASK_INDICES),:), cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES),:), cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES),:),     & ! JKS
+               temp_cloudsat_cfad_ze(:,:,:), temp_cloudsat_precip_cover(:,:),               &
+               temp_cloudsat_pia(:))
+          print*,'CLOUDSAT-2'
+          ! Decode back to the cospOUT shapes
+          cospOUT%cloudsat_cfad_ze(ij:ik,:,:)    = R_UNDEF
+          cospOUT%cloudsat_precip_cover(ij:ik,:) = R_UNDEF
+          cospOUT%cloudsat_pia(ij:ik)            = R_UNDEF
+          if (associated(cospOUT%cloudsat_cfad_ze))        cospOUT%cloudsat_cfad_ze(ij+int(CSCAL_MASK_INDICES)-1,:,:)     = temp_cloudsat_cfad_ze(:,:,:)
+          if (associated(cospOUT%cloudsat_precip_cover))   cospOUT%cloudsat_precip_cover(ij+int(CSCAL_MASK_INDICES)-1,:)  = temp_cloudsat_precip_cover(:,:)
+          if (associated(cospOUT%cloudsat_pia))            cospOUT%cloudsat_pia(ij+int(CSCAL_MASK_INDICES)-1)         = temp_cloudsat_pia(:)
+          deallocate(temp_cloudsat_cfad_ze,temp_cloudsat_precip_cover,temp_cloudsat_pia)
+          if (allocated(CSCAL_SWATH_MASK)) deallocate(CSCAL_SWATH_MASK)
+          print*,'CLOUDSAT-4'
+       else
+          call quickbeam_column(cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,&
+               Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,       &
+               cospgridIN%land(:), cospgridIN%surfelev(:), cospgridIN%at(:,cospIN%Nlevels), &
+               cospIN%fracPrecipIce, cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,     &
+               cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover(ij:ik,:), &
+               cospOUT%cloudsat_pia(ij:ik))
+       endif
        ! Free up memory  (if necessary)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
@@ -1886,7 +2044,9 @@ CONTAINS
 
     ! MODIS
     if (Lmodis_column) then
+       print*,'MODIS'
        if(modisIN%nSunlit > 0) then
+          print*,'MODIS-1'
           ! Allocate space for local variables
           allocate(modisCftotal(modisIN%nSunlit), modisCfLiquid(modisIN%nSunlit),        &
                    modisCfIce(modisIN%nSunlit),modisCfHigh(modisIN%nSunlit),             &
@@ -1904,6 +2064,7 @@ CONTAINS
                    modisJointHistogram(modisIN%nSunlit,numMODISTauBins,numMODISPresBins),&
                    modisJointHistogramIce(modisIN%nSunlit,numModisTauBins,numMODISReffIceBins),&
                    modisJointHistogramLiq(modisIN%nSunlit,numModisTauBins,numMODISReffLiqBins))
+          print*,'MODIS-2'
           ! Call simulator
           call modis_column(modisIN%nSunlit, modisIN%Ncolumns,modisRetrievedPhase,       &
                              modisRetrievedCloudTopPressure,modisRetrievedTau,           &
@@ -1915,6 +2076,7 @@ CONTAINS
                              modisMeanCloudTopPressure, modisMeanLiquidWaterPath,        &
                              modisMeanIceWaterPath, modisJointHistogram,                 &
                              modisJointHistogramIce,modisJointHistogramLiq)
+          print*,'MODIS-3'
           ! Store data (if requested)
           if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean)) then
              cospOUT%modis_Cloud_Fraction_Total_Mean(ij+int(modisIN%sunlit(:))-1)   =    &
@@ -1992,13 +2154,16 @@ CONTAINS
                   cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik,:,numMODISPresBins:1:-1)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
+             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik,1:numMODISTauBins,:) = R_UNDEF
              cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
                 modisJointHistogramIce(:,:,:)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
+             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik,:,:) = R_UNDEF
              cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
                 modisJointHistogramLiq(:,:,:)
           endif
+          print*,'MODIS-4'
 
           if(modisIN%nSunlit < modisIN%Npoints) then
              ! Where it's night and we haven't done the retrievals the values are undefined
@@ -2038,8 +2203,13 @@ CONTAINS
                 cospOUT%modis_Ice_Water_Path_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
              if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))      &
                 cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))      &
+                cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))      &
+                cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF                                
           end if
        else
+          print*,'MODIS-5'
           ! It's nightime everywhere - everything is undefined
           if (associated(cospOUT%modis_Cloud_Fraction_Total_Mean))                       &
              cospOUT%modis_Cloud_Fraction_Total_Mean(ij:ik) = R_UNDEF
@@ -2077,6 +2247,10 @@ CONTAINS
              cospOUT%modis_Ice_Water_Path_Mean(ij:ik) = R_UNDEF
           if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))         &
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))                    &
+             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))                    &
+             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik, :, :) = R_UNDEF             
        endif
        ! Free up memory (if necessary)
        if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)
@@ -2108,6 +2282,8 @@ CONTAINS
        if (allocated(isccp_boxtau))                    deallocate(isccp_boxtau)
        if (allocated(isccp_meantbclr))                 deallocate(isccp_meantbclr)
        if (allocated(isccpLEVMATCH))                   deallocate(isccpLEVMATCH)
+       if (allocated(MODIS_SWATH_MASK))                deallocate(MODIS_SWATH_MASK)
+       if (allocated(MODIS_MASK_INDICES))              deallocate(MODIS_MASK_INDICES) 
     endif
 
     ! RTTOV multi-instrument
@@ -2205,75 +2381,122 @@ CONTAINS
 
     ! CLOUDSAT/CALIPSO products
     if (Lradar_lidar_tcc .or. Llidar_only_freq_cloud .or. Lcloudsat_tcc .or. Lcloudsat_tcc2) then
-
+       print*,'CLOUDSAT/CALIPSO joint'
        if (use_vgrid) then
           allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,Nlvgrid),                    &
                radar_lidar_tcc(cloudsatIN%Npoints), cloudsat_tcc(cloudsatIN%Npoints),    &
                cloudsat_tcc2(cloudsatIN%Npoints))
           allocate(betamol_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),                  &
-                   betamoli(cloudsatIN%Npoints,1,Nlvgrid),                               &
+                   betamolI(cloudsatIN%Npoints,1,Nlvgrid),                               &
                    pnormI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid),               &
                    Ze_totI(cloudsatIN%Npoints,cloudsatIN%Ncolumns,Nlvgrid))
 
           ! Regrid in the vertical (*NOTE* This routine requires SFC-2-TOA ordering, so flip
           ! inputs and outputs to maintain TOA-2-SFC ordering convention in COSP2.)
-          betamol_in(:,1,:) = calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1)
-          call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
-               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),                         &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),betamol_in,         &
-               Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),                    &
-               betamolI(:,1,Nlvgrid:1:-1))
+          print*,'CLOUDSAT/CALIPSO joint-1'
+         !  print*,'allocated(CSCAL_MASK_INDICES):  ',allocated(CSCAL_MASK_INDICES)
+         !  print*,'allocated(calipso_beta_mol):  ',allocated(calipso_beta_mol)
+         !  print*,'allocated(cloudsatDBZe):  ',allocated(cloudsatDBZe)
+          ! Use CLOUDSAT masking array here (it should be the same as calipso)
+          if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+             betamol_in(:,1,:) = calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1)
+             call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
+                  cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),                         &
+                  cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),betamol_in,         &
+                  Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),                    &
+                  betamolI(:,1,Nlvgrid:1:-1))
+             call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
+                  cloudsatIN%Nlevels,cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),      &
+                  cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),                    &
+                  calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                    &
+                  vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),pnormI(:,:,Nlvgrid:1:-1))
+             call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
+                  cloudsatIN%Nlevels,cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),      &
+                  cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),                    &
+                  cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
+                  vgrid_zu(Nlvgrid:1:-1),Ze_totI(:,:,Nlvgrid:1:-1),log_units=.true.)
+             print*,'CLOUDSAT/CALIPSO joint-2'
+          else
+             betamol_in(:,1,:) = calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1)
+             call cosp_change_vertical_grid(cloudsatIN%Npoints,1,cloudsatIN%Nlevels,        &
+                  cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),                         &
+                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),betamol_in,         &
+                  Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),                    &
+                  betamolI(:,1,Nlvgrid:1:-1))
 
-          call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
-               cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
-               calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                    &
-               vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),pnormI(:,:,Nlvgrid:1:-1))
+             call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
+                  cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
+                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
+                  calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,                    &
+                  vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),pnormI(:,:,Nlvgrid:1:-1))
 
-          call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
-               cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
-               cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
-               vgrid_zu(Nlvgrid:1:-1),Ze_totI(:,:,Nlvgrid:1:-1),log_units=.true.)
-
+             call cosp_change_vertical_grid(cloudsatIN%Npoints,cloudsatIN%Ncolumns,         &
+                  cloudsatIN%Nlevels,cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),      &
+                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),                    &
+                  cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),Nlvgrid,vgrid_zl(Nlvgrid:1:-1), &
+                  vgrid_zu(Nlvgrid:1:-1),Ze_totI(:,:,Nlvgrid:1:-1),log_units=.true.)
+             print*,'CLOUDSAT/CALIPSO joint-2b'
+          end if
           call cosp_lidar_only_cloud(cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,   &
-             pnormI, betamolI, Ze_totI, lidar_only_freq_cloud, radar_lidar_tcc,          &
-             cloudsat_tcc, cloudsat_tcc2)
-
+               pnormI, betamolI, Ze_totI, lidar_only_freq_cloud, radar_lidar_tcc,          &
+               cloudsat_tcc, cloudsat_tcc2)        
           deallocate(betamol_in,betamolI,pnormI,ze_totI)
        else
           allocate(lidar_only_freq_cloud(cloudsatIN%Npoints,cloudsatIN%Nlevels),         &
                radar_lidar_tcc(cloudsatIN%Npoints), cloudsat_tcc(cloudsatIN%Npoints),    &
                cloudsat_tcc2(cloudsatIN%Npoints))
+          print*,'CLOUDSAT/CALIPSO joint-3'
           call cosp_lidar_only_cloud(cloudsatIN%Npoints,cloudsatIN%Ncolumns,             &
                cospIN%Nlevels,calipso_beta_tot(:,:,cloudsatIN%Nlevels:1:-1),             &
                calipso_beta_mol(:,cloudsatIN%Nlevels:1:-1),                              &
                cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1),lidar_only_freq_cloud,          &
                radar_lidar_tcc, cloudsat_tcc, cloudsat_tcc2)
+          print*,'CLOUDSAT/CALIPSO joint-4'
        endif
 
        ! Store, when necessary
-       if (associated(cospOUT%lidar_only_freq_cloud)) then
-          cospOUT%lidar_only_freq_cloud(ij:ik,:) = lidar_only_freq_cloud
-       endif
-       if (associated(cospOUT%radar_lidar_tcc)) then
-          cospOUT%radar_lidar_tcc(ij:ik) = radar_lidar_tcc
-       endif
-       if (associated(cospOUT%cloudsat_tcc)) then
-          cospOUT%cloudsat_tcc(ij:ik) = cloudsat_tcc
-       endif
-       if (associated(cospOUT%cloudsat_tcc2)) then
-          cospOUT%cloudsat_tcc2(ij:ik) = cloudsat_tcc2
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+          if (associated(cospOUT%lidar_only_freq_cloud))   then 
+             cospOUT%lidar_only_freq_cloud(ij:ik,:)  = R_UNDEF
+             cospOUT%lidar_only_freq_cloud(ij+int(CSCAL_MASK_INDICES(:))-1,:)  = lidar_only_freq_cloud(:,:)
+          endif
+          if (associated(cospOUT%radar_lidar_tcc))         then
+             cospOUT%radar_lidar_tcc(ij:ik)  = R_UNDEF
+             cospOUT%radar_lidar_tcc(ij+int(CSCAL_MASK_INDICES(:))-1)          = radar_lidar_tcc(:)
+          endif
+          if (associated(cospOUT%cloudsat_tcc))            then
+             cospOUT%cloudsat_tcc(ij:ik)  = R_UNDEF
+             cospOUT%cloudsat_tcc(ij+int(CSCAL_MASK_INDICES(:))-1)             = cloudsat_tcc(:)
+          endif
+          if (associated(cospOUT%cloudsat_tcc2))           then
+             cospOUT%cloudsat_tcc2(ij:ik)  = R_UNDEF
+             cospOUT%cloudsat_tcc2(ij+int(CSCAL_MASK_INDICES(:))-1)            = cloudsat_tcc2(:)
+          endif
+       else
+          if (associated(cospOUT%lidar_only_freq_cloud)) then
+             cospOUT%lidar_only_freq_cloud(ij:ik,:) = lidar_only_freq_cloud
+          endif
+          if (associated(cospOUT%radar_lidar_tcc)) then
+             cospOUT%radar_lidar_tcc(ij:ik) = radar_lidar_tcc
+          endif
+          if (associated(cospOUT%cloudsat_tcc)) then
+             cospOUT%cloudsat_tcc(ij:ik) = cloudsat_tcc
+          endif
+          if (associated(cospOUT%cloudsat_tcc2)) then
+             cospOUT%cloudsat_tcc2(ij:ik) = cloudsat_tcc2
+          endif
        endif
     endif
 
     ! CloudSat/MODIS joint products (CFODDs and Occurrence Frequency of Warm Clouds)
     if (Lcloudsat_modis_wr) then
+       print*,'CLOUDSAT/MODIS joint'
        allocate( cfodd_ntotal(cloudsatIN%Npoints, CFODD_NDBZE, CFODD_NICOD, CFODD_NCLASS) )
        allocate( wr_occfreq_ntotal(cloudsatIN%Npoints, WR_NREGIME) )
 
        if ( use_vgrid ) then
           !! interporation for fixed vertical grid:
+          print*,'CLOUDSAT/MODIS joint-1'
           allocate( zlev(cloudsatIN%Npoints,Nlvgrid),                         &
                     t_in(cloudsatIN%Npoints,1,cloudsatIN%Nlevels),            &
                     tempI(cloudsatIN%Npoints,1,Nlvgrid),                      &
@@ -2282,67 +2505,154 @@ CONTAINS
           do k = 1, Nlvgrid
              zlev(:,k) = vgrid_zu(k)
           enddo
-          t_in(:,1,:) = cospgridIN%at(:,:)
-          call cosp_change_vertical_grid (                                    &
-               cloudsatIN%Npoints, 1, cloudsatIN%Nlevels,                     &
-               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
-               t_in(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,                    &
-               vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
-               tempI(:,:,Nlvgrid:1:-1)                                        )
-          call cosp_change_vertical_grid (                                    &
-               cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
-               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
-               cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,            &
-               vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
-               Ze_totI(:,:,Nlvgrid:1:-1), log_units=.true.                    )
-          call cosp_change_vertical_grid (                                    &
-               cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
-               cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
-               cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
-               cospIN%frac_out(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,         &
-               vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
-               frac_outI(:,:,Nlvgrid:1:-1)                                    )
-          call cosp_diag_warmrain(                                            &
-               cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
-               tempI, zlev,                                                   & !! in
-               cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
-               cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
-               cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
-               cospOUT%modis_Cloud_Fraction_Water_Mean,                       & !! in
-               cospOUT%modis_Ice_Water_Path_Mean,                             & !! in
-               cospOUT%modis_Optical_Thickness_Ice_Mean,                      & !! in
-               cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                    & !! in
-               cospOUT%modis_Cloud_Fraction_Ice_Mean,                         & !! in
-               frac_outI,                                                     & !! in
-               Ze_totI,                                                       & !! in
-               cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          print*,'CLOUDSAT/MODIS joint-2'
+          ! Use CLOUDSAT masking array here (it should be the same as calipso)
+          if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+             t_in(:,1,:) = cospgridIN%at(int(CSCAL_MASK_INDICES(:)),:)
+             call cosp_change_vertical_grid (                                    &
+                  cloudsatIN%Npoints, 1, cloudsatIN%Nlevels,                     &
+                  cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),              &
+                  cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),         &
+                  t_in(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,                    &
+                  vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+                  tempI(:,:,Nlvgrid:1:-1)                                        )
+             call cosp_change_vertical_grid (                                    &
+                  cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
+                  cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),              &
+                  cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),         &
+                  cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,            &
+                  vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+                  Ze_totI(:,:,Nlvgrid:1:-1), log_units=.true.                    )
+             call cosp_change_vertical_grid (                                    &
+                  cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
+                  cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),              &
+                  cospgridIN%hgt_matrix_half(int(CSCAL_MASK_INDICES(:)),cloudsatIN%Nlevels:1:-1),         &
+                  cospIN%frac_out(int(CSCAL_MASK_INDICES(:)),:,cloudsatIN%Nlevels:1:-1), Nlvgrid,         &
+                  vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+                  frac_outI(:,:,Nlvgrid:1:-1)                                    )
+             print*,'CLOUDSAT/MODIS joint-3'
+             call cosp_diag_warmrain(                                            &
+                  cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
+                  tempI, zlev,                                                   & !! in
+                  cospOUT%modis_Liquid_Water_Path_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                          & !! in
+                  cospOUT%modis_Optical_Thickness_Water_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                    & !! in
+                  cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                  & !! in
+                  cospOUT%modis_Cloud_Fraction_Water_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                       & !! in
+                  cospOUT%modis_Ice_Water_Path_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                             & !! in
+                  cospOUT%modis_Optical_Thickness_Ice_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                      & !! in
+                  cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                    & !! in
+                  cospOUT%modis_Cloud_Fraction_Ice_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                         & !! in
+                  frac_outI,                                                     & !! in
+                  Ze_totI,                                                       & !! in
+                  cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout           
+          else
+             t_in(:,1,:) = cospgridIN%at(:,:)
+             call cosp_change_vertical_grid (                                    &
+                  cloudsatIN%Npoints, 1, cloudsatIN%Nlevels,                     &
+                  cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
+                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
+                  t_in(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,                    &
+                  vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+                  tempI(:,:,Nlvgrid:1:-1)                                        )
+             call cosp_change_vertical_grid (                                    &
+                  cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
+                  cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
+                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
+                  cloudsatDBZe(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,            &
+                  vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+                  Ze_totI(:,:,Nlvgrid:1:-1), log_units=.true.                    )
+             call cosp_change_vertical_grid (                                    &
+                  cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,   &
+                  cospgridIN%hgt_matrix(:,cloudsatIN%Nlevels:1:-1),              &
+                  cospgridIN%hgt_matrix_half(:,cloudsatIN%Nlevels:1:-1),         &
+                  cospIN%frac_out(:,:,cloudsatIN%Nlevels:1:-1), Nlvgrid,         &
+                  vgrid_zl(Nlvgrid:1:-1), vgrid_zu(Nlvgrid:1:-1),                &
+                  frac_outI(:,:,Nlvgrid:1:-1)                                    )
+             print*,'CLOUDSAT/MODIS joint-3b'
+             call cosp_diag_warmrain(                                            &
+                  cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
+                  tempI, zlev,                                                   & !! in
+                  cospOUT%modis_Liquid_Water_Path_Mean(ij:ik),                   & !! in ! JKS fix bug here.
+                  cospOUT%modis_Optical_Thickness_Water_Mean(ij:ik),             & !! in
+                  cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij:ik),           & !! in
+                  cospOUT%modis_Cloud_Fraction_Water_Mean(ij:ik),                & !! in
+                  cospOUT%modis_Ice_Water_Path_Mean(ij:ik),                      & !! in
+                  cospOUT%modis_Optical_Thickness_Ice_Mean(ij:ik),               & !! in
+                  cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij:ik),             & !! in
+                  cospOUT%modis_Cloud_Fraction_Ice_Mean(ij:ik),                  & !! in
+                  frac_outI,                                                     & !! in
+                  Ze_totI,                                                       & !! in
+                  cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          endif
+          print*,'CLOUDSAT/MODIS joint-4'
           deallocate( zlev, t_in, tempI, frac_outI, Ze_totI )
        else  ! do not use vgrid interporation ---------------------------------------!
           !! original model grid
-          call cosp_diag_warmrain(                                            &
-               cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
-               cospgridIN%at, cospgridIN%hgt_matrix,                          & !! in
-               cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
-               cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
-               cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
-               cospOUT%modis_Cloud_Fraction_Water_Mean,                       & !! in
-               cospOUT%modis_Ice_Water_Path_Mean,                             & !! in
-               cospOUT%modis_Optical_Thickness_Ice_Mean,                      & !! in
-               cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                    & !! in
-               cospOUT%modis_Cloud_Fraction_Ice_Mean,                         & !! in
-               cospIN%frac_out,                                               & !! in
-               cloudsatDBZe,                                                  & !! in
-               cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          print*,'CLOUDSAT/MODIS joint-5'
+          if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
+             call cosp_diag_warmrain(                                            &
+                   cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
+                   cospgridIN%at(int(CSCAL_MASK_INDICES(:)),:), cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES(:)),:),                          & !! in
+                   cospOUT%modis_Liquid_Water_Path_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                          & !! in
+                   cospOUT%modis_Optical_Thickness_Water_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                    & !! in
+                   cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                  & !! in
+                   cospOUT%modis_Cloud_Fraction_Water_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                       & !! in
+                   cospOUT%modis_Ice_Water_Path_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                             & !! in
+                   cospOUT%modis_Optical_Thickness_Ice_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                      & !! in
+                   cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                    & !! in
+                   cospOUT%modis_Cloud_Fraction_Ice_Mean(ij+int(CSCAL_MASK_INDICES(:))-1),                         & !! in
+                   cospIN%frac_out(int(CSCAL_MASK_INDICES(:)),:,:),                                         & !! in
+                   cloudsatDBZe,                                                  & !! in
+                   cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          else
+             call cosp_diag_warmrain(                                            &
+                   cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
+                   cospgridIN%at, cospgridIN%hgt_matrix,                          & !! in
+                   cospOUT%modis_Liquid_Water_Path_Mean(ij:ik),                   & !! in
+                   cospOUT%modis_Optical_Thickness_Water_Mean(ij:ik),             & !! in
+                   cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij:ik),           & !! in
+                   cospOUT%modis_Cloud_Fraction_Water_Mean(ij:ik),                & !! in
+                   cospOUT%modis_Ice_Water_Path_Mean(ij:ik),                      & !! in
+                   cospOUT%modis_Optical_Thickness_Ice_Mean(ij:ik),               & !! in
+                   cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij:ik),             & !! in
+                   cospOUT%modis_Cloud_Fraction_Ice_Mean(ij:ik),                  & !! in
+                   cospIN%frac_out,                                               & !! in
+                   cloudsatDBZe,                                                  & !! in
+                   cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
+          endif 
+          print*,'CLOUDSAT/MODIS joint-6'
        endif  !! use_vgrid or not
 
        ! Store, when necessary
-       if ( associated(cospOUT%cfodd_ntotal) ) then
-          cospOUT%cfodd_ntotal(ij:ik,:,:,:) = cfodd_ntotal
-       endif
-       if ( associated(cospOUT%wr_occfreq_ntotal) ) then
-          cospOUT%wr_occfreq_ntotal(ij:ik,:) = wr_occfreq_ntotal
+       cospOUT%lidar_only_freq_cloud(ij+int(CSCAL_MASK_INDICES(:))-1,:)  = lidar_only_freq_cloud(:,:)
+
+       if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays for CSCAL
+          if (cospIN % cospswathsIN(6) % N_inst_swaths .gt. 0) then ! If MODIS is also swathed then use the joint mask MODIS_CSCAL_MASK_INDICES for setting R_UNDEF
+             if ( associated(cospOUT%cfodd_ntotal) ) then
+                cospOUT%cfodd_ntotal(ij+int(CSCAL_MASK_INDICES(:))-1,:,:,:) = cfodd_ntotal
+                cospOUT%cfodd_ntotal(ij+int(MODIS_CSCAL_MASK_INDICES(:))-1,:,:,:) = R_UNDEF
+             endif
+             if ( associated(cospOUT%wr_occfreq_ntotal) ) then
+                cospOUT%wr_occfreq_ntotal(ij+int(CSCAL_MASK_INDICES(:))-1,:) = wr_occfreq_ntotal
+                cospOUT%wr_occfreq_ntotal(ij+int(MODIS_CSCAL_MASK_INDICES(:))-1,:) = R_UNDEF
+             endif         
+          else ! Otherwise just mask simpling
+             if ( associated(cospOUT%cfodd_ntotal) ) then
+                cospOUT%cfodd_ntotal(ij:ik,:,:,:) = R_UNDEF
+                cospOUT%cfodd_ntotal(ij+int(CSCAL_MASK_INDICES(:))-1,:,:,:) = cfodd_ntotal
+             endif
+             if ( associated(cospOUT%wr_occfreq_ntotal) ) then
+                cospOUT%wr_occfreq_ntotal(ij:ik,:) = R_UNDEF
+                cospOUT%wr_occfreq_ntotal(ij+int(CSCAL_MASK_INDICES(:))-1,:) = wr_occfreq_ntotal
+             endif
+          endif
+       else 
+          if ( associated(cospOUT%cfodd_ntotal) ) then
+             cospOUT%cfodd_ntotal(ij:ik,:,:,:) = cfodd_ntotal
+          endif
+          if ( associated(cospOUT%wr_occfreq_ntotal) ) then
+             cospOUT%wr_occfreq_ntotal(ij:ik,:) = wr_occfreq_ntotal
+          endif
        endif
     endif
  
@@ -2364,6 +2674,8 @@ CONTAINS
        nullify(calipsoIN%Npoints,calipsoIN%Ncolumns,calipsoIN%Nlevels,calipsoIN%beta_mol,&
                calipsoIN%betatot,calipsoIN%betatot_liq,calipsoIN%betatot_ice,            &
                calipsoIN%tau_mol,calipsoIN%tautot,calipsoIN%tautot_liq,calipsoIN%tautot_ice)
+       if (allocated(CSCAL_MASK_INDICES)) deallocate(CSCAL_MASK_INDICES)
+       if (allocated(CSCAL_SWATH_MASK)) deallocate(CSCAL_SWATH_MASK)               
     endif
 
     if (LgrLidar532_subcolumn) then 
@@ -2393,6 +2705,8 @@ CONTAINS
        if (allocated(modisIN%sunlit))    deallocate(modisIN%sunlit)
        if (allocated(modisIN%notSunlit)) deallocate(modisIN%notSunlit)
        if (allocated(modisIN%pres))      deallocate(modisIN%pres)
+       if (allocated(MODIS_CSCAL_MASK_INDICES)) deallocate(MODIS_CSCAL_MASK_INDICES)
+       if (allocated(MODIS_CSCAL_SWATH_MASK))   deallocate(MODIS_CSCAL_SWATH_MASK)        
     endif
     
     if (Lrttov_column) then
@@ -2550,7 +2864,7 @@ CONTAINS
   ! SUBROUTINE compute_orbitmasks
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine compute_orbitmasks(Npoints,Nlocaltimes,localtimes,localtime_widths,      &
-   lat,lon,hour,minute,swath_mask_out)
+                                lat,lon,hour,minute,swath_mask_out,Nswathed_out)
 
     ! Inputs
     integer,intent(in) :: &
@@ -2570,9 +2884,11 @@ CONTAINS
     ! Output
     logical,dimension(Npoints),intent(out) :: &
       swath_mask_out    ! Mask of reals over all gridcells
+    integer,intent(out) :: &
+      Nswathed_out
 
     ! Local variables
-    integer :: i ! iterators
+    integer :: i   ! iterator
 
     real(wp),parameter                     :: &
       pi = 4.D0*DATAN(1.D0),  &  ! yum
@@ -2604,6 +2920,7 @@ CONTAINS
     ! Mask is true where values should be calculated
     swath_mask_out = ALL( swath_mask_all(:,:),2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
 
+    Nswathed_out = count(swath_mask_out)
     ! Mask is true where values should be masked to R_UNDEF
    !  swath_mask_out = ALL( swath_mask_all(:,:) .eq. .false.,2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
 
