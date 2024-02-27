@@ -234,9 +234,11 @@ contains
 
     real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
         sat_lon,        & ! Central longitude of the instrument.
-        swath_mask_all, & ! Mask of reals over all local times
         dlon,           & ! distance to satellite longitude in degrees
         dx                ! distance to satellite longitude in km?
+
+    logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
+        swath_mask_all    ! Mask of reals over all local times
         
     logical :: verbose = .false.
     
@@ -246,9 +248,10 @@ contains
     ! 3. Allocate RTTOV input and output structures
     ! ------------------------------------------------------
     ! Largely from RTTOV documentation.
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
     ! Handle swathing here. Initial code from Genevieve with implementation changes.
+    swath_mask_all = .false.
     if (rttov_Nlocaltime .gt. 0) then
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
@@ -258,23 +261,13 @@ contains
             dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
             ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
             dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude * pi / 180) * radius
-        end do
-        
-        ! inside swath = 1, outside swath = 0 for "swath_mask_all"
-        swath_mask_all = 0
-        do j=1,rttov_Nlocaltime
+            ! Determine if a gridcell falls in the swath width
             where (abs(dx(:,j))<(rttov_localtime_width(j)*0.5))
-                 swath_mask_all(:,j) = 1
-            end where
+                swath_mask_all(:,j) = .true.
+            end where                    
         end do
 
-        ! Collapse along the Nlocaltimes dimension and shift to logicals
-        inst_swath_mask(:) = .false. ! Initialize to false
-        do j = 1,rttovIN % nPoints
-            if ( ANY( swath_mask_all(j,:) .eq. 1) ) then
-                inst_swath_mask(j) = .true.
-            end if
-        end do
+        inst_swath_mask = ANY( swath_mask_all(:,:),2)
     else
         inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
     end if
@@ -286,43 +279,49 @@ contains
         print*,'inst_nprof:          ',inst_nprof
         print*,'inst_nChannels_rec:  ',inst_nChannels_rec
         print*,'inst_nchanprof:      ',inst_nchanprof
-    end if 
+    end if
     
-    ! Allocate structures for rttov_direct
-    call rttov_alloc_direct( &
-        errorstatus,             &
-        1_jpim,                  &  ! 1 => allocate
-        inst_nprof,              &
-        inst_nchanprof,          &
-        rttovIN%nLevels,         &
-        inst_chanprof,           &
-        inst_opts,               &
-        inst_profiles,           &
-        inst_coefs,              &
-        inst_transmission,       &
-        inst_radiance,           &
-        calcemis=inst_calcemis,       &
-        emissivity=inst_emissivity,   &
-        calcrefl=inst_calcrefl,       &
-        reflectance=inst_reflectance, &
-        init=.TRUE._jplm)
-    call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
+    if (inst_nprof .gt. 0_jpim) then ! Only allocate if there are calculations to make
 
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! 4. Build the list of profile/channel indices in chanprof
-    ! ------------------------------------------------------
-    ! Largely from RTTOV documentation.
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-    nch = 0_jpim
-    do j = 1, inst_nprof
-      do jch = 1, inst_nChannels_rec ! nChannels
-        nch = nch + 1_jpim
-        inst_chanprof(nch)%prof = j
-        inst_chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
-      end do
-    end do
-    if (verbose) print*,'Done with "cosp_rttov_allocate"'
+        ! Allocate structures for rttov_direct
+        call rttov_alloc_direct( &
+            errorstatus,             &
+            1_jpim,                  &  ! 1 => allocate
+            inst_nprof,              &
+            inst_nchanprof,          &
+            rttovIN%nLevels,         &
+            inst_chanprof,           &
+            inst_opts,               &
+            inst_profiles,           &
+            inst_coefs,              &
+            inst_transmission,       &
+            inst_radiance,           &
+            calcemis=inst_calcemis,       &
+            emissivity=inst_emissivity,   &
+            calcrefl=inst_calcrefl,       &
+            reflectance=inst_reflectance, &
+            init=.TRUE._jplm)
+        call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
+
+        ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        ! 4. Build the list of profile/channel indices in chanprof
+        ! ------------------------------------------------------
+        ! Largely from RTTOV documentation.
+        ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+        nch = 0_jpim
+        do j = 1, inst_nprof
+          do jch = 1, inst_nChannels_rec ! nChannels
+            nch = nch + 1_jpim
+            inst_chanprof(nch)%prof = j
+            inst_chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
+          end do
+        end do
+        if (verbose) print*,'Done with "cosp_rttov_allocate"'
+
+    else
+        print*,'nothing swathed'
+    end if
         
   end subroutine cosp_rttov_allocate
 
@@ -399,9 +398,11 @@ contains
 
     real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
         sat_lon,        & ! Central longitude of the instrument.
-        swath_mask_all, & ! Mask of reals over all local times
         dlon,           & ! distance to satellite longitude in degrees
         dx                ! distance to satellite longitude in km?
+
+    logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
+        swath_mask_all    ! Mask of reals over all local times        
         
     logical :: verbose = .false.
     
@@ -415,10 +416,11 @@ contains
 
     nullify(inst_predictindex)
     call rttov_get_pc_predictindex(errorstatus, inst_opts, inst_predictindex, file_pccoef=inst_PC_coef_filepath)
-    call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)        
+    call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)
 
-    ! Handle swathing here. Initial code from Genevieve with minor changes.
-    if (rttov_Nlocaltime > 0) then
+    ! Handle swathing here. Initial code from Genevieve with implementation changes.
+    swath_mask_all = .false.
+    if (rttov_Nlocaltime .gt. 0) then
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
             ! Calculate the central longitude for each gridcell and orbit
@@ -427,30 +429,19 @@ contains
             dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
             ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
             dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude * pi / 180) * radius
-        end do
-        
-        ! inside swath = 1, outside swath = 0 for "swath_mask_all"
-        swath_mask_all = 0
-        do j=1,rttov_Nlocaltime
+            ! Determine if a gridcell falls in the swath width
             where (abs(dx(:,j))<(rttov_localtime_width(j)*0.5))
-                 swath_mask_all(:,j) = 1
-            end where
+                swath_mask_all(:,j) = .true.
+            end where                    
         end do
 
-        ! Collapse along the Nlocaltimes dimension and shift to logicals
-        inst_swath_mask(:) = .false. ! Initialize to false
-        do j = 1,rttovIN % nPoints
-            if ( ANY( swath_mask_all(j,:) .eq. 1) ) then
-                inst_swath_mask(j) = .true.
-            end if
-        end do
-        ! Determine the total number of radiances to simulate (nchanprof).
+        inst_swath_mask = ANY( swath_mask_all(:,:),2)
     else
         inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
-    end if
+    end if    
+
     ! Determine the total number of radiances to simulate (nchanprof).
     inst_nprof     = count(inst_swath_mask)
-
     inst_npred_pc  = SIZE(inst_predictindex)
     inst_nchanprof = inst_npred_pc * inst_nprof  ! Size of chanprof array is total number of predictors over all profiles
     

@@ -315,12 +315,9 @@ program cosp2_test
   real(wp),dimension(:),allocatable :: &
        cosp_localtime, &
        cosp_localtime_width
-
-  logical,dimension(:),allocatable :: &
-       swath_mask_out    ! Mask of reals over all local times
        
   ! Swathing DDT array
-  type(swath_inputs),dimension(7)  :: &
+  type(swath_inputs),dimension(6)  :: &
        cospswathsIN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -352,24 +349,24 @@ program cosp2_test
 
   ! Read orbital swathing inputs into structure:
   ! Indexing order is ISCCP, MISR, CLOUDSAT-CALIPSO, ATLID, PARASOL, MODIS
-  cospswathsIN(1) % N_inst_swaths = N_SWATHS_ISCCP
-  cospswathsIN(1) % inst_localtimes => SWATH_LOCALTIMES_ISCCP(1:N_SWATHS_ISCCP)
-  cospswathsIN(1) % inst_localtime_widths => SWATH_WIDTHS_ISCCP(1:N_SWATHS_ISCCP)
-  cospswathsIN(2) % N_inst_swaths = N_SWATHS_MISR
-  cospswathsIN(2) % inst_localtimes => SWATH_LOCALTIMES_MISR(1:N_SWATHS_MISR)
-  cospswathsIN(2) % inst_localtime_widths => SWATH_WIDTHS_MISR(1:N_SWATHS_MISR)
-  cospswathsIN(3) % N_inst_swaths = N_SWATHS_CSCAL
-  cospswathsIN(3) % inst_localtimes => SWATH_LOCALTIMES_CSCAL(1:N_SWATHS_CSCAL)
-  cospswathsIN(3) % inst_localtime_widths => SWATH_WIDTHS_CSCAL(1:N_SWATHS_CSCAL)
-  cospswathsIN(4) % N_inst_swaths = N_SWATHS_ATLID
-  cospswathsIN(4) % inst_localtimes => SWATH_LOCALTIMES_ATLID(1:N_SWATHS_ATLID)
-  cospswathsIN(4) % inst_localtime_widths => SWATH_WIDTHS_ATLID(1:N_SWATHS_ATLID)
-  cospswathsIN(5) % N_inst_swaths = N_SWATHS_PARASOL
-  cospswathsIN(5) % inst_localtimes => SWATH_LOCALTIMES_PARASOL(1:N_SWATHS_PARASOL)
-  cospswathsIN(5) % inst_localtime_widths => SWATH_WIDTHS_PARASOL(1:N_SWATHS_PARASOL)
-  cospswathsIN(6) % N_inst_swaths = N_SWATHS_MODIS
-  cospswathsIN(6) % inst_localtimes => SWATH_LOCALTIMES_MODIS(1:N_SWATHS_MODIS)
-  cospswathsIN(6) % inst_localtime_widths => SWATH_WIDTHS_MODIS(1:N_SWATHS_MODIS)
+  cospswathsIN(1) % N_inst_swaths                             = N_SWATHS_ISCCP
+  cospswathsIN(1) % inst_localtimes(1:N_SWATHS_ISCCP)         = SWATH_LOCALTIMES_ISCCP(1:N_SWATHS_ISCCP)
+  cospswathsIN(1) % inst_localtime_widths(1:N_SWATHS_ISCCP)   = SWATH_WIDTHS_ISCCP(1:N_SWATHS_ISCCP)
+  cospswathsIN(2) % N_inst_swaths                             = N_SWATHS_MISR
+  cospswathsIN(2) % inst_localtimes(1:N_SWATHS_MISR)          = SWATH_LOCALTIMES_MISR(1:N_SWATHS_MISR)
+  cospswathsIN(2) % inst_localtime_widths(1:N_SWATHS_MISR)    = SWATH_WIDTHS_MISR(1:N_SWATHS_MISR)
+  cospswathsIN(3) % N_inst_swaths                             = N_SWATHS_CSCAL
+  cospswathsIN(3) % inst_localtimes(1:N_SWATHS_CSCAL)         = SWATH_LOCALTIMES_CSCAL(1:N_SWATHS_CSCAL)
+  cospswathsIN(3) % inst_localtime_widths(1:N_SWATHS_CSCAL)   = SWATH_WIDTHS_CSCAL(1:N_SWATHS_CSCAL)
+  cospswathsIN(4) % N_inst_swaths                             = N_SWATHS_ATLID
+  cospswathsIN(4) % inst_localtimes(1:N_SWATHS_ATLID)         = SWATH_LOCALTIMES_ATLID(1:N_SWATHS_ATLID)
+  cospswathsIN(4) % inst_localtime_widths(1:N_SWATHS_ATLID)   = SWATH_WIDTHS_ATLID(1:N_SWATHS_ATLID)
+  cospswathsIN(5) % N_inst_swaths                             = N_SWATHS_PARASOL
+  cospswathsIN(5) % inst_localtimes(1:N_SWATHS_PARASOL)       = SWATH_LOCALTIMES_PARASOL(1:N_SWATHS_PARASOL)
+  cospswathsIN(5) % inst_localtime_widths(1:N_SWATHS_PARASOL) = SWATH_WIDTHS_PARASOL(1:N_SWATHS_PARASOL)
+  cospswathsIN(6) % N_inst_swaths                             = N_SWATHS_MODIS
+  cospswathsIN(6) % inst_localtimes(1:N_SWATHS_MODIS)         = SWATH_LOCALTIMES_MODIS(1:N_SWATHS_MODIS)
+  cospswathsIN(6) % inst_localtime_widths(1:N_SWATHS_MODIS)   = SWATH_WIDTHS_MODIS(1:N_SWATHS_MODIS)
      
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
@@ -749,14 +746,9 @@ program cosp2_test
   if (rttov_verbose) print*,'Calling "destroy_cospIN".'
   call destroy_cospIN(cospIN)
   if (rttov_verbose) print*,'Calling "destroy_cospstateIN".'
-  call destroy_cospstateIN(cospstateIN)
+  call destroy_cospstateIN(cospstateIN) 
   if (rttov_verbose) print*,'Calling "cosp_cleanUp".'
   call cosp_cleanUp()
-  ! Clean swathing DDT
-  do ij=1,7
-    if (associated(cospswathsIN(ij) % inst_localtimes)) nullify(cospswathsIN(ij) % inst_localtimes)
-    if (associated(cospswathsIN(ij) % inst_localtime_widths)) nullify(cospswathsIN(ij) % inst_localtime_widths)
-  end do
   if (rttov_verbose) print*,'all done.'
 
 contains
