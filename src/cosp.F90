@@ -140,7 +140,7 @@ MODULE MOD_COSP
 
      integer ::                            &
           N_inst_swaths = 0
-     real(wp),dimension(:),pointer ::      &
+     real(wp),dimension(20) ::      &
           inst_localtimes,                 &
           inst_localtime_widths
 
@@ -195,7 +195,7 @@ MODULE MOD_COSP
           rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
      type(rttov_cfg),dimension(:),pointer :: &
           cfg_rttov              ! RTTOV configuration information (multiple instruments)
-     type(swath_inputs),dimension(7) :: & ! Could be a pointer but fine
+     type(swath_inputs),dimension(6) :: & ! Could be a pointer but fine
           cospswathsIN 
   end type cosp_optical_inputs
 
@@ -1642,7 +1642,7 @@ CONTAINS
        ! Call simulator
        if (cospIN % cospswathsIN(2) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
           if (verbose) print*,'MISR'
-          if (isccpIN%Npoints .gt. 0) then
+          if (misrIN%Npoints .gt. 0) then
              ! Operate at the masked format.
              allocate(temp_misr_cldarea(misrIN%Npoints),                          &
                       temp_misr_meanztop(misrIN%Npoints),                         &
@@ -2969,7 +2969,7 @@ CONTAINS
       swath_mask_all    ! Mask of logicals over all local times, gridcells  
 
     ! Iterate over local times
-    swath_mask_all(:,:) = 0
+    swath_mask_all(:,:) = .false.
     do i=1,Nlocaltimes
       ! Calculate the central longitude for each gridcell and orbit
       sat_lon(:,i) = 15.0 * (localtimes(i) - (hour + minute / 60))
@@ -2984,9 +2984,9 @@ CONTAINS
     end do
 
     ! Mask is true where values should be calculated
-    swath_mask_out = ALL( swath_mask_all(:,:),2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
+    swath_mask_out = ANY( swath_mask_all(:,:),2) ! Compute mask by collapsing the localtimes dimension
+    Nswathed_out   = count(swath_mask_out) ! Number of gridcells that should be calculated.
 
-    Nswathed_out = count(swath_mask_out)
     ! Mask is true where values should be masked to R_UNDEF
    !  swath_mask_out = ALL( swath_mask_all(:,:) .eq. .false.,2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
 
