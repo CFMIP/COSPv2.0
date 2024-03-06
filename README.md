@@ -50,11 +50,11 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
 
       `./cosp2_test cosp2_input_nl.um_global.txt`
 
-Currently, there are 2 input namelists: `cosp2_input_nl.txt` uses a small test input file (`cosp_input.nc`), stored in the github repository; `cosp2_input_nl.um_global.txt` uses a global field (`cosp_input.um_global.nc`). The global input file and its associated known good output (`cosp2_output.um_global.gfortran.kgo.vXXX.nc`) are stored externally in Google Drive, and they can be retrieved by running `download_test_data.sh` from within the `driver/` directory.`vXXX` represents the version of the known good output files.
+Currently, there are 2 input namelists: `cosp2_input_nl.txt` uses a small test input file (`cosp_input.nc`), stored in the github repository; `cosp2_input_nl.um_global.txt` uses a global field (`cosp_input.um_global.nc`). The global input file and its associated known good output (`cosp2_output.um_global.gfortran.kgo.vXXX.nc`) are stored externally in Google Drive, and they can be retrieved by running `download_test_data.sh` from within the `driver/` directory.`vXXX` represents the version of the known good output files, f.e. `v002`. You can set an environmet variable (f.e. if you are in bash shell: `export KGO_VERSION=v002`)
 
 1. Regression testing (comparing to reference data)
    1. Reference data or known good output (KGO) for a small test case is provided with COSP2. The data can be found at `driver/data/outputs/UKMO/`.
-   1. To compare driver output to the KGO, in `driver/`, invoke Python 3 script `compare_to_kgo.py`. This script requires the following Python modules: numpy, netCDF4, argparse, and sys. The following example shows how to call this script from the command line (replace `vXXX` with the latest version you have acquired through ./download_test_data.sh, f.e. `v002`):
+   1. To compare driver output to the KGO, in `driver/`, invoke Python 3 script `compare_to_kgo.py`. This script requires the following Python modules: numpy, netCDF4, argparse, and sys. The following example shows how to call this script from the command line. Replace `vXXX` with the latest version you have acquired through `./download_test_data.sh`:
 
       `python compare_to_kgo.py data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.vXXX.nc data/outputs/UKMO/cosp2_output.um_global.nc --atol=1.0e-20 --rtol=0.0005`
 
