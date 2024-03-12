@@ -39,6 +39,7 @@
 ! Mar 2018 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
 ! Apr 2018 - R. Guzman        - Added parameters for GROUND LIDAR and ATLID simulators
 ! Nov 2018 - T. Michibata     - Added CloudSat+MODIS Warmrain Diagnostics
+! Mar 2024 - C. Wall          - Added MODIS joint-histogram diagnostics
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -75,7 +76,6 @@ MODULE MOD_COSP_CONFIG
     !        WHICH IS SET DURING INITIALIZATION IN COSP_INTERFACE_INIT.
     ! ####################################################################################
     ! Optical depth bin axis
-! Bin edges match Pincus et al. 2023 observational data (doi:10.5194/essd-15-2483-2023)
     integer,parameter :: &
          ntau=7  
     real(wp),parameter,dimension(ntau+1) :: &
@@ -100,7 +100,6 @@ MODULE MOD_COSP_CONFIG
          tau_binCentersV1p4 = (tau_binEdgesV1p4(1,:)+tau_binEdgesV1p4(2,:))/2._wp  
     
     ! Cloud-top height pressure bin axis
-    ! Bin edges and centers match Pincus et al. 2023 observational data (doi:10.5194/essd-15-2483-2023)
     integer,parameter :: &
          npres = 7     
     real(wp),parameter,dimension(npres+1) :: &
@@ -130,15 +129,15 @@ MODULE MOD_COSP_CONFIG
 
     ! Liquid and Ice particle bins for MODIS joint histogram of optical-depth and particle
     ! size
+    ! Bin edges match Pincus et al. 2023 observational data (doi:10.5194/essd-15-2483-2023)
     integer :: i,j
     integer,parameter :: &
-         nReffLiq = 6, & ! Number of bins for tau/ReffLiq joint-histogram
-         nReffIce = 6    ! Number of bins for tau/ReffICE joint-histogram
-     ! Bin edges match Pincus et al. 2023 observational data (doi:10.5194/essd-15-2483-2023)
-         real(wp),parameter,dimension(nReffLiq+1) :: &
-    reffLIQ_binBounds = (/4.0e-6, 8e-6, 1.0e-5, 1.25e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
+         nReffLiq = 6, & ! Number of ReffLiq bins for tau/ReffLiq and LWP/ReffLiq joint-histogram
+         nReffIce = 6    ! Number of ReffIce bins for tau/ReffICE and IWP/ReffIce joint-histogram
+    real(wp),parameter,dimension(nReffLiq+1) :: &
+         reffLIQ_binBounds = (/4.0e-6, 8e-6, 1.0e-5, 1.25e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
     real(wp),parameter,dimension(nReffIce+1) :: &
-         reffICE_binBounds = (/0., 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 6.0e-5, 9.0e-5/)
+         reffICE_binBounds = (/5.0e-6, 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 5.0e-5, 6.0e-5/)
     real(wp),parameter,dimension(2,nReffICE) :: &
          reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
                                     l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
@@ -152,18 +151,27 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter,dimension(nReffLIQ) :: &
          reffLIQ_binCenters = (reffLIQ_binEdges(1,:)+reffLIQ_binEdges(2,:))/2._wp
 
-            ! LWP bins for MODIS joint histogram of liquid water path and liquid
-    ! effective radius
+    ! LWP and IWP bins for MODIS joint histogram of (1) LWP and droplet size
+    ! and (2) IWP and particle size
     integer, parameter :: &
-         nLWP = 7 ! Number of bins for WLP/ReffLiq joint-histogram
-     real(wp),parameter,dimension(nLWP+1) :: &
+         nLWP = 7, & ! Number of bins for LWP/ReffLiq joint-histogram
+         nIWP = 7    ! Number of bins for IWP/ReffIce joint-histogram
+    real(wp),parameter,dimension(nLWP+1) :: &
          LWP_binBounds = (/0., 0.01, 0.03, 0.06, 0.10, 0.15, 0.25, 20.0/) ! kg/m2
-     real(wp),parameter,dimension(2,nLWP) :: &
+    real(wp),parameter,dimension(nIWP+1) :: &
+         IWP_binBounds = (/0., 0.02, 0.05, 0.10, 0.20, 0.40, 1.00, 20.0/) ! kg/m2
+    real(wp),parameter,dimension(2,nLWP) :: &
          LWP_binEdges = reshape(source=(/LWP_binBounds(1),((LWP_binBounds(k),  &
                                 l=1,2),k=2,nLWP),LWP_binBounds(nLWP+1)/),  &
                                 shape = (/2,nLWP/))
-     real(wp),parameter,dimension(nLWP) :: &
+    real(wp),parameter,dimension(2,nIWP) :: &
+         IWP_binEdges = reshape(source=(/IWP_binBounds(1),((IWP_binBounds(k),  &
+                                l=1,2),k=2,nIWP),IWP_binBounds(nIWP+1)/),  &
+                                shape = (/2,nIWP/))
+    real(wp),parameter,dimension(nLWP) :: &
          LWP_binCenters = (LWP_binEdges(1,:)+LWP_binEdges(2,:))/2._wp
+    real(wp),parameter,dimension(nIWP) :: &
+         IWP_binCenters = (IWP_binEdges(1,:)+IWP_binEdges(2,:))/2._wp
     ! ####################################################################################  
     ! Constants used by RTTOV.
     ! ####################################################################################  
@@ -284,16 +292,27 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter,dimension(2,nReffLiq) :: &
          modis_histReffLiqEdges = reffLIQ_binEdges     ! Effective radius bin edges
     ! ####################################################################################
-    ! MODIS simulator LWP/ReffLIQ joint-histogram information
+    ! MODIS simulator LWP/ReffLIQ and IWP/ReffIce joint-histogram information
     ! ####################################################################################
-     integer,parameter :: &
-         numMODISLWPBins = nLWP                ! Number of bins for joint-histogram
+    ! Liquid
+    integer,parameter :: &
+         numMODISLWPBins = nLWP                        ! Number of bins for joint-histogram
     real(wp),parameter,dimension(nLWP+1) :: &
-         modis_histLWP = LWP_binBounds     ! LWP bin boundaries 
+         modis_histLWP = LWP_binBounds                 ! LWP bin boundaries 
     real(wp),parameter,dimension(nLWP) :: &
-         modis_histLWPCenters = LWP_binCenters ! LWP bin centers
+         modis_histLWPCenters = LWP_binCenters         ! LWP bin centers
     real(wp),parameter,dimension(2,nLWP) :: &
-         modis_histLWPEdges = LWP_binEdges     ! LWP bin edges
+         modis_histLWPEdges = LWP_binEdges             ! LWP bin edges
+
+    ! Ice
+    integer,parameter :: &
+         numMODISIWPBins = nIWP                        ! Number of bins for joint-histogram
+    real(wp),parameter,dimension(nIWP+1) :: &
+         modis_histIWP = IWP_binBounds                 ! IWP bin boundaries 
+    real(wp),parameter,dimension(nIWP) :: &
+         modis_histIWPCenters = IWP_binCenters         ! IWP bin centers
+    real(wp),parameter,dimension(2,nIWP) :: &
+         modis_histIWPEdges = IWP_binEdges             ! IWP bin edges     
 
     ! ####################################################################################
     ! CLOUDSAT reflectivity histogram information 
