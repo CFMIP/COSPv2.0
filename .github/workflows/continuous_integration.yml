@@ -40,18 +40,18 @@ jobs:
         compiler: [gfortran-10, gfortran-11, gfortran-12, ifort]
     env:
       F90: ${{ matrix.compiler }}
-      FC: ${{ matrix.compiler }}
+      FC:  ${{ matrix.compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
       ATOL: 0.0
       RTOL: 0.0
       KGO_VERSION: v002
     # Sequence of tasks that will be executed as part of the job
     steps:
-    # Checks-out repository under $GITHUB_WORKSPACE
-    - uses: actions/checkout@v2
     ###############################################################################
     # Initial steps
     ###############################################################################
+    # Checks-out repository under $GITHUB_WORKSPACE
+    - uses: actions/checkout@v2
     # Set up Python and install dependencies
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -63,12 +63,6 @@ jobs:
         python-version: 3.11
     - name: Install python packages
       run: conda install --yes cartopy matplotlib netcdf4
-    # Update system packages
-    - name: Update system packages
-      run: sudo apt-get update
-    # Non compiler-specific environment
-    - name: Non compiler-specific environment
-      run: export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${NFHOME}/lib
     ###############################################################################
     # FORTRAN compilers
     ###############################################################################
@@ -117,7 +111,9 @@ jobs:
     ###############################################################################
     # NetCDF C library
     - name: Install NetCDF library
-      run: sudo apt-get install libnetcdf-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install libnetcdf-dev
 
     - name: Install NetCDF Fortran library
       if: contains(matrix.compiler, 'gfortran')
@@ -139,6 +135,8 @@ jobs:
         FCFLAGS: -fPIC
       run: |
         source /opt/intel/oneapi/setvars.sh || true
+        which ifort
+        which ifx
         ${F90} --version
         git clone https://github.com/Unidata/netcdf-fortran.git --branch v4.4.4
         cd netcdf-fortran
