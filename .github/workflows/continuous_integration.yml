@@ -191,7 +191,7 @@ jobs:
         ./cosp2_test cosp2_input_nl.um_global.txt
     # 2. UM global snapshot. Diagnostics on model levels.
     - name: UM global snapshot. Diagnostics on model levels.
-      if: contains(matrix.compiler, gfortran)
+      if: contains(matrix.compiler, 'gfortran')
       run: |
         cd driver/run
         ./cosp2_test cosp2_input_nl.um_global_model_levels.txt cosp2_output_nl.um_global_model_levels.txt
@@ -231,7 +231,7 @@ jobs:
         fi
     # 3. UM global snapshot. Diagnostics on model levels. Only gfortran.
     - name: UM global on model levels against known good output (KGO)
-      if: contains(matrix.compiler, gfortran)
+      if: contains(matrix.compiler, 'gfortran')
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc
