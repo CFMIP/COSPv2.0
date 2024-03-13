@@ -35,6 +35,7 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         compiler: [gfortran-10, gfortran-11, gfortran-12, ifort]
     env:
@@ -114,9 +115,14 @@ jobs:
     - name: Install NetCDF library
       run: sudo apt-get install libnetcdf-dev
 
+    - name: Install NetCDF Fortran library
+      if: contains(matrix.compiler, 'gfortran')
+      run: sudo apt-get install libnetcdff-dev
+
     # Cache netcdf FORTRAN library
     - name: cache-netcdf-fortran
       id: cache-netcdf-fortran
+      if: contains(matrix.compiler, 'ifort')
       uses: actions/cache@v2
       with:
         path: /home/runner/netcdf-fortran
@@ -124,6 +130,7 @@ jobs:
 
     # Build NetCDF FORTRAN library for current compiler
     - name: Build NetCDF FORTRAN library
+      if: contains(matrix.compiler, 'ifort')
       env:
         FCFLAGS: -fPIC
       if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
