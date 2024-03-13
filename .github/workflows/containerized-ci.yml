@@ -47,7 +47,6 @@ jobs:
     # like COSP. We tell ifort to use heap arrays.
     - name: Build driver
       run: |
-        source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
         cd build
         make -j driver
