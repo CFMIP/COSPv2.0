@@ -38,6 +38,11 @@ jobs:
       KGO_VERSION: v002
 
     steps:
+    #
+    # Checks-out repository under $GITHUB_WORKSPACE
+    #
+    - uses: actions/checkout@v4
+    
     ###############################################################################
     # Build COSP and retrieve input and test files
     ###############################################################################
