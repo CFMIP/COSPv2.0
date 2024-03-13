@@ -130,10 +130,9 @@ jobs:
 
     # Build NetCDF FORTRAN library for current compiler
     - name: Build NetCDF FORTRAN library
-      if: contains(matrix.compiler, 'ifort')
+      if: contains(matrix.compiler, 'ifort') && steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
       env:
         FCFLAGS: -fPIC
-      if: steps.cache-netcdf-fortran.outputs.cache-hit != 'true'
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         ${F90} --version
