@@ -33,13 +33,13 @@ jobs:
   # This workflow contains a single job called "test"
   test:
     # The type of runner that the job will run on
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        fortran-compiler: [gfortran, gfortran-8, gfortran-7, ifort]
+        compiler: [gfortran-10, gfortran-11, gfortran-12, ifort]
     env:
-      F90: ${{ matrix.fortran-compiler }}
-      FC: ${{ matrix.fortran-compiler }}
+      F90: ${{ matrix.compiler }}
+      FC: ${{ matrix.compiler }}
       F90FLAGS: "-O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan"
       ATOL: 0.0
       RTOL: 0.0
@@ -57,11 +57,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.7
+        python-version: 3.11
     - name: Setup conda
       uses: s-weigand/setup-conda@v1
       with:
-        python-version: 3.7
+        python-version: 3.11
     - name: Install python packages
       run: conda install --yes cartopy matplotlib netcdf4
     # Update system packages
@@ -74,17 +74,11 @@ jobs:
     # FORTRAN compilers
     ###############################################################################
     #
-    # Install gfortran compiler
-    #
-    - name: Install gfortran compiler
-      if: contains(matrix.fortran-compiler, 'gfortran')
-      run: sudo apt-get install ${{ matrix.fortran-compiler }}
-    #
     # Intel compilers
     #
     - name: cache-intel-compilers
       id: cache-intel-compilers
-      if: contains(matrix.fortran-compiler, 'ifort')
+      if: contains(matrix.compiler, 'ifort')
       uses: actions/cache@v2
       with:
         path: /opt/intel
@@ -94,7 +88,7 @@ jobs:
     # List of packages from Docler file at
     #    https://github.com/intel/oneapi-containers/blob/master/images/docker/hpckit-devel-ubuntu18.04/Dockerfile
     - name: Install Intel compilers and libraries
-      if: contains(matrix.fortran-compiler, 'ifort') && steps.cache-intel-compilers.outputs.cache-hit != 'true'
+      if: contains(matrix.compiler, 'ifort') && steps.cache-intel-compilers.outputs.cache-hit != 'true'
       run: |
         wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
@@ -103,43 +97,16 @@ jobs:
         sudo apt-get install intel-hpckit-getting-started intel-oneapi-clck intel-oneapi-common-licensing intel-oneapi-common-vars
         sudo apt-get install intel-oneapi-dev-utilities  intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic intel-oneapi-compiler-fortran intel-oneapi-itac
 
-    #
-    # Nvidia compilers
-    #
-    - name: cache-nvidia-compilers
-      id: cache-nvidia-compilers
-      if: contains(matrix.fortran-compiler, 'nvfortran')
-      uses: actions/cache@v2
-      with:
-        path: /opt/nvidia/hpc_sdk/
-        key: nvhpc-${{ runner.os }}-2020-20.7
-
-    - name: Nvidia setup compilers
-      if: contains(matrix.fortran-compiler, 'nvfortran') && steps.cache-nvidia-compilers.outputs.cache-hit != 'true'
-      env:
-        NVCOMPILERS: /opt/nvidia/hpc_sdk
-      run: |
-        wget -q https://developer.download.nvidia.com/hpc-sdk/nvhpc-20-7_20.7_amd64.deb https://developer.download.nvidia.com/hpc-sdk/nvhpc-2020_20.7_amd64.deb
-        sudo apt-get install ./nvhpc-20-7_20.7_amd64.deb ./nvhpc-2020_20.7_amd64.deb
     ###############################################################################
     # Compiler-specific environment
     ###############################################################################
-    # Environments for ifort and nvidia compilers
+    # Environment for Intel compilers
     - name: Environment for ifort compiler
-      if: contains(matrix.fortran-compiler, 'ifort')
+      if: contains(matrix.compiler, 'ifort')
       run: |
         echo "CC=icx" > $GITHUB_ENV
         echo "FC=ifort" > $GITHUB_ENV
         echo "F90FLAGS=-O3 -heap-arrays" > $GITHUB_ENV
-    - name: Environment for nvfortran compiler
-      env:
-        NVCOMPILERS: /opt/nvidia/hpc_sdk
-      if: contains(matrix.fortran-compiler, 'nvfortran')
-      run: |
-        echo "CC=nvc" > $GITHUB_ENV
-        echo "FC=nvfortran" > $GITHUB_ENV
-        echo "F90FLAGS=-Mallocatable=03 -Mstandard -Mbounds -Mchkptr -Kieee -Mchkstk" > $GITHUB_ENV
-        echo "${NVCOMPILERS}/Linux_x86_64/20.7/compilers/bin" >> $GITHUB_PATH
     ###############################################################################
     # NetCDF C and FORTRAN libraries
     ###############################################################################
@@ -153,7 +120,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: /home/runner/netcdf-fortran
-        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.fortran-compiler }}-v02
+        key: netcdf-fortran-4.4.4a-${{ runner.os }}-${{ matrix.compiler }}-v02
 
     # Build NetCDF FORTRAN library for current compiler
     - name: Build NetCDF FORTRAN library
@@ -216,26 +183,18 @@ jobs:
     # doing it this way the output is easier to interpret.
     ###############################################################################
     # 1. Basic test
-    - name: Basic test
+    - name: Basic test, UM global snapshot
       run: |
         source /opt/intel/oneapi/setvars.sh || true
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
-    # 2. UM global snapshot
-    - name: UM global snapshot
-      run: |
-        source /opt/intel/oneapi/setvars.sh || true
-        cd driver/run
         ./cosp2_test cosp2_input_nl.um_global.txt
-    # 3. UM global snapshot. Diagnostics on model levels.
+    # 2. UM global snapshot. Diagnostics on model levels.
     - name: UM global snapshot. Diagnostics on model levels.
+      if: contains(matrix.compiler, gfortran)
       run: |
-        if [[ "${F90}" = 'gfortran' ]]; then
-          cd driver/run
-          ./cosp2_test cosp2_input_nl.um_global_model_levels.txt cosp2_output_nl.um_global_model_levels.txt
-        else
-          echo "Test is only run for gfortran compiler."
-        fi
+        cd driver/run
+        ./cosp2_test cosp2_input_nl.um_global_model_levels.txt cosp2_output_nl.um_global_model_levels.txt
     ###############################################################################
     # Compare results against known good outputs. As above,
     # we split it in as many steps as tests.
@@ -272,15 +231,12 @@ jobs:
         fi
     # 3. UM global snapshot. Diagnostics on model levels. Only gfortran.
     - name: UM global on model levels against known good output (KGO)
+      if: contains(matrix.compiler, gfortran)
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
-        if [[ "${F90}" = 'gfortran' ]]; then
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-        else
-          echo "Test only run for gfortran compiler."
-        fi
     ###############################################################################
     # Produce plots when it fails during global snapshot tests,
     # and create a tarball with outputs.
