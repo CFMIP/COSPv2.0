@@ -45,8 +45,6 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       KGO_VERSION: v002
-      NFHOME: /home/runner/netcdf-fortran
-      LD_LIBRARY_PATH: /home/runner/netcdf-fortran/lib
     # Sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -101,13 +99,19 @@ jobs:
     ###############################################################################
     # Compiler-specific environment
     ###############################################################################
-    # Environment for Intel compilers
+    - name: Environment for ifort compiler
+      if: contains(matrix.compiler, 'gfortran')
+      run: echo "NFHOME=/usr/include" > $GITHUB_ENV
+
     - name: Environment for ifort compiler
       if: contains(matrix.compiler, 'ifort')
       run: |
         echo "CC=icx" > $GITHUB_ENV
         echo "FC=ifort" > $GITHUB_ENV
         echo "F90FLAGS=-O3 -heap-arrays" > $GITHUB_ENV
+        echo "NFHOME=/home/runner/netcdf-fortran" > $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/home/runner/netcdf-fortran/lib" > $GITHUB_ENV
+
     ###############################################################################
     # NetCDF C and FORTRAN libraries
     ###############################################################################
