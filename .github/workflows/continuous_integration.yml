@@ -99,7 +99,7 @@ jobs:
     ###############################################################################
     # Compiler-specific environment
     ###############################################################################
-    - name: Environment for ifort compiler
+    - name: Environment for Gfortran compiler
       if: contains(matrix.compiler, 'gfortran')
       run: echo "NFHOME=/usr/include" > $GITHUB_ENV
 
