@@ -95,7 +95,7 @@ jobs:
     ###############################################################################
     - name: Environment for Gfortran compiler
       if: contains(matrix.compiler, 'gfortran')
-      run: echo "NFHOME=/usr/include" > $GITHUB_ENV
+      run: echo "NFHOME=/usr" > $GITHUB_ENV
 
     - name: Environment for ifort compiler
       if: contains(matrix.compiler, 'ifort')
