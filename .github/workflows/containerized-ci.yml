@@ -30,7 +30,7 @@ jobs:
     env:
       F90: ${{ matrix.compiler }}
       FC:  ${{ matrix.compiler }}
-      F90FLAGS: ${{ fcflags }}
+      F90FLAGS:  ${{ matrix.fcflags }}
       # Make variables:
       NFHOME: /opt/netcdf-fortran
       ATOL: 0.0
