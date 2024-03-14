@@ -51,7 +51,7 @@ jobs:
         cd build
         make -j driver
     # Retrieve and expand large data files
-    - name: Retrieve data files
+    - name: Retrieve input files
       run: |
         GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
         OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
@@ -59,27 +59,36 @@ jobs:
         gunzip ${OUTPATH}
         cd driver/data/inputs/UKMO
         md5sum -c cosp_input.um_global.nc.md5
+    - name: Retrieve KGOs
+      run: |
+        if [[ "${F90}" = 'gfortran' ]]; then
+          GDFILE1='https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar'
+          GDFILE2='https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq'
+          GDFILE3='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
+        fi
+        if [[ "${F90}" = 'ifort' ]]; then
+          GDFILE1='https://drive.google.com/file/d/1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T/view?usp=sharing'
+          GDFILE2='https://drive.google.com/file/d/1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP/view?usp=drive_link'
+          GDFILE3='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
+        fi
         cd ${GITHUB_WORKSPACE}
-        GDFILE='https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar'
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDFILE
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.gz
+        curl -sSfL -o $OUTPATH $GDFILE1
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.md5
+        md5sum -c cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.md5
         cd ${GITHUB_WORKSPACE}
-        GDFILE='https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq'
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDFILE
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.$F90.kgo.$KGO_VERSION.nc.gz
+        curl -sSfL -o $OUTPATH $GDFILE2
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.md5
+        md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
         cd ${GITHUB_WORKSPACE}
-        GDFILE='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDFILE
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.$F90.kgo.$KGO_VERSION.nc.gz
+        curl -sSfL -o $OUTPATH $GDFILE3
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.md5
+        md5sum -c cosp2_output.um_global_model_levels.${F90}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.
@@ -98,7 +107,7 @@ jobs:
     - name: Basic against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # 2. UM global snapshot. The approach used for the basic test would needed
@@ -107,7 +116,7 @@ jobs:
     - name: UM global against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
         ATOL=1.0e-20
         RTOL=0.0006
