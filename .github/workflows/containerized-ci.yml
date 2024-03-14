@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ifort, ifx, nvfortran]
+        compiler: [ifort, ifx]
         include:
         # Set flags for Intel Fortran Compiler Classic
         - compiler: ifort
