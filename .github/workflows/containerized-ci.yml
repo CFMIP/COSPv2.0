@@ -7,19 +7,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ifort, ifx]
+        compiler: [ifort]
         include:
         # Set flags for Intel Fortran Compiler Classic
         - compiler: ifort
           fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
-        # Set flags for Intel Fortran Compiler
-        - compiler: ifx
-          fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
+        # # Set flags for Intel Fortran Compiler
+        # - compiler: ifx
+        #   fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
         # Set container images
         - compiler: ifort
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
-        - compiler: ifx
-          image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
+        # - compiler: ifx
+        #   image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
     container:
       image: ${{ matrix.image }}
     env:
