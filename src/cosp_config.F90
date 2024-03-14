@@ -79,12 +79,12 @@ MODULE MOD_COSP_CONFIG
     integer,parameter :: &
          ntau=7  
     real(wp),parameter,dimension(ntau+1) :: &
-       tau_binBounds = (/0.0, 0.3, 1.3, 3.6, 9.4, 23., 60., 150./)
+       tau_binBounds = (/0.0, 0.3, 1.3, 3.6, 9.4, 23., 60., 10000./)
     real(wp),parameter,dimension(ntau) :: &
-         tau_binCenters = (/0.15, 0.80, 2.45, 6.5, 16.2, 41.5, 105.0/)
+         tau_binCenters = (/0.15, 0.80, 2.45, 6.5, 16.2, 41.5, 100.0/)
     real(wp),parameter,dimension(2,ntau) :: &
          tau_binEdges = reshape(source=(/0.0, 0.3,  0.3,  1.3,  1.3,  3.6,      3.6,     &
-                                         9.4, 9.4, 23.0, 23.0, 60.0, 60.0, 150.0/),   &
+                                         9.4, 9.4, 23.0, 23.0, 60.0, 60.0, 100000.0/),   &
                                          shape=(/2,ntau/)) 
 
     ! Optical depth bin axes (ONLY USED BY MODIS SIMULATOR IN v1.4)
@@ -103,11 +103,11 @@ MODULE MOD_COSP_CONFIG
     integer,parameter :: &
          npres = 7     
     real(wp),parameter,dimension(npres+1) :: &
-         pres_binBounds = (/0., 180., 310., 440., 560., 680., 800., 1100./)
+         pres_binBounds = (/0., 180., 310., 440., 560., 680., 800., 10000./)
     real(wp),parameter,dimension(npres) :: &
-         pres_binCenters = (/9500., 74000., 62000., 50000., 37500., 24500., 9000./)   
+         pres_binCenters = (/90000., 74000., 62000., 50000., 37500., 24500., 9000./)   
     real(wp),parameter,dimension(2,npres) :: &
-         pres_binEdges = reshape(source=(/110000.0, 80000.0, 80000.0, 68000.0, 68000.0,    &
+         pres_binEdges = reshape(source=(/100000.0, 80000.0, 80000.0, 68000.0, 68000.0,    &
                                            56000.0, 56000.0, 44000.0, 44000.0, 31000.0,    &
                                            31000.0, 18000.0, 18000.0,     0.0/),           &
                                            shape=(/2,npres/))
