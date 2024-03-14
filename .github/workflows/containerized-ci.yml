@@ -67,8 +67,8 @@ jobs:
           GDFILE3='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
         fi
         if [[ "${F90}" = 'ifort' ]]; then
-          GDFILE1='https://drive.google.com/file/d/1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T/view?usp=sharing'
-          GDFILE2='https://drive.google.com/file/d/1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP/view?usp=drive_link'
+          GDFILE1='https://docs.google.com/uc?export=download&id=1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T'
+          GDFILE2='https://docs.google.com/uc?export=download&id=1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP'
           GDFILE3='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
         fi
         cd ${GITHUB_WORKSPACE}
