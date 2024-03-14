@@ -58,31 +58,30 @@ jobs:
     # Retrieve and expand large data files
     - name: Retrieve data files
       run: |
-        sudo apt-get install wget
         GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
         OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
-        wget --no-check-certificate $GDFILE -O $OUTPATH
+        curl -sSfL -o $OUTPATH $GDFILE
         gunzip ${OUTPATH}
         cd driver/data/inputs/UKMO
         md5sum -c cosp_input.um_global.nc.md5
         cd ${GITHUB_WORKSPACE}
         GDFILE='https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar'
         OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.gz
-        wget --no-check-certificate $GDFILE -O $OUTPATH
+        curl -sSfL -o $OUTPATH $GDFILE
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc.md5
         cd ${GITHUB_WORKSPACE}
         GDFILE='https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq'
         OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.gz
-        wget --no-check-certificate $GDFILE -O $OUTPATH
+        curl -sSfL -o $OUTPATH $GDFILE
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc.md5
         cd ${GITHUB_WORKSPACE}
         GDFILE='https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2'
         OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.gz
-        wget --no-check-certificate $GDFILE -O $OUTPATH
+        curl -sSfL -o $OUTPATH $GDFILE
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc.md5
