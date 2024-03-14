@@ -23,8 +23,6 @@ jobs:
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         - compiler: ifx
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
-        - compiler: nvfortran
-          image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:nvhpc
     container:
       image: ${{ matrix.image }}
     env:
