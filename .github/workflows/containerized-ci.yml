@@ -14,7 +14,6 @@ jobs:
           fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
           gdkgo1: https://docs.google.com/uc?export=download&id=1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T
           gdkgo2: https://docs.google.com/uc?export=download&id=1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP
-          gdkgo3: https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2
         # # Set flags for Intel Fortran Compiler
         # - compiler: ifx
         #   fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
@@ -37,7 +36,6 @@ jobs:
       KGO_VERSION: v002
       GDKGO1: ${{ matrix.gdkgo1 }}
       GDKGO2: ${{ matrix.gdkgo2 }}
-      GDKGO3: ${{ matrix.gdkgo3 }}
     steps:
     #
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -68,7 +66,7 @@ jobs:
     - name: Retrieve KGOs for basic test
       run: |
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.gz
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.$F90.kgo.$KGO_VERSION.nc.gz
         curl -sSfL -o $OUTPATH $GDKGO1
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
@@ -76,25 +74,15 @@ jobs:
     - name: Retrieve KGOs for global test
       run: |
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.$F90.kgo.$KGO_VERSION.nc.gz
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.gz
         curl -sSfL -o $OUTPATH $GDKGO2
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
-    - name: Retrieve KGOs for model levels outputs test
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.$F90.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDKGO3
-        gunzip ${OUTPATH}
-        cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global_model_levels.${F90}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
-    # Run COSP2 tests. We could run both tests in one step, but
-    # doing it this way the output is easier to interpret.
+    # Run COSP2 tests. Basic test and UM global snapshot
     ###############################################################################
-    # 1. Basic test
-    - name: Basic test, UM global snapshot
+    - name: Basic test and UM global snapshot
       run: |
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
