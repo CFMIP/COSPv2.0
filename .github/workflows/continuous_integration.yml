@@ -26,12 +26,12 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 
 # Workflow for continuous integration tests
-name: CI
+name: Continuous integration gfortran compilers
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  # This workflow contains a single job called "test"
-  test:
+  # This workflow contains a single job called "ci_gfortran"
+  ci_gfortran:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
     strategy:
@@ -52,10 +52,10 @@ jobs:
     # Initial steps
     ###############################################################################
     # Checks-out repository under $GITHUB_WORKSPACE
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     # Set up Python and install dependencies
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.11
     - name: Setup conda
