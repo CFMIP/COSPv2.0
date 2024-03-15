@@ -7,21 +7,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ifort]
+        compiler: [ifx]
         include:
         # Set flags for Intel Fortran Compiler Classic
-        - compiler: ifort
-          fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
+        # - compiler: ifort
+        #   fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
+        #   gdkgo1: https://docs.google.com/uc?export=download&id=1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T
+        #   gdkgo2: https://docs.google.com/uc?export=download&id=1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP
+        # Set flags for Intel Fortran Compiler
+        - compiler: ifx
+          fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
           gdkgo1: https://docs.google.com/uc?export=download&id=1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T
           gdkgo2: https://docs.google.com/uc?export=download&id=1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP
-        # # Set flags for Intel Fortran Compiler
-        # - compiler: ifx
-        #   fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
         # Set container images
-        - compiler: ifort
-          image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
-        # - compiler: ifx
+        # - compiler: ifort
         #   image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
+        - compiler: ifx
+          image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
     container:
       image: ${{ matrix.image }}
     env:
@@ -98,22 +100,13 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-    # 2. UM global snapshot. The approach used for the basic test would needed
-    # large tolerances for the ifort compiler. We keep tolerances small for ifort,
-    # and then we test against the output table.
+    # 2. UM global snapshot.
     - name: UM global against known good output (KGO)
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-        # ATOL=1.0e-20
-        # RTOL=0.0006
-        # OUTTST=data/outputs/UKMO/cosp2_output.um_global.out
-        # OUTKGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.${KGO_VERSION}.out
-        # python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} \
-        #   --noerror=True --stats_file=${OUTTST}
-        # diff ${OUTKGO} ${OUTTST}
     ###############################################################################
     # Produce plots when it fails during global snapshot tests,
     # and create a tarball with outputs.
