@@ -116,7 +116,7 @@ jobs:
         curl -sSfL -o $OUTPATH $GDKGO3
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5        cd ${GITHUB_WORKSPACE}
+        md5sum -c cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.
