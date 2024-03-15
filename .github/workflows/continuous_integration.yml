@@ -39,6 +39,9 @@ jobs:
       matrix:
         compiler: [gfortran-10, gfortran-11, gfortran-12]
         python-version: [3.11]
+    defaults:
+      run:
+        shell: bash -el {0}
     env:
       F90: ${{ matrix.compiler }}
       FC:  ${{ matrix.compiler }}
@@ -58,21 +61,15 @@ jobs:
     ###############################################################################
     # Checks-out repository under $GITHUB_WORKSPACE
     - uses: actions/checkout@v4
-    # Set up Python and install dependencies
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Setup conda
-      # uses: s-weigand/setup-conda@v1.2.1
-      # with:
-      #   python-version: 3.11
+    # Set up conda environment
+    - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v3.0.3
       with:
         auto-update-conda: true
+        activate-environment: ci-env
+        environment-file: build/environment.yml
         python-version: ${{ matrix.python-version }}
-    - name: Install python packages
-      run: conda install --yes cartopy matplotlib netcdf4
+        auto-activate-base: false
     # NetCDF C and FORTRAN libraries
     - name: Install NetCDF library
       run: |
