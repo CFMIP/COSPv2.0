@@ -17,8 +17,8 @@ jobs:
         # Set flags for Intel Fortran Compiler
         - compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-          gdkgo1: https://docs.google.com/uc?export=download&id=1TpXY-vXkwAnym9nNjzUxt1q_8c8T7X8T
-          gdkgo2: https://docs.google.com/uc?export=download&id=1ic-2B3dIx1kIoi-Nd1ndLbLAe_LIWDGP
+          gdkgo1: https://docs.google.com/uc?export=download&id=19N7wXou-2Zv0oVAnwn4Ucs8Ghr-C0SMt
+          gdkgo2: https://docs.google.com/uc?export=download&id=1EUO6C_v0rq0NMXkLGqZDKX99kknnMRQN
         # Set container images
         # - compiler: ifort
         #   image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
