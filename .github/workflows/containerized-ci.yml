@@ -70,7 +70,7 @@ jobs:
         curl -sSfL -o $OUTPATH $GDKGO1
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.md5
+        md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
     - name: Retrieve KGOs for global test
       run: |
         cd ${GITHUB_WORKSPACE}
@@ -78,7 +78,7 @@ jobs:
         curl -sSfL -o $OUTPATH $GDKGO2
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
+        md5sum -c cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. Basic test and UM global snapshot
     ###############################################################################
