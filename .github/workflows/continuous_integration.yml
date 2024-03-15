@@ -49,6 +49,7 @@ jobs:
       GDKGO1: https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq
       GDKGO2: https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar
       GDKGO3: https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2
+      F90_SHORT_NAME: gfortran
     # Sequence of tasks that will be executed as part of the job
     steps:
     ###############################################################################
@@ -94,27 +95,28 @@ jobs:
     - name: Retrieve KGOs for basic test
       run: |
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.$F90.kgo.$KGO_VERSION.nc.gz
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
         curl -sSfL -o $OUTPATH $GDKGO1
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
+        md5sum -c cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
     - name: Retrieve KGOs for global test
       run: |
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.gz
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
         curl -sSfL -o $OUTPATH $GDKGO2
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.md5        cd ${GITHUB_WORKSPACE}
+        md5sum -c cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
+        cd ${GITHUB_WORKSPACE}
     - name: Retrieve KGOs for global test with outputs on model levels
       run: |
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90}.kgo.$KGO_VERSION.nc.gz
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
         curl -sSfL -o $OUTPATH $GDKGO3
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global_model_levels.${F90}.kgo.$KGO_VERSION.nc.md5        cd ${GITHUB_WORKSPACE}
+        md5sum -c cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5        cd ${GITHUB_WORKSPACE}
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.
@@ -139,21 +141,21 @@ jobs:
     - name: Basic against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output_um.gfortran.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # 2. UM global snapshot. 
     - name: UM global against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global.gfortran.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # 3. UM global snapshot. Diagnostics on model levels.
     - name: UM global on model levels against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.gfortran.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
           python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     ###############################################################################
