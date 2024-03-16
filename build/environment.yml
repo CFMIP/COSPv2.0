@@ -1,0 +1,8 @@
+name: ci-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - cartopy
+  - matplotlib
+  - netcdf4
