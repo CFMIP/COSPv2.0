@@ -185,7 +185,7 @@ jobs:
     ###############################################################################
     - name: Upload output file if test fails
       if: failure()
-      uses: actions/upload-artifact@v1.0.0
+      uses: actions/upload-artifact@v4.3.1
       with:
         name: outputs.UKMO.tgz
         path: driver/data/outputs/UKMO/outputs.UKMO.tgz
