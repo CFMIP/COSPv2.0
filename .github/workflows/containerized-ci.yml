@@ -25,7 +25,7 @@ jobs:
         - compiler: ifx
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         # Common variables
-        - kgo_version: v001
+        - kgo_version: v002
     container:
       image: ${{ matrix.image }}
     env:
@@ -133,7 +133,7 @@ jobs:
     # Make output files available if any test fails
     ###############################################################################
     - name: Upload output file if test fails
-      if: failure()
+      if: success()
       uses: actions/upload-artifact@v4.3.1
       with:
         name: outputs.${{ matrix.compiler }}.UKMO.tgz
