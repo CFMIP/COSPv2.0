@@ -133,7 +133,7 @@ jobs:
     # Make output files available if any test fails
     ###############################################################################
     - name: Upload output file if test fails
-      if: success()
+      if: failure()
       uses: actions/upload-artifact@v4.3.1
       with:
         name: outputs.${{ matrix.compiler }}.UKMO.tgz
