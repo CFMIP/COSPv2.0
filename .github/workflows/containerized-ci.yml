@@ -137,4 +137,4 @@ jobs:
       uses: actions/upload-artifact@v4.3.1
       with:
         name: outputs.${{ matrix.compiler }}.UKMO.tgz
-        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
+        path: driver/data/outputs/UKMO/outputs.${{ matrix.compiler }}.UKMO.tgz
