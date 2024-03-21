@@ -850,7 +850,7 @@ CONTAINS
                                             reflectance)                                         
         call cpu_time(driver_time(7))
     else
-        print*,'empty chunk'
+        if (verbose) print*,'empty chunk'
     end if
     
 !    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)

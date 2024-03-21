@@ -238,7 +238,7 @@ contains
         dx                ! distance to satellite longitude in km?
 
     logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
-        swath_mask_all    ! Mask of reals over all local times
+        swath_mask_all    ! Mask of logicals over all local times
         
     logical :: verbose = .false.
     
@@ -320,7 +320,7 @@ contains
         if (verbose) print*,'Done with "cosp_rttov_allocate"'
 
     else
-        print*,'nothing swathed'
+        if (verbose) print*,'nothing swathed'
     end if
         
   end subroutine cosp_rttov_allocate
@@ -402,7 +402,7 @@ contains
         dx                ! distance to satellite longitude in km?
 
     logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
-        swath_mask_all    ! Mask of reals over all local times        
+        swath_mask_all    ! Mask of logicals over all local times        
         
     logical :: verbose = .false.
     
