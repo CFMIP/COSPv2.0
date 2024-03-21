@@ -24,6 +24,8 @@ jobs:
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         - compiler: ifx
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
+        # Common variables
+        - kgo_version: v002
     container:
       image: ${{ matrix.image }}
     env:
@@ -35,7 +37,7 @@ jobs:
       # KGO tests variables
       ATOL: 0.0
       RTOL: 0.0
-      KGO_VERSION: v002
+      KGO_VERSION: ${{ matrix.kgo_version }}
       GDKGO1: ${{ matrix.gdkgo1 }}
       GDKGO2: ${{ matrix.gdkgo2 }}
     steps:
@@ -123,7 +125,7 @@ jobs:
           python plot_test_outputs.py --tst_file=$TST_MLEV
         fi
         cd data/outputs/UKMO
-        tar --ignore-failed-read -czf outputs.UKMO.tgz cosp2_output.um_global.nc \
+        tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
           cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
           cosp2_output.um_global.out
         ls -lh
@@ -134,5 +136,5 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v4.3.1
       with:
-        name: outputs.UKMO.tgz
-        path: driver/data/outputs/UKMO/outputs.UKMO.tgz
+        name: outputs.${{ matrix.compiler }}.UKMO.tgz
+        path: driver/data/outputs/UKMO/outputs.${{ matrix.compiler }}.UKMO.tgz
