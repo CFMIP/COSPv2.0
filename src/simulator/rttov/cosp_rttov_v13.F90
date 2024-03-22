@@ -170,60 +170,27 @@ contains
 
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE rttov_allocate - JKS
+  ! SUBROUTINE cosp_rttov_swath - JKS
   ! ------------------------------------------------------
-  ! 3. Allocate RTTOV input and output structures
-  ! 4. Build the list of profile/channel indices in inst_chanprof
+  ! Determine which gridcells should be swathed.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,inst_coefs, &
-                                 inst_profiles, inst_iChannel,rttov_Nlocaltime,   &
-                                 rttov_localtime,rttov_localtime_width,           &
-                                 inst_chanprof,                                   &
-                                 inst_nchanprof,inst_nprof,inst_swath_mask,       &
-                                 inst_transmission,inst_radiance,inst_calcemis,   &
-                                 inst_emissivity,inst_calcrefl,inst_reflectance,  &
-                                 debug)
-                           
+  subroutine cosp_rttov_swath(rttovIN,rttov_Nlocaltime,               &
+                              rttov_localtime,rttov_localtime_width,  &
+                              inst_swath_mask, debug)
+
     type(rttov_in),intent(in)      :: &
         rttovIN
-    integer(kind=jpim),intent(in)  :: &
-        inst_nChannels_rec
-    type(rttov_options),intent(in) :: &
-        inst_opts
-    type(rttov_coefs),intent(in)   :: &
-        inst_coefs
-    type(rttov_profile),pointer,intent(out) :: &
-        inst_profiles(:)  
-    integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
-        inst_iChannel
     integer(KIND=jpim),intent(in)           :: &
-        rttov_Nlocaltime    
+        rttov_Nlocaltime
     real(kind=jprb), dimension(rttov_Nlocaltime), intent(in)    :: &
         rttov_localtime,       &
-        rttov_localtime_width
-    type(rttov_chanprof),pointer,intent(inout) :: &
-        inst_chanprof(:)    
-    integer(kind=jpim),intent(inout) :: &
-        inst_nchanprof, &
-        inst_nprof          ! Now accounting for orbits
+        rttov_localtime_width                                
     logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
         inst_swath_mask
-    type(rttov_transmission),intent(out) :: &
-        inst_transmission
-    type(rttov_radiance),intent(out) :: &
-        inst_radiance
-    logical(kind=jplm),pointer,intent(out) :: &
-        inst_calcemis(:)
-    type(rttov_emissivity),pointer,intent(out) :: &
-        inst_emissivity(:)
-    logical(kind=jplm),pointer,intent(out) :: &
-        inst_calcrefl(:)
-    type(rttov_reflectance),pointer,intent(out) :: &
-        inst_reflectance(:)
     logical,intent(in),optional :: &
         debug
-        
+
     !---- Local variables ----!
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch
@@ -242,13 +209,7 @@ contains
         
     logical :: verbose = .false.
     
-    if (present(debug)) verbose = debug
-        
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! 3. Allocate RTTOV input and output structures
-    ! ------------------------------------------------------
-    ! Largely from RTTOV documentation.
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    if (present(debug)) verbose = debug    
 
     ! Handle swathing here. Initial code from Genevieve with implementation changes.
     swath_mask_all = .false.
@@ -271,8 +232,75 @@ contains
     else
         inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
     end if
+    if (verbose) print*,'inst_swath_mask:  ',inst_swath_mask
+
+  end subroutine cosp_rttov_swath
+
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE rttov_allocate - JKS
+  ! ------------------------------------------------------
+  ! 3. Allocate RTTOV input and output structures
+  ! 4. Build the list of profile/channel indices in inst_chanprof
+  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  subroutine cosp_rttov_allocate(rttovIN,inst_nChannels_rec,inst_opts,inst_coefs, &
+                                 inst_profiles, inst_iChannel, inst_chanprof,     &
+                                 inst_nchanprof,inst_nprof,inst_swath_mask,       &
+                                 inst_transmission,inst_radiance,inst_calcemis,   &
+                                 inst_emissivity,inst_calcrefl,inst_reflectance,  &
+                                 debug)
+                           
+    type(rttov_in),intent(in)      :: &
+        rttovIN
+    integer(kind=jpim),intent(in)  :: &
+        inst_nChannels_rec
+    type(rttov_options),intent(in) :: &
+        inst_opts
+    type(rttov_coefs),intent(in)   :: &
+        inst_coefs
+    type(rttov_profile),pointer,intent(out) :: &
+        inst_profiles(:)  
+    integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
+        inst_iChannel
+    type(rttov_chanprof),pointer,intent(inout) :: &
+        inst_chanprof(:)    
+    integer(kind=jpim),intent(inout) :: &
+        inst_nchanprof
+    integer(kind=jpim),intent(in) :: &
+        inst_nprof          ! Now accounting for orbits
+    logical(jplm),dimension(rttovIN % nPoints),intent(inout)    :: &
+        inst_swath_mask
+    type(rttov_transmission),intent(out) :: &
+        inst_transmission
+    type(rttov_radiance),intent(out) :: &
+        inst_radiance
+    logical(kind=jplm),pointer,intent(out) :: &
+        inst_calcemis(:)
+    type(rttov_emissivity),pointer,intent(out) :: &
+        inst_emissivity(:)
+    logical(kind=jplm),pointer,intent(out) :: &
+        inst_calcrefl(:)
+    type(rttov_reflectance),pointer,intent(out) :: &
+        inst_reflectance(:)
+    logical,intent(in),optional :: &
+        debug
+        
+    !---- Local variables ----!
+    ! Loop variables
+    integer(kind=jpim) :: j, jch, nch
+
+        
+    logical :: verbose = .false.
+    
+    if (present(debug)) verbose = debug
+        
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 3. Allocate RTTOV input and output structures
+    ! ------------------------------------------------------
+    ! Largely from RTTOV documentation.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
     ! Determine the total number of radiances to simulate (nchanprof).
-    inst_nprof     = count(inst_swath_mask)
     inst_nchanprof = inst_nChannels_rec * inst_nprof
     
     if (verbose) then
@@ -281,47 +309,41 @@ contains
         print*,'inst_nchanprof:      ',inst_nchanprof
     end if
     
-    if (inst_nprof .gt. 0_jpim) then ! Only allocate if there are calculations to make
+    ! Allocate structures for rttov_direct
+    call rttov_alloc_direct( &
+        errorstatus,             &
+        1_jpim,                  &  ! 1 => allocate
+        inst_nprof,              &
+        inst_nchanprof,          &
+        rttovIN%nLevels,         &
+        inst_chanprof,           &
+        inst_opts,               &
+        inst_profiles,           &
+        inst_coefs,              &
+        inst_transmission,       &
+        inst_radiance,           &
+        calcemis=inst_calcemis,       &
+        emissivity=inst_emissivity,   &
+        calcrefl=inst_calcrefl,       &
+        reflectance=inst_reflectance, &
+        init=.TRUE._jplm)
+    call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
 
-        ! Allocate structures for rttov_direct
-        call rttov_alloc_direct( &
-            errorstatus,             &
-            1_jpim,                  &  ! 1 => allocate
-            inst_nprof,              &
-            inst_nchanprof,          &
-            rttovIN%nLevels,         &
-            inst_chanprof,           &
-            inst_opts,               &
-            inst_profiles,           &
-            inst_coefs,              &
-            inst_transmission,       &
-            inst_radiance,           &
-            calcemis=inst_calcemis,       &
-            emissivity=inst_emissivity,   &
-            calcrefl=inst_calcrefl,       &
-            reflectance=inst_reflectance, &
-            init=.TRUE._jplm)
-        call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
-
-        ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        ! 4. Build the list of profile/channel indices in chanprof
-        ! ------------------------------------------------------
-        ! Largely from RTTOV documentation.
-        ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-        nch = 0_jpim
-        do j = 1, inst_nprof
-          do jch = 1, inst_nChannels_rec ! nChannels
-            nch = nch + 1_jpim
-            inst_chanprof(nch)%prof = j
-            inst_chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
-          end do
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ! 4. Build the list of profile/channel indices in chanprof
+    ! ------------------------------------------------------
+    ! Largely from RTTOV documentation.
+    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+    nch = 0_jpim
+    do j = 1, inst_nprof
+        do jch = 1, inst_nChannels_rec ! nChannels
+        nch = nch + 1_jpim
+        inst_chanprof(nch)%prof = j
+        inst_chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
         end do
-        if (verbose) print*,'Done with "cosp_rttov_allocate"'
-
-    else
-        if (verbose) print*,'nothing swathed'
-    end if
+    end do
+    if (verbose) print*,'Done with "cosp_rttov_allocate"'
         
   end subroutine cosp_rttov_allocate
 
@@ -334,9 +356,7 @@ contains
 
   subroutine cosp_pc_rttov_allocate(rttovIN,inst_PC_coef_filepath,                          &
                                     inst_coefs,inst_opts,inst_profiles,                     &
-                                    inst_nchannels_rec,inst_iChannel_in,                    &
-                                    rttov_Nlocaltime,rttov_localtime,rttov_localtime_width, &
-                                    inst_chanprof,                                          &
+                                    inst_nchannels_rec,inst_iChannel_in,inst_chanprof,      &
                                     inst_nchanprof,inst_nprof,inst_iChannel_out,            &
                                     inst_swath_mask,inst_transmission,inst_radiance,        &
                                     inst_calcemis,inst_emissivity,inst_pccomp,              &
@@ -356,15 +376,11 @@ contains
         inst_nchannels_rec
     integer(kind=jpim),intent(in),dimension(inst_nchannels_rec)     :: &
         inst_iChannel_in ! Channel indices the user initially requests.
-    integer(KIND=jpim),intent(in)           :: &
-        rttov_Nlocaltime    
-    real(kind=jprb), dimension(rttov_Nlocaltime), intent(in)    :: &
-        rttov_localtime,       &
-        rttov_localtime_width
     type(rttov_chanprof),pointer,intent(inout) :: &
         inst_chanprof(:)
     integer(kind=jpim),intent(inout) :: &
-        inst_nchanprof,        &
+        inst_nchanprof
+    integer(kind=jpim),intent(in) :: &
         inst_nprof
     integer(kind=jpim),intent(inout),allocatable  :: &
         inst_iChannel_out(:)      ! Passing out the channel indices
@@ -391,18 +407,6 @@ contains
     
     ! Local variables
     integer(kind=jpim) :: inst_npred_pc
-
-    real(kind=jprb),parameter                     :: &
-        pi = 4.D0*DATAN(1.D0),  &  ! yum
-        radius = 6371.0            ! Earth's radius in km (mean volumetric)
-
-    real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
-        sat_lon,        & ! Central longitude of the instrument.
-        dlon,           & ! distance to satellite longitude in degrees
-        dx                ! distance to satellite longitude in km?
-
-    logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
-        swath_mask_all    ! Mask of logicals over all local times        
         
     logical :: verbose = .false.
     
@@ -418,30 +422,8 @@ contains
     call rttov_get_pc_predictindex(errorstatus, inst_opts, inst_predictindex, file_pccoef=inst_PC_coef_filepath)
     call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)
 
-    ! Handle swathing here. Initial code from Genevieve with implementation changes.
-    swath_mask_all = .false.
-    if (rttov_Nlocaltime .gt. 0) then
-        ! Iterate over local times
-        do j=1,rttov_Nlocaltime
-            ! Calculate the central longitude for each gridcell and orbit
-            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%rttov_time(:,1) + rttovIN%rttov_time(:,2) / 60))
-            ! Calculate distance (in degrees) from each grid cell to the satellite central long
-            dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
-            ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
-            dx(:,j)   = dlon(:,j) * (pi/180.0) * COS(rttovIN%latitude * pi / 180) * radius
-            ! Determine if a gridcell falls in the swath width
-            where (abs(dx(:,j))<(rttov_localtime_width(j)*0.5))
-                swath_mask_all(:,j) = .true.
-            end where                    
-        end do
-
-        inst_swath_mask = ANY( swath_mask_all(:,:),2)
-    else
-        inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
-    end if    
 
     ! Determine the total number of radiances to simulate (nchanprof).
-    inst_nprof     = count(inst_swath_mask)
     inst_npred_pc  = SIZE(inst_predictindex)
     inst_nchanprof = inst_npred_pc * inst_nprof  ! Size of chanprof array is total number of predictors over all profiles
     

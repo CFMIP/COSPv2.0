@@ -654,6 +654,8 @@ CONTAINS
                                  refl_total,refl_clear,                            & ! Reflectance Outputs
                                  debug)
 
+    use mod_cosp_rttov,             only: cosp_rttov_swath                                 
+
     type(rttov_in),intent(in) :: &
         rttovIN
     type(rttov_cfg),intent(inout) :: &
@@ -674,17 +676,32 @@ CONTAINS
     logical :: verbose = .false.
     if (present(debug)) verbose = debug
 
-    ! Check options to determine if the principal component approach should be run
-    if (rttovConfig % opts % rt_ir % pc % addpc) then
-        call COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,                              &
-                                    bt_clear,rad_clear,                               &
-                                    error,verbose)                                
+    if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
+    allocate(rttovConfig % swath_mask(rttovIN % nPoints))
+
+    call cosp_rttov_swath(rttovIN,                                &
+                          rttovConfig % rttov_Nlocaltime,         &
+                          rttovConfig % rttov_localtime,          &
+                          rttovConfig % rttov_localtime_width,    &
+                          rttovConfig % swath_mask,               &
+                          debug)
+    rttovConfig % nprof = count(rttovConfig % swath_mask)    
+
+    if (rttovConfig % nprof .gt. 0) then ! Skip calculations if all values are swathed out
+        ! Check options to determine if the principal component approach should be run
+        if (rttovConfig % opts % rt_ir % pc % addpc) then
+            call COSP_PC_RTTOV_SIMULATE(rttovIN,rttovConfig,                              &
+                                        bt_clear,rad_clear,                               &
+                                        error,verbose)                                
+        else
+            call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,                             &
+                                        bt_total,bt_clear,                               &
+                                        rad_total,rad_clear,rad_cloudy,                  &
+                                        refl_total,refl_clear,                           &
+                                        error,verbose)
+        endif
     else
-        call COSP_REG_RTTOV_SIMULATE(rttovIN,rttovConfig,                             &
-                                     bt_total,bt_clear,                               &
-                                     rad_total,rad_clear,rad_cloudy,                  &
-                                     refl_total,refl_clear,                           &
-                                     error,verbose)
+        if (verbose) print*,'empty chunk'        
     endif
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
@@ -737,121 +754,111 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
-    if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
-    allocate(rttovConfig % swath_mask(rttovIN % nPoints))
     !if (verbose) print*,'Beginning "cosp_rttov_allocate".'
     call cosp_rttov_allocate(rttovIN,                             &
-                             rttovConfig % nChannels_rec,         &
-                             rttovConfig % opts,                  &
-                             rttovConfig % coefs,                 &
-                             profiles,                            &
-                             rttovConfig % iChannel,              &
-                             rttovConfig % rttov_Nlocaltime,      &
-                             rttovConfig % rttov_localtime,       &
-                             rttovConfig % rttov_localtime_width, &
-                             chanprof,                            &
-                             rttovConfig % nchanprof,             &
-                             rttovConfig % nprof,                 &
-                             rttovConfig % swath_mask,            &
-                             transmission,                        &
-                             radiance,                            &
-                             calcemis,                            &
-                             emissivity,                          &
-                             calcrefl,                            &
-                             reflectance,                         &
-                             verbose)
+                            rttovConfig % nChannels_rec,         &
+                            rttovConfig % opts,                  &
+                            rttovConfig % coefs,                 &
+                            profiles,                            &
+                            rttovConfig % iChannel,              &
+                            chanprof,                            &
+                            rttovConfig % nchanprof,             &
+                            rttovConfig % nprof,                 &
+                            rttovConfig % swath_mask,            &
+                            transmission,                        &
+                            radiance,                            &
+                            calcemis,                            &
+                            emissivity,                          &
+                            calcrefl,                            &
+                            reflectance,                         &
+                            verbose)
 
-    if (rttovConfig % nprof .gt. 0) then ! Skip calculations if all values are swathed out
-    
-        call cpu_time(driver_time(2))
-        !if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
-        call cosp_rttov_construct_profiles(rttovIN,                                &
-                                        profiles,                               &
-                                        rttovConfig % Lrttov_cld,               &
-                                        rttovConfig % Lrttov_aer,               &
-                                        rttovConfig % Lrttov_solar,             &
-                                        rttovConfig % user_tracegas_input,      &
-                                        rttovConfig % opts % rt_all % CO2_data, &
-                                        rttovConfig % opts % rt_all % CH4_data, &
-                                        rttovConfig % opts % rt_all % CO_data,  &
-                                        rttovConfig % opts % rt_all % N2O_data, &
-                                        rttovConfig % opts % rt_all % SO2_data, &
-                                        rttovConfig % opts % rt_all % ozone_data, &
-                                        rttovConfig % CO2_mr,                   &
-                                        rttovConfig % CH4_mr,                   &
-                                        rttovConfig % CO_mr,                    &
-                                        rttovConfig % N2O_mr,                   &
-                                        rttovConfig % SO2_mr,                   &
-                                        rttovConfig % ZenAng,                   &
-                                        rttovConfig % nprof,                    &
-                                        rttovConfig % swath_mask,               &
-                                        verbose)
-                                        
-        call cpu_time(driver_time(3))
-        
-        !if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
-        if (associated(rttovIN % emis_grey)) then
-            call cosp_rttov_setup_emissivity_reflectance(calcemis,    &
-                                                        emissivity,  &
-                                                        calcrefl,    &
-                                                        reflectance, &
-                                                        emis_grey = rttovIN % emis_grey) ! Config agnostic after allocate step.
-        else
-            call cosp_rttov_setup_emissivity_reflectance(calcemis,    &
-                                                        emissivity,  &
-                                                        calcrefl,    &
-                                                        reflectance)
-        end if
-        call cpu_time(driver_time(4))
-        
-        !if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
-        call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
-                                    rttovConfig % opts,                   &
-                                    profiles,                             &
-                                    rttovConfig % coefs,                  &
-                                    chanprof,                             &
-                                    transmission,                         &
-                                    radiance,                             &
-                                    calcemis,                             &
-                                    emissivity,                           &
-                                    calcrefl,                             &
-                                    reflectance)                                    
-        
-        call cpu_time(driver_time(5))
-        
-        !if (verbose) print*,'Beginning "cosp_rttov_save_output".'
-        call cosp_rttov_save_output(rttovIN % nPoints,                      &
-                                    rttovConfig % nchan_out,                &
-                                    rttovConfig % swath_mask,               &
-                                    rttovConfig % Lrttov_bt,                &
-                                    rttovConfig % Lrttov_rad,               &
-                                    rttovConfig % Lrttov_refl,              &
+    call cpu_time(driver_time(2))
+    !if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
+    call cosp_rttov_construct_profiles(rttovIN,                                &
+                                    profiles,                               &
                                     rttovConfig % Lrttov_cld,               &
                                     rttovConfig % Lrttov_aer,               &
-                                    radiance,                               &
-                                    bt_total,bt_clear,                      &
-                                    rad_total,rad_clear,rad_cloudy,         &
-                                    refl_total,refl_clear)
-
-        call cpu_time(driver_time(6))                                        
-        !if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
-        call cosp_rttov_deallocate_profiles(rttovConfig % nprof,           &
-                                            rttovConfig % nchanprof,       &
-                                            rttovIN % nLevels,             &
-                                            rttovConfig % opts,            &
-                                            profiles,                      &
-                                            rttovConfig % coefs,           &
-                                            chanprof,                      &
-                                            transmission,                  &
-                                            radiance,                      &
-                                            calcemis,                      &
-                                            emissivity,                    &
-                                            calcrefl,                      &
-                                            reflectance)                                         
-        call cpu_time(driver_time(7))
+                                    rttovConfig % Lrttov_solar,             &
+                                    rttovConfig % user_tracegas_input,      &
+                                    rttovConfig % opts % rt_all % CO2_data, &
+                                    rttovConfig % opts % rt_all % CH4_data, &
+                                    rttovConfig % opts % rt_all % CO_data,  &
+                                    rttovConfig % opts % rt_all % N2O_data, &
+                                    rttovConfig % opts % rt_all % SO2_data, &
+                                    rttovConfig % opts % rt_all % ozone_data, &
+                                    rttovConfig % CO2_mr,                   &
+                                    rttovConfig % CH4_mr,                   &
+                                    rttovConfig % CO_mr,                    &
+                                    rttovConfig % N2O_mr,                   &
+                                    rttovConfig % SO2_mr,                   &
+                                    rttovConfig % ZenAng,                   &
+                                    rttovConfig % nprof,                    &
+                                    rttovConfig % swath_mask,               &
+                                    verbose)
+                                    
+    call cpu_time(driver_time(3))
+    
+    !if (verbose) print*,'Beginning "cosp_rttov_setup_emissivity_reflectance".'
+    if (associated(rttovIN % emis_grey)) then
+        call cosp_rttov_setup_emissivity_reflectance(calcemis,    &
+                                                    emissivity,  &
+                                                    calcrefl,    &
+                                                    reflectance, &
+                                                    emis_grey = rttovIN % emis_grey) ! Config agnostic after allocate step.
     else
-        if (verbose) print*,'empty chunk'
+        call cosp_rttov_setup_emissivity_reflectance(calcemis,    &
+                                                    emissivity,  &
+                                                    calcrefl,    &
+                                                    reflectance)
     end if
+    call cpu_time(driver_time(4))
+    
+    !if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
+    call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
+                                rttovConfig % opts,                   &
+                                profiles,                             &
+                                rttovConfig % coefs,                  &
+                                chanprof,                             &
+                                transmission,                         &
+                                radiance,                             &
+                                calcemis,                             &
+                                emissivity,                           &
+                                calcrefl,                             &
+                                reflectance)                                    
+    
+    call cpu_time(driver_time(5))
+    
+    !if (verbose) print*,'Beginning "cosp_rttov_save_output".'
+    call cosp_rttov_save_output(rttovIN % nPoints,                      &
+                                rttovConfig % nchan_out,                &
+                                rttovConfig % swath_mask,               &
+                                rttovConfig % Lrttov_bt,                &
+                                rttovConfig % Lrttov_rad,               &
+                                rttovConfig % Lrttov_refl,              &
+                                rttovConfig % Lrttov_cld,               &
+                                rttovConfig % Lrttov_aer,               &
+                                radiance,                               &
+                                bt_total,bt_clear,                      &
+                                rad_total,rad_clear,rad_cloudy,         &
+                                refl_total,refl_clear)
+
+    call cpu_time(driver_time(6))                                        
+    !if (verbose) print*,'Beginning "cosp_rttov_deallocate_profiles".'
+    call cosp_rttov_deallocate_profiles(rttovConfig % nprof,           &
+                                        rttovConfig % nchanprof,       &
+                                        rttovIN % nLevels,             &
+                                        rttovConfig % opts,            &
+                                        profiles,                      &
+                                        rttovConfig % coefs,           &
+                                        chanprof,                      &
+                                        transmission,                  &
+                                        radiance,                      &
+                                        calcemis,                      &
+                                        emissivity,                    &
+                                        calcrefl,                      &
+                                        reflectance)                                         
+    call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
 !    print*,'Time to run "cosp_rttov_construct_profiles":     ',          driver_time(3)-driver_time(2)
@@ -905,9 +912,7 @@ CONTAINS
 
     ! Run each step for running RTTOV from mod_cosp_rttov (and time them)
     call cpu_time(driver_time(1))
-    if (allocated(rttovConfig % swath_mask)) deallocate(rttovConfig % swath_mask)
-    allocate(rttovConfig % swath_mask(rttovIN % nPoints))
-!    if (verbose) print*,'Beginning "cosp_pc_rttov_allocate".'
+    ! if (verbose) print*,'Beginning "cosp_pc_rttov_allocate".'
     call cosp_pc_rttov_allocate(rttovIN, &
                                 rttovConfig % PC_coef_filepath,              &
                                 rttovConfig % coefs,                         &
@@ -915,9 +920,6 @@ CONTAINS
                                 profiles,                                    &
                                 rttovConfig % nchannels_rec,                 &
                                 rttovConfig % iChannel,                      &
-                                rttovConfig % rttov_Nlocaltime,              &
-                                rttovConfig % rttov_localtime,               &
-                                rttovConfig % rttov_localtime_width,         &
                                 chanprof,                                    &
                                 rttovConfig % nchanprof,                     &
                                 rttovConfig % nprof,                         &
@@ -931,78 +933,75 @@ CONTAINS
                                 predictindex)
     call cpu_time(driver_time(2))
 
-    if (rttovConfig % nprof .gt. 0) then ! Skip calculations if all values are swathed out.
+!    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
+    call cosp_rttov_construct_profiles(rttovIN,                                &
+                                    profiles,                               &
+                                    rttovConfig % Lrttov_cld,               &
+                                    rttovConfig % Lrttov_aer,               &
+                                    rttovConfig % Lrttov_solar,             &
+                                    rttovConfig % user_tracegas_input,      &
+                                    rttovConfig % opts % rt_all % CO2_data, &
+                                    rttovConfig % opts % rt_all % CH4_data, &
+                                    rttovConfig % opts % rt_all % CO_data,  &
+                                    rttovConfig % opts % rt_all % N2O_data, &
+                                    rttovConfig % opts % rt_all % SO2_data, &
+                                    rttovConfig % opts % rt_all % ozone_data, &
+                                    rttovConfig % CO2_mr,                   &
+                                    rttovConfig % CH4_mr,                   &
+                                    rttovConfig % CO_mr,                    &
+                                    rttovConfig % N2O_mr,                   &
+                                    rttovConfig % SO2_mr,                   &
+                                    rttovConfig % ZenAng,                   &
+                                    rttovConfig % nprof,                    &
+                                    rttovConfig % swath_mask,               &
+                                    verbose)
+    call cpu_time(driver_time(3))
+    call cosp_pc_rttov_setup_emissivity(calcemis,   &
+                                        emissivity)
+    call cpu_time(driver_time(4))
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_call_direct".'
+    call cosp_pc_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
+                                rttovConfig % opts,                   &
+                                profiles,                             &
+                                rttovConfig % coefs,                  &
+                                chanprof,                             &
+                                transmission,                         &
+                                rttovConfig % nchannels_rec,          &
+                                rttovConfig % iChannel_out,           &
+                                radiance,                             &
+                                calcemis,                             &
+                                emissivity,                           &
+                                rttovConfig % pccomp)
 
-    !    if (verbose) print*,'Beginning "cosp_rttov_construct_profiles".'
-        call cosp_rttov_construct_profiles(rttovIN,                                &
-                                        profiles,                               &
-                                        rttovConfig % Lrttov_cld,               &
-                                        rttovConfig % Lrttov_aer,               &
-                                        rttovConfig % Lrttov_solar,             &
-                                        rttovConfig % user_tracegas_input,      &
-                                        rttovConfig % opts % rt_all % CO2_data, &
-                                        rttovConfig % opts % rt_all % CH4_data, &
-                                        rttovConfig % opts % rt_all % CO_data,  &
-                                        rttovConfig % opts % rt_all % N2O_data, &
-                                        rttovConfig % opts % rt_all % SO2_data, &
-                                        rttovConfig % opts % rt_all % ozone_data, &
-                                        rttovConfig % CO2_mr,                   &
-                                        rttovConfig % CH4_mr,                   &
-                                        rttovConfig % CO_mr,                    &
-                                        rttovConfig % N2O_mr,                   &
-                                        rttovConfig % SO2_mr,                   &
-                                        rttovConfig % ZenAng,                   &
-                                        rttovConfig % nprof,                    &
-                                        rttovConfig % swath_mask,               &
-                                        verbose)
-        call cpu_time(driver_time(3))
-        call cosp_pc_rttov_setup_emissivity(calcemis,   &
-                                            emissivity)
-        call cpu_time(driver_time(4))
-    !    if (verbose) print*,'Beginning "cosp_pc_rttov_call_direct".'
-        call cosp_pc_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
-                                    rttovConfig % opts,                   &
-                                    profiles,                             &
-                                    rttovConfig % coefs,                  &
-                                    chanprof,                             &
-                                    transmission,                         &
-                                    rttovConfig % nchannels_rec,          &
-                                    rttovConfig % iChannel_out,           &
-                                    radiance,                             &
-                                    calcemis,                             &
-                                    emissivity,                           &
-                                    rttovConfig % pccomp)
+    call cpu_time(driver_time(5))
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_save_output".'
+    call cosp_pc_rttov_save_output(rttovIN % nPoints,                       &
+                                rttovConfig % nchannels_rec,             &
+                                rttovConfig % swath_mask,                &
+                                rttovConfig % pccomp,                    &
+                                rttovConfig % Lrttov_bt,                 &
+                                rttovConfig % Lrttov_rad,                &
+                                bt_clear,                                &
+                                rad_clear)
 
-        call cpu_time(driver_time(5))
-    !    if (verbose) print*,'Beginning "cosp_pc_rttov_save_output".'
-        call cosp_pc_rttov_save_output(rttovIN % nPoints,                       &
-                                    rttovConfig % nchannels_rec,             &
-                                    rttovConfig % swath_mask,                &
-                                    rttovConfig % pccomp,                    &
-                                    rttovConfig % Lrttov_bt,                 &
-                                    rttovConfig % Lrttov_rad,                &
-                                    bt_clear,                                &
-                                    rad_clear)
-
-        call cpu_time(driver_time(6))                                           
-    !    if (verbose) print*,'Beginning "cosp_pc_rttov_deallocate_profiles".'
-        call cosp_pc_rttov_deallocate_profiles(rttovConfig % nprof,           &
-                                            rttovConfig % nchanprof,       &
-                                            rttovIN % nlevels,             &
-                                            rttovConfig % nChannels_rec,   &
-                                            rttovConfig % opts,            &
-                                            profiles,                      &
-                                            rttovConfig % coefs,           &
-                                            chanprof,                      &
-                                            transmission,                  &
-                                            radiance,                      &
-                                            calcemis,                      &
-                                            emissivity,                    &
-                                            rttovConfig % pccomp,          &
-                                            predictindex)
-                                            
-        call cpu_time(driver_time(7))
-    end if
+    call cpu_time(driver_time(6))                                           
+!    if (verbose) print*,'Beginning "cosp_pc_rttov_deallocate_profiles".'
+    call cosp_pc_rttov_deallocate_profiles(rttovConfig % nprof,           &
+                                        rttovConfig % nchanprof,       &
+                                        rttovIN % nlevels,             &
+                                        rttovConfig % nChannels_rec,   &
+                                        rttovConfig % opts,            &
+                                        profiles,                      &
+                                        rttovConfig % coefs,           &
+                                        chanprof,                      &
+                                        transmission,                  &
+                                        radiance,                      &
+                                        calcemis,                      &
+                                        emissivity,                    &
+                                        rttovConfig % pccomp,          &
+                                        predictindex)
+                                        
+    call cpu_time(driver_time(7))
     
 !    print*,'Time to run "cosp_pc_rttov_allocate":     ',                    driver_time(2)-driver_time(1)
 !    print*,'Time to run "cosp_rttov_construct_profiles":     ',             driver_time(3)-driver_time(2)

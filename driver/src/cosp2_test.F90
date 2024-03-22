@@ -1220,10 +1220,6 @@ contains
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
     
-    if (Lrttov) then
-       allocate(y%cfg_rttov(ninst_rttov))
-       ! JKS allocate localtime
-    endif
   end subroutine construct_cospIN
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1662,6 +1658,7 @@ contains
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
     if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
+    if (associated(y%cfg_rttov))          nullify(y%cfg_rttov)
     
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
