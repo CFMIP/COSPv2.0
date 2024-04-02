@@ -41,7 +41,7 @@ jobs:
         python-version: [3.11]
         include:
           - compiler_short_name: gfortran
-          - kgo_version: v002
+          - kgo_version: v003
     defaults:
       run:
         shell: bash -el {0}
@@ -53,9 +53,9 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       KGO_VERSION: ${{ matrix.kgo_version }}
-      GDKGO1: https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq
-      GDKGO2: https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar
-      GDKGO3: https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2
+      GDKGO1: https://docs.google.com/uc?export=download&id=1oQBJGFg0F8k-LhRGsCYn-qWzmMMVfQ6K
+      GDKGO2: https://docs.google.com/uc?export=download&id=1b7qwJWqDzoZGcIP0qyUprTV_LErCGpT6
+      GDKGO3: https://docs.google.com/uc?export=download&id=1NvTo3bYaGpz-FUpZ4jta_kRzA04xTCsn
       F90_SHORT_NAME: ${{ matrix.compiler_short_name }}
     # Sequence of tasks that will be executed as part of the job
     steps:
