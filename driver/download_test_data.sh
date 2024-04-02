@@ -8,9 +8,9 @@ else
 fi
 
 
-kgo_links=( "https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq" \
-            "https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar" \
-            "https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2" )
+kgo_links=( "https://docs.google.com/uc?export=download&id=1oQBJGFg0F8k-LhRGsCYn-qWzmMMVfQ6K" \
+            "https://docs.google.com/uc?export=download&id=1b7qwJWqDzoZGcIP0qyUprTV_LErCGpT6" \
+            "https://docs.google.com/uc?export=download&id=1NvTo3bYaGpz-FUpZ4jta_kRzA04xTCsn" )
 
 out_type=( "cosp2_output_um.gfortran.kgo" \
            "cosp2_output.um_global.gfortran.kgo" \
