@@ -102,7 +102,7 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             xticks = np.arange(-90,91,30)
             xlabel = 'Latitude (deg)'
         if vd['xaxis_type'] == 'CFODD_NDBZE':
-            x = np.arange(-29,20,2)
+            x = np.arange(-30,21,2)
             xticks = x
             xticks_labels = None
             xlabel = 'CloudSat equivalent reflectivity factor (dBZ)'            
@@ -125,10 +125,8 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks = y
             ylabel = 'Liquid particle size (micron)'
         if vd['yaxis_type'] == 'CFODD_NICOD':
-            yticks_labels = ('1', '3', '5', '7', '9', '11', '13', '15', '17', '19',
-                             '21', '23', '25', '27', '29', '31', '33', '35', '37', 
-                             '39', '41', '43', '45', '47', '49', '51', '53', '55', 
-                             '57', '59')
+            y = np.arange(0,61,2)
+            yticks_labels = None            
             yticks = y
             ylabel = 'MODIS in-cloud optical depth'            
         if vd['yaxis_type'] == 'levStat':
