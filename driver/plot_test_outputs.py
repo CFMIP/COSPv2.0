@@ -101,6 +101,12 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             xticks_labels = None
             xticks = np.arange(-90,91,30)
             xlabel = 'Latitude (deg)'
+        if vd['xaxis_type'] == 'CFODD_NDBZE':
+            xticks_labels = ('-29', '-27', '-25', '-23', '-21', '-19', '-17', '-15',
+                             '-13', '-11', '-9', '-7', '-5', '-3', '-1', '1,' '3,' 
+                             '5,' '7,' '9,' '11', '13', '15', '17', '19')
+            xticks = x
+            xlabel = 'CloudSat equivalent reflectivity factor (dBZ)'            
         if vd['yaxis_type'] == 'pres7':
             yticks_labels = ('1000', '800', '680', '560', '440', '310', '180','')
             yticks = y
@@ -119,6 +125,13 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks_labels = ('0', '8', '10', '13', '15', '20', '30')
             yticks = y
             ylabel = 'Liquid particle size (micron)'
+        if vd['yaxis_type'] == 'CFODD_NICOD':
+            yticks_labels = ('1', '3', '5', '7', '9', '11', '13', '15', '17', '19',
+                             '21', '23', '25', '27', '29', '31', '33', '35', '37', 
+                             '39', '41', '43', '45', '47', '49', '51', '53', '55', 
+                             '57', '59')
+            yticks = y
+            ylabel = 'MODIS in-cloud optical depth'            
         if vd['yaxis_type'] == 'levStat':
             if not dims['levStat'].any():
                 # For diagnostics on model levels, all elements in levStat
