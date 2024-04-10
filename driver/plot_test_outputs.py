@@ -102,10 +102,9 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             xticks = np.arange(-90,91,30)
             xlabel = 'Latitude (deg)'
         if vd['xaxis_type'] == 'CFODD_NDBZE':
-            xticks_labels = ('-29', '-27', '-25', '-23', '-21', '-19', '-17', '-15',
-                             '-13', '-11', '-9', '-7', '-5', '-3', '-1', '1,' '3,' 
-                             '5,' '7,' '9,' '11', '13', '15', '17', '19')
+            x = np.arange(-29,20,2)
             xticks = x
+            xticks_labels = None
             xlabel = 'CloudSat equivalent reflectivity factor (dBZ)'            
         if vd['yaxis_type'] == 'pres7':
             yticks_labels = ('1000', '800', '680', '560', '440', '310', '180','')
