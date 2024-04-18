@@ -188,7 +188,7 @@ jobs:
     ###############################################################################
     - name: Upload output file if test fails
       if: failure()
-      uses: actions/upload-artifact@v4.3.1
+      uses: actions/upload-artifact@v4.3.2
       with:
         name: outputs.${{ matrix.compiler }}.UKMO.tgz
         path: driver/data/outputs/UKMO/outputs.${{ matrix.compiler }}.UKMO.tgz
