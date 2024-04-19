@@ -1,0 +1,10 @@
+**.o
+**.a
+**.mod
+driver/run/cosp2_test
+driver/data/inputs/UKMO/*_global.nc
+driver/data/outputs/UKMO/*kgo.v*.nc
+driver/data/outputs/UKMO/*.nc
+!driver/data/outputs/cosp2_output_um.gfortran.kgo.nc
+driver/data/outputs/UKMO/*md5
+driver/data/outputs/UKMO/*.out
