@@ -2136,7 +2136,7 @@ contains
   SUBROUTINE NC_READ_INPUT_FILE(fname,Npnts,Nl,Nhydro,lon,lat,p,ph,z,zh,T,qv,rh,tca,cca, &
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
-                                dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
+                                dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,   &
                                 emsfc_lw,mode,Nlon,Nlat,surfelev,year,month,day,         &
                                 hour,minute,seconds)
      
@@ -2148,7 +2148,7 @@ contains
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
-    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev, &
+    real(wp),dimension(Npnts),intent(out) :: skt,psfc,landmask,u_wind,v_wind,sunlit,surfelev, &
                                              year,month,day,hour,minute,seconds
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
@@ -2460,6 +2460,12 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=skt)
           endif
+       case ('psfc')
+          if (Lpoint) then
+             psfc(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=psfc)
+          endif          
        case ('orography') 
           if (Lpoint) then
              surfelev(1:Npoints) = x1(1:Npoints) 
