@@ -107,6 +107,7 @@ MODULE MOD_COSP
      real(wp),allocatable,dimension(:) :: &
           land,                & ! Land/Sea mask                          (0 for ocean, 1 for land)
           skt,                 & ! Surface temperature                    (K)
+          psfc,                & ! Surface pressure                       (Pa)
           surfelev,            & ! Surface Elevation                      (m)
           rttov_sfcmask          ! Mask for RTTOV surface types (0 for ocean, 1 for land, 2 for sea ice)
      ! Fields used ONLY by RTTOV
@@ -1157,7 +1158,7 @@ CONTAINS
 
     if (Lrttov_column) then
        rttovIN%nPoints    => Npoints
-       rttovIN%nLevels    => cospIN%nLevels
+       rttovIN%nLevels    => cospIN%nLevels ! This is actually "nlayers" in the RTTOV sense
        rttovIN%nSubCols   => cospIN%nColumns
        rttovIN%co2        => cospgridIN%co2
        rttovIN%ch4        => cospgridIN%ch4
@@ -1167,7 +1168,8 @@ CONTAINS
        rttovIN%u_surf     => cospgridIN%u_sfc
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
-       rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
+       rttovIN%p_surf     => cospgridIN%psfc ! Lower boundary of lowest layer may not be the surface.
+      !  rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
        if (associated(cospIN%emis_grey)) rttovIN%emis_grey  => cospIN%emis_grey
 !       rttovIN%surfem     => cospgridIN%emis_in
 !       rttovIN%refl_in     => cospgridIN%refl_in       

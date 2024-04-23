@@ -576,6 +576,7 @@ contains
       if (inst_swath_mask(i)) then ! only added masked columns to profiles
           j = j + 1 ! Increment first
             
+          ! Trace gas concentrations on levels (not layers!)
           ! Initialize trace gas concentrations from user input.
           if (Luser_tracegas) then
               if (Ldo_co2) inst_profiles(j)%co2(:)        = inst_co2_mr
@@ -595,9 +596,9 @@ contains
           end if
           
           ! Initialize column pressure, temperature, and humidity
-          inst_profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa
-          inst_profiles(j)%t(:) =  rttovIN%t(i, :)
-          inst_profiles(j)%q(:) =  rttovIN%q(i, :)
+          inst_profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa. Pressure on levels.
+          inst_profiles(j)%t(:) =  rttovIN%t(i, :) ! Temperature on levels.
+          inst_profiles(j)%q(:) =  rttovIN%q(i, :) ! Water vapor concentration on levels.
 
           ! q coefficient limit is 0.1e-10
           where(inst_profiles(j)%q(:) < 0.1e-10)
@@ -669,14 +670,6 @@ contains
       end if 
     end do    
             
-!    if (verbose) then
-!        print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
-!        print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
-!        print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
-!        print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
-!        print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
-!        print*,'inst_profiles(1)%s2m%t:    ',inst_profiles(1)%s2m%t
-!    end if
         
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in profile initialization' , lalloc = .false.)
@@ -701,7 +694,7 @@ contains
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
             j = j + 1 ! Increment profile counter      
             
-            ! Cloud scheme stuff
+            ! Cloud scheme stuff. Values are on layers, not levels like the gas concentrations.
             inst_profiles(j)%cfrac(:)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
             inst_profiles(j)%cloud(1,:) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
             inst_profiles(j)%cloud(6,:) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
@@ -772,6 +765,29 @@ contains
 !        print*,'inst_profiles(:))%azangle:        ',inst_profiles(:)%azangle      
 !      end if
     end if
+
+    if (verbose) then
+        print*,'inst_profiles(1)%nlevels:  ',inst_profiles(1)%nlevels
+        print*,'inst_profiles(1)%nlayers:  ',inst_profiles(1)%nlayers        
+        print*,'shape(rttovIN%t): ', shape(rttovIN%t)
+        print*,'shape(rttovIN%p): ', shape(rttovIN%p)
+        print*,'shape(rttovIN%ph): ', shape(rttovIN%ph)
+        print*,'shape(inst_profiles(1)%p(:)):     ',shape(inst_profiles(1)%p(:))
+        print*,'shape(inst_profiles(1)%t(:)):     ',shape(inst_profiles(1)%t(:))
+        print*,'shape(inst_profiles(1)%q(:)):     ',shape(inst_profiles(1)%q(:))
+        print*,'shape(inst_profiles(1)%cfrac(:)):     ',shape(inst_profiles(1)%cfrac(:))
+        print*,'shape(rttovIN%tca(1,:)):  ',shape(rttovIN%tca(1,:))
+        print*,'rttovIN%ph(1,:): ', rttovIN%ph(1,:)
+        print*,'rttovIN%p(1,:): ', rttovIN%p(1,:)
+        print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
+        print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
+        print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
+        print*,'inst_profiles(1)%cfrac:    ',inst_profiles(1)%cfrac
+        ! print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
+        print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
+        print*,'inst_profiles(1)%s2m%t:    ',inst_profiles(1)%s2m%t
+        print*,'inst_profiles(1)%s2m%p:    ',inst_profiles(1)%s2m%p        
+    end if    
     
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in aerosol profile initialization' , lalloc = .true.)

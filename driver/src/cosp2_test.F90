@@ -84,6 +84,7 @@ program cosp2_test
        lon,       & ! Longitude (deg)
        lat,       & ! Latitude (deg)
        skt,       & ! Skin temperature (K)
+       psfc,      & ! Surface Pressure (Pa)
        surfelev,  & ! Surface Elevation (m)
        landmask,  & ! Land/sea mask (0/1)
        u_wind,    & ! U-component of wind (m/s)
@@ -98,7 +99,7 @@ program cosp2_test
        seconds      ! Second [0,60]
   real(wp),dimension(:,:),allocatable,target :: &
        p,         & ! Model pressure levels (pa)
-       ph,        & ! Moddel pressure @ half levels (pa)
+       ph,        & ! Model pressure @ half levels (pa)
        zlev,      & ! Model level height (m)
        zlev_half, & ! Model level height @ half-levels (m)
        T,         & ! Temperature (K)
@@ -380,7 +381,7 @@ program cosp2_test
            fl_lsgrpl(Npoints,Nlevels),fl_ccrain(Npoints,Nlevels),                        &
            fl_ccsnow(Npoints,Nlevels),Reff(Npoints,Nlevels,N_HYDRO),                     &
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
-           dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
+           dem_c(Npoints,Nlevels),skt(Npoints),psfc(Npoints),landmask(Npoints),          &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
            frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),year(Npoints),           &
            month(Npoints),day(Npoints),hour(Npoints),minute(Npoints),seconds(Npoints))
@@ -397,7 +398,7 @@ program cosp2_test
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
-                          dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
+                          dem_s,dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
                           emsfc_lw,geomode,Nlon,Nlat,surfelev,year,month,day,hour,       &
                           minute,seconds)
   call cpu_time(driver_time(2))
@@ -583,6 +584,12 @@ program cosp2_test
      ! Pressure at interface (nlevels+1). Set uppermost interface to 0.
      cospstateIN%phalf(:,2:Nlevels+1) = ph(start_idx:end_idx,Nlevels:1:-1)   ! Pa  
      cospstateIN%phalf(:,1)           = 0._wp
+     ! Surface pressure
+     if (any(psfc(start_idx:end_idx) .lt. 0._wp)) then
+        print*,'Some of values of the surface pressure field are negative. Replacing all psfc values with the lowest boundary pressure.'
+        psfc(start_idx:end_idx) = cospstateIN%phalf(start_idx:end_idx,Nlevels+1)
+     end if          
+     cospstateIN%psfc        = psfc(start_idx:end_idx)              ! Pa
      ! Height of bottom interfaces of model layers (nlevels).
      ! cospstateIN%hgt_matrix_half(:,1) contains the bottom of the top layer.
      ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
@@ -1239,6 +1246,7 @@ contains
     type(cosp_column_inputs),intent(out) :: y         
     
     allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
+             y%psfc(npoints), &
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%rttov_sfcmask(nPoints),    &
@@ -1669,6 +1677,7 @@ contains
 
     if (allocated(y%sunlit))          deallocate(y%sunlit)
     if (allocated(y%skt))             deallocate(y%skt)
+    if (allocated(y%psfc))            deallocate(y%psfc)
     if (allocated(y%land))            deallocate(y%land)
     if (allocated(y%rttov_sfcmask))   deallocate(y%rttov_sfcmask)
     if (allocated(y%at))              deallocate(y%at)

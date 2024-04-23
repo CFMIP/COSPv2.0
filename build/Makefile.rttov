@@ -38,7 +38,9 @@
 #LDFLAGS_ARCH=-fopenmp
 
 # Derecho with debug changes (01/23/2024)
-RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV2
+# RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV2
+# Derecho with HDF
+RTTOVDIR=/glade/u/home/jonahshaw/w/RTTOV2/hdf_build
 FC=ifort
 FFLAGS= -I$(RTTOVDIR)/mod -I$(RTTOVDIR)/include -fPIC -O3 -fopenmp
 LDFLAGS_ARCH=-fopenmp
@@ -53,8 +55,7 @@ BINDIR=$(RTTOVDIR)/bin
 
 #### Do not edit beyond this line ####
 
-# JKS - should this be $(RTTOVDIR)/build/Makefile.local   ?
-# include ../../build/Makefile.local
+# JKS - Include settings used to build RTTOV
 include $(RTTOVDIR)/build/Makefile.local
 
 LIBDIR=$(RTTOVDIR)/lib
