@@ -1169,7 +1169,6 @@ CONTAINS
        rttovIN%v_surf     => cospgridIN%v_sfc
        rttovIN%t_skin     => cospgridIN%skt
        rttovIN%p_surf     => cospgridIN%psfc ! Lower boundary of lowest layer may not be the surface.
-      !  rttovIN%p_surf     => cospgridIN%phalf(:,cospIN%Nlevels+1)
        if (associated(cospIN%emis_grey)) rttovIN%emis_grey  => cospIN%emis_grey
 !       rttovIN%surfem     => cospgridIN%emis_in
 !       rttovIN%refl_in     => cospgridIN%refl_in       
