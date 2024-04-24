@@ -315,7 +315,8 @@ contains
         1_jpim,                  &  ! 1 => allocate
         inst_nprof,              &
         inst_nchanprof,          &
-        rttovIN%nLevels,         &
+        rttovIN%nLevels+1,       & ! "levels" means interfaces, not layers
+        ! rttovIN%nLevels,         &
         inst_chanprof,           &
         inst_opts,               &
         inst_profiles,           &
@@ -463,8 +464,9 @@ contains
           1_jpim,                                        &  ! 1 => allocate
           inst_nprof,                                    &
           inst_nchanprof,                                &
-          rttovIN%nLevels,                               &
-          inst_chanprof,                                 & ! Make this instrument-specific? The rttov_config DDT would then be assigned to this value. Allocation difficulties?
+          rttovIN%nLevels+1,                             & ! "levels" means interfaces, not layers
+        ! rttovIN%nLevels,                               &
+          inst_chanprof,                                 &
           inst_opts,                                     &
           inst_profiles,                                 &
           inst_coefs,                                    &
@@ -553,9 +555,9 @@ contains
         debug
     
     ! Loop variables
-    integer(kind=jpim) :: i, j           ! Use i to iterate over profile, j for swath_mask.
+    integer(kind=jpim) :: i, j, k           ! Use i to iterate over profile, j for swath_mask, k for vertical interpolation
     logical :: verbose = .false.
-          
+
     if (present(debug)) verbose = debug
           
     ! Store profile data from rttovIN in profile type.
@@ -576,37 +578,123 @@ contains
       if (inst_swath_mask(i)) then ! only added masked columns to profiles
           j = j + 1 ! Increment first
             
-          ! Trace gas concentrations on levels (not layers!)
-          ! Initialize trace gas concentrations from user input.
-          if (Luser_tracegas) then
-              if (Ldo_co2) inst_profiles(j)%co2(:)        = inst_co2_mr
-              if (Ldo_n2o) inst_profiles(j)%n2o(:)        = inst_n2o_mr
-              if (Ldo_co)  inst_profiles(j)%co(:)         = inst_co_mr
-              if (Ldo_ch4) inst_profiles(j)%ch4(:)        = inst_ch4_mr
-              if (Ldo_so2) inst_profiles(j)%so2(:)        = inst_so2_mr
-              if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :) ! no O3 user input set up
-          else
-              ! For when trace gas columns are supplied by the model. Units must match (kg/kg over moist air)
-              if (Ldo_co2) inst_profiles(j)%co2(:)        = rttovIN%co2(i,:)
-              if (Ldo_n2o) inst_profiles(j)%n2o(:)        = rttovIN%n2o(i,:)
-              if (Ldo_co)  inst_profiles(j)%co(:)         = rttovIN%co(i,:)
-              if (Ldo_ch4) inst_profiles(j)%ch4(:)        = rttovIN%ch4(i,:)
-              if (Ldo_so2) inst_profiles(j)%so2(:)        = rttovIN%so2(i,:)
-              if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
-          end if
-          
           ! Initialize column pressure, temperature, and humidity
-          inst_profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa. Pressure on levels.
-          inst_profiles(j)%t(:) =  rttovIN%t(i, :) ! Temperature on levels.
-          inst_profiles(j)%q(:) =  rttovIN%q(i, :) ! Water vapor concentration on levels.
+          inst_profiles(j)%p(:) =  rttovIN%ph(i, :) * 1e-2 ! convert Pa to hPa. Pressure on levels.
+          if (inst_profiles(j)%p(1) .le. 0) inst_profiles(j)%p(1) = 1 ! If the model top is set to zero make it one (like the COSPv2 driver)
+        !   inst_profiles(j)%p(:) =  rttovIN%p(i, :) * 1e-2 ! convert Pa to hPa. Pressure on layers. Wrong
+
+          ! Interpolate q and t to levels!
+
+          ! Handle the top and bottom levels separately.
+          ! Top
+          call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%q(i,1),rttovIN%q(i,2),inst_profiles(j)%q(1))
+          call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%t(i,1),rttovIN%t(i,2),inst_profiles(j)%t(1))
+          ! Bottom
+          call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%q(i,rttovIN%nlevels-1),rttovIN%q(i,rttovIN%nlevels),inst_profiles(j)%q(rttovIN%nlevels+1))
+          call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%t(i,rttovIN%nlevels-1),rttovIN%t(i,rttovIN%nlevels),inst_profiles(j)%t(rttovIN%nlevels+1))
+
+        !   if (verbose) then
+        !     print*,'k:  ',k
+        !     print*,'inst_profiles(j)%p(1):  ',inst_profiles(j)%p(1)
+        !     print*,'rttovIN%p(i,1):   ',rttovIN%p(i,1)
+        !     print*,'rttovIN%p(i,2):   ',rttovIN%p(i,2)
+        !     print*,'rttovIN%q(i,1):   ',rttovIN%q(i,1)
+        !     print*,'rttovIN%q(i,2):   ',rttovIN%q(i,2)
+        !     print*,'inst_profiles(j)%q(1):      ',inst_profiles(j)%q(1)
+        !   end if
+
+          do k=2,rttovIN%nlevels ! I should really rename the RTTOV one to nlayers!!
+            call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%q(i,k-1),rttovIN%q(i,k),inst_profiles(j)%q(k))
+            call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%t(i,k-1),rttovIN%t(i,k),inst_profiles(j)%t(k))
+
+            ! if (verbose) then
+            !     print*,'k:  ',k
+            !     print*,'inst_profiles(j)%p(k):  ',inst_profiles(j)%p(k)
+            !     print*,'rttovIN%p(i,k-1): ',rttovIN%p(i,k-1)
+            !     print*,'rttovIN%p(i,k):   ',rttovIN%p(i,k)
+            !     print*,'rttovIN%q(i,k-1): ',rttovIN%q(i,k-1)
+            !     print*,'rttovIN%q(i,k):   ',rttovIN%q(i,k)
+            !     print*,'inst_profiles(j)%q(k):      ',inst_profiles(j)%q(k)
+            !   end if
+
+          end do
+
+        !   inst_profiles(j)%t(:) =  rttovIN%t(i, :) ! Temperature on levels.
+        !   inst_profiles(j)%q(:) =  rttovIN%q(i, :) ! Water vapor concentration on levels.
 
           ! q coefficient limit is 0.1e-10
           where(inst_profiles(j)%q(:) < 0.1e-10)
              inst_profiles(j)%q(:) = 0.11e-10
           end where
 
-          ! Gas inst_profiles
-          inst_profiles(j)%o3         =  rttovIN%o3(i, :)
+          ! Trace gas concentrations on levels (not layers!)
+          ! Initialize trace gas concentrations from user input.
+          if (Luser_tracegas) then
+            if (Ldo_co2) inst_profiles(j)%co2(:)        = inst_co2_mr
+            if (Ldo_n2o) inst_profiles(j)%n2o(:)        = inst_n2o_mr
+            if (Ldo_co)  inst_profiles(j)%co(:)         = inst_co_mr
+            if (Ldo_ch4) inst_profiles(j)%ch4(:)        = inst_ch4_mr
+            if (Ldo_so2) inst_profiles(j)%so2(:)        = inst_so2_mr
+            ! if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
+            if (Ldo_o3)  then ! no O3 user input set up 
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%o3(i,rttovIN%nlevels-1),rttovIN%o3(i,rttovIN%nlevels),inst_profiles(j)%o3(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%o3(i,k-1),rttovIN%o3(i,k),inst_profiles(j)%o3(k)) 
+                end do
+            end if
+          else ! For when trace gas columns are supplied by the model. Units must match (kg/kg over moist air) and concentration must be supplied on model levels (not layers), requiring interpolation.
+            if (Ldo_co2)  then ! CO2
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%co2(i,1),rttovIN%co2(i,2),inst_profiles(j)%co2(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%co2(i,rttovIN%nlevels-1),rttovIN%co2(i,rttovIN%nlevels),inst_profiles(j)%co2(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%co2(i,k-1),rttovIN%co2(i,k),inst_profiles(j)%co2(k)) 
+                end do
+            end if
+            if (Ldo_n2o)  then ! N2O
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%n2o(i,1),rttovIN%n2o(i,2),inst_profiles(j)%n2o(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%n2o(i,rttovIN%nlevels-1),rttovIN%n2o(i,rttovIN%nlevels),inst_profiles(j)%n2o(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%n2o(i,k-1),rttovIN%n2o(i,k),inst_profiles(j)%n2o(k)) 
+                end do
+            end if
+            if (Ldo_co)  then ! CO
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%co(i,1),rttovIN%co(i,2),inst_profiles(j)%co(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%co(i,rttovIN%nlevels-1),rttovIN%co(i,rttovIN%nlevels),inst_profiles(j)%co(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%co(i,k-1),rttovIN%co(i,k),inst_profiles(j)%co(k)) 
+                end do
+            end if
+            if (Ldo_ch4)  then ! CH4
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%ch4(i,1),rttovIN%ch4(i,2),inst_profiles(j)%ch4(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%ch4(i,rttovIN%nlevels-1),rttovIN%ch4(i,rttovIN%nlevels),inst_profiles(j)%ch4(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%ch4(i,k-1),rttovIN%ch4(i,k),inst_profiles(j)%ch4(k)) 
+                end do
+            end if
+            if (Ldo_so2)  then ! SO2
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%so2(i,1),rttovIN%so2(i,2),inst_profiles(j)%so2(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%so2(i,rttovIN%nlevels-1),rttovIN%so2(i,rttovIN%nlevels),inst_profiles(j)%so2(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%so2(i,k-1),rttovIN%so2(i,k),inst_profiles(j)%so2(k)) 
+                end do
+            end if                                                
+            if (Ldo_o3)  then ! Ozone
+                call interpolate_logp(100*inst_profiles(j)%p(1),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(1))
+                call interpolate_logp(100*inst_profiles(j)%p(rttovIN%nlevels+1),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%o3(i,rttovIN%nlevels-1),rttovIN%o3(i,rttovIN%nlevels),inst_profiles(j)%o3(rttovIN%nlevels+1))
+                do k=2,rttovIN%nlevels 
+                    call interpolate_logp(100*inst_profiles(j)%p(k),rttovIN%p(i,k-1),rttovIN%p(i,k),rttovIN%o3(i,k-1),rttovIN%o3(i,k),inst_profiles(j)%o3(k)) 
+                end do
+            end if
+
+            ! Original non-interpolated code
+            !   if (Ldo_co2) inst_profiles(j)%co2(:)        = rttovIN%co2(i,:)
+            !   if (Ldo_n2o) inst_profiles(j)%n2o(:)        = rttovIN%n2o(i,:)
+            !   if (Ldo_co)  inst_profiles(j)%co(:)         = rttovIN%co(i,:)
+            !   if (Ldo_ch4) inst_profiles(j)%ch4(:)        = rttovIN%ch4(i,:)
+            !   if (Ldo_so2) inst_profiles(j)%so2(:)        = rttovIN%so2(i,:)
+            !   if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
+          end if
 
           ! 2m parameters
           inst_profiles(j)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
@@ -766,28 +854,32 @@ contains
 !      end if
     end if
 
-    if (verbose) then
-        print*,'inst_profiles(1)%nlevels:  ',inst_profiles(1)%nlevels
-        print*,'inst_profiles(1)%nlayers:  ',inst_profiles(1)%nlayers        
-        print*,'shape(rttovIN%t): ', shape(rttovIN%t)
-        print*,'shape(rttovIN%p): ', shape(rttovIN%p)
-        print*,'shape(rttovIN%ph): ', shape(rttovIN%ph)
-        print*,'shape(inst_profiles(1)%p(:)):     ',shape(inst_profiles(1)%p(:))
-        print*,'shape(inst_profiles(1)%t(:)):     ',shape(inst_profiles(1)%t(:))
-        print*,'shape(inst_profiles(1)%q(:)):     ',shape(inst_profiles(1)%q(:))
-        print*,'shape(inst_profiles(1)%cfrac(:)):     ',shape(inst_profiles(1)%cfrac(:))
-        print*,'shape(rttovIN%tca(1,:)):  ',shape(rttovIN%tca(1,:))
-        print*,'rttovIN%ph(1,:): ', rttovIN%ph(1,:)
-        print*,'rttovIN%p(1,:): ', rttovIN%p(1,:)
-        print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
-        print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
-        print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
-        print*,'inst_profiles(1)%cfrac:    ',inst_profiles(1)%cfrac
-        ! print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
-        print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
-        print*,'inst_profiles(1)%s2m%t:    ',inst_profiles(1)%s2m%t
-        print*,'inst_profiles(1)%s2m%p:    ',inst_profiles(1)%s2m%p        
-    end if    
+    ! if (verbose) then
+    !     print*,'inst_profiles(1)%nlevels:  ',inst_profiles(1)%nlevels
+    !     print*,'inst_profiles(1)%nlayers:  ',inst_profiles(1)%nlayers        
+    !     print*,'shape(rttovIN%t): ', shape(rttovIN%t)
+    !     print*,'shape(rttovIN%p): ', shape(rttovIN%p)
+    !     print*,'shape(rttovIN%ph): ', shape(rttovIN%ph)
+    !     print*,'shape(inst_profiles(1)%p(:)):     ',shape(inst_profiles(1)%p(:))
+    !     print*,'shape(inst_profiles(1)%t(:)):     ',shape(inst_profiles(1)%t(:))
+    !     print*,'shape(inst_profiles(1)%q(:)):     ',shape(inst_profiles(1)%q(:))
+    !     print*,'shape(inst_profiles(1)%cfrac(:)):     ',shape(inst_profiles(1)%cfrac(:))
+    !     print*,'shape(rttovIN%tca(1,:)):  ',shape(rttovIN%tca(1,:))
+    !     print*,'rttovIN%ph(1,:): ', rttovIN%ph(1,:)
+    !     print*,'rttovIN%p(1,:): ', rttovIN%p(1,:)
+    !     print*,'rttovIN%t(1,:): ', rttovIN%t(1,:)
+    !     print*,'rttovIN%q(1,:): ', rttovIN%q(1,:)
+    !     print*,'rttovIN%o3(1,:): ', rttovIN%o3(1,:)
+    !     print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
+    !     print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
+    !     print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
+    !     print*,'inst_profiles(1)%o3(:):     ',inst_profiles(1)%o3(:)
+    !     print*,'inst_profiles(1)%cfrac:    ',inst_profiles(1)%cfrac
+    !     print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
+    !     print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
+    !     print*,'inst_profiles(1)%s2m%t:    ',inst_profiles(1)%s2m%t
+    !     print*,'inst_profiles(1)%s2m%p:    ',inst_profiles(1)%s2m%p
+    ! end if    
     
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in aerosol profile initialization' , lalloc = .true.)
@@ -1276,7 +1368,8 @@ contains
         0_jpim,                  &  ! 0 => deallocate
         inst_nprof,              &
         inst_nchanprof,          & 
-        nLevels,                 &
+        nLevels+1,               & ! "levels" means interfaces, not layers
+        ! nLevels,                 &
         inst_chanprof,           &
         inst_opts,               &
         inst_profiles,           &
@@ -1347,7 +1440,8 @@ contains
         0_jpim,                  &  ! 0 => deallocate
         inst_nprof,              &
         inst_nchanprof,          &
-        nLevels,                 &
+        nLevels+1,               & ! "levels" means interfaces, not layers
+        ! nLevels,                 &
         inst_chanprof,           &
         inst_opts,               &
         inst_profiles,           &
@@ -1374,6 +1468,23 @@ contains
     endif
 
   end subroutine cosp_rttov_deallocate_coefs
+
+  subroutine interpolate_logp(ptarget,p1,p2,z1,z2,ztarget)
+
+    real(jprb),intent(in) :: ptarget
+    real(WP),intent(in) :: p1,p2,z1,z2
+    real(jprb),intent(out) :: ztarget ! variable interpolated to the target pressure level
+
+    ! Normal procedure where ptarget falls within [p1,p2]
+    if ((ptarget .gt. p1) .and. (ptarget .lt. p2)) then 
+        ztarget = z1 + (z2-z1) * log(ptarget / p1) / log(p2 / p1)
+    elseif (ptarget .lt. p1) then ! Top of model level. ptarget may be zero...
+        ztarget = z1 ! Just set it to the layer value?? Not sure how to handle this if ptarget=0. I think that this is fine. We're basically out of range.
+    elseif (ptarget .gt. p2) then ! surface level
+        ztarget = z2 + (z2-z1) * log(ptarget / p2) / log(p2 / p1)
+    end if
+        
+  end subroutine interpolate_logp
 
 !##########################
 ! Module End
