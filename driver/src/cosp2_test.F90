@@ -548,15 +548,15 @@ program cosp2_test
      ! Construct COSP input types
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      if (iChunk .eq. 1) then
-!        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=0.2_wp)
-        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
+       call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=1.0_wp)
+      !   call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
         call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)
      endif
      if (iChunk .eq. nChunks) then
         call destroy_cospIN(cospIN)
         call destroy_cospstateIN(cospstateIN)
-!        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=0.2_wp)
-        call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
+       call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=1.0_wp)
+      !   call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
         call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)    
      endif
      call cpu_time(driver_time(4))
