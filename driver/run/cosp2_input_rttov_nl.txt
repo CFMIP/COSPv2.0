@@ -26,7 +26,7 @@
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
   NPOINTS=153,! Number of gridpoints 153,27840,7081,6912
-  NPOINTS_IT=5000,! Max number of gridpoints to be processed in one iteration
+  NPOINTS_IT=5000,! 50,5000, Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=38,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
@@ -82,10 +82,10 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-  rttov_Ninstruments=3,
-  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst5_PREFIRE_CESM2.txt','instrument_nls/cosp2_rttov_inst6_AIRS_CESM2_bin.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
-!  rttov_Ninstruments=7,
-!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt','instrument_nls/cosp2_rttov_inst4.txt','instrument_nls/cosp2_rttov_inst5_PREFIRE_CESM2.txt','instrument_nls/cosp2_rttov_inst6_AIRS_CESM2_bin.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
+!  rttov_Ninstruments=3,
+!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst5_PREFIRE_CESM2.txt','instrument_nls/cosp2_rttov_inst6_AIRS_CESM2_bin.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
+  rttov_Ninstruments=7,
+  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt','instrument_nls/cosp2_rttov_inst4.txt','instrument_nls/cosp2_rttov_inst5_PREFIRE_CESM2.txt','instrument_nls/cosp2_rttov_inst6_AIRS_CESM2_bin.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
 !  rttov_Ninstruments=4,
 !  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt','instrument_nls/cosp2_rttov_inst4.txt',
 !  rttov_Ninstruments=3,

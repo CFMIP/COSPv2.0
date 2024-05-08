@@ -33,6 +33,8 @@
   Lrttov_aer=.false.,                ! Calculate RTTOV all-sky + cloudy-sky values
   Lrttov_cldparam=.false.,          ! Use user input cloud optical parameters
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
+  Lrttov_gridbox_cldmmr=.true.,     ! Do cloud mixing ratios represent gridcell means?
+  Ldo_nlte_correction=.true.,       ! Correct for non-local thermal equilibrium effects? Requires appropriate coefficients.    
   Lrttov_pc=.false.,                ! Run with PC-RTTOV
   !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
   nchannels_rec=8461, ! 8461 for all IASI channels, could limit just to those that overlap RRTMG channels

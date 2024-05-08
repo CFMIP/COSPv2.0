@@ -25,18 +25,18 @@
 
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
-  NPOINTS=1728, ! 1728,6912
-  NPOINTS_IT=250,! 250,1000 Max number of gridpoints to be processed in one iteration
+  NPOINTS=153,! Number of gridpoints 153,27840,7081,6912
+  NPOINTS_IT=2,! 50,5000, Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
-  NLEVELS=54,   ! Number of model levels
+  NLEVELS=38,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
   NLVGRID=40,       ! Number of levels in statistical outputs (only used if USE_VGRID=.true.)
   CSAT_VGRID=.true., ! CloudSat vertical grid? (if .true. then the CloudSat standard grid is used for the outputs.
                      !  USE_VGRID needs also be .true.)
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
-  FINPUT='../data/inputs/UKMO/cosp_input.um_global.nc', ! List input NetCDF files
-  FOUTPUT='../data/outputs/UKMO/cosp2_output.um_global.nc',
+  FINPUT='../data/inputs/UKMO/cosp_input_um.nc', ! List input NetCDF files
+  FOUTPUT='../data/outputs/UKMO/cosp2_output_um_iasi.nc',
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
@@ -82,9 +82,32 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-  rttov_Ninstruments=4,
-  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt','instrument_nls/cosp2_rttov_inst2.txt','instrument_nls/cosp2_rttov_inst3.txt','instrument_nls/cosp2_rttov_inst7_VIIRS_CESM2.txt',
-!  rttov_Ninstruments=1,
-!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt',
+  ! Simulating a single Nadir-viewing IASI instrument.
+  !rttov_Ninstruments=1,
+  !rttov_instrument_namelists='instrument_nls/cosp2_rttov_IASI_CESM2_val.txt',
+  ! Simulating three IASI instruments and three FORUM instruments
+  rttov_Ninstruments=6,
+  rttov_instrument_namelists='instrument_nls/cosp2_rttov_IASI_CESM2_val1.txt','instrument_nls/cosp2_rttov_IASI_CESM2_val2.txt','instrument_nls/cosp2_rttov_IASI_CESM2_val3.txt','instrument_nls/cosp2_rttov_FORUM_CESM2_val1.txt','instrument_nls/cosp2_rttov_FORUM_CESM2_val2.txt','instrument_nls/cosp2_rttov_FORUM_CESM2_val3.txt',  
   rttov_verbose=.true.
+  !----------------------------------------------------------------------------------
+  !-------------- Swathing inputs
+  !----------------------------------------------------------------------------------
+  N_SWATHS_ISCCP=0,
+  SWATH_LOCALTIMES_ISCCP=0,0,
+  SWATH_WIDTHS_ISCCP=0,0,
+  N_SWATHS_MISR=0,
+  SWATH_LOCALTIMES_MISR=0,0,
+  SWATH_WIDTHS_MISR=0,0,
+  N_SWATHS_MODIS=0,
+  SWATH_LOCALTIMES_MODIS=0,0,
+  SWATH_WIDTHS_MODIS=0,0,
+  N_SWATHS_CSCAL=0,
+  SWATH_LOCALTIMES_CSCAL=0,0,
+  SWATH_WIDTHS_CSCAL=0,0,
+  N_SWATHS_PARASOL=0,
+  SWATH_LOCALTIMES_PARASOL=0,0,
+  SWATH_WIDTHS_PARASOL=0,0,
+  N_SWATHS_ATLID=0,
+  SWATH_LOCALTIMES_ATLID=0,0,
+  SWATH_WIDTHS_ATLID=0,0,
 /
