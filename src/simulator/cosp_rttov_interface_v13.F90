@@ -228,6 +228,8 @@ CONTAINS
     logical         :: Lrttov_aer
     logical         :: Lrttov_cldparam
     logical         :: Lrttov_aerparam
+    logical         :: Lrttov_gridbox_cldmmr
+    logical         :: Ldo_nlte_correction
     logical         :: Lrttov_pc
     logical         :: Lrttov_solar
     logical         :: Lchannel_filepath
@@ -270,29 +272,32 @@ CONTAINS
     if (present(debug)) verbose = debug
                
     ! Init. variables to false.
-    rttov_Nlocaltime    = 0
-    Lrttov_bt           = .false.
-    Lrttov_rad          = .false.
-    Lrttov_refl         = .false.
-    Lrttov_cld          = .false.
-    Lrttov_aer          = .false.
-    Lrttov_cldparam     = .false.
-    Lrttov_aerparam     = .false.
-    Lrttov_pc           = .false.
-    Lrttov_solar        = .false.
-    Lchannel_filepath   = .false.
-    SO2_data            = .false. 
-    N2O_data            = .false. 
-    CO_data             = .false.
-    CO2_data            = .false.
-    CH4_data            = .false. 
-    ozone_data          = .false.
-    clw_data            = .false.    
-    user_tracegas_input = .false.
+    rttov_Nlocaltime      = 0
+    Lrttov_bt             = .false.
+    Lrttov_rad            = .false.
+    Lrttov_refl           = .false.
+    Lrttov_cld            = .false.
+    Lrttov_aer            = .false.
+    Lrttov_cldparam       = .false.
+    Lrttov_aerparam       = .false.
+    Lrttov_gridbox_cldmmr = .true. ! Assume gridbox average MMRs. Most common for GCMs.
+    Ldo_nlte_correction   = .false. ! Correct for non-local thermal equilibrium effects? Default false.
+    Lrttov_pc             = .false.
+    Lrttov_solar          = .false.
+    Lchannel_filepath     = .false.
+    SO2_data              = .false. 
+    N2O_data              = .false. 
+    CO_data               = .false.
+    CO2_data              = .false.
+    CH4_data              = .false. 
+    ozone_data            = .false.
+    clw_data              = .false.    
+    user_tracegas_input   = .false.
     
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
+                         Lrttov_gridbox_cldmmr,Ldo_nlte_correction,              & ! Assume cloud water mixing ratios are gridbox average instead of in-cloud
                          Lrttov_pc,Lrttov_solar,nchannels_rec,Lchannel_filepath, &
                          channel_filepath,rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
@@ -418,7 +423,7 @@ CONTAINS
     rttov_config % opts % rt_ir % rayleigh_min_pressure   = 0._wp ! 0 hPa
     rttov_config % opts % rt_ir % rayleigh_single_scatt   = .true.
     rttov_config % opts % rt_ir % rayleigh_depol          = .true. ! Default false, recommended true
-    rttov_config % opts % rt_ir % do_nlte_correction      = .false.
+    rttov_config % opts % rt_ir % do_nlte_correction      = Ldo_nlte_correction
     rttov_config % opts % rt_ir % solar_sea_brdf_model    = 2
     rttov_config % opts % rt_ir % ir_sea_emis_model       = 2
 
@@ -431,7 +436,7 @@ CONTAINS
     rttov_config % opts % rt_ir % user_aer_opt_param      = Lrttov_aerparam ! User specifies the aerosol scattering optical parameters 
     rttov_config % opts % rt_ir % user_cld_opt_param      = Lrttov_cldparam ! User specifies the cloud scattering optical parameters 
     
-    rttov_config % opts % rt_ir % grid_box_avg_cloud      = .true.
+    rttov_config % opts % rt_ir % grid_box_avg_cloud      = Lrttov_gridbox_cldmmr
     rttov_config % opts % rt_ir % cldcol_threshold        = -1._wp
     rttov_config % opts % rt_ir % cloud_overlap           = 1 ! Maximum-random overlap
     rttov_config % opts % rt_ir % cc_low_cloud_top        = 750_wp ! 750 hPa. Only applies when cloud_overlap=2.
@@ -598,6 +603,8 @@ CONTAINS
         print*,'rttov_config % Lrttov_aer:        ',rttov_config % Lrttov_aer
         print*,'rttov_config % Lrttov_pc:         ',rttov_config % Lrttov_pc
         print*,'rttov_config % Lrttov_solar:      ',rttov_config % Lrttov_solar
+        print*,'rttov_config % opts % rt_ir % grid_box_avg_cloud:   ',rttov_config % opts % rt_ir % grid_box_avg_cloud
+        print*,'rttov_config % opts % rt_ir % do_nlte_correction:     ',rttov_config % opts % rt_ir % do_nlte_correction
         print*,'rttov_config % rttov_Nlocaltime:        ',rttov_config % rttov_Nlocaltime
         print*,'rttov_config % rttov_localtime:         ',rttov_config % rttov_localtime
         print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width            
