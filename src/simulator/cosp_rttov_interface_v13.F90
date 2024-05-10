@@ -101,6 +101,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           nchan_out,             &
           nchannels_rec,         &
           rttov_Nlocaltime,      &
+          rttov_extendatmos,     &
           nprof
       real(wp)                     :: &
           CO2_mr,              &
@@ -257,7 +258,8 @@ CONTAINS
         
     ! JKS for orbital swathing
     integer(kind=jpim)     ::  &   
-        rttov_Nlocaltime            ! Number of orbits
+        rttov_Nlocaltime,          & ! Number of orbits
+        rttov_extendatmos
     real(wp),dimension(20) ::  &         ! Reasonable but arbitrary limit at 10 local time orbits
         rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
         rttov_localtime_width        ! Width of satellite swath (km).
@@ -293,6 +295,8 @@ CONTAINS
     ozone_data            = .false.
     clw_data              = .false.    
     user_tracegas_input   = .false.
+    rttov_Nlocaltime      = 0       ! Default: zero swath masking
+    rttov_extendatmos     = 0       ! 0: do not extend above supplied pressure levels. 1: Simply top layer. 2: Not yet implemented.
     
     ! Read RTTOV namelist fields
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
@@ -308,7 +312,7 @@ CONTAINS
                          CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
                          rttov_nthreads,rttov_ZenAng,rttov_Nlocaltime,           &
-                         rttov_localtime,rttov_localtime_width
+                         rttov_localtime,rttov_localtime_width,rttov_extendatmos
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -345,7 +349,10 @@ CONTAINS
     rttov_config%rttov_Nlocaltime         = rttov_Nlocaltime
     rttov_config%rttov_localtime(:)       = rttov_localtime(1:rttov_Nlocaltime)
     rttov_config%rttov_localtime_width(:) = rttov_localtime_width(1:rttov_Nlocaltime)
-        
+
+    ! Extend atmosphere setting. If user-supplied values end too low, channels sounding the upper atmosphere will be bad.
+    rttov_config%rttov_extendatmos = rttov_extendatmos
+
     ! Set logicals for RTTOV config
     rttov_config%Lrttov_bt         = Lrttov_bt
     rttov_config%Lrttov_rad        = Lrttov_rad
@@ -772,6 +779,7 @@ CONTAINS
                             rttovConfig % nchanprof,             &
                             rttovConfig % nprof,                 &
                             rttovConfig % swath_mask,            &
+                            rttovConfig % rttov_extendatmos,     &
                             transmission,                        &
                             radiance,                            &
                             calcemis,                            &
@@ -802,6 +810,7 @@ CONTAINS
                                     rttovConfig % ZenAng,                   &
                                     rttovConfig % nprof,                    &
                                     rttovConfig % swath_mask,               &
+                                    rttovConfig % rttov_extendatmos,        &
                                     verbose)
                                     
     call cpu_time(driver_time(3))
@@ -932,6 +941,7 @@ CONTAINS
                                 rttovConfig % nprof,                         &
                                 rttovConfig % iChannel_out,                  &
                                 rttovConfig % swath_mask,                    &
+                                rttovConfig % rttov_extendatmos,             &
                                 transmission,                                &
                                 radiance,                                    &
                                 calcemis,                                    &
@@ -961,6 +971,7 @@ CONTAINS
                                     rttovConfig % ZenAng,                   &
                                     rttovConfig % nprof,                    &
                                     rttovConfig % swath_mask,               &
+                                    rttovConfig % rttov_extendatmos,        &
                                     verbose)
     call cpu_time(driver_time(3))
     call cosp_pc_rttov_setup_emissivity(calcemis,   &
