@@ -588,7 +588,7 @@ contains
     ! Iterate over all columns
     j = 0 ! Initialize input
     do i = 1, rttovIN%nPoints
-        
+      if (i .gt. rttovIN%nPoints) exit  
       if (inst_swath_mask(i)) then ! only added masked columns to profiles
           j = j + 1 ! Increment first
 
@@ -788,17 +788,17 @@ contains
         
       j = 0 ! Initialize input
       do i = 1,rttovIN%nPoints
-      
+        if (i .g.t rttovIN%nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
             j = j + 1 ! Increment profile counter      
             
             ! Cloud scheme stuff. Values are on layers, not levels like the gas concentrations.
-            inst_profiles(j)%cfrac(modeltop_index:inst_profiles(j)%nlevels)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
-            inst_profiles(j)%cloud(1,modeltop_index:inst_profiles(j)%nlevels) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
-            inst_profiles(j)%cloud(6,modeltop_index:inst_profiles(j)%nlevels) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
+            inst_profiles(j)%cfrac(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
+            inst_profiles(j)%cloud(1,modeltop_index:inst_profiles(j)%nlayers) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
+            inst_profiles(j)%cloud(6,modeltop_index:inst_profiles(j)%nlayers) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
 
-            inst_profiles(j)%clwde(modeltop_index:inst_profiles(j)%nlevels)   = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter (um)
-            inst_profiles(j)%icede(modeltop_index:inst_profiles(j)%nlevels)   = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter (um)
+            inst_profiles(j)%clwde(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter (um)
+            inst_profiles(j)%icede(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter (um)
 
         ! Example UKMO input has effective radii for multiple cloud types, making identification of a single
         ! liquid droplet or ice crystal effective diameter difficult.
@@ -832,6 +832,7 @@ contains
       ! Read in aerosol profiles
 !      j = 0 ! Initialize input
 !      do i = 1,rttovIN%nPoints
+!        if (i .gt. rttovIN%nPoints)
 !        if (inst_swath_mask(i)) then ! only added masked columns to profiles
 !            j = j + 1 ! Increment profile counter   
 !            inst_profiles(j)%aerosols(naertyp,nlayers) = rttovIN%aerosols ! Aerosols in different modes (see User Guide pg 80)
@@ -845,6 +846,7 @@ contains
       ! Read in aerosol profiles
       j = 0 ! Initialize input
       do i = 1,rttovIN%nPoints
+        if (i .gt. rttovIN%nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
             j = j + 1 ! Increment profile counter   
             inst_profiles(j)%date(:) = rttovIN%rttov_date(i,:)
@@ -1222,6 +1224,7 @@ contains
     else ! If swathing is occurring, assign the outputs appropriately
         j = 0
         do i=1,nPoints
+          if (i .gt. nPoints) exit  
           if (inst_swath_mask(i)) then ! only added masked columns to profiles
             if (Lrttov_bt) then
               bt_total(i, 1:inst_nchan_out) = inst_radiance%bt(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
@@ -1313,6 +1316,7 @@ contains
     else ! If swathing is occurring, assign the outputs appropriately
       j = 0
       do i=1,nPoints
+        if (i .gt. nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
           if (Lrttov_bt) then
             bt_clear(i, 1:inst_nchannels_rec) = inst_pccomp%bt_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
