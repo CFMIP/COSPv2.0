@@ -29,7 +29,7 @@
   Lrttov_bt=.true.,                 ! Calculate RTTOV brightness temps
   Lrttov_rad=.true.,                ! Calculate RTTOV radiances
   Lrttov_refl=.false.,              ! Calculate RTTOV reflectivities
-  Lrttov_cld=.false.,                ! Calculate RTTOV all-sky + cloudy-sky values
+  Lrttov_cld=.true.,                ! Calculate RTTOV all-sky + cloudy-sky values
   Lrttov_aer=.false.,                ! Calculate RTTOV all-sky + cloudy-sky values
   Lrttov_cldparam=.false.,          ! Use user input cloud optical parameters
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
@@ -42,7 +42,7 @@
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/',
   OD_coef_filepath='AIRS_L1C/rtcoef_eos_2_airs_l1c_o3co2.H5',
-  cld_coef_filepath='cldaer_visir/sccldcoef_metop_2_iasi.H5',  
+  cld_coef_filepath='AIRS_L1C/sccldcoef_eos_2_airs_l1c.H5',
   !-------------- RTTOV Trace Gas Logicals (must match coefficient files)
   SO2_data=.false.,
   N2O_data=.false.,

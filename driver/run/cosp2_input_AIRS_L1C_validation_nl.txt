@@ -25,8 +25,8 @@
 
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
-  NPOINTS=153,! Number of gridpoints 153,27840,7081,6912
-  NPOINTS_IT=5000,! 50,5000, Max number of gridpoints to be processed in one iteration
+  NPOINTS=1,! Number of gridpoints 153,27840,7081,6912
+  NPOINTS_IT=10,! 50,5000, Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=38,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
@@ -84,7 +84,7 @@
   !----------------------------------------------------------------------------------
   ! Simulating three AIRS L1C instruments
   rttov_Ninstruments=3,
-  rttov_instrument_namelists='instrument_nls/cosp2_rttov_AIRS_L1C_val1.txt','instrument_nls/cosp2_rttov_AIRS_L1C_val2.txt','instrument_nls/cosp2_rttov_AIRS_L1C_val3.txt',
+  rttov_instrument_namelists='instrument_nls/cosp2_rttov_AIRS_L1C_val1.txt','instrument_nls/cosp2_rttov_AIRS_L1C_val2.txt','instrument_nls/cosp2_rttov_AIRS_L1C_val3.txt','instrument_nls/cosp2_rttov_AIRS_L1C_CESM2.txt',
   rttov_verbose=.true.
   !----------------------------------------------------------------------------------
   !-------------- Swathing inputs
