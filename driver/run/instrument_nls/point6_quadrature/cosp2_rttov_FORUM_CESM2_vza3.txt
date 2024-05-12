@@ -73,5 +73,7 @@
   ! Set local time sampling with swath widths
   rttov_Nlocaltime=0,            	! Number of local times to sample at
   rttov_localtime=1,0,     	! Local times to sample at in hrs [0,24]
-  rttov_localtime_width=1550,0,  ! Swath width (km)   
+  rttov_localtime_width=1550,0,  ! Swath width (km)
+  ! ---------------------- How to handle atmosphere between the top of supplied values and the RTTOV instrument.  
+  rttov_extendatmos=0,    ! 0: Atmosphere ends at the top of supplied values. 1: CAM-like additional interfaces at 1e-4 Pa and 2.25 Pa.    
 /

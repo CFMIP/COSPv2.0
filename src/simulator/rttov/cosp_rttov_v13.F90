@@ -788,7 +788,7 @@ contains
         
       j = 0 ! Initialize input
       do i = 1,rttovIN%nPoints
-        if (i .g.t rttovIN%nPoints) exit
+        if (i .gt. rttovIN%nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
             j = j + 1 ! Increment profile counter      
             
@@ -1224,7 +1224,7 @@ contains
     else ! If swathing is occurring, assign the outputs appropriately
         j = 0
         do i=1,nPoints
-          if (i .gt. nPoints) exit  
+        !   if (i .gt. nPoints) exit
           if (inst_swath_mask(i)) then ! only added masked columns to profiles
             if (Lrttov_bt) then
               bt_total(i, 1:inst_nchan_out) = inst_radiance%bt(1 + (j * inst_nchan_out):(j+1) * inst_nchan_out)
@@ -1316,7 +1316,7 @@ contains
     else ! If swathing is occurring, assign the outputs appropriately
       j = 0
       do i=1,nPoints
-        if (i .gt. nPoints) exit
+        ! if (i .gt. nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
           if (Lrttov_bt) then
             bt_clear(i, 1:inst_nchannels_rec) = inst_pccomp%bt_pccomp(1 + (j * inst_nchannels_rec):(j+1) * inst_nchannels_rec)
