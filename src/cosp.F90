@@ -790,6 +790,7 @@ CONTAINS
                                   cospIN % cospswathsIN(1) % inst_localtimes,             &
                                   cospIN % cospswathsIN(1) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
+                                  cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                   ISCCP_SWATH_MASK,N_ISCCP_SWATHED) ! Output: logical mask array
           isccpIN%Npoints  => N_ISCCP_SWATHED
@@ -852,6 +853,7 @@ CONTAINS
                                   cospIN % cospswathsIN(2) % inst_localtimes,             &
                                   cospIN % cospswathsIN(2) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
+                                  cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                   MISR_SWATH_MASK,N_MISR_SWATHED) ! Output: logical mask array
           misrIN%Npoints  => N_MISR_SWATHED
@@ -897,6 +899,7 @@ CONTAINS
                                   cospIN % cospswathsIN(3) % inst_localtimes,             &
                                   cospIN % cospswathsIN(3) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
+                                  cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                   CSCAL_SWATH_MASK, N_CSCAL_SWATHED) ! Output: logical mask array    
           calipsoIN%Npoints     => N_CSCAL_SWATHED
@@ -967,6 +970,7 @@ CONTAINS
                                   cospIN % cospswathsIN(4) % inst_localtimes,             &
                                   cospIN % cospswathsIN(4) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
+                                  cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                   ATLID_SWATH_MASK, N_ATLID_SWATHED) ! Output: logical mask array
           atlidIN%Npoints        => N_ATLID_SWATHED
@@ -1011,6 +1015,7 @@ CONTAINS
                                   cospIN % cospswathsIN(5) % inst_localtimes,             &
                                   cospIN % cospswathsIN(5) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
+                                  cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                   PARASOL_SWATH_MASK, N_PARASOL_SWATHED) ! Output: logical mask array
           parasolIN%Npoints      => N_PARASOL_SWATHED
@@ -1050,6 +1055,7 @@ CONTAINS
                                      cospIN % cospswathsIN(3) % inst_localtimes,             &
                                      cospIN % cospswathsIN(3) % inst_localtime_widths,       &
                                      cospgridIN%lat, cospgridIN%lon,                         &
+                                     cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                      cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                      CSCAL_SWATH_MASK, N_CSCAL_SWATHED) ! Output: logical mask array
              cloudsatIN%Npoints    => N_CSCAL_SWATHED
@@ -1101,6 +1107,7 @@ CONTAINS
                                   cospIN % cospswathsIN(6) % inst_localtimes,             &
                                   cospIN % cospswathsIN(6) % inst_localtime_widths,       &
                                   cospgridIN%lat, cospgridIN%lon,                         &
+                                  cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
                                   cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
                                   MODIS_SWATH_MASK, N_MODIS_SWATHED) ! Output: logical mask array          
 
@@ -2931,7 +2938,7 @@ CONTAINS
   ! SUBROUTINE compute_orbitmasks
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine compute_orbitmasks(Npoints,Nlocaltimes,localtimes,localtime_widths,      &
-                                lat,lon,hour,minute,swath_mask_out,Nswathed_out)
+                                lat,lon,month,day,hour,minute,swath_mask_out,Nswathed_out)
 
     ! Inputs
     integer,intent(in) :: &
@@ -2945,6 +2952,8 @@ CONTAINS
     real(wp),dimension(Npoints),intent(in) :: &
       lat,     &
       lon,     &
+      month,   &
+      day,     &
       hour,    &
       minute
 
@@ -2969,11 +2978,21 @@ CONTAINS
     logical,dimension(Npoints,Nlocaltimes) :: &
       swath_mask_all    ! Mask of logicals over all local times, gridcells  
 
+    integer, dimension(Npoints) :: &
+      rttov_DOY         ! Array of day of year values
+    real(wp), dimension(Npoints) :: &
+      localtime_offsets ! Offset values to avoid striping with hourly RT calls. [hours]
+    ! Compute the day of the year and determine the localtime offset
+    do i=1,Npoints
+        call get_DOY(int(month(i)), int(day(i)), rttov_DOY(i))
+    end do
+    localtime_offsets = (mod(rttov_DOY(:), 5) - 2) / 5.0  ! Need to cast to real
+
     ! Iterate over local times
     swath_mask_all(:,:) = .false.
     do i=1,Nlocaltimes
       ! Calculate the central longitude for each gridcell and orbit
-      sat_lon(:,i) = 15.0 * (localtimes(i) - (hour + minute / 60))
+      sat_lon(:,i) = 15.0 * (localtimes(i) + localtime_offsets - (hour + minute / 60))
       ! Calculate distance (in degrees) from each grid cell to the satellite central long
       dlon(:,i) = mod((lon - sat_lon(:,i) + 180.0), 360.0) - 180.0             
       ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
@@ -2992,6 +3011,31 @@ CONTAINS
    !  swath_mask_out = ALL( swath_mask_all(:,:) .eq. .false.,2) ! Compute mask by collapsing the localtimes dimension ! ANY(swath_mask_all,dim=1)
 
   end subroutine compute_orbitmasks  
+
+  subroutine get_DOY(month, day, DOY)
+
+   integer,intent(in) :: &
+       month,   &
+       day
+   integer,intent(out) :: &
+       DOY
+
+   ! This subroutine does not handle leap years because it is not relevant to the purpose.
+   ! Simple look-up table for DOY.
+   if (month .eq. 1)  DOY = day
+   if (month .eq. 2)  DOY = 31 + day
+   if (month .eq. 3)  DOY = 59 + day
+   if (month .eq. 4)  DOY = 90 + day
+   if (month .eq. 5)  DOY = 120 + day
+   if (month .eq. 6)  DOY = 151 + day
+   if (month .eq. 7)  DOY = 181 + day
+   if (month .eq. 8)  DOY = 212 + day
+   if (month .eq. 9)  DOY = 243 + day
+   if (month .eq. 10) DOY = 273 + day
+   if (month .eq. 11) DOY = 304 + day
+   if (month .eq. 12) DOY = 334 + day
+
+ end subroutine get_DOY
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_errorCheck
