@@ -4533,7 +4533,7 @@ CONTAINS
              end do
           end if
        endif   
-       if (any(cospgridIN%rttov_date(:,1) .lt. 0)) then ! rttov_date(1), year on [0,60]
+       if (any(cospgridIN%rttov_date(:,1) .lt. 0)) then ! rttov_date(1), year on [0,inf]
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_date(1) contains values out of range'
           Lrttov_column = .false.
@@ -4571,7 +4571,7 @@ CONTAINS
              end do
           end if
        endif
-       if (any(cospgridIN%rttov_date(:,3) .lt. 0 .OR. cospgridIN%rttov_date(:,3) .gt. 366)) then ! rttov_date(3), day on [0,366]
+       if (any(cospgridIN%rttov_date(:,3) .lt. 1 .OR. cospgridIN%rttov_date(:,3) .gt. 31)) then ! rttov_date(3), day on [1,31]
           nError=nError+1
           errorMessage(nError) = 'ERROR: COSP input variable: cospIN%rttov_date(3) contains values out of range'
           Lrttov_column = .false.

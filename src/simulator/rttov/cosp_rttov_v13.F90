@@ -206,10 +206,20 @@ contains
 
     logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
         swath_mask_all    ! Mask of logicals over all local times
-        
+
+    integer, dimension(rttovIN % nPoints) :: &
+        rttov_DOY         ! Array of day of year values
+    real(kind=jprb), dimension(rttovIN % nPoints) :: &
+        localtime_offsets ! Offset values to avoid striping with hourly RT calls. [hours]
     logical :: verbose = .false.
     
-    if (present(debug)) verbose = debug    
+    if (present(debug)) verbose = debug
+
+    ! Compute the day of the year and determine the localtime offset
+    do j=1,rttovIN%nPoints
+        call get_DOY(int(rttovIN%rttov_date(j,2)), int(rttovIN%rttov_date(j,3)), rttov_DOY(j))
+    end do
+    localtime_offsets = (mod(rttov_DOY(:), 5) - 2) / 5.0  ! Need to cast to real
 
     ! Handle swathing here. Initial code from Genevieve with implementation changes.
     swath_mask_all = .false.
@@ -217,7 +227,7 @@ contains
         ! Iterate over local times
         do j=1,rttov_Nlocaltime
             ! Calculate the central longitude for each gridcell and orbit
-            sat_lon(:,j) = 15.0 * (rttov_localtime(j) - (rttovIN%rttov_time(:,1) + rttovIN%rttov_time(:,2) / 60))
+            sat_lon(:,j) = 15.0 * (rttov_localtime(j) + localtime_offsets(:) - (rttovIN%rttov_time(:,1) + rttovIN%rttov_time(:,2) / 60))
             ! Calculate distance (in degrees) from each grid cell to the satellite central long
             dlon(:,j) = mod((rttovIN%longitude - sat_lon(:,j) + 180.0), 360.0) - 180.0             
             ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
@@ -1499,6 +1509,31 @@ contains
     end if
         
   end subroutine interpolate_logp
+
+  subroutine get_DOY(month, day, DOY)
+
+    integer,intent(in) :: &
+        month,   &
+        day
+    integer,intent(out) :: &
+        DOY
+
+    ! This subroutine does not handle leap years because it is not relevant to the purpose.
+    ! Simple look-up table for DOY.
+    if (month .eq. 1)  DOY = day
+    if (month .eq. 2)  DOY = 31 + day
+    if (month .eq. 3)  DOY = 59 + day
+    if (month .eq. 4)  DOY = 90 + day
+    if (month .eq. 5)  DOY = 120 + day
+    if (month .eq. 6)  DOY = 151 + day
+    if (month .eq. 7)  DOY = 181 + day
+    if (month .eq. 8)  DOY = 212 + day
+    if (month .eq. 9)  DOY = 243 + day
+    if (month .eq. 10) DOY = 273 + day
+    if (month .eq. 11) DOY = 304 + day
+    if (month .eq. 12) DOY = 334 + day
+
+  end subroutine get_DOY
 
 !##########################
 ! Module End
