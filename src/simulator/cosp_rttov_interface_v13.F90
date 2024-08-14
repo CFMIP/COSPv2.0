@@ -715,7 +715,7 @@ CONTAINS
                                         error,verbose)
         endif
     else
-        if (verbose) print*,'empty chunk'        
+        if (verbose) print*,'empty chunk'
     endif
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
