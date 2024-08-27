@@ -54,7 +54,8 @@ MODULE cosp_phys_constants
        amCO2 = 44.0096_wp,      & ! CO2     [g/mol]
        amCH4 = 16.0426_wp,      & ! Methane [g/mol]
        amN2O = 44.0129_wp,      & ! N2O     [g/mol]
-       amCO  = 28.0102_wp         ! CO      [g/mol]
+       amCO  = 28.0102_wp,      & ! CO      [g/mol]
+       amSO2 = 64.0640_wp         ! SO2     [g/mol]
 
   ! WMO/SI value
   REAL(wp), PARAMETER :: &

@@ -101,6 +101,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           nchan_out,             &
           nchannels_rec,         &
           rttov_Nlocaltime,      &
+          gas_units,             &
           rttov_extendatmos,     &
           nprof
       real(wp)                     :: &
@@ -259,6 +260,7 @@ CONTAINS
     ! JKS for orbital swathing
     integer(kind=jpim)     ::  &   
         rttov_Nlocaltime,          & ! Number of orbits
+        rttov_gas_units,           & ! RTTOV units for trace gases: 0 ppmv over dry air, 1 kg/kg over moist air, 2 ppmv over moist air, 3 kg/kg over dry air
         rttov_extendatmos
     real(wp),dimension(20) ::  &         ! Reasonable but arbitrary limit at 10 local time orbits
         rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
@@ -296,6 +298,7 @@ CONTAINS
     clw_data              = .false.    
     user_tracegas_input   = .false.
     rttov_Nlocaltime      = 0       ! Default: zero swath masking
+    rttov_gas_units       = 1       ! Default: kg/kg over moist air (should be updated!)
     rttov_extendatmos     = 0       ! 0: do not extend above supplied pressure levels. 1: Simply top layer. 2: Not yet implemented.
     
     ! Read RTTOV namelist fields
@@ -312,7 +315,8 @@ CONTAINS
                          CO2_mr,CH4_mr,CO_mr,N2O_mr,SO2_mr,                      & ! Mixing ratios
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
                          rttov_nthreads,rttov_ZenAng,rttov_Nlocaltime,           &
-                         rttov_localtime,rttov_localtime_width,rttov_extendatmos
+                         rttov_localtime,rttov_localtime_width,                  &
+                         rttov_gas_units,rttov_extendatmos
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -374,7 +378,8 @@ CONTAINS
     
     ! Set to false in namelist if model supplies trace profiles
     rttov_config%user_tracegas_input = user_tracegas_input
-    
+    rttov_config%gas_units = rttov_gas_units
+
     rttov_config%SO2_mr       = SO2_mr
     rttov_config%N2O_mr       = N2O_mr
     rttov_config%CO_mr        = CO_mr
@@ -614,7 +619,9 @@ CONTAINS
         print*,'rttov_config % opts % rt_ir % do_nlte_correction:     ',rttov_config % opts % rt_ir % do_nlte_correction
         print*,'rttov_config % rttov_Nlocaltime:        ',rttov_config % rttov_Nlocaltime
         print*,'rttov_config % rttov_localtime:         ',rttov_config % rttov_localtime
-        print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width            
+        print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width
+        print*,'rttov_config % rttov_extendatmos:       ',rttov_config % rttov_extendatmos
+        print*,'rttov_config % gas_units:               ',rttov_config % gas_units
     end if     
         
     ! subsub routines
@@ -810,6 +817,7 @@ CONTAINS
                                     rttovConfig % ZenAng,                   &
                                     rttovConfig % nprof,                    &
                                     rttovConfig % swath_mask,               &
+                                    rttovConfig % gas_units,                &
                                     rttovConfig % rttov_extendatmos,        &
                                     verbose)
                                     
@@ -971,6 +979,7 @@ CONTAINS
                                     rttovConfig % ZenAng,                   &
                                     rttovConfig % nprof,                    &
                                     rttovConfig % swath_mask,               &
+                                    rttovConfig % gas_units,                &
                                     rttovConfig % rttov_extendatmos,        &
                                     verbose)
     call cpu_time(driver_time(3))
