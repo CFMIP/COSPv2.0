@@ -46,8 +46,9 @@ module mod_cosp_rttov
   use rttov_unix_env,      only : rttov_exit
   use cosp_kinds,          only : wp
   use mod_cosp_config,     only : N_HYDRO
-  use cosp_phys_constants, only : mdry=>amd,mO3=>amO3,mco2=>amCO2,mCH4=>amCH4,           &
-                                  mn2o=>amN2O,mco=>amCO
+  use cosp_phys_constants, only : mdry=>amd,mH2O=>amw,mO3=>amO3,mCO2=>amCO2,              &
+                                  mCH4=>amCH4,mN2O=>amN2O,mCO=>amCO,mSO2=>amSO2
+
 
   ! The rttov_emis_atlas_data type must be imported separately
   use mod_rttov_emis_atlas, ONLY : &
@@ -544,6 +545,7 @@ contains
                                            inst_zenang,    &
                                            inst_nprof,     &
                                            inst_swath_mask,&
+                                           inst_gas_units, &
                                            inst_extend_atmos,&
                                            debug)
 
@@ -571,6 +573,7 @@ contains
         inst_zenang
     integer(kind=jpim),intent(in) :: &
         inst_nprof,       &
+        inst_gas_units,   &
         inst_extend_atmos
     logical(kind=jplm),dimension(rttovIN % nPoints),intent(in) :: &
         inst_swath_mask
@@ -592,8 +595,6 @@ contains
     ! If you are not able to provide ozone, CO2, etc profiles the flags
     ! ozone_data, co2_data and so on in the options structure should be 
     ! set to false."
-
-    inst_profiles(:)%gas_units  =  1 ! kg/kg over moist air (default)
         
     ! Iterate over all columns
     j = 0 ! Initialize input
@@ -641,7 +642,11 @@ contains
             if (Ldo_so2) inst_profiles(j)%so2(:)        = inst_so2_mr
             ! if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
             if (Ldo_o3)  then ! no O3 user input set up 
-                call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(modeltop_index))
+                if (inst_extend_atmos) then ! CAM sets the top layer O3 to a linear interpolation between the highest layer and zero O3 at 50 Pa. (see rrtmg_state.F90)
+                    call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),50._wp,rttovIN%p(i,1),0.0_wp,rttovIN%o3(i,1),inst_profiles(j)%o3(modeltop_index))
+                else
+                    call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(modeltop_index))
+                end if                
                 call interpolate_logp(100*inst_profiles(j)%p(inst_profiles(j)%nlevels),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%o3(i,rttovIN%nlevels-1),rttovIN%o3(i,rttovIN%nlevels),inst_profiles(j)%o3(inst_profiles(j)%nlevels))
                 do k=modeltop_index+1,inst_profiles(j)%nlevels-1 
                     kk = k + 1 - modeltop_index
@@ -711,10 +716,12 @@ contains
               if (Ldo_o3)  inst_profiles(j)%o3(1)   = inst_profiles(j)%o3(modeltop_index)
           end if
           
-          ! q coefficient limit is 0.1e-10
-          where(inst_profiles(j)%q(:) < 0.1e-10)
-             inst_profiles(j)%q(:) = 0.11e-10
-          end where          
+          ! q coefficient limit is 0.1e-10 for MMRs over moist air
+          if (inst_profiles(j)%gas_units .eq. 1) then
+            where(inst_profiles(j)%q(:) < 0.1e-10)
+                inst_profiles(j)%q(:) = 0.11e-10
+            end where
+          end if
 
           ! 2m parameters
           inst_profiles(j)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
@@ -775,10 +782,25 @@ contains
           inst_profiles(j)%skin%watertype = 1
           !inst_profiles(j) %idg         = 0. ! Depreciated?
           !inst_profiles(j) %ish         = 0. ! Depreciated?
+
+          ! Correct units if dry mass mixing ratios in ppmv were supplied
+          if (inst_gas_units .eq. 3) then
+            inst_profiles(j)%s2m%q     = inst_profiles(j)%s2m%q * mdry / mH2O * 1.e6
+            inst_profiles(j)%q(:)      = inst_profiles(j)%q(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * mdry / mH2O * 1.e6
+            inst_profiles(j)%gas_units  =  0 ! ppmv over dry air
+          else
+            inst_profiles(j)%gas_units  =  inst_gas_units
+          end if
+
       end if 
-    end do    
-            
-        
+    end do
+
     ! JKS - nothing to check here, this will never trigger.
     call rttov_error('error in profile initialization' , lalloc = .false.)
         
