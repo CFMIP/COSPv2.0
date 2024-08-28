@@ -34,7 +34,7 @@
   Lrttov_cldparam=.false.,          ! Use user input cloud optical parameters
   Lrttov_aerparam=.false.,          ! Use user input aerosol optical parameters
   Lrttov_gridbox_cldmmr=.true.,     ! Do cloud mixing ratios represent gridcell means?
-  Ldo_nlte_correction=.true.,       ! Correct for non-local thermal equilibrium effects? Requires appropriate coefficients.    
+  Ldo_nlte_correction=.false.,       ! Correct for non-local thermal equilibrium effects? Requires appropriate coefficients.    
   Lrttov_pc=.false.,                ! Run with PC-RTTOV
   !-------------- Number of channels to reconstruct. Should match the length of entries in "channel_filepath"
   nchannels_rec=8461, ! 8461 for all IASI channels, could limit just to those that overlap RRTMG channels
@@ -70,6 +70,7 @@
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   rttov_nthreads=1,
+  rttov_gas_units=3, ! 0: ppmv over dry air, 1: kg/kg over moist air, 2: ppmv over moist air, 3: kg/kg over dry air
   rttov_ZenAng=35.97,               ! Satellite Zenith Angle, was 76.2
   ! Set local time sampling with swath widths
   rttov_Nlocaltime=0,            	! Number of local times to sample at

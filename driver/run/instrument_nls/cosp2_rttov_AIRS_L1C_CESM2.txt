@@ -43,14 +43,15 @@
   channel_filepath='rttov_channel_input_AIRSL1C_subset.csv'
   rttov_srcDir='/glade/u/home/jonahshaw/w/RTTOV/',
   rttov_coefDir='rtcoef_rttov13/',
-  OD_coef_filepath='AIRS_L1C/rtcoef_eos_2_airs_l1c_o3co2.H5',
+  ! OD_coef_filepath='AIRS_L1C/rtcoef_eos_2_airs_l1c_o3co2.H5',
+  OD_coef_filepath='AIRS_L1C/rtcoef_eos_2_airs_l1c_7gas.H5', ! Full version with N20 and CH4
   cld_coef_filepath='AIRS_L1C/sccldcoef_eos_2_airs_l1c.H5',
   !-------------- RTTOV Trace Gas Logicals (must match coefficient files)
   SO2_data=.false.,
-  N2O_data=.false.,
+  N2O_data=.true., ! .true. for 7gas
   CO_data=.false.,
   CO2_data=.true.,
-  CH4_data=.false.,
+  CH4_data=.true., ! .true. for 7gas
   ozone_data=.true.,
   clw_data=.false.,        ! Only used for MW calculations
   ! -------------- RTTOV Trace Gas Concentrations
@@ -69,6 +70,7 @@
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   rttov_nthreads=1,
+  rttov_gas_units=3, ! 0: ppmv over dry air, 1: kg/kg over moist air, 2: ppmv over moist air, 3: kg/kg over dry air
   rttov_ZenAng=0.0,               ! Satellite Zenith Angle
   ! Set local time sampling with swath widths
   rttov_Nlocaltime=0,            	! Number of local times to sample at
