@@ -69,6 +69,7 @@
   !-------------- RTTOV Other --------------- 
   ! Control degree of parallelization in RTTOV 1=no parallel, >1 more parallel
   rttov_nthreads=1,
+  rttov_gas_units=3, ! 0: ppmv over dry air, 1: kg/kg over moist air, 2: ppmv over moist air, 3: kg/kg over dry air
   rttov_ZenAng=0.0,               ! Satellite Zenith Angle
   ! Set local time sampling with swath widths
   rttov_Nlocaltime=2,            	! Number of local times to sample at
