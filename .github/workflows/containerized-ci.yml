@@ -118,7 +118,6 @@ jobs:
     # and create a tarball with outputs.
     ###############################################################################
     - name: Produce plots and create tarball
-      shell: bash
       if: failure()
       run: |
         cd driver
