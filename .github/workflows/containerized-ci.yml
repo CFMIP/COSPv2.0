@@ -131,6 +131,7 @@ jobs:
       shell: bash
       if: failure()
       run: |
+        conda activate ci-env
         cd driver
         if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           python plot_test_outputs.py
