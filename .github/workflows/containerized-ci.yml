@@ -8,6 +8,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [ifort, ifx]
+        python-version: [3.11]
         include:
         # Flags and KGOs for Intel Fortran Compiler Classic
         - compiler: ifort
@@ -49,6 +50,15 @@ jobs:
     # Checks-out repository under $GITHUB_WORKSPACE
     #
     - uses: actions/checkout@v4
+    # Set up conda environment
+    - name: Setup conda environment
+      uses: conda-incubator/setup-miniconda@v3.0.4
+      with:
+        auto-update-conda: true
+        activate-environment: ci-env
+        environment-file: build/environment.yml
+        python-version: ${{ matrix.python-version }}
+        auto-activate-base: false
 
     ###############################################################################
     # Build COSP and retrieve input and test files
