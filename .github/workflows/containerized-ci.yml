@@ -125,7 +125,8 @@ jobs:
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
-        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        STATS=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.out
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
     ###############################################################################
     # Produce plots when it fails during global snapshot tests,
     # and create a tarball with outputs.
@@ -139,7 +140,7 @@ jobs:
         fi
         cd data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
-          cosp2_output_um.nc *.png cosp2_output.um_global.${{ matrix.compiler }}.kgo.out
+          cosp2_output_um.nc *.png cosp2_output.um_global.${{ matrix.compiler }}.out
         ls -lh
     ###############################################################################
     # Make output files available if any test fails
