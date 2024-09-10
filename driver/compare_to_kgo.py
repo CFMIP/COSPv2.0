@@ -189,6 +189,7 @@ if __name__ == '__main__':
     if errored:
         print(red_colour + "===== ERROR: some of the differences are larger "
               "than the tolerances." + std_colour)
+        print_stats_table(summary_stats, print_all=args.allvar)
     print_stats_table(summary_stats, print_all=args.allvar,
                       stats_file=args.stats_file)
 
