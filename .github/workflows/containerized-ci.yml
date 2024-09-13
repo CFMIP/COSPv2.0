@@ -1,5 +1,5 @@
 name: Continuous integration in containers
-on: [push, workflow_dispatch]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   Containerized-CI:
@@ -13,24 +13,20 @@ jobs:
         # Flags and KGOs for Intel Fortran Compiler Classic
         - compiler: ifort
           fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
-        #  gdkgo1: https://docs.google.com/uc?export=download&id=1dva4lq4ZXciTiuOvGgA8OUJKihbGQ90K
-        #  gdkgo2: https://docs.google.com/uc?export=download&id=1ns0OtWU5jVnu1IEBfBN-tlTkq2PTrcvC
-          gdkgo1: https://docs.google.com/uc?export=download&id=1eyRCT9e7j7SKsKhbfJBuwBoN5DlsrW7L
-          gdkgo2: https://docs.google.com/uc?export=download&id=1uTffyCdWLPvRHDkVtZZiBfc3spbk4_Tf
+          gdkgo1: https://docs.google.com/uc?export=download&id=1dva4lq4ZXciTiuOvGgA8OUJKihbGQ90K
+          gdkgo2: https://docs.google.com/uc?export=download&id=1ns0OtWU5jVnu1IEBfBN-tlTkq2PTrcvC
         # Flags and KGOs for Intel Fortran Compiler
         - compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-        #  gdkgo1: https://docs.google.com/uc?export=download&id=1WzFsoqi0EZfsyyh203QXmUQTIh5tBm9b
-        #  gdkgo2: https://docs.google.com/uc?export=download&id=1ezYqG-jfZ6i9bRgKOWUyBiQlMhtncpKj
-          gdkgo1: https://docs.google.com/uc?export=download&id=1VrPkQmDpt6otch-tsaka-62tiMDuJNz_
-          gdkgo2: https://docs.google.com/uc?export=download&id=1m6JdHlSAMmK8zT-X3pfxSORPJURiITkQ
+          gdkgo1: https://docs.google.com/uc?export=download&id=1WzFsoqi0EZfsyyh203QXmUQTIh5tBm9b
+          gdkgo2: https://docs.google.com/uc?export=download&id=1ezYqG-jfZ6i9bRgKOWUyBiQlMhtncpKj
         # Set container images
         - compiler: ifort
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         - compiler: ifx
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         # Common variables
-        - kgo_version: v003
+        - kgo_version: v004
     defaults:
       run:
         shell: bash -el {0}
@@ -116,14 +112,15 @@ jobs:
     - name: Basic against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output_um.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output_um.nc
-        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        STATS=data/outputs/UKMO/cosp2_output_um.${{ matrix.compiler }}.out
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
     # 2. UM global snapshot.
     - name: UM global against known good output (KGO)
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
         STATS=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.out
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
