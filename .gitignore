@@ -7,4 +7,4 @@ driver/data/outputs/UKMO/*kgo.v*.nc
 driver/data/outputs/UKMO/*.nc
 driver/data/outputs/UKMO/*.png
 !driver/data/outputs/cosp2_output_um.gfortran.kgo.nc
-driver/data/outputs/UKMO/*.out
+!driver/data/outputs/UKMO/*.out
