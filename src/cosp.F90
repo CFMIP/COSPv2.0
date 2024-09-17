@@ -168,7 +168,7 @@ MODULE MOD_COSP
           tautot_S_liq,        & ! Parasol Liquid water optical thickness, from TOA to SFC
           tautot_S_ice,        & ! Parasol Ice water optical thickness, from TOA to SFC
           fracPrecipIce          ! Fraction of precipitation which is frozen (1).
-     type(radar_cfg) :: &
+     type(radar_cfg), allocatable :: &
           rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
   end type cosp_optical_inputs
 
