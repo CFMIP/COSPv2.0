@@ -509,7 +509,7 @@ CONTAINS
        Lrttov_column    = .true.
 
     ! Set flag to deallocate rttov types (only done on final call to simulator)
-    if (size(cospOUT%isccp_meantb) .eq. stop_idx) lrttov_cleanUp = .true.
+    if (associated(cospOUT%isccp_meantb) .and. size(cospOUT%isccp_meantb) .eq. stop_idx) lrttov_cleanUp = .true.
 
     ! ISCCP column
     if (associated(cospOUT%isccp_fq)                                       .or.          &
