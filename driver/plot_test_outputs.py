@@ -101,6 +101,11 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             xticks_labels = None
             xticks = np.arange(-90,91,30)
             xlabel = 'Latitude (deg)'
+        if vd['xaxis_type'] == 'CFODD_NDBZE':
+            x = np.arange(-30,21,2)
+            xticks = x
+            xticks_labels = None
+            xlabel = 'CloudSat equivalent reflectivity factor (dBZ)'
         if vd['yaxis_type'] == 'pres7':
             yticks_labels = ('1000', '800', '680', '560', '440', '310', '180','')
             yticks = y
@@ -119,6 +124,11 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks_labels = ('0', '8', '10', '13', '15', '20', '30')
             yticks = y
             ylabel = 'Liquid particle size (micron)'
+        if vd['yaxis_type'] == 'CFODD_NICOD':
+            y = np.arange(0,61,2)
+            yticks_labels = None
+            yticks = y
+            ylabel = 'MODIS in-cloud optical depth'
         if vd['yaxis_type'] == 'levStat':
             if not dims['levStat'].any():
                 # For diagnostics on model levels, all elements in levStat
@@ -298,7 +308,8 @@ def variable2D_metadata(var_list, fname):
                   ('hgt16', 'tau7', 'loc'),
                   ('REICE_MODIS', 'tau7', 'loc'),
                   ('RELIQ_MODIS', 'tau7', 'loc'),
-                  ('levStat', 'SR_BINS', 'loc'))
+                  ('levStat', 'SR_BINS', 'loc'),
+                  ('CFODD_NICOD', 'CFODD_NDBZE', 'loc'))
     zcs_dims = (('levStat','loc'), ('lev','loc'))
     f_id = netCDF4.Dataset(fname, 'r')
     vmeta = {}
@@ -352,11 +363,15 @@ if __name__ == '__main__':
                       'albisccp', 'misr_meanztop', 'misr_cldarea', 'cltmodis', 'clwmodis', 'climodis', 'clhmodis',
                       'clmmodis', 'cllmodis', 'tautmodis', 'tauwmodis', 'tauimodis', 'tautlogmodis', 'tauwlogmodis',
                       'tauilogmodis', 'reffclwmodis', 'reffclimodis', 'pctmodis', 'lwpmodis', 'iwpmodis',
-                      'cltlidarradar', 'cloudsat_tcc', 'cloudsat_tcc2','parasolGrid_refl']
+                      'cltlidarradar', 'cloudsat_tcc', 'cloudsat_tcc2','parasolGrid_refl',
+                      'ptcloudsatflag0', 'ptcloudsatflag1', 'ptcloudsatflag2', 'ptcloudsatflag3', 'ptcloudsatflag4', 
+                      'ptcloudsatflag5', 'ptcloudsatflag6', 'ptcloudsatflag7', 'ptcloudsatflag8', 'ptcloudsatflag9',
+                      'cloudsatpia', 'npdfcld', 'npdfdrz', 'npdfrain']
     v2D_hists_names = ['clisccp', 'clmodis', 'cfadDbze94', 'clMISR',
                        'modis_Optical_Thickness_vs_ReffICE',
                        'modis_Optical_Thickness_vs_ReffLIQ',
-                       'cfadLidarsr532', 'cfadLidarsr532gr', 'cfadLidarsr355']
+                       'cfadLidarsr532', 'cfadLidarsr532gr', 'cfadLidarsr355',
+                       'ncfodd1', 'ncfodd2', 'ncfodd3']
     v2D_zcs_names = ['clcalipsoice','clcalipsoliq','clcalipsoun','clcalipsotmp','clcalipsotmpice','clcalipsotmpliq',
                      'clcalipsotmpun','clcalipso','clcalipsoopaque','clcalipsothin','clcalipsozopaque',
                      'clcalipsoopacity','clgrLidar532','clatlid','clcalipso2',
