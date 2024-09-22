@@ -102,6 +102,9 @@ MODULE MOD_COSP_RTTOV_INTERFACE
           nchannels_rec,         &
           rttov_Nlocaltime,      &
           gas_units,             &
+          clw_scheme,            &
+          ice_scheme,            &
+          icede_param,           &
           rttov_extendatmos,     &
           nprof
       real(wp)                     :: &
@@ -117,6 +120,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
       real(kind=jprb), allocatable     :: &
           emisChannel(:),          &         ! RTTOV channel emissivity
           reflChannel(:),          &         ! RTTOV channel reflectivity
+          wavenumChannel(:),       &         ! RTTOV channel wavenumber
           rttov_localtime(:),      &
           rttov_localtime_width(:) 
       type(rttov_options)          :: &
@@ -207,6 +211,7 @@ CONTAINS
     ! Local variables
     character(len=256),target :: &
         channel_filepath,  &
+        wavenum_filepath,  &
         rttov_srcDir,      &
         rttov_coefDir,     &
         OD_coef_filepath,  &
@@ -235,6 +240,7 @@ CONTAINS
     logical         :: Lrttov_pc
     logical         :: Lrttov_solar
     logical         :: Lchannel_filepath
+    logical         :: Lwavenum_filepath
     logical         :: user_tracegas_input 
     logical         :: SO2_data
     logical         :: N2O_data
@@ -261,6 +267,9 @@ CONTAINS
     integer(kind=jpim)     ::  &   
         rttov_Nlocaltime,          & ! Number of orbits
         rttov_gas_units,           & ! RTTOV units for trace gases: 0 ppmv over dry air, 1 kg/kg over moist air, 2 ppmv over moist air, 3 kg/kg over dry air
+        rttov_clw_scheme,          & ! Scheme for determining cloud water optical properties.
+        rttov_ice_scheme,          & ! Scheme for determining cloud ice optical properties.
+        rttov_icede_param,         & ! Scheme for how cloud ice deff is parameterized
         rttov_extendatmos
     real(wp),dimension(20) ::  &         ! Reasonable but arbitrary limit at 10 local time orbits
         rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
@@ -289,6 +298,7 @@ CONTAINS
     Lrttov_pc             = .false.
     Lrttov_solar          = .false.
     Lchannel_filepath     = .false.
+    Lwavenum_filepath     = .false.
     SO2_data              = .false. 
     N2O_data              = .false. 
     CO_data               = .false.
@@ -298,7 +308,10 @@ CONTAINS
     clw_data              = .false.    
     user_tracegas_input   = .false.
     rttov_Nlocaltime      = 0       ! Default: zero swath masking
-    rttov_gas_units       = 1       ! Default: kg/kg over moist air (should be updated!)
+    rttov_gas_units       = 1       ! Default: kg/kg over moist air (should be updated by user!)
+    rttov_clw_scheme      = 1       ! 1: OPAC, 2: Deff
+    rttov_ice_scheme      = 1       ! 0: Ice radii used, 1: Baum, 2: Baran (2014), 3: Baran (2018)
+    rttov_icede_param     = 0       ! 0: Indicates that Deff is supplied but is rejected by RTTOV. 1: Ou and Liou, 2: Wyser(recommended), 3: Boudala, 4: McFarquhar.
     rttov_extendatmos     = 0       ! 0: do not extend above supplied pressure levels. 1: Simply top layer. 2: Not yet implemented.
     
     ! Read RTTOV namelist fields
@@ -306,7 +319,8 @@ CONTAINS
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
                          Lrttov_gridbox_cldmmr,Ldo_nlte_correction,              & ! Assume cloud water mixing ratios are gridbox average instead of in-cloud
                          Lrttov_pc,Lrttov_solar,nchannels_rec,Lchannel_filepath, &
-                         channel_filepath,rttov_srcDir,rttov_coefDir,            &
+                         channel_filepath,Lwavenum_filepath,wavenum_filepath,    &
+                         rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          PC_coef_filepath,                                       &
                          CO2_data,CH4_data,CO_data,N2O_data,SO2_data,ozone_data, & ! Use trace gases for radiative transfer?
@@ -316,7 +330,8 @@ CONTAINS
                          ipcbnd,ipcreg,npcscores,                                & ! PC-RTTOV config values
                          rttov_nthreads,rttov_ZenAng,rttov_Nlocaltime,           &
                          rttov_localtime,rttov_localtime_width,                  &
-                         rttov_gas_units,rttov_extendatmos
+                         rttov_gas_units,rttov_clw_scheme,rttov_ice_scheme,      &
+                         rttov_icede_param,rttov_extendatmos
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Read in namelists
@@ -379,6 +394,11 @@ CONTAINS
     ! Set to false in namelist if model supplies trace profiles
     rttov_config%user_tracegas_input = user_tracegas_input
     rttov_config%gas_units = rttov_gas_units
+
+    ! Parametrization of cloud optical properties.
+    rttov_config%clw_scheme   = rttov_clw_scheme
+    rttov_config%ice_scheme   = rttov_ice_scheme
+    rttov_config%icede_param  = rttov_icede_param
 
     rttov_config%SO2_mr       = SO2_mr
     rttov_config%N2O_mr       = N2O_mr
@@ -591,6 +611,14 @@ CONTAINS
     
     allocate(rttov_config % iChannel(rttov_config % nchan_out)) ! There is a need for these variables to be separate somewhere...
     allocate(rttov_config % iChannel_out(rttov_config % nchan_out))
+    if (Lwavenum_filepath) then
+        allocate(rttov_config % wavenumChannel(rttov_config % nchan_out))
+        open(18,file=wavenum_filepath,access='sequential',form="formatted")
+        do i = 1, rttov_config % nchan_out
+            read(18,*) rttov_config % wavenumChannel(i)
+        end do
+        close(18)
+    end if
     if (Lchannel_filepath) then
         allocate(rttov_config % emisChannel(rttov_config % nchan_out))
         allocate(rttov_config % reflChannel(rttov_config % nchan_out))
@@ -622,6 +650,9 @@ CONTAINS
         print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width
         print*,'rttov_config % rttov_extendatmos:       ',rttov_config % rttov_extendatmos
         print*,'rttov_config % gas_units:               ',rttov_config % gas_units
+        print*,'rttov_config % clw_scheme:              ',rttov_config % clw_scheme
+        print*,'rttov_config % ice_scheme:              ',rttov_config % ice_scheme
+        print*,'rttov_config % icede_param:             ',rttov_config % icede_param
     end if     
         
     ! subsub routines
@@ -818,6 +849,9 @@ CONTAINS
                                     rttovConfig % nprof,                    &
                                     rttovConfig % swath_mask,               &
                                     rttovConfig % gas_units,                &
+                                    rttovConfig % clw_scheme,               &
+                                    rttovConfig % ice_scheme,               &
+                                    rttovConfig % icede_param,              &
                                     rttovConfig % rttov_extendatmos,        &
                                     verbose)
                                     
@@ -980,6 +1014,9 @@ CONTAINS
                                     rttovConfig % nprof,                    &
                                     rttovConfig % swath_mask,               &
                                     rttovConfig % gas_units,                &
+                                    rttovConfig % clw_scheme,               &
+                                    rttovConfig % ice_scheme,               &
+                                    rttovConfig % icede_param,              &
                                     rttovConfig % rttov_extendatmos,        &
                                     verbose)
     call cpu_time(driver_time(3))
