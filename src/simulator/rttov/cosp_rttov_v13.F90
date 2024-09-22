@@ -641,12 +641,8 @@ contains
             if (Ldo_ch4) inst_profiles(j)%ch4(:)        = inst_ch4_mr
             if (Ldo_so2) inst_profiles(j)%so2(:)        = inst_so2_mr
             ! if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
-            if (Ldo_o3)  then ! no O3 user input set up 
-                if (inst_extend_atmos) then ! CAM sets the top layer O3 to a linear interpolation between the highest layer and zero O3 at 50 Pa. (see rrtmg_state.F90)
-                    call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),50._wp,rttovIN%p(i,1),0.0_wp,rttovIN%o3(i,1),inst_profiles(j)%o3(modeltop_index))
-                else
-                    call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(modeltop_index))
-                end if                
+            if (Ldo_o3)  then ! no O3 user input set up
+                call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(modeltop_index))
                 call interpolate_logp(100*inst_profiles(j)%p(inst_profiles(j)%nlevels),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%o3(i,rttovIN%nlevels-1),rttovIN%o3(i,rttovIN%nlevels),inst_profiles(j)%o3(inst_profiles(j)%nlevels))
                 do k=modeltop_index+1,inst_profiles(j)%nlevels-1 
                     kk = k + 1 - modeltop_index
@@ -705,27 +701,37 @@ contains
           end if
 
           ! If adding CAM-like model top layer, copy temperature and trace gas values to the new top level. 
-          if (inst_extend_atmos==1) then
+          if (inst_extend_atmos==1) then ! Replicate RRTMG-LW operations in CAM6
               inst_profiles(j)%t(1)    = inst_profiles(j)%t(modeltop_index)
+              inst_profiles(j)%t(inst_profiles(j)%nlevels) = rttovIN%t_skin(i) ! RRTMG sets the lowest atmospheric temperature equal to the surface skin temperature
               inst_profiles(j)%q(1)    = inst_profiles(j)%q(modeltop_index)
               if (Ldo_co2) inst_profiles(j)%co2(1)  = inst_profiles(j)%co2(modeltop_index)
               if (Ldo_n2o) inst_profiles(j)%n2o(1)  = inst_profiles(j)%n2o(modeltop_index)
               if (Ldo_co)  inst_profiles(j)%co(1)   = inst_profiles(j)%co(modeltop_index)
               if (Ldo_ch4) inst_profiles(j)%ch4(1)  = inst_profiles(j)%ch4(modeltop_index)
               if (Ldo_so2) inst_profiles(j)%so2(1)  = inst_profiles(j)%so2(modeltop_index)
-              if (Ldo_o3)  inst_profiles(j)%o3(1)   = inst_profiles(j)%o3(modeltop_index)
+              if (Ldo_o3)  inst_profiles(j)%o3(1)   = 0.0
+              ! CAM sets the top layer O3 to a linear interpolation between the highest layer and zero O3 at 50 Pa. So the top interface should just be zero then (see rrtmg_state.F90)
+            !   if (Ldo_o3) call interpolate_logp(100*inst_profiles(j)%p(1),50._wp,rttovIN%p(i,1),0.0_wp,rttovIN%o3(i,1),inst_profiles(j)%o3(1))
           end if
           
-          ! q coefficient limit is 0.1e-10 for MMRs over moist air
+          ! q and o3 coefficient limit is 0.1e-10 for MMRs over moist air
           if (inst_profiles(j)%gas_units .eq. 1) then
             where(inst_profiles(j)%q(:) < 0.1e-10)
                 inst_profiles(j)%q(:) = 0.11e-10
+            end where
+            where(inst_profiles(j)%o3(:) < 0.1e-10)
+                inst_profiles(j)%o3(:) = 0.11e-10
             end where
           end if
 
           ! 2m parameters
           inst_profiles(j)%s2m%p      =  rttovIN%p_surf(i) * 1e-2 ! convert Pa to hPa
-          inst_profiles(j)%s2m%t      =  rttovIN%t2m(i)
+          if (inst_extend_atmos==1) then
+              inst_profiles(j)%s2m%t      =  rttovIN%t_skin(i)
+          else
+              inst_profiles(j)%s2m%t      =  rttovIN%t2m(i)
+          end if
           inst_profiles(j)%s2m%q      =  rttovIN%q2m(i) ! Should be the same as gas units (kg/kg)
           inst_profiles(j)%s2m%u      =  rttovIN%u_surf(i)
           inst_profiles(j)%s2m%v      =  rttovIN%v_surf(i)
@@ -784,16 +790,30 @@ contains
           !inst_profiles(j) %ish         = 0. ! Depreciated?
 
           ! Correct units if dry mass mixing ratios in ppmv were supplied
+          !   Units for gas abundances: (must be the same for all profiles)
+          !   2 => ppmv over moist air
+          !   1=> kg/kg over moist air (default)
+          !   0 (or less) => ppmv over dry air
+          ! JKS added 3 => kg/kg over dry air, which requires conversion.
           if (inst_gas_units .eq. 3) then
-            inst_profiles(j)%s2m%q     = inst_profiles(j)%s2m%q * mdry / mH2O * 1.e6
-            inst_profiles(j)%q(:)      = inst_profiles(j)%q(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * mdry / mH2O * 1.e6
-            inst_profiles(j)%gas_units  =  0 ! ppmv over dry air
+            ! Convert to ppmv over dry air
+            inst_profiles(j)%s2m%q     = (inst_profiles(j)%s2m%q / (1.0 - inst_profiles(j)%s2m%q)) * mdry / mH2O * 1.e6
+            inst_profiles(j)%q(:)      = (inst_profiles(j)%q(:) / (1.0 - inst_profiles(j)%q(:))) * mdry / mH2O * 1.e6
+            inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * mdry / mO3 * 1.e6
+            inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * mdry / mCO2 * 1.e6
+            inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * mdry / mCH4 * 1.e6
+            inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * mdry / mN2O * 1.e6
+            inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * mdry / mCO * 1.e6
+            inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * mdry / mSO2 * 1.e6
+            inst_profiles(j)%gas_units  =  0
+            ! Alternately, convert kg/kg/ over dry air to kg/kg over moist air
+            ! inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * (1.0 - inst_profiles(j)%q(:))
+            ! inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * (1.0 - inst_profiles(j)%q(:))
+            ! inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * (1.0 - inst_profiles(j)%q(:))
+            ! inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * (1.0 - inst_profiles(j)%q(:))
+            ! inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * (1.0 - inst_profiles(j)%q(:))
+            ! inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * (1.0 - inst_profiles(j)%q(:))
+            ! inst_profiles(j)%gas_units  =  1
           else
             inst_profiles(j)%gas_units  =  inst_gas_units
           end if
@@ -897,6 +917,19 @@ contains
 !        print*,'inst_profiles(:))%azangle:        ',inst_profiles(:)%azangle      
 !      end if
     end if
+
+    ! if (verbose) then ! JKS remove at some point
+    !     print*,"inst_profiles(1)%gas_units: ",inst_profiles(1)%gas_units
+    !     print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
+    !     print*,"inst_profiles(1)%s2m%t:    ",inst_profiles(1)%s2m%t
+    !     print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
+    !     print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
+    !     print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
+    !     print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
+    !     print*,'inst_profiles(1)%ch4(:):     ',inst_profiles(1)%ch4(:)
+    !     print*,'inst_profiles(1)%o3(:):     ',inst_profiles(1)%o3(:)
+    !     print*,'inst_profiles(1)%n2o(:):    ',inst_profiles(1)%n2o(:)
+    ! end if
 
     ! if (verbose) then
         ! print*,'inst_profiles(1)%nlevels:  ',inst_profiles(1)%nlevels
