@@ -525,28 +525,31 @@ contains
   ! Largely from cosp_rttov_v11.F90 file.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  subroutine cosp_rttov_construct_profiles(rttovIN,        &
-                                           inst_profiles,  &
-                                           Lrttov_cld,     &
-                                           Lrttov_aer,     &
-                                           Lrttov_solar,   &
-                                           Luser_tracegas, &
-                                           Ldo_co2,        &
-                                           Ldo_ch4,        &
-                                           Ldo_co,         &
-                                           Ldo_n2o,        &
-                                           Ldo_so2,        &
-                                           Ldo_o3,         &
-                                           inst_co2_mr,    &
-                                           inst_ch4_mr,    &
-                                           inst_co_mr,     &
-                                           inst_n2o_mr,    &
-                                           inst_so2_mr,    &
-                                           inst_zenang,    &
-                                           inst_nprof,     &
-                                           inst_swath_mask,&
-                                           inst_gas_units, &
-                                           inst_extend_atmos,&
+  subroutine cosp_rttov_construct_profiles(rttovIN,            &
+                                           inst_profiles,      &
+                                           Lrttov_cld,         &
+                                           Lrttov_aer,         &
+                                           Lrttov_solar,       &
+                                           Luser_tracegas,     &
+                                           Ldo_co2,            &
+                                           Ldo_ch4,            &
+                                           Ldo_co,             &
+                                           Ldo_n2o,            &
+                                           Ldo_so2,            &
+                                           Ldo_o3,             &
+                                           inst_co2_mr,        &
+                                           inst_ch4_mr,        &
+                                           inst_co_mr,         &
+                                           inst_n2o_mr,        &
+                                           inst_so2_mr,        &
+                                           inst_zenang,        &
+                                           inst_nprof,         &
+                                           inst_swath_mask,    &
+                                           inst_gas_units,     &
+                                           inst_clw_scheme,    &
+                                           inst_ice_scheme,    &
+                                           inst_icede_param,   &
+                                           inst_extend_atmos,  &
                                            debug)
 
     type(rttov_in),intent(in) :: &
@@ -574,6 +577,9 @@ contains
     integer(kind=jpim),intent(in) :: &
         inst_nprof,       &
         inst_gas_units,   &
+        inst_clw_scheme,  &
+        inst_ice_scheme,  &
+        inst_icede_param, &
         inst_extend_atmos
     logical(kind=jplm),dimension(rttovIN % nPoints),intent(in) :: &
         inst_swath_mask
@@ -833,10 +839,18 @@ contains
       ! Set cloud mass mixing ratio units
       inst_profiles(:)%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)
 
-      inst_profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types but requires an effective diameter value
-    !    inst_profiles(:)%clwde_scheme = 1. ! Scheme for cloud liquid water cotent to effective diameter. User guide says do not change.
-      inst_profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
-      inst_profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
+      ! See RTTOV documentation page 75 for details.
+      inst_profiles(:)%clw_scheme   = inst_clw_scheme ! 1: OPAC 2: Deff
+      inst_profiles(:)%ice_scheme   = inst_ice_scheme ! 1:Baum 2:Baran(2014) 3:Baran(2018)
+      if (inst_icede_param .eq. 0) then ! Need a filler even if icede is suppled
+        inst_profiles(:)%icede_param = 2
+      else ! Only use the model diameters if icede_param supplied on [1:4]
+        inst_profiles(:)%icede_param = inst_icede_param ! 1: Ou and Liou, 2: Wyser(recommended), 3: Boudala, 4: McFarquhar. Only used if ice effective diameter not input
+      end if
+    !   inst_profiles(:)%clw_scheme   = 2 ! Deff scheme avoids cloud types but requires an effective diameter value
+    ! !    inst_profiles(:)%clwde_scheme = 1. ! Scheme for cloud liquid water cotent to effective diameter. User guide says do not change.
+    !   inst_profiles(:)%ice_scheme   = 1 !1:Baum 2:Baran(2014) 3:Baran(2018)
+    !   inst_profiles(:)%icede_param  = 2 ! 2:Wyser(recommended). Only used if ice effective diameter not input
         
       j = 0 ! Initialize input
       do i = 1,rttovIN%nPoints
@@ -850,7 +864,9 @@ contains
             inst_profiles(j)%cloud(6,modeltop_index:inst_profiles(j)%nlayers) = rttovIN%cldIce(i,:) ! Cloud ice mixing ratio (1 type). See pg 74.
 
             inst_profiles(j)%clwde(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%DeffLiq(i,:) ! Cloud water effective diameter (um)
-            inst_profiles(j)%icede(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter (um)
+            if (inst_icede_param .eq. 0) then ! Only use the model diameters if icede_param supplied
+                inst_profiles(j)%icede(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%DeffIce(i,:) ! Cloud ice effective diameter (um)
+            end if
 
         ! Example UKMO input has effective radii for multiple cloud types, making identification of a single
         ! liquid droplet or ice crystal effective diameter difficult.
