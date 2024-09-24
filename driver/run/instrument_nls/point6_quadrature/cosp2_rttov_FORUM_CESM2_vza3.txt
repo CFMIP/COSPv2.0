@@ -75,6 +75,10 @@
   rttov_Nlocaltime=0,            	! Number of local times to sample at
   rttov_localtime=1,0,     	! Local times to sample at in hrs [0,24]
   rttov_localtime_width=1550,0,  ! Swath width (km)
+  ! ---------------------- How to parameterize the optical properties of cloud ice and cloud liquid (see RTTOV user manual pg 75)
+  rttov_clw_scheme=2,   ! Should be 2 if model supplies effective radius and not cloud type.
+  rttov_ice_scheme=1,   ! 1 uses effective radii values if rttov_icede_param=0, 2 and 3 ignore icede entirely.
+  rttov_icede_param=4,  ! 0 if icede should be used from model, if ice_scheme = 1 then 1-4 are different options for computing icede separately.
   ! ---------------------- How to handle atmosphere between the top of supplied values and the RTTOV instrument.  
   rttov_extendatmos=1,    ! 0: Atmosphere ends at the top of supplied values. 1: CAM-like additional interfaces at 1e-4 Pa and 2.25 Pa.    
 /

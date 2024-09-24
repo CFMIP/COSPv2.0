@@ -309,8 +309,8 @@ CONTAINS
     user_tracegas_input   = .false.
     rttov_Nlocaltime      = 0       ! Default: zero swath masking
     rttov_gas_units       = 1       ! Default: kg/kg over moist air (should be updated by user!)
-    rttov_clw_scheme      = 1       ! 1: OPAC, 2: Deff
-    rttov_ice_scheme      = 1       ! 0: Ice radii used, 1: Baum, 2: Baran (2014), 3: Baran (2018)
+    rttov_clw_scheme      = 2       ! 1: OPAC, 2: Deff
+    rttov_ice_scheme      = 1       ! 1: Baum, 2: Baran (2014), 3: Baran (2018)
     rttov_icede_param     = 0       ! 0: Indicates that Deff is supplied but is rejected by RTTOV. 1: Ou and Liou, 2: Wyser(recommended), 3: Boudala, 4: McFarquhar.
     rttov_extendatmos     = 0       ! 0: do not extend above supplied pressure levels. 1: Simply top layer. 2: Not yet implemented.
     

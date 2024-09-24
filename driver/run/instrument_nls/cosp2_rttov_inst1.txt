@@ -76,4 +76,10 @@
   rttov_ZenAng=0.0,               ! Satellite Zenith Angle 
   ! Set local time sampling with swath widths
   rttov_Nlocaltime=0,                ! Number of local times to sample at
+  ! ---------------------- How to parameterize the optical properties of cloud ice and cloud liquid (see RTTOV user manual pg 75)
+  rttov_clw_scheme=2,
+  rttov_ice_scheme=2,
+  rttov_icede_param=2,
+  ! ---------------------- How to handle atmosphere between the top of supplied values and the RTTOV instrument.  
+  rttov_extendatmos=1,    ! 0: Atmosphere ends at the top of supplied values. 1: CAM-like additional interfaces at 1e-4 Pa and 2.25 Pa.
 /
