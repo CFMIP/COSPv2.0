@@ -302,7 +302,6 @@ contains
     !---- Local variables ----!
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch, nlevels_rttov
-
     logical :: verbose = .false.
     
     if (present(debug)) verbose = debug
@@ -606,7 +605,12 @@ contains
       if (i .gt. rttovIN%nPoints) exit  
       if (inst_swath_mask(i)) then ! only added masked columns to profiles
           j = j + 1 ! Increment first
-
+          ! Ensure j is within bounds
+          if (j > size(inst_profiles)) then
+              call rttov_error('Profile index out of bounds in main loop', lalloc = .false.)
+              if (verbose) print*,"Went too far for inst_profiles in main loop"
+              exit
+          end if
           ! To imitate CAM6-RRTMG, set a model top index. If inst_extend_atmos==1 then just increment that index by one and retroactively apply it to the top layer.
           ! This will be the same index that the vertical interpolation operates over so it will fix that too!
 
@@ -615,7 +619,7 @@ contains
               inst_profiles(j)%p(:) =  rttovIN%ph(i, :) * 1e-2 ! convert Pa to hPa. Pressure on levels.
               if (inst_profiles(j)%p(1) .le. 0) inst_profiles(j)%p(1) = 2.25 ! If the model top is set to zero (like the COSPv2 driver and CAM6) make it 2.25mb. CAM-like correction
               modeltop_index = 1
-          else if (inst_extend_atmos==1) then 
+          else if (inst_extend_atmos == 1) then 
               modeltop_index = 2
               inst_profiles(j)%p(1) = 1e-4
               inst_profiles(j)%p(2) = 2.25
@@ -824,9 +828,6 @@ contains
 
       end if 
     end do
-
-    ! JKS - nothing to check here, this will never trigger.
-    call rttov_error('error in profile initialization' , lalloc = .false.)
         
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the cloud fields if simulating cloud.
@@ -855,7 +856,11 @@ contains
         if (i .gt. rttovIN%nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
             j = j + 1 ! Increment profile counter      
-            
+            if (j > size(inst_profiles)) then
+                call rttov_error('Profile index out of bounds in Lrttov_cld loop', lalloc = .false.)
+                if (verbose) print*,"Went too far for inst_profiles in Lrttov_cld loop"
+                exit
+            end if
             ! Cloud scheme stuff. Values are on layers, not levels like the gas concentrations.
             inst_profiles(j)%cfrac(modeltop_index:inst_profiles(j)%nlayers)   = rttovIN%tca(i,:)    ! Cloud fraction for each layer       
             inst_profiles(j)%cloud(1,modeltop_index:inst_profiles(j)%nlayers) = rttovIN%cldLiq(i,:) ! Cloud water mixing ratio (all in the first type for Deff)
@@ -882,10 +887,6 @@ contains
         end if
       end do
     end if
-        
-    ! JKS - nothing to check here, this will never trigger.
-    call rttov_error('error in cloud profile initialization' , lalloc = .false.)
-    
     
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the aerosol fields if simulating aerosol.
@@ -914,7 +915,13 @@ contains
       do i = 1,rttovIN%nPoints
         if (i .gt. rttovIN%nPoints) exit
         if (inst_swath_mask(i)) then ! only added masked columns to profiles
-            j = j + 1 ! Increment profile counter   
+            j = j + 1 ! Increment profile counter
+            ! Ensure j is within bounds
+            if (j > size(inst_profiles)) then
+                call rttov_error('Profile index out of bounds in Lrttov_solar loop', lalloc = .false.)
+                if (verbose) print*,"Went too far for inst_profiles in Lrttov_solar loop"
+                exit
+            end if
             inst_profiles(j)%date(:) = rttovIN%rttov_date(i,:)
             inst_profiles(j)%time(:) = rttovIN%rttov_time(i,:)
         end if
@@ -973,7 +980,7 @@ contains
     ! end if    
     
     ! JKS - nothing to check here, this will never trigger.
-    call rttov_error('error in aerosol profile initialization' , lalloc = .true.)
+    ! call rttov_error('error in aerosol profile initialization' , lalloc = .true.)
     
     ! JKS To-do: set up scattering profiles (MW only) (rttov_profile_cloud)
 
@@ -1107,7 +1114,6 @@ contains
         print*,'shape(inst_chanprof%prof):      ',shape(inst_chanprof%prof)
         print*,'shape(inst_chanprof%chan):      ',shape(inst_chanprof%chan)
         print*,'shape(inst_profiles):           ',shape(inst_profiles)
-!    print*,'shape(inst_profiles(:)%q):         ',shape(inst_profiles(:)%q)
     end if
 
 !    print*,'NTHRDS tests'
@@ -1269,7 +1275,6 @@ contains
     integer :: i, j
 
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
-    
     ! Only save output if appropriate
     if (count(inst_swath_mask) .eq. nPoints) then ! No swathing, save all output
         if (Lrttov_bt) then
