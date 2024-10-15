@@ -364,6 +364,7 @@ CONTAINS
     endif
     
     ! Set swath arrays correctly.
+    ! if (verbose) print*,"allocating rttov_config%rttov_localtime and rttov_config%rttov_localtime_width"
     allocate(rttov_config%rttov_localtime(rttov_Nlocaltime),rttov_config%rttov_localtime_width(rttov_Nlocaltime))
     rttov_config%rttov_Nlocaltime         = rttov_Nlocaltime
     rttov_config%rttov_localtime(:)       = rttov_localtime(1:rttov_Nlocaltime)
@@ -737,6 +738,7 @@ CONTAINS
                           rttovConfig % rttov_localtime_width,    &
                           rttovConfig % swath_mask,               &
                           debug)
+    ! rttovConfig % swath_mask(:) = .true. ! JKS - for now, just set everything to true
     rttovConfig % nprof = count(rttovConfig % swath_mask)    
 
     if (rttovConfig % nprof .gt. 0) then ! Skip calculations if all values are swathed out
@@ -872,7 +874,7 @@ CONTAINS
     end if
     call cpu_time(driver_time(4))
     
-    !if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
+    ! if (verbose) print*,'Beginning "cosp_rttov_call_direct".'
     call cosp_rttov_call_direct(rttovConfig % rttov_direct_nthreads,  &
                                 rttovConfig % opts,                   &
                                 profiles,                             &

@@ -303,7 +303,6 @@ contains
     ! Loop variables
     integer(kind=jpim) :: j, jch, nch, nlevels_rttov
 
-        
     logical :: verbose = .false.
     
     if (present(debug)) verbose = debug
@@ -445,7 +444,6 @@ contains
     nullify(inst_predictindex)
     call rttov_get_pc_predictindex(errorstatus, inst_opts, inst_predictindex, file_pccoef=inst_PC_coef_filepath)
     call rttov_error('rttov_get_pc_predictindex fatal error' , lalloc = .false.)
-
 
     ! Determine the total number of radiances to simulate (nchanprof).
     inst_npred_pc  = SIZE(inst_predictindex)
