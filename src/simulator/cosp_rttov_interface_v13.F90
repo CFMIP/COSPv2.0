@@ -62,16 +62,15 @@ MODULE MOD_COSP_RTTOV_INTERFACE
                               
   IMPLICIT NONE
 
-#include "rttov_scatt.interface"
-#include "rttov_parallel_scatt.interface"
-#include "rttov_read_scattcoeffs.interface"
-#include "rttov_dealloc_scattcoeffs.interface"
-#include "rttov_scatt_setupindex.interface"
+! #include "rttov_scatt.interface"
+! #include "rttov_parallel_scatt.interface"
+! #include "rttov_read_scattcoeffs.interface"
+! #include "rttov_dealloc_scattcoeffs.interface"
+! #include "rttov_scatt_setupindex.interface"
 
 #include "rttov_read_coefs.interface"
 #include "rttov_user_options_checkinput.interface"
 #include "rttov_print_opts.interface"
-#include "rttov_get_pc_predictindex.interface"
   
   ! RTTOV variables/structures.
   !====================
@@ -654,6 +653,7 @@ CONTAINS
         print*,'rttov_config % clw_scheme:              ',rttov_config % clw_scheme
         print*,'rttov_config % ice_scheme:              ',rttov_config % ice_scheme
         print*,'rttov_config % icede_param:             ',rttov_config % icede_param
+        call rttov_print_opts(rttov_config % opts) ! JKS testing
     end if     
         
     ! subsub routines
@@ -885,7 +885,8 @@ CONTAINS
                                 calcemis,                             &
                                 emissivity,                           &
                                 calcrefl,                             &
-                                reflectance)                                    
+                                reflectance,                          &
+                                verbose)                                    
     
     call cpu_time(driver_time(5))
     
