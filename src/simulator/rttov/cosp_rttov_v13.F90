@@ -81,11 +81,11 @@ module mod_cosp_rttov
 !#include "rttov_dealloc_coef_pccomp.interface"
 
 ! Includes when directly inputting cloud optical parameters
-#include "rttov_init_opt_param.interface"
-#include "rttov_bpr_init.interface"
-#include "rttov_bpr_calc.interface"
-#include "rttov_bpr_dealloc.interface"
-#include "rttov_legcoef_calc.interface"
+! #include "rttov_init_opt_param.interface"
+! #include "rttov_bpr_init.interface"
+! #include "rttov_bpr_calc.interface"
+! #include "rttov_bpr_dealloc.interface"
+! #include "rttov_legcoef_calc.interface"
 #include "rttov_calc_solar_angles.interface"
        
   ! Scattering coefficients (read in once during initialization)
@@ -616,7 +616,7 @@ contains
 
           ! top layer thickness
           if (inst_extend_atmos == 0) then
-              inst_profiles(j)%p(:) =  rttovIN%ph(i, :) * 1e-2 ! convert Pa to hPa. Pressure on levels.
+              inst_profiles(j)%p(1:inst_profiles(j)%nlevels) =  rttovIN%ph(i, :) * 1e-2 ! convert Pa to hPa. Pressure on levels.
               if (inst_profiles(j)%p(1) .le. 0) inst_profiles(j)%p(1) = 2.25 ! If the model top is set to zero (like the COSPv2 driver and CAM6) make it 2.25mb. CAM-like correction
               modeltop_index = 1
           else if (inst_extend_atmos == 1) then 
@@ -643,12 +643,12 @@ contains
           ! Trace gas concentrations on levels (not layers!)
           ! Initialize trace gas concentrations from user input.
           if (Luser_tracegas) then
-            if (Ldo_co2) inst_profiles(j)%co2(:)        = inst_co2_mr
-            if (Ldo_n2o) inst_profiles(j)%n2o(:)        = inst_n2o_mr
-            if (Ldo_co)  inst_profiles(j)%co(:)         = inst_co_mr
-            if (Ldo_ch4) inst_profiles(j)%ch4(:)        = inst_ch4_mr
-            if (Ldo_so2) inst_profiles(j)%so2(:)        = inst_so2_mr
-            ! if (Ldo_o3)  inst_profiles(j)%o3(:)         = rttovIN%o3(i, :)
+            if (Ldo_co2) inst_profiles(j)%co2(1:inst_profiles(j)%nlevels)        = inst_co2_mr
+            if (Ldo_n2o) inst_profiles(j)%n2o(1:inst_profiles(j)%nlevels)        = inst_n2o_mr
+            if (Ldo_co)  inst_profiles(j)%co(1:inst_profiles(j)%nlevels)         = inst_co_mr
+            if (Ldo_ch4) inst_profiles(j)%ch4(1:inst_profiles(j)%nlevels)        = inst_ch4_mr
+            if (Ldo_so2) inst_profiles(j)%so2(1:inst_profiles(j)%nlevels)        = inst_so2_mr
+            ! if (Ldo_o3)  inst_profiles(j)%o3(1:inst_profiles(j)%nlevels)         = rttovIN%o3(i, :)
             if (Ldo_o3)  then ! no O3 user input set up
                 call interpolate_logp(100*inst_profiles(j)%p(modeltop_index),rttovIN%p(i,1),rttovIN%p(i,2),rttovIN%o3(i,1),rttovIN%o3(i,2),inst_profiles(j)%o3(modeltop_index))
                 call interpolate_logp(100*inst_profiles(j)%p(inst_profiles(j)%nlevels),rttovIN%p(i,rttovIN%nlevels-1),rttovIN%p(i,rttovIN%nlevels),rttovIN%o3(i,rttovIN%nlevels-1),rttovIN%o3(i,rttovIN%nlevels),inst_profiles(j)%o3(inst_profiles(j)%nlevels))
@@ -828,7 +828,7 @@ contains
 
       end if 
     end do
-        
+
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! Only add the cloud fields if simulating cloud.
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1114,6 +1114,10 @@ contains
         print*,'shape(inst_chanprof%prof):      ',shape(inst_chanprof%prof)
         print*,'shape(inst_chanprof%chan):      ',shape(inst_chanprof%chan)
         print*,'shape(inst_profiles):           ',shape(inst_profiles)
+        print*,'inst_profiles(1)'
+        call rttov_print_profile(inst_profiles(1))
+        print*,'inst_profiles(size(inst_profiles))'
+        call rttov_print_profile(inst_profiles(size(inst_profiles)))
     end if
 
 !    print*,'NTHRDS tests'
@@ -1305,7 +1309,8 @@ contains
             refl_clear(1:nPoints, 1:inst_nchan_out) = &
                 transpose(reshape(inst_radiance%refl_clear(1:inst_nchan_out * nPoints), (/ inst_nchan_out, nPoints/) ))
         end if
-    else ! If swathing is occurring, assign the outputs appropriately
+    else ! If swathing is occurring, assign the outputs appropriately. 
+        ! The radiance structure has shape nchanprof and the outputs have shape (nPoints, inst_nchan_out)
         j = 0
         do i=1,nPoints
         !   if (i .gt. nPoints) exit
