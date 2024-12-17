@@ -270,7 +270,7 @@ contains
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
-    type(rttov_profile),pointer,intent(out) :: &
+    type(rttov_profile),allocatable,target,intent(out) :: &
         inst_profiles(:)  
     integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
         inst_iChannel
@@ -343,7 +343,8 @@ contains
         calcrefl=inst_calcrefl,       &
         reflectance=inst_reflectance, &
         init=.TRUE._jplm)
-    call rttov_error('allocation error for rttov_direct structures' , lalloc = .false.)
+    call rttov_error('error for rttov_alloc_direct structures' , lalloc = .false.)
+    call rttov_error('allocation error for rttov_alloc_direct structures' , lalloc = .true.)
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 4. Build the list of profile/channel indices in chanprof
@@ -386,7 +387,7 @@ contains
         inst_coefs        
     type(rttov_options),intent(inout) :: &
         inst_opts
-    type(rttov_profile),pointer,intent(out) :: &
+    type(rttov_profile),allocatable,target,intent(out) :: &
         inst_profiles(:)        
     integer(kind=jpim),intent(inout) :: &
         inst_nchannels_rec
@@ -497,6 +498,7 @@ contains
           nchannels_rec=inst_nchannels_rec * inst_nprof, &
           pccomp=inst_pccomp,                            &
           init=.TRUE._jplm)
+    call rttov_error('error for rttov_direct structures (PC-RTTOV)' , lalloc = .false.)
     call rttov_error('allocation error for rttov_direct structures (PC-RTTOV)' , lalloc = .true.)
 
     ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -551,7 +553,7 @@ contains
 
     type(rttov_in),intent(in) :: &
         rttovIN
-    type(rttov_profile),pointer,intent(inout) :: &    
+    type(rttov_profile),allocatable,target,intent(inout) :: &    
         inst_profiles(:)
     logical,intent(in)        :: &
         Lrttov_cld,       &
@@ -1084,7 +1086,7 @@ contains
         inst_nthreads
     type(rttov_options),intent(in)  :: &
         inst_opts
-    type(rttov_profile),pointer,intent(in) :: &
+    type(rttov_profile),allocatable,target,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)    :: &
         inst_coefs
@@ -1154,7 +1156,8 @@ contains
               reflectance = inst_reflectance,&! inout input/output BRDFs per channel
               nthreads    = inst_nthreads)    ! in    number of threads to use
     endif
-    call rttov_error('rttov_direct error', lalloc = .true.)
+    call rttov_error('rttov_direct error', lalloc = .false.)
+    call rttov_error('rttov_direct allocation error', lalloc = .true.)
   
   end subroutine cosp_rttov_call_direct
   
@@ -1182,7 +1185,7 @@ contains
         inst_nthreads
     type(rttov_options),intent(in) :: &
         inst_opts
-    type(rttov_profile),pointer,intent(in) :: &
+    type(rttov_profile),allocatable,target,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
@@ -1239,7 +1242,9 @@ contains
               channels_rec = inst_channels_rec,&! in    reconstructed channel list
               nthreads     = inst_nthreads)     ! in    number of threads to use
     endif
-    call rttov_error('rttov_direct error (PC-RTTOV)', lalloc = .true.)
+    call rttov_error('rttov_direct error (PC-RTTOV)', lalloc = .false.)
+    call rttov_error('rttov_direct allocation error (PC-RTTOV)', lalloc = .true.)
+
   end subroutine cosp_pc_rttov_call_direct
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1446,7 +1451,7 @@ contains
         nLevels
     type(rttov_options),intent(in) :: &
         inst_opts
-    type(rttov_profile),pointer,intent(in) :: &
+    type(rttov_profile),allocatable,target,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
@@ -1483,6 +1488,7 @@ contains
         emissivity=inst_emissivity,   &
         calcrefl=inst_calcrefl,       &
         reflectance=inst_reflectance)
+    call rttov_error('error for rttov_direct structures', lalloc = .false.)
     call rttov_error('deallocation error for rttov_direct structures', lalloc = .true.)
 
   end subroutine cosp_rttov_deallocate_profiles
@@ -1515,7 +1521,7 @@ contains
         inst_nChannels_rec
     type(rttov_options),intent(in) :: &
         inst_opts
-    type(rttov_profile),pointer,intent(in) :: &
+    type(rttov_profile),allocatable,target,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
