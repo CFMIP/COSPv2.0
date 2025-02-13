@@ -139,7 +139,7 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter,dimension(nReffLiq+1) :: &
          reffLIQ_binBounds = (/4.0e-6, 8e-6, 1.0e-5, 1.25e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
     real(wp),parameter,dimension(nReffIce+1) :: &
-         reffICE_binBounds = (/5.0e-6, 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 5.0e-5, 6.0e-5/, 9.0e-5)
+         reffICE_binBounds = (/5.0e-6, 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 5.0e-5, 6.0e-5/, 1.0e-2)
     real(wp),parameter,dimension(2,nReffICE) :: &
          reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
                                     l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
