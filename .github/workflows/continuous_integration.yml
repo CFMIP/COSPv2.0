@@ -170,13 +170,16 @@ jobs:
     - name: Produce plots and create tarball
       if: failure()
       run: |
-        cd driver/data/outputs/UKMO
+        cd driver
+        DRIVER_DIR=$PWD
+        echo $PWD
+        cd data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
           cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
           cosp2_output.um_global.out
         ls -lh
         TST_MLEV=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
-        cd ~/driver
+        cd $DRIVER_DIR
         if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           python plot_test_outputs.py
         fi
