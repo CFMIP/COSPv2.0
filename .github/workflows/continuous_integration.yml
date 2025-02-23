@@ -170,19 +170,19 @@ jobs:
     - name: Produce plots and create tarball
       if: failure()
       run: |
+        cd data/outputs/UKMO
+        tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
+          cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
+          cosp2_output.um_global.out
+        ls -lh
         TST_MLEV=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
-        cd driver
+        cd ~/driver
         if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
           python plot_test_outputs.py
         fi
         if [[ -e data/outputs/UKMO/cosp2_output.um_global_model_levels.nc ]]; then
           python plot_test_outputs.py --tst_file=$TST_MLEV
         fi
-        cd data/outputs/UKMO
-        tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
-          cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
-          cosp2_output.um_global.out
-        ls -lh
     ###############################################################################
     # Make output files available if any test fails
     ###############################################################################
