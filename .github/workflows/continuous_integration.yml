@@ -170,7 +170,7 @@ jobs:
     - name: Produce plots and create tarball
       if: failure()
       run: |
-        cd data/outputs/UKMO
+        cd driver/data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
           cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
           cosp2_output.um_global.out
