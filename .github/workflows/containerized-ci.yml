@@ -84,6 +84,7 @@ jobs:
         cd ${GITHUB_WORKSPACE}
         OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.$F90.kgo.$KGO_VERSION.nc.gz
         curl -sSfL -o $OUTPATH $GDKGO1
+        ls -l ${OUTPATH}
         gunzip ${OUTPATH}
         cd driver/data/outputs/UKMO
         # md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
