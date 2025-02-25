@@ -186,7 +186,7 @@ if __name__ == '__main__':
         kgo = read_var(args.kgo_file, vname) # KGO
         tst = read_var(args.tst_file, vname) # test
         summary_stats[vname] = calculate_stats(tst, kgo, 
-                                    atol=args.atol, rtol=args.rtol)
+                                               atol=args.atol, rtol=args.rtol)
         if summary_stats[vname]['N'] > 0: errored = True
 
     # Print summary stats
