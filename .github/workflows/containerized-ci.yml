@@ -131,15 +131,13 @@ jobs:
       if: failure()
       run: |
         cd driver
-        DRIVER_DIR=$PWD
+        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
+          python plot_test_outputs.py
+        fi
         cd data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
           cosp2_output_um.nc *.png cosp2_output*.${{ matrix.compiler }}.out
         ls -lh
-        cd $DRIVER_DIR
-        if [[ -e data/outputs/UKMO/cosp2_output.um_global.nc ]]; then
-          python plot_test_outputs.py
-        fi
     ###############################################################################
     # Make output files available if any test fails
     ###############################################################################
