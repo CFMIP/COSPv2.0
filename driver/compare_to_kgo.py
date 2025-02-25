@@ -70,7 +70,11 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
     """
     summary_stats = {'N':0, 'AvgDiff':0.0, 'MinDiff':0.0, 'MaxDiff':0.0, 'StDev':0.0}
     # All differences
-    d = tst - kgo
+    try:
+        d = tst - kgo
+    except:
+        print("Error: arrays have different shapes.")
+        d = kgo
     # Mask for differences larger than absolute tolerance
     maskAllDiff = (np.absolute(d) > atol)
     NallDiff = maskAllDiff.sum()
@@ -181,14 +185,8 @@ if __name__ == '__main__':
     for vname in vlst:
         kgo = read_var(args.kgo_file, vname) # KGO
         tst = read_var(args.tst_file, vname) # test
-        try:
-            summary_stats[vname] = calculate_stats(tst, kgo, 
-                                                atol=args.atol, rtol=args.rtol)
-        except:
-            summary_stats[vname].pop()
-            print(red_colour + "===== ERROR: could not compare variable "
-                  + vname + std_colour)
-            errored = True
+        summary_stats[vname] = calculate_stats(tst, kgo, 
+                                    atol=args.atol, rtol=args.rtol)
         if summary_stats[vname]['N'] > 0: errored = True
 
     # Print summary stats

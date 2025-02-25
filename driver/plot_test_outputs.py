@@ -194,7 +194,7 @@ def plot_pcolormesh(x, y, v, d, fig_name, title=None, coastlines=False):
         plt.xticks(d['xticks'],d['xticks_labels'])
     else:
         plt.xticks(d['xticks'])
-    if d['yticks_labels']:
+    if d['yticks_labels'] and len(d['yticks_labels']) == len(d['yticks']):
         plt.yticks(d['yticks'],d['yticks_labels'])
     else:
         plt.yticks(d['yticks'])
