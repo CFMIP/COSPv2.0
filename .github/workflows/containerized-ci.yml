@@ -117,6 +117,7 @@ jobs:
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
     # 2. UM global snapshot.
     - name: UM global against known good output (KGO)
+      if: always()
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
