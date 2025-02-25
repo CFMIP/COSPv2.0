@@ -190,7 +190,7 @@ def plot_pcolormesh(x, y, v, d, fig_name, title=None, coastlines=False):
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
         ax.coastlines()
     h = plt.pcolormesh(x, y, v, cmap=cmap, vmax=d['vmax'])
-    if d['xticks_labels']:
+    if d['xticks_labels'] and len(d['xticks_labels']) == len(d['xticks']):
         plt.xticks(d['xticks'],d['xticks_labels'])
     else:
         plt.xticks(d['xticks'])
