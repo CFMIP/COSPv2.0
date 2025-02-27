@@ -112,11 +112,11 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks = y
             ylabel = 'Cloud Top Height (m)'
         if vd['yaxis_type'] == 'REICE_MODIS':
-            yticks_labels =  ('5', '10', '20', '30', '40','50', '60', '10000')
+            yticks_labels =  ('0','5', '10', '20', '30', '40','50', '60', '10000')
             yticks = y
             ylabel = 'Ice particle size (micron)'
         if vd['yaxis_type'] == 'RELIQ_MODIS':
-            yticks_labels = ('4', '8', '10', '12.5', '15', '20', '30')
+            yticks_labels = ('0','4', '8', '10', '12.5', '15', '20', '30', '10000')
             yticks = y
             ylabel = 'Liquid particle size (micron)'
         if vd['yaxis_type'] == 'levStat':

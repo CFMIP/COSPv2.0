@@ -130,16 +130,15 @@ MODULE MOD_COSP_CONFIG
     ! Liquid and Ice particle bins for MODIS joint histogram of optical-depth and particle
     ! size
     ! Bin edges match Pincus et al. 2023 observational data (doi:10.5194/essd-15-2483-2023)
-    ! Additional ReffICE bin (60-90 microns) to capture clouds with CER > 60 microns 
-    ! simulated by GCMs
+    ! Additional Re bins to capture all simulated clouds
     integer :: i,j
     integer,parameter :: &
-         nReffLiq = 6, & ! Number of ReffLiq bins for tau/ReffLiq and LWP/ReffLiq joint-histogram
-         nReffIce = 7 ! Number of ReffIce bins for tau/ReffICE and IWP/ReffIce joint-histogram
+         nReffLiq = 8, & ! Number of ReffLiq bins for tau/ReffLiq and LWP/ReffLiq joint-histogram
+         nReffIce = 8 ! Number of ReffIce bins for tau/ReffICE and IWP/ReffIce joint-histogram
     real(wp),parameter,dimension(nReffLiq+1) :: &
-         reffLIQ_binBounds = (/4.0e-6, 8e-6, 1.0e-5, 1.25e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
+         reffLIQ_binBounds = (/0.0, 4.0e-6, 8e-6, 1.0e-5, 1.25e-5, 1.5e-5, 2.0e-5, 3.0e-5, 1.0e-2/)
     real(wp),parameter,dimension(nReffIce+1) :: &
-         reffICE_binBounds = (/5.0e-6, 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 5.0e-5, 6.0e-5, 1.0e-2/)
+         reffICE_binBounds = (/0.0,5.0e-6, 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 5.0e-5, 6.0e-5, 1.0e-2/)
     real(wp),parameter,dimension(2,nReffICE) :: &
          reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
                                     l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
