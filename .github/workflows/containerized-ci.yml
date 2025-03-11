@@ -12,20 +12,20 @@ jobs:
         # Flags and KGOs for Intel Fortran Compiler Classic
         - compiler: ifort
           fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
-          gdkgo1: https://docs.google.com/uc?export=download&id=1dva4lq4ZXciTiuOvGgA8OUJKihbGQ90K
-          gdkgo2: https://docs.google.com/uc?export=download&id=1ns0OtWU5jVnu1IEBfBN-tlTkq2PTrcvC
+          gdkgo1: https://docs.google.com/uc?export=download&id=1R6uvtWno-bhdgxACCwdcaRNXs9l5_G4w
+          gdkgo2: https://docs.google.com/uc?export=download&id=1bVU1_dx6hXcV_fHX2cLUn-D03T-Hij8z
         # Flags and KGOs for Intel Fortran Compiler
         - compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-          gdkgo1: https://docs.google.com/uc?export=download&id=1WzFsoqi0EZfsyyh203QXmUQTIh5tBm9b
-          gdkgo2: https://docs.google.com/uc?export=download&id=1ezYqG-jfZ6i9bRgKOWUyBiQlMhtncpKj
+          gdkgo1: https://docs.google.com/uc?export=download&id=1CLPJ1ikAcGBEiZ3WAGqL-zpaPIgC__po
+          gdkgo2: https://docs.google.com/uc?export=download&id=1JOrLFbt0BYgpD0h6A3tsoRD4iTJ4jDvZ
         # Set container images
         - compiler: ifort
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         - compiler: ifx
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         # Common variables
-        - kgo_version: v004
+        - kgo_version: v005
     defaults:
       run:
         shell: bash -el {0}
