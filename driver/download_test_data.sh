@@ -1,16 +1,11 @@
 #/bin/bash
 
-if [[ -n ${KGO_VERSION} ]] ; then
-    echo "KGO_VERSION=$KGO_VERSION"
-else
-    export KGO_VERSION=v003
-    echo "set KGO_VERSION=$KGO_VERSION"
-fi
+KGO_VERSION=v004
+echo "KGO_VERSION=$KGO_VERSION"
 
-
-kgo_links=( "https://docs.google.com/uc?export=download&id=1oQBJGFg0F8k-LhRGsCYn-qWzmMMVfQ6K" \
-            "https://docs.google.com/uc?export=download&id=1b7qwJWqDzoZGcIP0qyUprTV_LErCGpT6" \
-            "https://docs.google.com/uc?export=download&id=1NvTo3bYaGpz-FUpZ4jta_kRzA04xTCsn" )
+kgo_links=( "https://docs.google.com/uc?export=download&id=1kC9RViPBdAsGcOivpYXxs3hHJ11Kv8IN" \
+            "https://docs.google.com/uc?export=download&id=1X_oOzvY2lf-kyAR-D1E6JfuefkGg1idn" \
+            "https://docs.google.com/uc?export=download&id=1c14qBf9VwYJWYVGCu-Cw35F-qqHx0mSg" )
 
 out_type=( "cosp2_output_um.gfortran.kgo" \
            "cosp2_output.um_global.gfortran.kgo" \
@@ -25,16 +20,12 @@ gunzip -f ${OUTPATH}
 cd data/inputs/UKMO
 md5sum -c cosp_input.um_global.nc.md5
 
-if [[ ${KGO_VERSION} == "v002" ]] ; then
-  for i in ${!kgo_links[@]}; do
-    cd ${DRIVER_DIR}
-    GDFILE=${kgo_links[$i]}
-    OUTPATH=data/outputs/UKMO/${out_type[$i]}.$KGO_VERSION.nc.gz
-    wget --no-check-certificate $GDFILE -O $OUTPATH
-    gunzip -f ${OUTPATH}
-    cd data/outputs/UKMO
-    md5sum -c ${out_type[$i]}.$KGO_VERSION.nc.md5
-  done
-else
-  echo "wrong KGO_VERSION supplied, try 'export KGO_VERSION=v002'"
-fi
+for i in ${!kgo_links[@]}; do
+  cd ${DRIVER_DIR}
+  GDFILE=${kgo_links[$i]}
+  OUTPATH=data/outputs/UKMO/${out_type[$i]}.$KGO_VERSION.nc.gz
+  wget --no-check-certificate $GDFILE -O $OUTPATH
+  gunzip -f ${OUTPATH}
+  cd data/outputs/UKMO
+  md5sum -c ${out_type[$i]}.$KGO_VERSION.nc.md5
+done
