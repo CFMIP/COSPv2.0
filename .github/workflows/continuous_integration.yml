@@ -33,11 +33,11 @@ jobs:
   # This workflow contains a single job called "ci_gfortran"
   ci_gfortran:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gfortran-10, gfortran-11, gfortran-12]
+        compiler: [gfortran-12]
         python-version: [3.11]
         include:
           - compiler_short_name: gfortran
