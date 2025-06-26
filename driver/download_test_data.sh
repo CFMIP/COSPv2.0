@@ -50,7 +50,7 @@ for i in ${!kgo_links[@]}; do
   cd ${DRIVER_DIR}
   GDFILE=${kgo_links[$i]}
   OUTPATH=data/outputs/UKMO/${out_type[$i]}.$KGO_VERSION.nc.gz
-  wget --no-check-certificate $GDFILE -O $OUTPATH
+  curl -sSfL -o $OUTPATH $GDFILE
   gunzip -f ${OUTPATH}
   cd data/outputs/UKMO
   md5sum -c ${out_type[$i]}.$KGO_VERSION.nc.md5
