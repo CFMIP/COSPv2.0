@@ -281,6 +281,7 @@ def produce_cosp_summary_plots(fname, variables, output_dir, Nlat_lon = None):
         fig_name = os.path.join(output_dir, ".".join([os.path.basename(fname), vname, 'png']))
         coastlines = False
         if vd['plot_type'] == 'map': coastlines = True
+        print(z[:,20])
         plot_pcolormesh(x, y, z, pkw, fig_name, title=title, coastlines=coastlines)
 
 def variable2D_metadata(var_list, fname):
@@ -363,6 +364,7 @@ if __name__ == '__main__':
                      'clcalipsoopacity','clgrLidar532','clatlid','clcalipso2',
                      'lidarBetaMol532gr','lidarBetaMol532','lidarBetaMol355']
     v2D_all_names = v2D_maps_names + v2D_hists_names + v2D_zcs_names
+    v2D_all_names = ['albisccp']
     # Plots for these variables are not yet developed
     # atb532_perp(lev, cosp_scol, loc);
     # atb532(lev, cosp_scol, loc);
