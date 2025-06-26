@@ -249,7 +249,7 @@ def read_var_to_masked_array(fname, vname, fill_value, Nlat_lon = None):
     print("type(xx):", type(xx))
     print("xx.dtype:", xx.dtype)
     print("type(fill_value):", type(fill_value))
-    x = np.ma.masked_equal(f_id.variables[vname][:], fill_value)
+    x = np.ma.masked_values(f_id.variables[vname][:], fill_value)
     lon = np.ma.masked_equal(f_id.variables['longitude'][:], fill_value)
     lat = np.ma.masked_equal(f_id.variables['latitude'][:], fill_value)
     units = f_id.variables[vname].getncattr('units')
