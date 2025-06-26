@@ -27,6 +27,7 @@
 
 import netCDF4,argparse,sys
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import os
@@ -378,4 +379,6 @@ if __name__ == '__main__':
     produce_cosp_summary_plots(args.tst_file, vars2D, args.out_dir,
                                Nlat_lon=(args.Nlat, args.Nlon))
 
+    print(np.__version__)
+    print(matplotlib.__version__)
     print("===== Summary plots produced =====")
