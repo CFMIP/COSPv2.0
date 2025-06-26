@@ -160,7 +160,6 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
-        exit 1
     # 3. UM global snapshot. Diagnostics on model levels.
     - name: UM global on model levels against known good output (KGO)
       if: always()
