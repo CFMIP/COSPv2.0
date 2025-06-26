@@ -89,7 +89,7 @@ jobs:
     - name: Retrieve input files and KGOs
       run: |
         cd driver
-        . download_test_data.sh
+        . download_test_data.sh ${F90}
         cd ${GITHUB_WORKSPACE}
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
