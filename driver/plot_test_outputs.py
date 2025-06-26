@@ -27,7 +27,6 @@
 
 import netCDF4,argparse,sys
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import os
@@ -245,11 +244,7 @@ def read_var_to_masked_array(fname, vname, fill_value, Nlat_lon = None):
         long_name: long name attribute.
     """
     f_id = netCDF4.Dataset(fname, 'r')
-    xx = f_id.variables[vname][:]
-    print("type(xx):", type(xx))
-    print("xx.dtype:", xx.dtype)
-    print("type(fill_value):", type(fill_value))
-    x = np.ma.masked_values(f_id.variables[vname][:], fill_value)
+    x = np.ma.masked_equal(f_id.variables[vname][:], fill_value)
     lon = np.ma.masked_equal(f_id.variables['longitude'][:], fill_value)
     lat = np.ma.masked_equal(f_id.variables['latitude'][:], fill_value)
     units = f_id.variables[vname].getncattr('units')
@@ -285,7 +280,6 @@ def produce_cosp_summary_plots(fname, variables, output_dir, Nlat_lon = None):
         fig_name = os.path.join(output_dir, ".".join([os.path.basename(fname), vname, 'png']))
         coastlines = False
         if vd['plot_type'] == 'map': coastlines = True
-        print(z[:,20])
         plot_pcolormesh(x, y, z, pkw, fig_name, title=title, coastlines=coastlines)
 
 def variable2D_metadata(var_list, fname):
@@ -368,7 +362,6 @@ if __name__ == '__main__':
                      'clcalipsoopacity','clgrLidar532','clatlid','clcalipso2',
                      'lidarBetaMol532gr','lidarBetaMol532','lidarBetaMol355']
     v2D_all_names = v2D_maps_names + v2D_hists_names + v2D_zcs_names
-    v2D_all_names = ['albisccp']
     # Plots for these variables are not yet developed
     # atb532_perp(lev, cosp_scol, loc);
     # atb532(lev, cosp_scol, loc);
@@ -385,6 +378,4 @@ if __name__ == '__main__':
     produce_cosp_summary_plots(args.tst_file, vars2D, args.out_dir,
                                Nlat_lon=(args.Nlat, args.Nlon))
 
-    print(np.__version__)
-    print(matplotlib.__version__)
     print("===== Summary plots produced =====")
