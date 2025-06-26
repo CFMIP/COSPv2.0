@@ -92,11 +92,39 @@ jobs:
         cd build
         make -j driver
     # Retrieve and expand large data files
-    - name: Retrieve input files and KGOs
+    - name: Retrieve input files
       run: |
-        cd driver
-        . download_test_data.sh
+        GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
+        OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
+        curl -sSfL -o $OUTPATH $GDFILE
+        gunzip ${OUTPATH}
+        cd driver/data/inputs/UKMO
+        md5sum -c cosp_input.um_global.nc.md5
+    - name: Retrieve KGOs for basic test
+      run: |
         cd ${GITHUB_WORKSPACE}
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
+        curl -sSfL -o $OUTPATH $GDKGO1
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
+    - name: Retrieve KGOs for global test
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
+        curl -sSfL -o $OUTPATH $GDKGO2
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
+        cd ${GITHUB_WORKSPACE}
+    - name: Retrieve KGOs for global test with outputs on model levels
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
+        curl -sSfL -o $OUTPATH $GDKGO3
+        gunzip ${OUTPATH}
+        cd driver/data/outputs/UKMO
+        md5sum -c cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.
