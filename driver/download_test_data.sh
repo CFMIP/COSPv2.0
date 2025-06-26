@@ -31,7 +31,8 @@ case $COMPILER in
     ;;
 
   *)
-    echo -n "Invalid compiler"
+    echo "ERROR: Invalid compiler"
+    exit 1
     ;;
 esac
 
