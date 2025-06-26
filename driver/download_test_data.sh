@@ -42,7 +42,7 @@ echo "KGO_VERSION=$KGO_VERSION"
 DRIVER_DIR=${PWD}
 GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
 OUTPATH=data/inputs/UKMO/cosp_input.um_global.nc.gz
-wget --no-check-certificate $GDFILE -O $OUTPATH
+curl -sSfL -o $OUTPATH $GDFILE
 gunzip -f ${OUTPATH}
 cd data/inputs/UKMO
 md5sum -c cosp_input.um_global.nc.md5
