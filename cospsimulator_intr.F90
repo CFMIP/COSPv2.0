@@ -4106,16 +4106,16 @@ CONTAINS
   !
   ! This subroutine allocates output fields based on input logical flag switches.
   ! ######################################################################################  
-  subroutine construct_cosp_outputs(Npoints,Ncolumns,Nlevels,Nlvgrid,N_rttov_instruments,rttov_configs,x)
+  subroutine construct_cosp_outputs(Npoints,Ncolumns,Nlevels,Nlvgrid,Ninst_rttov,rttov_configs,x)
     ! Inputs
     integer,intent(in) :: &
          Npoints,         &   ! Number of sampled points
          Ncolumns,        &   ! Number of subgrid columns
          Nlevels,         &   ! Number of model levels
          Nlvgrid,         &   ! Number of levels in L3 stats computation
-         N_rttov_instruments  ! Number of RTTOV instruments  
+         Ninst_rttov  ! Number of RTTOV instruments  
 
-    type(rttov_cfg), dimension(N_rttov_instruments),intent(in) :: &
+    type(rttov_cfg), dimension(Ninst_rttov),intent(in) :: &
          rttov_configs
 
     ! Outputs
@@ -4224,13 +4224,13 @@ CONTAINS
        end if
     end if       
         
-    if ((N_rttov_instruments .gt. 0) .and. (lrttov_sim)) then
-        x % N_rttov_instruments = N_rttov_instruments
-        allocate(x % rttov_outputs(N_rttov_instruments)) ! Need to allocate a pointer?
+    if ((Ninst_rttov .gt. 0) .and. (lrttov_sim)) then
+        x % Ninst_rttov = Ninst_rttov
+        allocate(x % rttov_outputs(Ninst_rttov)) ! Need to allocate a pointer?
         print*,'Immediately after rttov_outputs allocation.'
         print*,'associated(x % rttov_outputs(1) % refl_total):    ',associated(x % rttov_outputs(1) % refl_total)
         print*,'associated(x % rttov_outputs(1) % refl_clear):    ',associated(x % rttov_outputs(1) % refl_clear)        
-        do i=1,N_rttov_instruments
+        do i=1,Ninst_rttov
             print*,'i:   ',i
             print*,'rttov_configs(i) % nchan_out:         ',rttov_configs(i) % nchan_out
             print*,'rttov_configs(i) % Lrttov_bt:         ',rttov_configs(i) % Lrttov_bt
@@ -4285,7 +4285,7 @@ CONTAINS
             end if         
         end do
     else
-        x % N_rttov_instruments = 0
+        x % Ninst_rttov = 0
     end if    
 
     print*,'associated(x % rttov_outputs(i) % refl_total):    ',associated(x % rttov_outputs(1) % refl_total)
@@ -4618,7 +4618,7 @@ CONTAINS
      ! RTTOV multi-instrument - JKS
 !     if (associated(y%rttov_outputs)) then
      if (allocated(y%rttov_outputs)) then
-         do i=1,y % N_rttov_instruments ! Iterate over each instrument
+         do i=1,y % Ninst_rttov ! Iterate over each instrument
              if (associated(y%rttov_outputs(i)%channel_indices)) then
                 deallocate(y%rttov_outputs(i)%channel_indices)
                 nullify(y%rttov_outputs(i)%channel_indices)
