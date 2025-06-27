@@ -29,70 +29,14 @@
 ! History
 ! May 2015 - D. Swales - Original version
 ! Apr 2015 - D. Swales - Modified for RTTOVv11.3
+! Jun 2025 - J.K. Shaw - Added RTTOVv13.2 integration and swathing. rttov_cfg moved to cosp_rttov_util.F90
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
-  USE COSP_KINDS, ONLY: wp
-  USE MOD_COSP_RTTOV,   ONLY: rttov_IN
+  USE COSP_KINDS,          ONLY: wp
+  USE MOD_COSP_RTTOV,      ONLY: rttov_IN
+  USE MOD_COSP_RTTOV_UTIL, ONLY: rttov_cfg,             rttov_output
   IMPLICIT NONE
 
-
-  ! DDT for each instrument being simulated. Values to be assigned during the cosp_rttov_init subroutine
-  type rttov_cfg
-      logical                      :: &
-          Lrttov_bt,           &
-          Lrttov_rad,          &
-          Lrttov_refl,         &
-          Lrttov_cld,          &
-          Lrttov_aer,          &
-          Lrttov_pc
-      character(len=256)           :: &
-          rttov_srcDir,        &
-          rttov_coefDir,       &
-          OD_coef_filepath,    &
-          aer_coef_filepath,   &
-          cld_coef_filepath,   &
-          PC_coef_filepath
-      integer                      :: &
-          nchanprof,             &
-          rttov_direct_nthreads, &
-          nchan_out,             &
-          nchannels_rec,         &
-          rttov_Nlocaltime
-      real(wp)                     :: &
-          CO2_mr,              &
-          CH4_mr,              &
-          CO_mr,               &
-          N2O_mr,              &
-          SO2_mr,              &
-          ZenAng
-      integer,allocatable          :: &
-          iChannel(:),      &  ! Requested channel indices
-          iChannel_out(:)      ! Passing out the channel indices (actual output channels)
-      real(kind=wp),allocatable    :: &
-          emisChannel(:),           &      ! RTTOV channel emissivity
-          reflChannel(:),           &      ! RTTOV channel reflectivity
-          rttov_localtime(:),       &      ! RTTOV localtime
-          rttov_localtime_width(:) 
-      logical, allocatable  :: &
-          swath_mask(:)          
-  end type rttov_cfg
-
-  type rttov_output
-      integer             :: &
-          nchan_out
-      integer,pointer     :: &
-          channel_indices(:)
-      real(wp),pointer    :: &
-          bt_total(:,:),    &
-          bt_clear(:,:),    &
-          rad_total(:,:),   &
-          rad_clear(:,:),   &
-          rad_cloudy(:,:),  &
-          refl_total(:,:),  &
-          refl_clear(:,:),  &
-          bt_total_pc(:,:), &
-          rad_total_pc(:,:)
-  end type rttov_output   
 
 CONTAINS
 
@@ -168,7 +112,6 @@ CONTAINS
 
     print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
              'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
-    ! How do I want the interface to function? How should it to be consistent with the rest of COSP?
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
   

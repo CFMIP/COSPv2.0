@@ -53,6 +53,8 @@ cosp_rttov_interface_v13.o : cosp_rttov_interface_v13.F90
 cosp_rttov_v13.o : cosp_rttov_v13.F90 
 	$(F90) $(F90FLAGS) $(FFLAGS) -c $<
 
+cosp_rttov_util.o : cosp_rttov_util.F90 
+	$(F90) $(F90FLAGS) $(FFLAGS) -c $<
 #
 # The COSP library
 #
@@ -64,9 +66,9 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
 
 # Add RTTOV files appropriately.
 ifdef RTTOV
-COSP_OBJS += cosp_rttov_interface_v13.o cosp_rttov_v13.o
+COSP_OBJS += cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_rttov_util.o
 else
-COSP_OBJS += cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o
+COSP_OBJS += cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
 endif
 
 
@@ -98,36 +100,39 @@ cosp.o : cosp_kinds.o cosp_modis_interface.o cosp_constants.o                   
 
 # Conditionally add dependencies on the STUB or actual RTTOV simulator.
 ifdef RTTOV
-cosp.o: cosp_rttov_interface_v13.o cosp_rttov_v13.o
+cosp.o                      : cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_rttov_util.o
+cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o cosp_rttov_util.o
 else
-cosp.o: cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o
+cosp.o                      : cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
+cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o cosp_rttov_utilSTUB.o
 endif
-
 
 cosp_constants.o            : cosp_kinds.o
 cosp_config.o               : cosp_kinds.o
 cosp_errorHandling.o        : cosp_kinds.o
-cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o
-cosp_isccp_interface.o      : cosp_kinds.o icarus.o
+cosp_isccp_interface.o      : cosp_kinds.o icarus.o cosp_stats.o
 icarus.o                    : cosp_kinds.o cosp_constants.o  cosp_stats.o
-cosp_misr_interface.o       : cosp_kinds.o
+cosp_misr_interface.o       : cosp_kinds.o cosp_stats.o
 MISR_simulator.o            : cosp_kinds.o cosp_config.o cosp_stats.o
-cosp_modis_interface.o      : cosp_kinds.o cosp_config.o modis_simulator.o
+cosp_modis_interface.o      : cosp_kinds.o cosp_config.o modis_simulator.o cosp_stats.o
 modis_simulator.o           : cosp_kinds.o cosp_config.o cosp_stats.o
-cosp_parasol_interface.o    : cosp_kinds.o
+cosp_parasol_interface.o    : cosp_kinds.o cosp_stats.o
 parasol.o                   : cosp_kinds.o cosp_config.o cosp_constants.o
-cosp_calipso_interface.o    : cosp_kinds.o lidar_simulator.o
+cosp_calipso_interface.o    : cosp_kinds.o lidar_simulator.o cosp_stats.o
 lidar_simulator.o           : cosp_kinds.o cosp_config.o cosp_stats.o
-cosp_grLidar532_interface.o : cosp_kinds.o
-cosp_atlid_interface.o      : cosp_kinds.o
-cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o
+cosp_grLidar532_interface.o : cosp_kinds.o cosp_stats.o
+cosp_atlid_interface.o      : cosp_kinds.o cosp_stats.o
+cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o cosp_stats.o
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
 
 # RTTOV Simulator code dependencies (only one interface and one RTTOV simulator are used at a time)
-cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o
+cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o cosp_rttov_util.o
 cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
-cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o
+cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
 cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+# RTTOV utility code dependencies
+cosp_rttov_util.o           : cosp_kinds.o
+cosp_rttov_utilSTUB.o       : cosp_kinds.o
 
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
@@ -140,7 +145,7 @@ array_lib.o       : cosp_kinds.o
 mrgrnk.o          : cosp_kinds.o
 math_lib.o        : cosp_kinds.o cosp_errorHandling.o
 optics_lib.o      : cosp_kinds.o cosp_errorHandling.o
-quickbeam_optics.o: cosp_kinds.o cosp_errorHandling.o cosp_constants.o cosp_config.o mrgrnk.o array_lib.o optics_lib.o math_lib.o quickbeam.o
+quickbeam_optics.o: cosp_kinds.o cosp_errorHandling.o cosp_constants.o cosp_config.o mrgrnk.o array_lib.o optics_lib.o math_lib.o quickbeam.o cosp_stats.o
 scops.o      : cosp_kinds.o cosp_errorHandling.o mo_rng.o
 prec_scops.o : cosp_kinds.o cosp_config.o
 cosp_utils.o : cosp_kinds.o cosp_config.o

@@ -31,6 +31,7 @@
 ! April 2018 - R. Guzman - Added OPAQ diagnostics and Ground LIDar (GLID) simulator
 ! April 2018 - R. Guzman - Added ATLID simulator
 !   Nov 2018 - T. Michibata - Added CloudSat+MODIS Warmrain Diagnostics
+! June  2025 - J.K. Shaw - Added COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp2_test
   use cosp_kinds,          only: wp                         
@@ -57,17 +58,17 @@ program cosp2_test
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
                                  quickbeam_optics_init,gases
-  use quickbeam,           only: radar_cfg
-  use mod_cosp,            only: cosp_init,cosp_optical_inputs,cosp_column_inputs,        &
-                                 cosp_outputs,swath_inputs,cosp_cleanUp,cosp_simulator
+  use mod_cosp,            only: cosp_init,        &
+                                 cosp_outputs,swath_inputs,cosp_simulator
   USE mod_rng,             ONLY: rng_state, init_rng
   USE mod_scops,           ONLY: scops
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
-  use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID
-  use MOD_COSP_RTTOV_INTERFACE, only: rttov_cfg
+  use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID,cosp_optical_inputs,           &
+                                 cosp_column_inputs,radar_cfg,cosp_cleanUp
+  use MOD_COSP_RTTOV_UTIL, only: rttov_cfg
   
   implicit none
 
@@ -1236,11 +1237,7 @@ contains
     ! Inputs
     integer,intent(in) :: &
          npoints, & ! Number of horizontal gridpoints
-         nlevels    ! Number of vertical levels
-!         N_rttov_instruments
-          
-!     type(rttov_cfg), dimension(N_rttov_instruments),intent(in) :: &
-!         rttov_configs         
+         nlevels    ! Number of vertical levels 
          
     ! Outputs
     type(cosp_column_inputs),intent(out) :: y         
@@ -1257,11 +1254,7 @@ contains
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
              y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),y%sza(nPoints))
-             
-    ! JKS - I should make this optional to save space.
-!    do i=1,N_rttov_instruments
-!        allocate(y%emis_in(npoints,rttov_configs(i) % nchan_out),y%refl_in(npoints,rttov_configs(i) % nchan_out))
-!    end do
+
 
   end subroutine construct_cospstateIN
 
@@ -1302,7 +1295,7 @@ contains
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    N_rttov_instruments,rttov_configs,                   &
+                                    Ninst_rttov,rttov_configs,                   &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,x)
      ! Inputs
      logical,intent(in) :: &
@@ -1419,9 +1412,9 @@ contains
           Ncolumns,        & ! Number of subgrid columns
           Nlevels,         & ! Number of model levels
           Nlvgrid,         & ! Number of levels in L3 stats computation
-          N_rttov_instruments
+          Ninst_rttov
           
-     type(rttov_cfg), dimension(N_rttov_instruments),intent(in) :: &
+     type(rttov_cfg), dimension(Ninst_rttov),intent(in) :: &
          rttov_configs
      
      ! Outputs
@@ -1585,10 +1578,10 @@ contains
     
     ! RTTOV - Allocate output for multiple instruments
     ! Do I not need to allocate the number of instruments? Because each rttov output DDT will be a pointer?
-    if ((N_rttov_instruments .gt. 0) .and. (Lrttov)) then
-        x % N_rttov_instruments = N_rttov_instruments
-        allocate(x % rttov_outputs(N_rttov_instruments)) ! Need to allocate a pointer?
-        do i=1,N_rttov_instruments
+    if ((Ninst_rttov .gt. 0) .and. (Lrttov)) then
+        x % Ninst_rttov = Ninst_rttov
+        allocate(x % rttov_outputs(Ninst_rttov)) ! Need to allocate a pointer?
+        do i=1,Ninst_rttov
             x % rttov_outputs(i) % nchan_out = rttov_configs(i) % nchan_out
             if (rttov_configs(i) % Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
                 allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
@@ -1627,7 +1620,7 @@ contains
             end if         
         end do
     else
-        x % N_rttov_instruments = 0
+        x % Ninst_rttov = 0
     end if
 
   end subroutine construct_cosp_outputs
@@ -2030,7 +2023,7 @@ contains
      
      ! RTTOV multi-instrument
      if (allocated(y%rttov_outputs)) then
-         do i=1,y % N_rttov_instruments ! Iterate over each instrument
+         do i=1,y % Ninst_rttov ! Iterate over each instrument
              if (associated(y%rttov_outputs(i)%channel_indices)) then
                 deallocate(y%rttov_outputs(i)%channel_indices)
                 nullify(y%rttov_outputs(i)%channel_indices)

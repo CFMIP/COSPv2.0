@@ -28,10 +28,12 @@
 !
 ! History
 ! May 2015 - D. Swales - Original version
+! Jun 2025 - J.K. Shaw - Added COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_CLOUDSAT_INTERFACE
   USE COSP_KINDS,      ONLY: wp
-  USE quickbeam,       ONLY: quickbeam_init,radar_cfg,Re_MAX_BIN,Re_BIN_LENGTH
+  USE quickbeam,       ONLY: quickbeam_init,Re_MAX_BIN,Re_BIN_LENGTH
+  use mod_cosp_stats,  ONLY: radar_cfg,compute_orbitmasks,cosp_optical_inputs,cosp_column_inputs
   IMPLICIT NONE
 
   ! Directory where LUTs will be stored
@@ -39,12 +41,21 @@ MODULE MOD_COSP_CLOUDSAT_INTERFACE
   logical :: RADAR_SIM_LOAD_scale_LUTs_flag   = .false.
   logical :: RADAR_SIM_UPDATE_scale_LUTs_flag = .false.
   
+  ! Module variables
+  real(wp),dimension(:,:),target,allocatable :: &
+     temp_hgt_matrix
+  real(wp),dimension(:,:,:),target,allocatable :: &
+     temp_z_vol_cloudsat,   &
+     temp_kr_vol_cloudsat,  &
+     temp_g_vol_cloudsat
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE cloudsat_IN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   type cloudsat_IN
+     integer         ::            &
+          Npoints            ! Number of horizontal grid-points
      integer,pointer ::            &
-          Npoints,         & ! Number of horizontal grid-points
           Nlevels,         & ! Number of vertical levels
           Ncolumns           ! Number of subcolumns
      real(wp),pointer ::   &
@@ -135,6 +146,86 @@ CONTAINS
     endif
 
   END SUBROUTINE COSP_CLOUDSAT_INIT
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  !  							SUBROUTINE COSP_CLOUDSAT_MASK
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_CLOUDSAT_MASK(cospIN,cospgridIN,Npoints,cloudsatIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
+     type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
+     type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
+     integer,intent(in),target :: &
+         Npoints
+     type(cloudsat_IN),intent(inout) :: &
+         cloudsatIN
+     integer,dimension(:),allocatable,intent(out) :: & ! Array containing the indices of the swath masks, already allocated?
+         CSCAL_MASK_INDICES
+     logical,dimension(:),allocatable,intent(inout) :: & ! Mask of reals over all local times
+         CSCAL_SWATH_MASK
+
+     ! Local variables
+     integer, target :: &
+         N_CLOUDSAT_SWATHED,  &
+         i
+
+     if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then
+         if (.not.allocated(CSCAL_SWATH_MASK)) allocate(CSCAL_SWATH_MASK(Npoints))
+         ! Do swathing to figure out which cells to simulate on
+         call compute_orbitmasks(Npoints,                                                &
+                                 cospIN % cospswathsIN(3) % N_inst_swaths,               &
+                                 cospIN % cospswathsIN(3) % inst_localtimes,             &
+                                 cospIN % cospswathsIN(3) % inst_localtime_widths,       &
+                                 cospgridIN%lat, cospgridIN%lon,                         &
+                                 cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
+                                 cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
+                                 CSCAL_SWATH_MASK,N_CLOUDSAT_SWATHED) ! Output: logical mask array
+         cloudsatIN%Npoints = N_CLOUDSAT_SWATHED
+         cloudsatIN%Ncolumns => cospIN%Ncolumns
+         if (.not. allocated(CSCAL_MASK_INDICES)) allocate(CSCAL_MASK_INDICES(cloudsatIN%Npoints))
+         CSCAL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = CSCAL_SWATH_MASK)
+         if (cloudsatIN%Npoints .gt. 0) then
+             ! Allocate swathed arrays.
+             allocate(temp_z_vol_cloudsat(cloudsatIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                      temp_kr_vol_cloudsat(cloudsatIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),  &
+                      temp_g_vol_cloudsat(cloudsatIN%Npoints,cospIN%Ncolumns,cospIN%Nlevels),   &
+                      temp_hgt_matrix(cloudsatIN%Npoints,cospIN%Nlevels))
+             ! Encode step: Read only appropriate values into the new temp arrays. 
+             temp_z_vol_cloudsat      = cospIN%z_vol_cloudsat(int(CSCAL_MASK_INDICES),:,:)
+             temp_kr_vol_cloudsat     = cospIN%kr_vol_cloudsat(int(CSCAL_MASK_INDICES),:,:)
+             temp_g_vol_cloudsat      = cospIN%g_vol_cloudsat(int(CSCAL_MASK_INDICES),:,:)
+             temp_hgt_matrix          = cospgridIN%hgt_matrix(int(CSCAL_MASK_INDICES),:)
+             ! Reassign swathed values.  
+             cloudsatIN%Nlevels    => cospIN%Nlevels
+             cloudsatIN%z_vol      => temp_z_vol_cloudsat
+             cloudsatIN%kr_vol     => temp_kr_vol_cloudsat
+             cloudsatIN%g_vol      => temp_g_vol_cloudsat
+             cloudsatIN%rcfg       => cospIN%rcfg_cloudsat
+             cloudsatIN%hgt_matrix => temp_hgt_matrix
+         end if
+     else
+          cloudsatIN%Npoints    =  Npoints
+          cloudsatIN%Ncolumns   => cospIN%Ncolumns
+          cloudsatIN%Nlevels    => cospIN%Nlevels
+          cloudsatIN%z_vol      => cospIN%z_vol_cloudsat
+          cloudsatIN%kr_vol     => cospIN%kr_vol_cloudsat
+          cloudsatIN%g_vol      => cospIN%g_vol_cloudsat
+          cloudsatIN%rcfg       => cospIN%rcfg_cloudsat
+          cloudsatIN%hgt_matrix => cospgridIN%hgt_matrix    
+     end if
+
+  END SUBROUTINE COSP_CLOUDSAT_MASK
+
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  !  							SUBROUTINE COSP_CLOUDSAT_CLEAN
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_CLOUDSAT_MASK_CLEAN()
+    ! Deallocate temporary arrays
+    if (allocated(temp_z_vol_cloudsat))     deallocate(temp_z_vol_cloudsat)
+    if (allocated(temp_kr_vol_cloudsat))    deallocate(temp_kr_vol_cloudsat)
+    if (allocated(temp_g_vol_cloudsat))     deallocate(temp_g_vol_cloudsat)
+    if (allocated(temp_hgt_matrix))         deallocate(temp_hgt_matrix)
+
+  END SUBROUTINE COSP_CLOUDSAT_MASK_CLEAN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !                              	  END MODULE

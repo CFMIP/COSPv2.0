@@ -27,8 +27,8 @@
 ! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !
 ! History:
-! May 2015- D. Swales - Original version
-!
+! May  2015 - D. Swales - Original version
+! June 2025 - J.K. Shaw - Added earth radius for COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE cosp_math_constants
   USE cosp_kinds, only: wp
@@ -69,5 +69,9 @@ MODULE cosp_phys_constants
        rv  = 461.51_wp,         & ! Gas constant for water vapor [J/K/Kg]
        cpv = 1869.46_wp,        & ! Specific heat at constant pressure for water vapor [J/K/Kg]
        km  = 1.38e-23_wp          ! Boltzmann constant [J/K]
+
+  ! RTTOV constants
+  REAL(wp), PARAMETER :: &
+       radius_earth = 6371.0            ! Earth's radius in km (mean volumetric)
 
 END MODULE cosp_phys_constants

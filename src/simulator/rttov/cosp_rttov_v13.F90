@@ -270,8 +270,8 @@ contains
         inst_opts
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
-    type(rttov_profile),allocatable,target,intent(out) :: &
-        inst_profiles(:)  
+    type(rttov_profile),pointer,intent(out) :: &
+        inst_profiles(:)
     integer(kind=jpim),dimension(inst_nChannels_rec),intent(in) :: &
         inst_iChannel
     type(rttov_chanprof),pointer,intent(inout) :: &
@@ -387,8 +387,8 @@ contains
         inst_coefs        
     type(rttov_options),intent(inout) :: &
         inst_opts
-    type(rttov_profile),allocatable,target,intent(out) :: &
-        inst_profiles(:)        
+    type(rttov_profile),pointer,intent(out) :: &
+        inst_profiles(:)
     integer(kind=jpim),intent(inout) :: &
         inst_nchannels_rec
     integer(kind=jpim),intent(in),dimension(inst_nchannels_rec)     :: &
@@ -553,7 +553,7 @@ contains
 
     type(rttov_in),intent(in) :: &
         rttovIN
-    type(rttov_profile),allocatable,target,intent(inout) :: &    
+    type(rttov_profile),target,intent(inout) :: &    
         inst_profiles(:)
     logical,intent(in)        :: &
         Lrttov_cld,       &
@@ -1086,7 +1086,7 @@ contains
         inst_nthreads
     type(rttov_options),intent(in)  :: &
         inst_opts
-    type(rttov_profile),allocatable,target,intent(in) :: &
+    type(rttov_profile),target,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)    :: &
         inst_coefs
@@ -1185,7 +1185,7 @@ contains
         inst_nthreads
     type(rttov_options),intent(in) :: &
         inst_opts
-    type(rttov_profile),allocatable,target,intent(in) :: &
+    type(rttov_profile),target,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
@@ -1451,7 +1451,7 @@ contains
         nLevels
     type(rttov_options),intent(in) :: &
         inst_opts
-    type(rttov_profile),allocatable,target,intent(in) :: &
+    type(rttov_profile),pointer,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
@@ -1521,7 +1521,7 @@ contains
         inst_nChannels_rec
     type(rttov_options),intent(in) :: &
         inst_opts
-    type(rttov_profile),allocatable,target,intent(in) :: &
+    type(rttov_profile),pointer,intent(in) :: &
         inst_profiles(:)
     type(rttov_coefs),intent(in)   :: &
         inst_coefs
