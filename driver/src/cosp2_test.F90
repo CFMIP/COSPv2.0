@@ -143,7 +143,6 @@ program cosp2_test
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
        isccp_topheight,           & ! ISCCP cloud top height
        isccp_topheight_direction    ! ISCCP cloud top height direction
-  integer :: rttov_Ninstruments = 0
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
        cloudsat_k2                  ! |K|^2, -1=use frequency dependent default
@@ -161,12 +160,17 @@ program cosp2_test
   character(len=512) :: &
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
-       fileIN                       ! dinput+finput       
+       fileIN                       ! dinput+finput
+
+  ! RTTOV
+  integer :: rttov_Ninstruments = 0
   character(len=256), dimension(50) :: &   ! Arbitrary limit of 50 should be fine.
        rttov_instrument_namelists          ! Input of paths to RTTOV instrument namelists
   character(len=256), allocatable   :: & 
        rttov_instrument_namelists_final(:) ! Array of paths to RTTOV instrument namelists
-
+  logical :: rttov_verbose      = .false.
+  logical :: Lrttov_run         = .false.
+  
   ! Inputs for orbit swathing
   integer :: N_SWATHS_ISCCP     = 0       ! Number of ISCCP swaths
   integer :: N_SWATHS_MISR      = 0       ! Number of MISR swaths
@@ -192,7 +196,7 @@ program cosp2_test
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,                    &
+       Lrttov_run, rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,        &
        N_SWATHS_ISCCP, SWATH_LOCALTIMES_ISCCP, SWATH_WIDTHS_ISCCP, N_SWATHS_MISR,        &
        SWATH_LOCALTIMES_MISR, SWATH_WIDTHS_MISR, N_SWATHS_MODIS, SWATH_LOCALTIMES_MODIS, &
        SWATH_WIDTHS_MODIS, N_SWATHS_PARASOL, SWATH_LOCALTIMES_PARASOL,                   &
@@ -222,8 +226,6 @@ program cosp2_test
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
              Lwr_occfreq,Lcfodd
-  logical :: Lrttov_run        = .false.        
-  logical :: rttov_verbose     = .false.        
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -246,7 +248,6 @@ program cosp2_test
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
                        Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,             &
-                       Lrttov_run,                                                       &
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
@@ -444,12 +445,12 @@ program cosp2_test
   if (Lparasolrefl) Lparasol = .true.
   
   ! JKS - This will need to be revamped. Each instrument needs these flags
-  if (Lrttov_run .and. (rttov_Ninstruments .gt. 0))         Lrttov = .true.
-  if ((Lrttov_run) .and. (rttov_Ninstruments .le. 0))  then
+  if (Lrttov_run .and. (rttov_Ninstruments .gt. 0))  Lrttov = .true.
+  if (Lrttov_run .and. (rttov_Ninstruments .le. 0))  then
       print*,'Lrttov_run is "true" but rttov_Ninstruments < 1. COSP-RTTOV will not run.'
       Lrttov = .false.
   endif
-  if ((Lrttov_run .eq. .false.) .and. (rttov_Ninstruments .gt. 0)) then
+  if ((.not. Lrttov_run) .and. (rttov_Ninstruments .gt. 0)) then
       print*,'rttov_Ninstruments > 0 but Lrttov_run is "false". COSP-RTTOV will not run.'
       Lrttov = .false.
   endif  
