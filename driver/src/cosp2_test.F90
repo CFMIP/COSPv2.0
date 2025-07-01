@@ -1228,8 +1228,6 @@ contains
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
 
-    allocate (y%rcfg_cloudsat)
-
   end subroutine construct_cospIN
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1416,7 +1414,7 @@ contains
           Nlvgrid,         & ! Number of levels in L3 stats computation
           Ninst_rttov
           
-     type(rttov_cfg), dimension(Ninst_rttov),intent(in) :: &
+     type(rttov_cfg), dimension(:),intent(in) :: &
          rttov_configs
      
      ! Outputs

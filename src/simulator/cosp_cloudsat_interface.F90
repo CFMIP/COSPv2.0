@@ -111,17 +111,6 @@ CONTAINS
          trim(cloudsat_micro_scheme)
 
     ! Initialize for NEW radar-configurarion derived type (radar_cfg)
-    allocate(rcfg%N_scale_flag(maxhclass,nRe_types))
-    allocate(rcfg%Z_scale_flag(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%Z_scale_added_flag(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%Ze_scaled(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%Zr_scaled(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%kr_scaled(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%fc(maxhclass,nd,nRe_types))
-    allocate(rcfg%rho_eff(maxhclass,nd,nRe_types))
-    allocate(rcfg%base_list(Re_MAX_BIN))
-    allocate(rcfg%step_list(Re_MAX_BIN))
-
     rcfg%freq                = radar_freq
     rcfg%k2                  = k2
     rcfg%use_gas_abs         = use_gas_abs
