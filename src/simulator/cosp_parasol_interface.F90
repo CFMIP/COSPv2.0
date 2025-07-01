@@ -143,6 +143,7 @@ contains
          endif
      else  
           parasolIN%Npoints      =  Npoints
+          parasolIN%Ncolumns => cospIN%Ncolumns
           parasolIN%Nlevels      => cospIN%Nlevels
           parasolIN%Nrefl        => cospIN%Nrefl
           parasolIN%tautot_S_liq => cospIN%tautot_S_liq
