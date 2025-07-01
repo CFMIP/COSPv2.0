@@ -26,7 +26,7 @@
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
   NPOINTS=1728, ! 1728,6912
-  NPOINTS_IT=1000,! Max number of gridpoints to be processed in one iteration
+  NPOINTS_IT=50,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=20,  ! Number of subcolumns
   NLEVELS=54,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
