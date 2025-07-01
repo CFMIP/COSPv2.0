@@ -169,7 +169,6 @@ program cosp2_test
   character(len=256), allocatable   :: & 
        rttov_instrument_namelists_final(:) ! Array of paths to RTTOV instrument namelists
   logical :: rttov_verbose      = .false.
-  logical :: Lrttov_run         = .false.
   
   ! Inputs for orbit swathing
   integer :: N_SWATHS_ISCCP     = 0       ! Number of ISCCP swaths
@@ -196,7 +195,7 @@ program cosp2_test
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       Lrttov_run, rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,        &
+       rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,                    &
        N_SWATHS_ISCCP, SWATH_LOCALTIMES_ISCCP, SWATH_WIDTHS_ISCCP, N_SWATHS_MISR,        &
        SWATH_LOCALTIMES_MISR, SWATH_WIDTHS_MISR, N_SWATHS_MODIS, SWATH_LOCALTIMES_MODIS, &
        SWATH_WIDTHS_MODIS, N_SWATHS_PARASOL, SWATH_LOCALTIMES_PARASOL,                   &
@@ -343,7 +342,6 @@ program cosp2_test
  
   ! Jonah namelist checking area
   print*,'rttov_verbose:   ',rttov_verbose
-  print*,'Lrttov_run:   ',Lrttov_run
   print*,'rttov_Ninstruments:    ',rttov_Ninstruments
 
   ! Shift the namelists read in into a shorter array for cosp_init:    
@@ -445,13 +443,13 @@ program cosp2_test
   if (Lparasolrefl) Lparasol = .true.
   
   ! JKS - This will need to be revamped. Each instrument needs these flags
-  if (Lrttov_run .and. (rttov_Ninstruments .gt. 0))  Lrttov = .true.
-  if (Lrttov_run .and. (rttov_Ninstruments .le. 0))  then
-      print*,'Lrttov_run is "true" but rttov_Ninstruments < 1. COSP-RTTOV will not run.'
+  if (Lrttov .and. (rttov_Ninstruments .gt. 0))  Lrttov = .true.
+  if (Lrttov .and. (rttov_Ninstruments .le. 0))  then
+      print*,'Lrttov is "true" but rttov_Ninstruments < 1. COSP-RTTOV will not run.'
       Lrttov = .false.
   endif
-  if ((.not. Lrttov_run) .and. (rttov_Ninstruments .gt. 0)) then
-      print*,'rttov_Ninstruments > 0 but Lrttov_run is "false". COSP-RTTOV will not run.'
+  if ((.not. Lrttov) .and. (rttov_Ninstruments .gt. 0)) then
+      print*,'rttov_Ninstruments > 0 but Lrttov is "false". COSP-RTTOV will not run.'
       Lrttov = .false.
   endif  
 
