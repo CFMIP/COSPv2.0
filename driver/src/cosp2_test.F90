@@ -31,11 +31,12 @@
 ! April 2018 - R. Guzman - Added OPAQ diagnostics and Ground LIDar (GLID) simulator
 ! April 2018 - R. Guzman - Added ATLID simulator
 !   Nov 2018 - T. Michibata - Added CloudSat+MODIS Warmrain Diagnostics
+! June  2025 - J.K. Shaw - Added COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 program cosp2_test
   use cosp_kinds,          only: wp                         
   USE MOD_COSP_CONFIG,     ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE,SR_BINS,    &
-                                 N_HYDRO,RTTOV_MAX_CHANNELS,numMISRHgtBins,               &
+                                 N_HYDRO,numMISRHgtBins,                                  &
                                  cloudsat_DBZE_BINS,LIDAR_NTEMP,calipso_histBsct,         &
                                  CFODD_NDBZE,      CFODD_NICOD,                           &
                                  CFODD_BNDRE,      CFODD_NCLASS,                          &
@@ -57,40 +58,49 @@ program cosp2_test
   use mod_cosp_io,         only: nc_read_input_file,write_cosp2_output
   USE mod_quickbeam_optics,only: size_distribution,hydro_class_init,quickbeam_optics,     &
                                  quickbeam_optics_init,gases
-  use quickbeam,           only: radar_cfg
-  use mod_cosp,            only: cosp_init,cosp_optical_inputs,cosp_column_inputs,        &
-                                 cosp_outputs,cosp_cleanUp,cosp_simulator
+  use mod_cosp,            only: cosp_init,        &
+                                 cosp_outputs,swath_inputs,cosp_simulator
   USE mod_rng,             ONLY: rng_state, init_rng
   USE mod_scops,           ONLY: scops
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
-  use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID
+  use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID,cosp_optical_inputs,           &
+                                 cosp_column_inputs,radar_cfg,cosp_cleanUp
+  use MOD_COSP_RTTOV_UTIL, only: rttov_cfg
   
   implicit none
 
   ! Input/Output driver file control
-  character(len=64) :: cosp_input_namelist
-  character(len=64) :: cosp_output_namelist = 'cosp2_output_nl.txt'
+  character(len=256) :: cosp_input_namelist
+  character(len=64)  :: cosp_output_namelist = 'cosp2_output_nl.txt'
 
   ! Test data
   integer :: &
        Nlon,Nlat,geomode
   real(wp) :: &
        emsfc_lw
-  real(wp),dimension(:),allocatable,target:: &
+  real(wp),dimension(:),allocatable,target   :: &
        lon,       & ! Longitude (deg)
        lat,       & ! Latitude (deg)
        skt,       & ! Skin temperature (K)
+       psfc,      & ! Surface Pressure (Pa)
        surfelev,  & ! Surface Elevation (m)
        landmask,  & ! Land/sea mask (0/1)
        u_wind,    & ! U-component of wind (m/s)
        v_wind,    & ! V-component of wind (m/s)
-       sunlit       ! Sunlit flag
+       sunlit     ! Sunlit flag
+  real(wp),dimension(:),allocatable          :: & ! JKS change to target?
+       year,      & ! Year (CE)
+       month,     & ! Month  [1,12]
+       day,       & ! Day    [1,31]
+       hour,      & ! Hour   [0,24]
+       minute,    & ! Minute [0,60]
+       seconds      ! Second [0,60]
   real(wp),dimension(:,:),allocatable,target :: &
        p,         & ! Model pressure levels (pa)
-       ph,        & ! Moddel pressure @ half levels (pa)
+       ph,        & ! Model pressure @ half levels (pa)
        zlev,      & ! Model level height (m)
        zlev_half, & ! Model level height @ half-levels (m)
        T,         & ! Temperature (K)
@@ -132,29 +142,16 @@ program cosp2_test
                                     ! (0=ice-spheres/1=ice-non-spherical)
        overlap,                   & ! Overlap type: 1=max, 2=rand, 3=max/rand
        isccp_topheight,           & ! ISCCP cloud top height
-       isccp_topheight_direction, & ! ISCCP cloud top height direction
-       rttov_platform,            & ! RTTOV: Satellite platform
-       rttov_satellite,           & ! RTTOV: Satellite
-       rttov_instrument,          & ! RTTOV: Instrument
-       rttov_Nchannels              ! RTTOV: Number of channels to be computed
+       isccp_topheight_direction    ! ISCCP cloud top height direction
+  integer :: rttov_Ninstruments = 0
   real(wp) ::                     & !
        cloudsat_radar_freq,       & ! CloudSat radar frequency (GHz)
-       cloudsat_k2,               & ! |K|^2, -1=use frequency dependent default
-       rttov_ZenAng,              & ! RTTOV: Satellite Zenith Angle
-       co2,                       & ! CO2 mixing ratio
-       ch4,                       & ! CH4 mixing ratio
-       n2o,                       & ! n2o mixing ratio
-       co                           ! co mixing ratio
+       cloudsat_k2                  ! |K|^2, -1=use frequency dependent default
   logical ::                      & !
        use_vgrid,                 & ! Use fixed vertical grid for outputs?
        csat_vgrid,                & ! CloudSat vertical grid? 
        use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
                                     ! algorithm 
-
-  integer,dimension(RTTOV_MAX_CHANNELS) :: &
-       rttov_Channels               ! RTTOV: Channel numbers
-  real(wp),dimension(RTTOV_MAX_CHANNELS) :: &
-       rttov_Surfem                 ! RTTOV: Surface emissivity
   character(len=64) :: &
        cloudsat_micro_scheme        ! Microphysical scheme used in cloudsat radar simulator
   character(len=64) :: &
@@ -164,13 +161,43 @@ program cosp2_test
   character(len=512) :: &
        dinput                       ! Directory where the input files are located
   character(len=600) :: &
-       fileIN                       ! dinput+finput
+       fileIN                       ! dinput+finput       
+  character(len=256), dimension(50) :: &   ! Arbitrary limit of 50 should be fine.
+       rttov_instrument_namelists          ! Input of paths to RTTOV instrument namelists
+  character(len=256), allocatable   :: & 
+       rttov_instrument_namelists_final(:) ! Array of paths to RTTOV instrument namelists
+
+  ! Inputs for orbit swathing
+  integer :: N_SWATHS_ISCCP     = 0       ! Number of ISCCP swaths
+  integer :: N_SWATHS_MISR      = 0       ! Number of MISR swaths
+  integer :: N_SWATHS_MODIS     = 0       ! Number of MODIS swaths
+  integer :: N_SWATHS_PARASOL   = 0       ! Number of PARASOL swaths
+  integer :: N_SWATHS_CSCAL     = 0       ! Number of CLOUDSAT+CALIPSO swaths
+  integer :: N_SWATHS_ATLID     = 0       ! Number of ATLID swaths
+  real(wp),dimension(10),target ::  & ! Arbitrary limit of 10 swaths seems reasonable.
+       SWATH_LOCALTIMES_ISCCP,    & ! Local time of ISCCP satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_MISR,     & ! Local time of MISR satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_MODIS,    & ! Local time of MODIS satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_PARASOL,  & ! Local time of PARASOL satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_CSCAL,    & ! Local time of CLOUDSAT+CALIPSO satellite overpasses (hrs GMT)
+       SWATH_LOCALTIMES_ATLID,    & ! Local time of ATLID satellite overpasses (hrs GMT)
+       SWATH_WIDTHS_ISCCP,        & ! Width in km of ISCCP satellite overpasses
+       SWATH_WIDTHS_MISR,         & ! Width in km of MISR satellite overpasses
+       SWATH_WIDTHS_MODIS,        & ! Width in km of MODIS satellite overpasses
+       SWATH_WIDTHS_PARASOL,      & ! Width in km of PARASOL satellite overpasses
+       SWATH_WIDTHS_CSCAL,        & ! Width in km of CLOUDSAT+CALIPSO satellite overpasses
+       SWATH_WIDTHS_ATLID           ! Width in km of ATLID satellite overpasses
+       
   namelist/COSP_INPUT/overlap, isccp_topheight, isccp_topheight_direction, npoints,      &
        npoints_it, ncolumns, nlevels, use_vgrid, Nlvgrid, csat_vgrid, dinput, finput,    &
        foutput, cloudsat_radar_freq, surface_radar, cloudsat_use_gas_abs,cloudsat_do_ray,&
        cloudsat_k2, cloudsat_micro_scheme, lidar_ice_type, use_precipitation_fluxes,     &
-       rttov_platform, rttov_satellite, rttov_Instrument, rttov_Nchannels,               &
-       rttov_Channels, rttov_Surfem, rttov_ZenAng, co2, ch4, n2o, co
+       rttov_Ninstruments, rttov_instrument_namelists, rttov_verbose,                    &
+       N_SWATHS_ISCCP, SWATH_LOCALTIMES_ISCCP, SWATH_WIDTHS_ISCCP, N_SWATHS_MISR,        &
+       SWATH_LOCALTIMES_MISR, SWATH_WIDTHS_MISR, N_SWATHS_MODIS, SWATH_LOCALTIMES_MODIS, &
+       SWATH_WIDTHS_MODIS, N_SWATHS_PARASOL, SWATH_LOCALTIMES_PARASOL,                   &
+       SWATH_WIDTHS_PARASOL, N_SWATHS_CSCAL, SWATH_LOCALTIMES_CSCAL,                     &
+       SWATH_WIDTHS_CSCAL, N_SWATHS_ATLID, SWATH_LOCALTIMES_ATLID, SWATH_WIDTHS_ATLID       
 
   ! Output namelist
   logical :: Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,Lclhcalipso,         &
@@ -191,10 +218,12 @@ program cosp2_test
              LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,Lclmmodis,         &
              Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,Ltautlogmodis,Ltauwlogmodis,     &
              Ltauilogmodis,Lreffclwmodis,Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,    &
-             Lclmodis,Ltbrttov,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,  &
+             Lclmodis,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,           &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lwr_occfreq, Lcfodd
+             Lwr_occfreq,Lcfodd
+  logical :: Lrttov_run        = .false.        
+  logical :: rttov_verbose     = .false.        
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -216,12 +245,12 @@ program cosp2_test
                        LlidarBetaMol532,Lcltmodis,Lclwmodis,Lclimodis,Lclhmodis,         &
                        Lclmmodis,Lcllmodis,Ltautmodis,Ltauwmodis,Ltauimodis,             &
                        Ltautlogmodis,Ltauwlogmodis,Ltauilogmodis,Lreffclwmodis,          &
-                       Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,Ltbrttov,    &
+                       Lreffclimodis,Lpctmodis,Llwpmodis,Liwpmodis,Lclmodis,             &
+                       Lrttov_run,                                                       &
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
                        Lwr_occfreq, Lcfodd
-
   ! Local variables
   logical :: &
        lsingle     = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
@@ -239,13 +268,15 @@ program cosp2_test
        sd                ! Hydrometeor description
   type(radar_cfg) :: &
        rcfg_cloudsat     ! Radar configuration
+  type(rttov_cfg), dimension(:), allocatable, target :: &
+       rttov_configs
   type(cosp_outputs) :: &
        cospOUT           ! COSP simulator outputs
   type(cosp_optical_inputs) :: &
        cospIN            ! COSP optical (or derived?) fields needed by simulators
   type(cosp_column_inputs) :: &
        cospstateIN       ! COSP model fields needed by simulators
-  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij
+  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij,inst_idx
   real(wp),dimension(10) :: driver_time
   character(len=256),dimension(100) :: cosp_status
 
@@ -281,6 +312,16 @@ program cosp2_test
        gamma_2 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/),&
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
+       
+  ! Local variables for orbit swathing
+  real(wp),dimension(:),allocatable :: &
+       cosp_localtime, &
+       cosp_localtime_width
+       
+  ! Swathing DDT array
+  type(swath_inputs),dimension(6)  :: &
+       cospswathsIN
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
@@ -294,11 +335,41 @@ program cosp2_test
   close(10)
 
   ! Output namelist (logical flags to turn on/off outputs)
-  if (command_argument_count() == 2) call get_command_argument(2, cosp_output_namelist)
+  if (command_argument_count() .ge. 2) call get_command_argument(2, cosp_output_namelist)
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
+ 
+  ! Jonah namelist checking area
+  print*,'rttov_verbose:   ',rttov_verbose
+  print*,'Lrttov_run:   ',Lrttov_run
+  print*,'rttov_Ninstruments:    ',rttov_Ninstruments
 
+  ! Shift the namelists read in into a shorter array for cosp_init:    
+  allocate(rttov_instrument_namelists_final(rttov_Ninstruments)) 
+  rttov_instrument_namelists_final(:) = rttov_instrument_namelists(1:rttov_Ninstruments)
+
+  ! Read orbital swathing inputs into structure:
+  ! Indexing order is ISCCP, MISR, CLOUDSAT-CALIPSO, ATLID, PARASOL, MODIS
+  cospswathsIN(1) % N_inst_swaths                             = N_SWATHS_ISCCP
+  cospswathsIN(1) % inst_localtimes(1:N_SWATHS_ISCCP)         = SWATH_LOCALTIMES_ISCCP(1:N_SWATHS_ISCCP)
+  cospswathsIN(1) % inst_localtime_widths(1:N_SWATHS_ISCCP)   = SWATH_WIDTHS_ISCCP(1:N_SWATHS_ISCCP)
+  cospswathsIN(2) % N_inst_swaths                             = N_SWATHS_MISR
+  cospswathsIN(2) % inst_localtimes(1:N_SWATHS_MISR)          = SWATH_LOCALTIMES_MISR(1:N_SWATHS_MISR)
+  cospswathsIN(2) % inst_localtime_widths(1:N_SWATHS_MISR)    = SWATH_WIDTHS_MISR(1:N_SWATHS_MISR)
+  cospswathsIN(3) % N_inst_swaths                             = N_SWATHS_CSCAL
+  cospswathsIN(3) % inst_localtimes(1:N_SWATHS_CSCAL)         = SWATH_LOCALTIMES_CSCAL(1:N_SWATHS_CSCAL)
+  cospswathsIN(3) % inst_localtime_widths(1:N_SWATHS_CSCAL)   = SWATH_WIDTHS_CSCAL(1:N_SWATHS_CSCAL)
+  cospswathsIN(4) % N_inst_swaths                             = N_SWATHS_ATLID
+  cospswathsIN(4) % inst_localtimes(1:N_SWATHS_ATLID)         = SWATH_LOCALTIMES_ATLID(1:N_SWATHS_ATLID)
+  cospswathsIN(4) % inst_localtime_widths(1:N_SWATHS_ATLID)   = SWATH_WIDTHS_ATLID(1:N_SWATHS_ATLID)
+  cospswathsIN(5) % N_inst_swaths                             = N_SWATHS_PARASOL
+  cospswathsIN(5) % inst_localtimes(1:N_SWATHS_PARASOL)       = SWATH_LOCALTIMES_PARASOL(1:N_SWATHS_PARASOL)
+  cospswathsIN(5) % inst_localtime_widths(1:N_SWATHS_PARASOL) = SWATH_WIDTHS_PARASOL(1:N_SWATHS_PARASOL)
+  cospswathsIN(6) % N_inst_swaths                             = N_SWATHS_MODIS
+  cospswathsIN(6) % inst_localtimes(1:N_SWATHS_MODIS)         = SWATH_LOCALTIMES_MODIS(1:N_SWATHS_MODIS)
+  cospswathsIN(6) % inst_localtime_widths(1:N_SWATHS_MODIS)   = SWATH_WIDTHS_MODIS(1:N_SWATHS_MODIS)
+     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in sample input data.
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -311,16 +382,26 @@ program cosp2_test
            fl_lsgrpl(Npoints,Nlevels),fl_ccrain(Npoints,Nlevels),                        &
            fl_ccsnow(Npoints,Nlevels),Reff(Npoints,Nlevels,N_HYDRO),                     &
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
-           dem_c(Npoints,Nlevels),skt(Npoints),landmask(Npoints),                        &
+           dem_c(Npoints,Nlevels),skt(Npoints),psfc(Npoints),landmask(Npoints),          &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
-           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints))
+           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),year(Npoints),           &
+           month(Npoints),day(Npoints),hour(Npoints),minute(Npoints),seconds(Npoints))
+
+  ! Set some fields to masked values if the COSP offline driver outputs are inconsistent
+  year(:)    = R_UNDEF
+  month(:)   = R_UNDEF
+  day(:)     = R_UNDEF
+  hour(:)    = R_UNDEF
+  minute(:)  = R_UNDEF
+  seconds(:) = R_UNDEF
 
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
-                          dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat,surfelev)
+                          dem_s,dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev,year,month,day,hour,       &
+                          minute,seconds)
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -347,7 +428,7 @@ program cosp2_test
        Lclthinmeanzse .or. Lclzopaquecalipsose) Lcalipso = .true. 
 
   if (LlidarBetaMol532gr .or. LcfadLidarsr532gr .or. Latb532gr .or. LclgrLidar532 .or.  & 
-       LclhgrLidar532 .or. LcllgrLidar532 .or. LclmgrLidar532 .or. LcltgrLidar532)   & 
+       LclhgrLidar532 .or. LcllgrLidar532 .or. LclmgrLidar532 .or. LcltgrLidar532)      & 
        LgrLidar532 = .true.
 
   if (LlidarBetaMol355 .or. LcfadLidarsr355 .or. Latb355 .or. Lclatlid .or.              & 
@@ -361,8 +442,18 @@ program cosp2_test
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
-  if (Ltbrttov) Lrttov = .true.
   
+  ! JKS - This will need to be revamped. Each instrument needs these flags
+  if (Lrttov_run .and. (rttov_Ninstruments .gt. 0))         Lrttov = .true.
+  if ((Lrttov_run) .and. (rttov_Ninstruments .le. 0))  then
+      print*,'Lrttov_run is "true" but rttov_Ninstruments < 1. COSP-RTTOV will not run.'
+      Lrttov = .false.
+  endif
+  if ((Lrttov_run .eq. .false.) .and. (rttov_Ninstruments .gt. 0)) then
+      print*,'rttov_Ninstruments > 0 but Lrttov_run is "false". COSP-RTTOV will not run.'
+      Lrttov = .false.
+  endif  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -393,9 +484,11 @@ program cosp2_test
        Lparasol, Lrttov,                                                                 &
        cloudsat_radar_freq, cloudsat_k2, cloudsat_use_gas_abs,                           &
        cloudsat_do_ray, isccp_topheight, isccp_topheight_direction, surface_radar,       &
-       rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme)
+       rcfg_cloudsat, use_vgrid, csat_vgrid, Nlvgrid, Nlevels, cloudsat_micro_scheme,    &
+       rttov_Ninstruments, rttov_instrument_namelists_final, rttov_configs,              &
+       debug=rttov_verbose)
   call cpu_time(driver_time(3))
-  
+    
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived type.
   ! *NOTE* The "construct/destroy" subroutines are local to this module and should be
@@ -420,21 +513,27 @@ program cosp2_test
        Lclcalipsoopacity, Lclopaquetemp, Lclthintemp, Lclzopaquetemp, Lclopaquemeanz,    & 
        Lclthinmeanz, Lclthinemis, Lclopaquemeanzse, Lclthinmeanzse, Lclzopaquecalipsose, &
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
-       Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,  &
+       Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,            &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
        Lwr_occfreq, Lcfodd,                                                              &
-       Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
+       rttov_Ninstruments,rttov_configs,                                                 &
+       Npoints, Ncolumns, Nlevels, Nlvgrid_local, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
   ! nChunks = # Points to Process (nPoints) / # Points per COSP iteration (nPoints_it)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  nChunks = nPoints/nPoints_it+1
+  if (MOD(nPoints,nPoints_it) .eq. 0) then ! JKS - do not run an extra iteration if Npoints_it divides Npoints cleanly
+     nChunks = Npoints/Npoints_it
+  else 
+     nChunks = nPoints/nPoints_it+1
+  endif 
   if (nPoints .eq. nPoints_it) nChunks = 1
   do iChunk=1,nChunks
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Determine indices for "chunking" (again, if necessary)
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     
      if (nChunks .eq. 1) then
         start_idx = 1
         end_idx   = nPoints
@@ -450,14 +549,16 @@ program cosp2_test
      ! Construct COSP input types
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      if (iChunk .eq. 1) then
-        call construct_cospIN(Nptsperit,nColumns,nLevels,cospIN)
-        call construct_cospstateIN(Nptsperit,nLevels,rttov_nChannels,cospstateIN)
+       call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=1.0_wp)
+      !   call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
+        call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)
      endif
      if (iChunk .eq. nChunks) then
         call destroy_cospIN(cospIN)
         call destroy_cospstateIN(cospstateIN)
-        call construct_cospIN(Nptsperit,nColumns,nLevels,cospIN)
-        call construct_cospstateIN(Nptsperit,nLevels,rttov_nChannels,cospstateIN)    
+       call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN,emis_grey=1.0_wp)
+      !   call construct_cospIN(Nptsperit,nColumns,nLevels,rttov_Ninstruments,cospIN)
+        call construct_cospstateIN(Nptsperit,nLevels,cospstateIN)    
      endif
      call cpu_time(driver_time(4))
 
@@ -467,8 +568,12 @@ program cosp2_test
      ! surface-2-TOA, whereas COSP expects all fields to be ordered from TOA-2-SFC. So the
      ! vertical fields are flipped prior to storing to COSP input type.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     
      cospIN%emsfc_lw         = emsfc_lw
      cospIN%rcfg_cloudsat    = rcfg_cloudsat
+     cospIN%cfg_rttov        => rttov_configs ! JKS - Not sure why the cloudsat isn't a pointer. The config files for RTTOV are large and I don't want them duplicated in memory
+     cospIN%cospswathsIN     = cospswathsIN ! Swathing information for each non-RTTOV simulator.
+     
      cospstateIN%hgt_matrix  = zlev(start_idx:end_idx,Nlevels:1:-1) ! km
      cospstateIN%sunlit      = sunlit(start_idx:end_idx)            ! 0-1
      cospstateIN%skt         = skt(start_idx:end_idx)               ! K
@@ -480,11 +585,122 @@ program cosp2_test
      ! Pressure at interface (nlevels+1). Set uppermost interface to 0.
      cospstateIN%phalf(:,2:Nlevels+1) = ph(start_idx:end_idx,Nlevels:1:-1)   ! Pa  
      cospstateIN%phalf(:,1)           = 0._wp
+     ! Surface pressure
+     if (any(psfc(start_idx:end_idx) .lt. 0._wp)) then
+        print*,'Some of values of the surface pressure field are negative. Replacing all psfc values with the lowest boundary pressure.'
+        psfc(start_idx:end_idx) = cospstateIN%phalf(start_idx:end_idx,Nlevels+1)
+     end if          
+     cospstateIN%psfc        = psfc(start_idx:end_idx)              ! Pa
      ! Height of bottom interfaces of model layers (nlevels).
      ! cospstateIN%hgt_matrix_half(:,1) contains the bottom of the top layer.
      ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
      
+     ! Assign RTTOV values
+     ! Keeping these structures since refl and emis could come from model input
+     cospstateIN%emis_in(:,:) = 1._wp
+     cospstateIN%refl_in(:,:) = 1._wp     
+     
+     ! Well-mixed gases are not provided in COSP offline input, so hardcoding them in.
+     ! Units are kg/kg over moist air.
+     ! Note: user_tracegas_input should be true in instrument namelists for the COSP offline driver
+     cospstateIN%co2(:,:)   = 5.241e-04
+     cospstateIN%ch4(:,:)   = 9.139e-07
+     cospstateIN%n2o(:,:)   = 4.665e-07
+     cospstateIN%co(:,:)    = 2.098e-07
+     cospstateIN%so2(:,:)   = 2.0e-11
+
+     if (any(year(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input year field are masked. Replacing with 1 so RTTOV will run.'
+         where (year(start_idx:end_idx) .lt. 0._wp) 
+             year(start_idx:end_idx) = 1
+         end where
+     end if
+     if (any(month(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input month field are masked. Replacing with 1 so RTTOV will run.'
+         where (month(start_idx:end_idx) .lt. 0._wp) 
+             month(start_idx:end_idx) = 1
+         end where
+     end if
+     if (any(day(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input day field are masked. Replacing with 1 so RTTOV will run.'
+         where (day(start_idx:end_idx) .lt. 0._wp) 
+             day(start_idx:end_idx) = 1
+         end where
+     end if     
+     if (any(hour(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input hour field are masked. Replacing with 1 so RTTOV will run.'
+         where (hour(start_idx:end_idx) .lt. 0._wp) 
+             hour(start_idx:end_idx) = 1._wp
+         end where
+     end if
+     if (any(minute(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input minute field are masked. Replacing with 1 so RTTOV will run.'
+         where (minute(start_idx:end_idx) .lt. 0._wp) 
+             minute(start_idx:end_idx) = 1._wp
+         end where
+     end if 
+     if (any(seconds(start_idx:end_idx) .lt. 0._wp)) then
+         print*,'Some of values of the input minute field are masked. Replacing with 1 so RTTOV will run.'
+         where (seconds(start_idx:end_idx) .lt. 0._wp) 
+             seconds(start_idx:end_idx) = 1._wp
+         end where
+     end if      
+     
+     ! Read in date and time objects for RTTOV
+     cospstateIN%rttov_date(:,1)  = year(start_idx:end_idx)
+     cospstateIN%rttov_date(:,2)  = month(start_idx:end_idx)
+     cospstateIN%rttov_date(:,3)  = day(start_idx:end_idx)
+     
+     cospstateIN%rttov_time(:,1)  = hour(start_idx:end_idx)
+     cospstateIN%rttov_time(:,2)  = minute(start_idx:end_idx)
+     cospstateIN%rttov_time(:,3)  = seconds(start_idx:end_idx) 
+          
+     cospstateIN%sza         = 0._wp ! => null() didn't work. ! JKS nothing passed in the UKMO input.
+
+     ! From the data input file
+     cospstateIN%u_sfc  = u_wind(start_idx:end_idx)
+     cospstateIN%v_sfc  = v_wind(start_idx:end_idx)
+     cospstateIN%lat    = lat(start_idx:end_idx)
+     cospstateIN%lon    = lon(start_idx:end_idx)
+          
+     cospstateIN%o3  = mr_ozone(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%tca = tca(start_idx:end_idx,Nlevels:1:-1)
+          
+     ! Combine large-scale and convective cloud mixing ratios for RTTOV [kg/kg]
+     cospstateIN%cloudIce = mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%cloudLiq = mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)     
+        
+     ! Combine large-scale and convective cloud effective radii into effective diameters for RTTOV
+     ! Reff(Npoints,Nlevels,N_HYDRO)
+     ! The weighted Reff is given by: Reff_net = (M_1 + M_2) / (M_1/Reff_1 + M_2/Reff_2)
+     cospstateIN%DeffLiq(:,:) = 0._wp ! Initialize for zero everywhere.
+     where ((mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
+     elsewhere (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ)
+     elsewhere (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ)
+     end where
+     
+     cospstateIN%DeffIce(:,:) = 0._wp ! Initialize for zero everywhere.
+     where ((mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
+     elsewhere (mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE)
+     elsewhere (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE)
+     end where     
+     
+     ! RTTOV doesn't consider precip flux for longwave, but it could be used when simulating MW instruments.
+     ! Graupel goes in the snow category, arbitrarily
+     cospstateIN%fl_rain = fl_lsrain(start_idx:end_idx,Nlevels:1:-1) + fl_ccrain(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%fl_snow = fl_lssnow(start_idx:end_idx,Nlevels:1:-1) + fl_ccsnow(start_idx:end_idx,Nlevels:1:-1) + &
+                           fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1)
+
+     ! Inputs not supplied in the UKMO test data
+     cospstateIN%rttov_sfcmask = landmask(start_idx:end_idx)       ! (0=ocn,1=land,2=seaice). No sea ice in UKMO input here.
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -501,17 +717,18 @@ program cosp2_test
           cospstateIN,cospIN)
 
      call cpu_time(driver_time(6))
-    
+
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Call COSP
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,.false.)
+     cosp_status = COSP_SIMULATOR(cospIN, cospstateIN, cospOUT,start_idx,end_idx,rttov_verbose)
      do ij=1,size(cosp_status,1)
         if (cosp_status(ij) .ne. '') print*,trim(cosp_status(ij))
      end do
      
      call cpu_time(driver_time(7))
-  enddo
+  end do
+
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to initialize:       ',driver_time(3)-driver_time(2)
   print*,'Time to construct types:  ',driver_time(4)-driver_time(3)
@@ -522,7 +739,7 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  call write_cosp2_output(Npoints, Ncolumns, Nlevels, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
+  call write_cosp2_output(Npoints, Ncolumns, Nlevels, rttov_Ninstruments, zlev(1,Nlevels:1:-1), lon, lat, cospOUT, foutput)
 
   call cpu_time(driver_time(8))
   print*,'Time to write to output:  ',driver_time(8)-driver_time(7)
@@ -530,10 +747,18 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Free up memory
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  if (rttov_verbose) print*,'Calling "destroy_cosp_outputs".'
   call destroy_cosp_outputs(cospOUT)
+  if (rttov_verbose) print*,'Calling "rttov_cleanup".'
+  call rttov_cleanup(cospIN)
+  if (rttov_verbose) print*,'Calling "destroy_cospIN".'
   call destroy_cospIN(cospIN)
-  call destroy_cospstateIN(cospstateIN)
+  if (rttov_verbose) print*,'Calling "destroy_cospstateIN".'
+  call destroy_cospstateIN(cospstateIN) 
+  if (rttov_verbose) print*,'Calling "cosp_cleanUp".'
   call cosp_cleanUp()
+  if (rttov_verbose) print*,'all done.'
+
 contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   ! SUBROUTINE subsample_and_optics
@@ -932,27 +1157,34 @@ contains
             Np,Reff)
     endif
   end subroutine subsample_and_optics
-  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine construct_cospIN(npoints,ncolumns,nlevels,y)
+  subroutine construct_cospIN(npoints,ncolumns,nlevels,ninst_rttov,y,emis_grey)
     ! Inputs
     integer,intent(in) :: &
          npoints,  & ! Number of horizontal gridpoints
          ncolumns, & ! Number of subcolumns
-         nlevels     ! Number of vertical levels
+         nlevels,  & ! Number of vertical levels
+         ninst_rttov ! Number of RTTOV instruments
     ! Outputs 
     type(cosp_optical_inputs),intent(out) :: y
-    
+    ! Optional input
+    real(kind=wp),intent(in),target, optional :: &
+         emis_grey
+         
     ! Dimensions
-    y%Npoints  = Npoints
-    y%Ncolumns = Ncolumns
-    y%Nlevels  = Nlevels
-    y%Npart    = 4
-    y%Nrefl    = PARASOL_NREFL
+    y%Npoints     = Npoints
+    y%Ncolumns    = Ncolumns
+    y%Nlevels     = Nlevels
+    y%Ninst_rttov = Ninst_rttov
+    y%Npart       = 4
+    y%Nrefl       = PARASOL_NREFL
     allocate(y%frac_out(npoints,       ncolumns,nlevels))
-
+    
+    if (present(emis_grey)) y%emis_grey => emis_grey
+    
     if (Lmodis .or. Lmisr .or. Lisccp) then
        allocate(y%tau_067(npoints,        ncolumns,nlevels),&
                 y%emiss_11(npoints,       ncolumns,nlevels))
@@ -995,7 +1227,7 @@ contains
                 y%asym(npoints,           ncolumns,nlevels),&
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
-    
+
     allocate (y%rcfg_cloudsat)
 
   end subroutine construct_cospIN
@@ -1003,22 +1235,28 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospstateIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%     
-  subroutine construct_cospstateIN(npoints,nlevels,nchan,y)
+  subroutine construct_cospstateIN(npoints,nlevels,y)
     ! Inputs
     integer,intent(in) :: &
          npoints, & ! Number of horizontal gridpoints
-         nlevels, & ! Number of vertical levels
-         nchan      ! Number of channels
+         nlevels    ! Number of vertical levels 
+         
     ! Outputs
     type(cosp_column_inputs),intent(out) :: y         
     
     allocate(y%sunlit(npoints),y%skt(npoints),y%land(npoints),y%at(npoints,nlevels),     &
+             y%psfc(npoints), &
              y%pfull(npoints,nlevels),y%phalf(npoints,nlevels+1),y%qv(npoints,nlevels),  &
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
-             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%emis_sfc(nchan),           &
-             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(npoints),&
-             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),y%seaice(npoints),    &
-             y%tca(nPoints,nLevels),y%hgt_matrix_half(npoints,nlevels))
+             y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%rttov_sfcmask(nPoints),    &
+             y%co(npoints,nlevels),y%n2o(npoints,nlevels),y%ch4(npoints,nlevels),        &
+             y%co2(npoints,nlevels), &             
+             y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(nPoints),&
+             y%DeffLiq(nPoints,nLevels),y%DeffIce(nPoints,nLevels),                      &
+             y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
+             y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
+             y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),y%sza(nPoints))
+
 
   end subroutine construct_cospstateIN
 
@@ -1055,11 +1293,12 @@ contains
                                     Lclzopaquetemp,Lclopaquemeanz,Lclthinmeanz,          & 
                                     Lclthinemis,Lclopaquemeanzse,Lclthinmeanzse,         &
                                     Lclzopaquecalipsose,LcfadDbze94,Ldbze94,Lparasolrefl,&
-                                    Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2, &
+                                    Lptradarflag0,Lptradarflag1,Lptradarflag2,           &
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
+                                    Ninst_rttov,rttov_configs,                   &
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1156,7 +1395,6 @@ contains
          LcfadDbze94,      & ! CLOUDSAT radar reflectivity CFAD
          Ldbze94,          & ! CLOUDSAT radar reflectivity
          LparasolRefl,     & ! PARASOL reflectance
-         Ltbrttov,         & ! RTTOV mean clear-sky brightness temperature
          Lptradarflag0,    & ! CLOUDSAT 
          Lptradarflag1,    & ! CLOUDSAT 
          Lptradarflag2,    & ! CLOUDSAT 
@@ -1176,11 +1414,17 @@ contains
           Ncolumns,        & ! Number of subgrid columns
           Nlevels,         & ! Number of model levels
           Nlvgrid,         & ! Number of levels in L3 stats computation
-          Nchan              ! Number of RTTOV channels  
+          Ninst_rttov
           
+     type(rttov_cfg), dimension(Ninst_rttov),intent(in) :: &
+         rttov_configs
+     
      ! Outputs
      type(cosp_outputs),intent(out) :: &
           x           ! COSP output structure  
+          
+     integer           :: &
+         i
    
      ! ISCCP simulator outputs
     if (Lboxtauisccp)    allocate(x%isccp_boxtau(Npoints,Ncolumns)) 
@@ -1327,23 +1571,68 @@ contains
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
     if (Lcltlidarradar) allocate(x%radar_lidar_tcc(Npoints))
-    if (Lcloudsat_tcc) allocate(x%cloudsat_tcc(Npoints))
+    if (Lcloudsat_tcc)  allocate(x%cloudsat_tcc(Npoints))
     if (Lcloudsat_tcc2) allocate(x%cloudsat_tcc2(Npoints))
             
-    ! RTTOV
-    if (Ltbrttov) allocate(x%rttov_tbs(Npoints,Nchan))
-
     ! Joint MODIS/CloudSat Statistics
     if (Lwr_occfreq)  allocate(x%wr_occfreq_ntotal(Npoints,WR_NREGIME))
     if (Lcfodd)       allocate(x%cfodd_ntotal(Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS))
+    
+    ! RTTOV - Allocate output for multiple instruments
+    ! Do I not need to allocate the number of instruments? Because each rttov output DDT will be a pointer?
+    if ((Ninst_rttov .gt. 0) .and. (Lrttov)) then
+        x % Ninst_rttov = Ninst_rttov
+        allocate(x % rttov_outputs(Ninst_rttov)) ! Need to allocate a pointer?
+        do i=1,Ninst_rttov
+            x % rttov_outputs(i) % nchan_out = rttov_configs(i) % nchan_out
+            if (rttov_configs(i) % Lrttov_pc) then ! Treat PC-RTTOV fields as clear-sky only for now
+                allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
+                if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
+                    allocate(x % rttov_outputs(i) % bt_total_pc(Npoints,rttov_configs(i) % nchan_out))
+        !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
+                end if
+                if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
+                    allocate(x % rttov_outputs(i) % rad_total_pc(Npoints,rttov_configs(i) % nchan_out))
+        !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
+        !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
+                end if  
+            else
+                allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
+                if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
+                    allocate(x % rttov_outputs(i) % bt_total(Npoints,rttov_configs(i) % nchan_out))
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
+                        allocate(x % rttov_outputs(i) % bt_clear(Npoints,rttov_configs(i) % nchan_out))
+                    end if
+                end if
+                if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
+                    allocate(x % rttov_outputs(i) % rad_total(Npoints,rttov_configs(i) % nchan_out))
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
+                        allocate(x % rttov_outputs(i) % rad_clear(Npoints,rttov_configs(i) % nchan_out))
+                    end if
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
+                        allocate(x % rttov_outputs(i) % rad_cloudy(Npoints,rttov_configs(i) % nchan_out))
+                    end if
+                end if
+                if (rttov_configs(i) % Lrttov_refl) then                            ! Reflectance
+                    allocate(x % rttov_outputs(i) % refl_total(Npoints,rttov_configs(i) % nchan_out))
+                    if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
+                        allocate(x % rttov_outputs(i) % refl_clear(Npoints,rttov_configs(i) % nchan_out))
+                    end if
+                end if    
+            end if         
+        end do
+    else
+        x % Ninst_rttov = 0
+    end if
 
   end subroutine construct_cosp_outputs
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospIN     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine destroy_cospIN(y)
+  subroutine destroy_cospIN(y)    
     type(cosp_optical_inputs),intent(inout) :: y
+    
     if (allocated(y%tau_067))             deallocate(y%tau_067)
     if (allocated(y%emiss_11))            deallocate(y%emiss_11)
     if (allocated(y%frac_out))            deallocate(y%frac_out)
@@ -1371,54 +1660,57 @@ contains
     if (allocated(y%betatot_atlid))       deallocate(y%betatot_atlid) 
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
-    if (allocated(y%fracPrecipIce))      deallocate(y%fracPrecipIce)
-    if (allocated(y%rcfg_cloudsat%N_scale_flag))       deallocate(y%rcfg_cloudsat%N_scale_flag)
-    if (allocated(y%rcfg_cloudsat%Z_scale_flag))       deallocate(y%rcfg_cloudsat%Z_scale_flag)
-    if (allocated(y%rcfg_cloudsat%Z_scale_added_flag)) deallocate(y%rcfg_cloudsat%Z_scale_added_flag)
-    if (allocated(y%rcfg_cloudsat%Ze_scaled))          deallocate(y%rcfg_cloudsat%Ze_scaled)
-    if (allocated(y%rcfg_cloudsat%Zr_scaled))          deallocate(y%rcfg_cloudsat%Zr_scaled)
-    if (allocated(y%rcfg_cloudsat%kr_scaled))          deallocate(y%rcfg_cloudsat%kr_scaled)
-    if (allocated(y%rcfg_cloudsat%fc))                 deallocate(y%rcfg_cloudsat%fc)
-    if (allocated(y%rcfg_cloudsat%rho_eff))            deallocate(y%rcfg_cloudsat%rho_eff)
-    if (allocated(y%rcfg_cloudsat%base_list))          deallocate(y%rcfg_cloudsat%base_list)
-    if (allocated(y%rcfg_cloudsat%step_list))          deallocate(y%rcfg_cloudsat%step_list)
+    if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
+    if (associated(y%cfg_rttov))          nullify(y%cfg_rttov)
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine destroy_cospstateIN(y)
+  subroutine destroy_cospstateIN(y)  
     type(cosp_column_inputs),intent(inout) :: y
 
     if (allocated(y%sunlit))          deallocate(y%sunlit)
     if (allocated(y%skt))             deallocate(y%skt)
+    if (allocated(y%psfc))            deallocate(y%psfc)
     if (allocated(y%land))            deallocate(y%land)
+    if (allocated(y%rttov_sfcmask))   deallocate(y%rttov_sfcmask)
     if (allocated(y%at))              deallocate(y%at)
     if (allocated(y%pfull))           deallocate(y%pfull)
     if (allocated(y%phalf))           deallocate(y%phalf)
     if (allocated(y%qv))              deallocate(y%qv)
-    if (allocated(y%o3))              deallocate(y%o3)
     if (allocated(y%hgt_matrix))      deallocate(y%hgt_matrix)
+    if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
+    if (allocated(y%surfelev))        deallocate(y%surfelev)
+    if (allocated(y%rttov_date))      deallocate(y%rttov_date)
+    if (allocated(y%rttov_time))      deallocate(y%rttov_time)
+    if (allocated(y%sza))             deallocate(y%sza)
+    if (allocated(y%co2))             deallocate(y%co2)
+    if (allocated(y%ch4))             deallocate(y%ch4)
+    if (allocated(y%n2o))             deallocate(y%n2o)
+    if (allocated(y%co))              deallocate(y%co)
+    if (allocated(y%o3))              deallocate(y%o3)
     if (allocated(y%u_sfc))           deallocate(y%u_sfc)
     if (allocated(y%v_sfc))           deallocate(y%v_sfc)
     if (allocated(y%lat))             deallocate(y%lat)
     if (allocated(y%lon))             deallocate(y%lon)
-    if (allocated(y%emis_sfc))        deallocate(y%emis_sfc)
+    if (allocated(y%emis_in))         deallocate(y%emis_in)
+    if (allocated(y%refl_in))         deallocate(y%refl_in)
     if (allocated(y%cloudIce))        deallocate(y%cloudIce)
     if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
-    if (allocated(y%seaice))          deallocate(y%seaice)
+    if (allocated(y%DeffLiq))         deallocate(y%DeffLiq)
+    if (allocated(y%DeffIce))         deallocate(y%DeffIce)
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
-    if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
-    if (allocated(y%surfelev))        deallocate(y%surfelev)
     
   end subroutine destroy_cospstateIN
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cosp_outputs
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
-  subroutine destroy_cosp_outputs(y)
+  subroutine destroy_cosp_outputs(y)    
      type(cosp_outputs),intent(inout) :: y
+     integer :: i ! Local iterator for RTTOV instruments
 
      ! Deallocate and nullify
      if (associated(y%calipso_beta_mol))          then
@@ -1641,10 +1933,6 @@ contains
         deallocate(y%misr_cldarea)
         nullify(y%misr_cldarea)      
      endif
-     if (associated(y%rttov_tbs))                 then
-        deallocate(y%rttov_tbs)
-        nullify(y%rttov_tbs)     
-     endif
      if (associated(y%modis_Cloud_Fraction_Total_Mean))                      then
         deallocate(y%modis_Cloud_Fraction_Total_Mean)       
         nullify(y%modis_Cloud_Fraction_Total_Mean)       
@@ -1733,8 +2021,73 @@ contains
         deallocate(y%wr_occfreq_ntotal)
         nullify(y%wr_occfreq_ntotal)
      endif
-
+     
+     ! RTTOV multi-instrument
+     if (allocated(y%rttov_outputs)) then
+         do i=1,y % Ninst_rttov ! Iterate over each instrument
+             if (associated(y%rttov_outputs(i)%channel_indices)) then
+                deallocate(y%rttov_outputs(i)%channel_indices)
+                nullify(y%rttov_outputs(i)%channel_indices)
+             endif
+             if (associated(y%rttov_outputs(i)%bt_total)) then
+                deallocate(y%rttov_outputs(i)%bt_total)
+                nullify(y%rttov_outputs(i)%bt_total)
+             endif
+             if (associated(y%rttov_outputs(i)%bt_clear)) then
+                deallocate(y%rttov_outputs(i)%bt_clear)
+                nullify(y%rttov_outputs(i)%bt_clear)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_total)) then
+                deallocate(y%rttov_outputs(i)%rad_total)
+                nullify(y%rttov_outputs(i)%rad_total)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_clear)) then
+                deallocate(y%rttov_outputs(i)%rad_clear)
+                nullify(y%rttov_outputs(i)%rad_clear)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_cloudy)) then
+                deallocate(y%rttov_outputs(i)%rad_cloudy)
+                nullify(y%rttov_outputs(i)%rad_cloudy)
+             endif
+             if (associated(y%rttov_outputs(i)%refl_total)) then
+                deallocate(y%rttov_outputs(i)%refl_total)
+                nullify(y%rttov_outputs(i)%refl_total)
+             endif
+             if (associated(y%rttov_outputs(i)%refl_clear)) then
+                deallocate(y%rttov_outputs(i)%refl_clear)
+                nullify(y%rttov_outputs(i)%refl_clear)
+             endif
+             if (associated(y%rttov_outputs(i)%bt_total_pc)) then
+                deallocate(y%rttov_outputs(i)%bt_total_pc)
+                nullify(y%rttov_outputs(i)%bt_total_pc)
+             endif
+             if (associated(y%rttov_outputs(i)%rad_total_pc)) then
+                deallocate(y%rttov_outputs(i)%rad_total_pc)
+                nullify(y%rttov_outputs(i)%rad_total_pc)
+             endif
+         end do
+         deallocate(y%rttov_outputs)
+     end if
+     
    end subroutine destroy_cosp_outputs
-  
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE rttov_cleanup     
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine rttov_cleanup(y)
+    use MOD_COSP_RTTOV_INTERFACE, only: DESTROY_RTTOV_CONFIG
+    
+    type(cosp_optical_inputs),intent(inout) :: y
+    integer :: i
+    
+    if (size(y%cfg_rttov) .gt. 0) then
+        do i=1,y%Ninst_rttov
+            call destroy_rttov_config(y%cfg_rttov(i))
+        end do
+    end if
+    nullify(y%cfg_rttov)
+    
+  end subroutine rttov_cleanup
+
  end program cosp2_test
 

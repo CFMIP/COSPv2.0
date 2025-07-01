@@ -133,7 +133,7 @@
   Liwpmodis=.true.,
   Lclmodis=.true.,
   !- RTTOV
-  Ltbrttov=.false.,
+!  Ltbrttov=.false.,
   ! -CLOUDSAT precipitation frequency/occurence diagnostics
   Lptradarflag0=.true.,
   Lptradarflag1=.true.,
