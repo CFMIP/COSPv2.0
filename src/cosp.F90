@@ -2119,8 +2119,14 @@ CONTAINS
           endif  !! use_vgrid or not
 
           ! Store, when necessary
-          cospOUT%lidar_only_freq_cloud(ij+int(CSCAL_MASK_INDICES(:))-1,:)  = lidar_only_freq_cloud(:,:)
-
+          if (associated(cospOUT%lidar_only_freq_cloud)) then
+             if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays 
+                cospOUT%lidar_only_freq_cloud(ij+int(CSCAL_MASK_INDICES(:))-1,:)  = lidar_only_freq_cloud(:,:)
+             else
+                cospOUT%lidar_only_freq_cloud(ij:ik,:) = lidar_only_freq_cloud
+             endif
+          endif
+          
           if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays for CSCAL
              if (cospIN % cospswathsIN(6) % N_inst_swaths .gt. 0) then ! If MODIS is also swathed then use the joint mask MODIS_CSCAL_MASK_INDICES for setting R_UNDEF
                 if ( associated(cospOUT%cfodd_ntotal) ) then
