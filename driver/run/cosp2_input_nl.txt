@@ -82,15 +82,7 @@
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-!  rttov_Platform=1,    ! satellite platform
-!  rttov_Satellite=15,  ! satellite
-!  rttov_Instrument=5,  ! instrument
-!  rttov_Nchannels=3,   ! Number of channels to be computed
-!  rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
-!  rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
-!  rttov_ZenAng=50.0, ! Satellite Zenith Angle
-!  CO2=5.241e-04, ! Mixing ratios of trace gases
-!  CH4=9.139e-07,
-!  N2O=4.665e-07,
-!  CO=2.098e-07
+!  rttov_Ninstruments=1,
+!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt',
+  rttov_verbose=.false.
 /
