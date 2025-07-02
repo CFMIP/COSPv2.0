@@ -179,7 +179,7 @@ contains
          modisIN%g         => cospIN%asym
          modisIN%w0        => cospIN%ss_alb        
          modisIN%Nsunlit   = count(cospgridIN%sunlit > 0)
-         modisIN%pres      => cospgridIN%phalf
+         modisIN%pres      = cospgridIN%phalf
          if (modisIN%Nsunlit .gt. 0) then
             allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
             modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
