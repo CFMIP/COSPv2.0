@@ -276,7 +276,7 @@ program cosp2_test
        cospIN            ! COSP optical (or derived?) fields needed by simulators
   type(cosp_column_inputs) :: &
        cospstateIN       ! COSP model fields needed by simulators
-  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij,inst_idx
+  integer :: iChunk,nChunks,start_idx,end_idx,nPtsPerIt,ij
   real(wp),dimension(10) :: driver_time
   character(len=256),dimension(100) :: cosp_status
 
@@ -312,12 +312,7 @@ program cosp2_test
        gamma_2 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/),&
        gamma_3 = (/-1., -1.,      2.0,      2.0, -1., -1.,      2.0,      2.0,      2.0/),&
        gamma_4 = (/-1., -1.,      6.0,      6.0, -1., -1.,      6.0,      6.0,      6.0/)
-       
-  ! Local variables for orbit swathing
-  real(wp),dimension(:),allocatable :: &
-       cosp_localtime, &
-       cosp_localtime_width
-       
+
   ! Swathing DDT array
   type(swath_inputs),dimension(6)  :: &
        cospswathsIN
@@ -597,8 +592,8 @@ program cosp2_test
      
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
-     cospstateIN%emis_in(:,:) = 1._wp
-     cospstateIN%refl_in(:,:) = 1._wp     
+   !   cospstateIN%emis_in(:,:) = 1._wp
+   !   cospstateIN%refl_in(:,:) = 1._wp     
      
      ! Well-mixed gases are not provided in COSP offline input, so hardcoding them in.
      ! Units are kg/kg over moist air.
@@ -748,8 +743,10 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   if (rttov_verbose) print*,'Calling "destroy_cosp_outputs".'
   call destroy_cosp_outputs(cospOUT)
-  if (rttov_verbose) print*,'Calling "rttov_cleanup".'
-  call rttov_cleanup(cospIN)
+  if (associated(cospIN%cfg_rttov)) then
+     if (rttov_verbose) print*,'Calling "rttov_cleanup".'
+     call rttov_cleanup(cospIN)
+  endif
   if (rttov_verbose) print*,'Calling "destroy_cospIN".'
   call destroy_cospIN(cospIN)
   if (rttov_verbose) print*,'Calling "destroy_cospstateIN".'
@@ -1247,7 +1244,7 @@ contains
              y%o3(npoints,nlevels),y%hgt_matrix(npoints,nlevels),y%u_sfc(npoints),       &
              y%v_sfc(npoints),y%lat(npoints),y%lon(nPoints),y%rttov_sfcmask(nPoints),    &
              y%co(npoints,nlevels),y%n2o(npoints,nlevels),y%ch4(npoints,nlevels),        &
-             y%co2(npoints,nlevels), &             
+             y%co2(npoints,nlevels), y%so2(npoints,nlevels),                             &             
              y%cloudIce(nPoints,nLevels),y%cloudLiq(nPoints,nLevels),y%surfelev(nPoints),&
              y%DeffLiq(nPoints,nLevels),y%DeffIce(nPoints,nLevels),                      &
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
@@ -1690,8 +1687,8 @@ contains
     if (allocated(y%v_sfc))           deallocate(y%v_sfc)
     if (allocated(y%lat))             deallocate(y%lat)
     if (allocated(y%lon))             deallocate(y%lon)
-    if (allocated(y%emis_in))         deallocate(y%emis_in)
-    if (allocated(y%refl_in))         deallocate(y%refl_in)
+   !  if (allocated(y%emis_in))         deallocate(y%emis_in)
+   !  if (allocated(y%refl_in))         deallocate(y%refl_in)
     if (allocated(y%cloudIce))        deallocate(y%cloudIce)
     if (allocated(y%cloudLiq))        deallocate(y%cloudLiq)
     if (allocated(y%DeffLiq))         deallocate(y%DeffLiq)

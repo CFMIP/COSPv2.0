@@ -267,7 +267,6 @@ CONTAINS
          Lparasol_subcolumn,   & ! On/Off switch for subcolumn PARASOL simulator
          Lcloudsat_subcolumn,  & ! On/Off switch for subcolumn CLOUDSAT simulator
          Lmodis_subcolumn,     & ! On/Off switch for subcolumn MODIS simulator
-         Lrttov_subcolumn,     & ! On/Off switch for subcolumn RTTOV simulator
          Lisccp_column,        & ! On/Off switch for column ISCCP simulator
          Lmisr_column,         & ! On/Off switch for column MISR simulator
          Lcalipso_column,      & ! On/Off switch for column CALIPSO simulator
@@ -422,7 +421,6 @@ CONTAINS
     Lparasol_subcolumn  = .false.
     Lcloudsat_subcolumn = .false.
     Lmodis_subcolumn    = .false.
-    Lrttov_subcolumn    = .false.
     Lisccp_column       = .false.
     Lmisr_column        = .false.
     Lcalipso_column     = .false.
@@ -616,7 +614,7 @@ CONTAINS
          Lmisr_subcolumn, Lmisr_column, Lmodis_subcolumn, Lmodis_column,                 &
          Lcloudsat_subcolumn, Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column,     &
          Latlid_subcolumn, Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column,     &
-         Lrttov_subcolumn, Lrttov_column, Lparasol_subcolumn, Lparasol_column,           &
+         Lrttov_column, Lparasol_subcolumn, Lparasol_column,                             &
          Lradar_lidar_tcc, Llidar_only_freq_cloud, Lcloudsat_tcc,Lcloudsat_tcc2,         &
          Lcloudsat_modis_wr, cospOUT, cosp_simulator, nError)
 
@@ -2365,7 +2363,7 @@ CONTAINS
   subroutine cosp_errorCheck(cospgridIN, cospIN, Lisccp_subcolumn, Lisccp_column,           &
        Lmisr_subcolumn, Lmisr_column, Lmodis_subcolumn, Lmodis_column, Lcloudsat_subcolumn, &
        Lcloudsat_column, Lcalipso_subcolumn, Lcalipso_column, Latlid_subcolumn,             &
-       Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column, Lrttov_subcolumn,          &
+       Latlid_column, LgrLidar532_subcolumn, LgrLidar532_column,                            &
        Lrttov_column, Lparasol_subcolumn, Lparasol_column, Lradar_lidar_tcc,                &
        Llidar_only_freq_cloud, Lcloudsat_tcc, Lcloudsat_tcc2, Lcloudsat_modis_wr,           &
        cospOUT, errorMessage, nError)
@@ -2394,7 +2392,6 @@ CONTAINS
          LgrLidar532_column,  & ! Ground Lidar column simulator on/off switch
          Lparasol_subcolumn,  & ! PARASOL subcolumn simulator on/off switch
          Lparasol_column,     & ! PARASOL column simulator on/off switch
-         Lrttov_subcolumn,    & ! RTTOV subcolumn simulator on/off switch
          Lrttov_column,       & ! RTTOV column simulator on/off switch
          Lcloudsat_tcc,       & !
          Lcloudsat_tcc2,      & !
