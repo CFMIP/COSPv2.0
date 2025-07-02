@@ -933,7 +933,7 @@ CONTAINS
           ! Call simulator one column at a time on sunlit columns
           do i = 1, modisIN%nSunlit ! Just run on the sunlit columns, even though the modisIN DDT includes everything orbit swathed
              call modis_subcolumn(modisIN%Ncolumns,modisIN%Nlevels,                      &
-                                  modisIN%pres(int(modisIN%sunlit(i)),:),                &
+                                  modisIN%pres(i,:),                                     &
                                   modisIN%tau(int(modisIN%sunlit(i)),:,:),               &
                                   modisIN%liqFrac(int(modisIN%sunlit(i)),:,:),           &
                                   modisIN%g(int(modisIN%sunlit(i)),:,:),                 &
