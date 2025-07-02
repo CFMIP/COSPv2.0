@@ -437,16 +437,7 @@ program cosp2_test
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
   
-  ! JKS - This will need to be revamped. Each instrument needs these flags
-  if (Lrttov .and. (rttov_Ninstruments .gt. 0))  Lrttov = .true.
-  if (Lrttov .and. (rttov_Ninstruments .le. 0))  then
-      print*,'Lrttov is "true" but rttov_Ninstruments < 1. COSP-RTTOV will not run.'
-      Lrttov = .false.
-  endif
-  if ((.not. Lrttov) .and. (rttov_Ninstruments .gt. 0)) then
-      print*,'rttov_Ninstruments > 0 but Lrttov is "false". COSP-RTTOV will not run.'
-      Lrttov = .false.
-  endif  
+  if (rttov_Ninstruments .gt. 0)  Lrttov = .true.
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1574,7 +1565,7 @@ contains
     
     ! RTTOV - Allocate output for multiple instruments
     ! Do I not need to allocate the number of instruments? Because each rttov output DDT will be a pointer?
-    if ((Ninst_rttov .gt. 0) .and. (Lrttov)) then
+    if (Lrttov) then
         x % Ninst_rttov = Ninst_rttov
         allocate(x % rttov_outputs(Ninst_rttov)) ! Need to allocate a pointer?
         do i=1,Ninst_rttov
