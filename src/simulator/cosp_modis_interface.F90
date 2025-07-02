@@ -179,10 +179,10 @@ contains
          modisIN%g         => cospIN%asym
          modisIN%w0        => cospIN%ss_alb        
          modisIN%Nsunlit   = count(cospgridIN%sunlit > 0)
+         modisIN%pres      => cospgridIN%phalf
          if (modisIN%Nsunlit .gt. 0) then
             allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
             modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
-            modisIN%pres      = cospgridIN%phalf(int(modisIN%sunlit(:)),:) ! JKS no reason to have this structure differently, right? Memory?
          endif       
          if (count(cospgridIN%sunlit <= 0) .gt. 0) then ! If more than zero tiles are not sunlit a.k.a. if there are dark tiles
             allocate(modisIN%notSunlit(count(cospgridIN%sunlit <= 0)))
