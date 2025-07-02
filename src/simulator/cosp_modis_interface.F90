@@ -153,11 +153,10 @@ contains
          modisIN%g         => cospIN%asym
          modisIN%w0        => cospIN%ss_alb
 
-         allocate(modisIN%pres(modisIN%Npoints,cospIN%Nlevels+1)) ! Moving this outside of the sunlit statements for consistency with the other variables
-         modisIN%Nsunlit   = count((cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK) ! Sunlit mask and indices array will just include swathing as well
-         modisIN%pres      = cospgridIN%phalf          
+         modisIN%Nsunlit   = count((cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK) ! Sunlit mask and indices now include swathing as well
          if (modisIN%Nsunlit .gt. 0) then
-            allocate(modisIN%sunlit(modisIN%Nsunlit))
+            allocate(modisIN%sunlit(modisIN%Nsunlit), modisIN%pres(modisIN%Npoints,cospIN%Nlevels+1))
+            modisIN%pres      = cospgridIN%phalf
             modisIN%sunlit    = pack((/ (i, i = 1, modisIN%Npoints ) /),mask = ((cospgridIN%sunlit > 0) .and. MODIS_SWATH_MASK)) ! Indices of columns to operate on in modisIN
          endif          
          if (modisIN%Npoints - modisIN%Nsunlit .gt. 0) then ! If more than zero tiles are not sunlit and swathed, create array to mask out these gridcells in cospOUT
@@ -179,9 +178,9 @@ contains
          modisIN%g         => cospIN%asym
          modisIN%w0        => cospIN%ss_alb        
          modisIN%Nsunlit   = count(cospgridIN%sunlit > 0)
-         modisIN%pres      = cospgridIN%phalf
          if (modisIN%Nsunlit .gt. 0) then
-            allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Nsunlit,cospIN%Nlevels+1))
+            allocate(modisIN%sunlit(modisIN%Nsunlit),modisIN%pres(modisIN%Npoints,cospIN%Nlevels+1))
+            modisIN%pres      = cospgridIN%phalf
             modisIN%sunlit    = pack((/ (i, i = 1, Npoints ) /),mask = cospgridIN%sunlit > 0)
          endif       
          if (count(cospgridIN%sunlit <= 0) .gt. 0) then ! If more than zero tiles are not sunlit a.k.a. if there are dark tiles
