@@ -112,11 +112,11 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks = y
             ylabel = 'Cloud Top Height (m)'
         if vd['yaxis_type'] == 'REICE_MODIS':
-            yticks_labels =  ('0', '10', '20', '30', '40', '60', '90')
+            yticks_labels =  ('0','5', '10', '20', '30', '40','50', '60', '10000')
             yticks = y
             ylabel = 'Ice particle size (micron)'
         if vd['yaxis_type'] == 'RELIQ_MODIS':
-            yticks_labels = ('0', '8', '10', '13', '15', '20', '30')
+            yticks_labels = ('0','4', '8', '10', '12.5', '15', '20', '30', '10000')
             yticks = y
             ylabel = 'Liquid particle size (micron)'
         if vd['yaxis_type'] == 'levStat':
@@ -190,11 +190,11 @@ def plot_pcolormesh(x, y, v, d, fig_name, title=None, coastlines=False):
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
         ax.coastlines()
     h = plt.pcolormesh(x, y, v, cmap=cmap, vmax=d['vmax'])
-    if d['xticks_labels']:
+    if d['xticks_labels'] and len(d['xticks_labels']) == len(d['xticks']):
         plt.xticks(d['xticks'],d['xticks_labels'])
     else:
         plt.xticks(d['xticks'])
-    if d['yticks_labels']:
+    if d['yticks_labels'] and len(d['yticks_labels']) == len(d['yticks']):
         plt.yticks(d['yticks'],d['yticks_labels'])
     else:
         plt.yticks(d['yticks'])

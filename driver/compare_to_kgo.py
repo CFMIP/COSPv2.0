@@ -70,7 +70,11 @@ def calculate_stats(tst, kgo, atol=0.0, rtol=None):
     """
     summary_stats = {'N':0, 'AvgDiff':0.0, 'MinDiff':0.0, 'MaxDiff':0.0, 'StDev':0.0}
     # All differences
-    d = tst - kgo
+    try:
+        d = tst - kgo
+    except:
+        print("Error: arrays have different shapes.")
+        d = kgo
     # Mask for differences larger than absolute tolerance
     maskAllDiff = (np.absolute(d) > atol)
     NallDiff = maskAllDiff.sum()
@@ -189,6 +193,7 @@ if __name__ == '__main__':
     if errored:
         print(red_colour + "===== ERROR: some of the differences are larger "
               "than the tolerances." + std_colour)
+        print_stats_table(summary_stats, print_all=args.allvar)
     print_stats_table(summary_stats, print_all=args.allvar,
                       stats_file=args.stats_file)
 

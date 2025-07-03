@@ -41,7 +41,7 @@ jobs:
         python-version: [3.11]
         include:
           - compiler_short_name: gfortran
-          - kgo_version: v002
+          - kgo_version: v004
     defaults:
       run:
         shell: bash -el {0}
@@ -53,9 +53,12 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       KGO_VERSION: ${{ matrix.kgo_version }}
-      GDKGO1: https://docs.google.com/uc?export=download&id=11dKcIL3EQr7s6jbo4f9GsoW0SufesGbq
-      GDKGO2: https://docs.google.com/uc?export=download&id=1s5Ha6Hqnv_hWbRUs8KQpJ4Lxy8uvJDar
-      GDKGO3: https://docs.google.com/uc?export=download&id=1kY1lRgzd0UhDiQef2u-VgTQql_iut3U2
+      # KGO1 is cosp2_output_um.gfortran.kgo.vNNN.nc.gz
+      GDKGO1: https://docs.google.com/uc?export=download&id=1kC9RViPBdAsGcOivpYXxs3hHJ11Kv8IN
+      # KGO2 is cosp2_output.um_global.gfortran.kgo.vNNN.nc.gz
+      GDKGO2: https://docs.google.com/uc?export=download&id=1X_oOzvY2lf-kyAR-D1E6JfuefkGg1idn
+      # KGO3 is cosp2_output.um_global_model_levels.gfortran.kgo.vNNN.nc.gz
+      GDKGO3: https://docs.google.com/uc?export=download&id=1c14qBf9VwYJWYVGCu-Cw35F-qqHx0mSg
       F90_SHORT_NAME: ${{ matrix.compiler_short_name }}
     # Sequence of tasks that will be executed as part of the job
     steps:
@@ -66,7 +69,7 @@ jobs:
     - uses: actions/checkout@v4
     # Set up conda environment
     - name: Setup conda environment
-      uses: conda-incubator/setup-miniconda@v3.0.3
+      uses: conda-incubator/setup-miniconda@v3.2.0
       with:
         auto-update-conda: true
         activate-environment: ci-env
@@ -151,6 +154,7 @@ jobs:
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # 2. UM global snapshot. 
     - name: UM global against known good output (KGO)
+      if: always()
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
@@ -158,11 +162,12 @@ jobs:
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     # 3. UM global snapshot. Diagnostics on model levels.
     - name: UM global on model levels against known good output (KGO)
+      if: always()
       run: |
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
-          python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     ###############################################################################
     # Produce plots when it fails during global snapshot tests,
     # and create a tarball with outputs.
@@ -188,7 +193,7 @@ jobs:
     ###############################################################################
     - name: Upload output file if test fails
       if: failure()
-      uses: actions/upload-artifact@v4.3.1
+      uses: actions/upload-artifact@v4.6.2
       with:
         name: outputs.${{ matrix.compiler }}.UKMO.tgz
         path: driver/data/outputs/UKMO/outputs.${{ matrix.compiler }}.UKMO.tgz
