@@ -996,6 +996,7 @@ contains
                 y%ss_alb(npoints,         ncolumns,nlevels))
     endif
     
+    allocate (y%rcfg_cloudsat)
 
   end subroutine construct_cospIN
   
