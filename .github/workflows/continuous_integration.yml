@@ -53,12 +53,6 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       KGO_VERSION: ${{ matrix.kgo_version }}
-      # KGO1 is cosp2_output_um.gfortran.kgo.vNNN.nc.gz
-      GDKGO1: https://docs.google.com/uc?export=download&id=1kC9RViPBdAsGcOivpYXxs3hHJ11Kv8IN
-      # KGO2 is cosp2_output.um_global.gfortran.kgo.vNNN.nc.gz
-      GDKGO2: https://docs.google.com/uc?export=download&id=1X_oOzvY2lf-kyAR-D1E6JfuefkGg1idn
-      # KGO3 is cosp2_output.um_global_model_levels.gfortran.kgo.vNNN.nc.gz
-      GDKGO3: https://docs.google.com/uc?export=download&id=1c14qBf9VwYJWYVGCu-Cw35F-qqHx0mSg
       F90_SHORT_NAME: ${{ matrix.compiler_short_name }}
     # Sequence of tasks that will be executed as part of the job
     steps:
@@ -92,39 +86,11 @@ jobs:
         cd build
         make -j driver
     # Retrieve and expand large data files
-    - name: Retrieve input files
+    - name: Retrieve input files and KGOs
       run: |
-        GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
-        OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
-        curl -sSfL -o $OUTPATH $GDFILE
-        gunzip ${OUTPATH}
-        cd driver/data/inputs/UKMO
-        md5sum -c cosp_input.um_global.nc.md5
-    - name: Retrieve KGOs for basic test
-      run: |
+        cd driver
+        . download_test_data.sh ${F90_SHORT_NAME}
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDKGO1
-        gunzip ${OUTPATH}
-        cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output_um.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
-    - name: Retrieve KGOs for global test
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDKGO2
-        gunzip ${OUTPATH}
-        cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
-        cd ${GITHUB_WORKSPACE}
-    - name: Retrieve KGOs for global test with outputs on model levels
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDKGO3
-        gunzip ${OUTPATH}
-        cd driver/data/outputs/UKMO
-        md5sum -c cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. We could run both tests in one step, but
     # doing it this way the output is easier to interpret.

@@ -12,13 +12,9 @@ jobs:
         # Flags and KGOs for Intel Fortran Compiler Classic
         - compiler: ifort
           fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
-          gdkgo1: https://docs.google.com/uc?export=download&id=1R6uvtWno-bhdgxACCwdcaRNXs9l5_G4w
-          gdkgo2: https://docs.google.com/uc?export=download&id=1bVU1_dx6hXcV_fHX2cLUn-D03T-Hij8z
         # Flags and KGOs for Intel Fortran Compiler
         - compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-          gdkgo1: https://docs.google.com/uc?export=download&id=1CLPJ1ikAcGBEiZ3WAGqL-zpaPIgC__po
-          gdkgo2: https://docs.google.com/uc?export=download&id=1JOrLFbt0BYgpD0h6A3tsoRD4iTJ4jDvZ
         # Set container images
         - compiler: ifort
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
@@ -41,8 +37,6 @@ jobs:
       ATOL: 0.0
       RTOL: 0.0
       KGO_VERSION: ${{ matrix.kgo_version }}
-      GDKGO1: ${{ matrix.gdkgo1 }}
-      GDKGO2: ${{ matrix.gdkgo2 }}
     steps:
     #
     # Checks-out repository under $GITHUB_WORKSPACE
@@ -71,30 +65,11 @@ jobs:
         cd build
         make -j driver
     # Retrieve and expand large data files
-    - name: Retrieve input files
+    - name: Retrieve input files and KGOs
       run: |
-        GDFILE='https://docs.google.com/uc?export=download&id=17eK4_DVEvFOE9Uf6siXJDpWZJKT1aqkU'
-        OUTPATH=driver/data/inputs/UKMO/cosp_input.um_global.nc.gz
-        curl -sSfL -o $OUTPATH $GDFILE
-        gunzip ${OUTPATH}
-        cd driver/data/inputs/UKMO
-        md5sum -c cosp_input.um_global.nc.md5
-    - name: Retrieve KGOs for basic test
-      run: |
+        cd driver
+        . download_test_data.sh ${F90}
         cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output_um.$F90.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDKGO1
-        gunzip ${OUTPATH}
-        cd driver/data/outputs/UKMO
-        # md5sum -c cosp2_output_um.${F90}.kgo.$KGO_VERSION.nc.md5
-    - name: Retrieve KGOs for global test
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        OUTPATH=driver/data/outputs/UKMO/cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.gz
-        curl -sSfL -o $OUTPATH $GDKGO2
-        gunzip ${OUTPATH}
-        cd driver/data/outputs/UKMO
-        # md5sum -c cosp2_output.um_global.${F90}.kgo.$KGO_VERSION.nc.md5
     ###############################################################################
     # Run COSP2 tests. Basic test and UM global snapshot
     ###############################################################################
