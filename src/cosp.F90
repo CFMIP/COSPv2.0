@@ -1283,8 +1283,8 @@ CONTAINS
             Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,       &
             cospgridIN%land(:), cospgridIN%surfelev(:), cospgridIN%at(:,cospIN%Nlevels), &
             cospIN%fracPrecipIce, cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half,     &
-            cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover,          &
-            cospOUT%cloudsat_pia)
+            cospOUT%cloudsat_cfad_ze(ij:ik,:,:), cospOUT%cloudsat_precip_cover(ij:ik,:), &
+            cospOUT%cloudsat_pia(ij:ik))
        ! Free up memory  (if necessary)
        if (allocated(out1D_1)) then
           deallocate(out1D_1)
@@ -1688,14 +1688,14 @@ CONTAINS
           call cosp_diag_warmrain(                                            &
                cloudsatIN%Npoints, cloudsatIN%Ncolumns, Nlvgrid,              & !! in
                tempI, zlev,                                                   & !! in
-               cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
-               cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
-               cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
-               cospOUT%modis_Cloud_Fraction_Water_Mean,                       & !! in
-               cospOUT%modis_Ice_Water_Path_Mean,                             & !! in
-               cospOUT%modis_Optical_Thickness_Ice_Mean,                      & !! in
-               cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                    & !! in
-               cospOUT%modis_Cloud_Fraction_Ice_Mean,                         & !! in
+               cospOUT%modis_Liquid_Water_Path_Mean(ij:ik),                   & !! in
+               cospOUT%modis_Optical_Thickness_Water_Mean(ij:ik),             & !! in
+               cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij:ik),           & !! in
+               cospOUT%modis_Cloud_Fraction_Water_Mean(ij:ik),                & !! in
+               cospOUT%modis_Ice_Water_Path_Mean(ij:ik),                      & !! in
+               cospOUT%modis_Optical_Thickness_Ice_Mean(ij:ik),               & !! in
+               cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij:ik),             & !! in
+               cospOUT%modis_Cloud_Fraction_Ice_Mean(ij:ik),                  & !! in
                frac_outI,                                                     & !! in
                Ze_totI,                                                       & !! in
                cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
@@ -1705,14 +1705,14 @@ CONTAINS
           call cosp_diag_warmrain(                                            &
                cloudsatIN%Npoints, cloudsatIN%Ncolumns, cospIN%Nlevels,       & !! in
                cospgridIN%at, cospgridIN%hgt_matrix,                          & !! in
-               cospOUT%modis_Liquid_Water_Path_Mean,                          & !! in
-               cospOUT%modis_Optical_Thickness_Water_Mean,                    & !! in
-               cospOUT%modis_Cloud_Particle_Size_Water_Mean,                  & !! in
-               cospOUT%modis_Cloud_Fraction_Water_Mean,                       & !! in
-               cospOUT%modis_Ice_Water_Path_Mean,                             & !! in
-               cospOUT%modis_Optical_Thickness_Ice_Mean,                      & !! in
-               cospOUT%modis_Cloud_Particle_Size_Ice_Mean,                    & !! in
-               cospOUT%modis_Cloud_Fraction_Ice_Mean,                         & !! in
+               cospOUT%modis_Liquid_Water_Path_Mean(ij:ik),                   & !! in
+               cospOUT%modis_Optical_Thickness_Water_Mean(ij:ik),             & !! in
+               cospOUT%modis_Cloud_Particle_Size_Water_Mean(ij:ik),           & !! in
+               cospOUT%modis_Cloud_Fraction_Water_Mean(ij:ik),                & !! in
+               cospOUT%modis_Ice_Water_Path_Mean(ij:ik),                      & !! in
+               cospOUT%modis_Optical_Thickness_Ice_Mean(ij:ik),               & !! in
+               cospOUT%modis_Cloud_Particle_Size_Ice_Mean(ij:ik),             & !! in
+               cospOUT%modis_Cloud_Fraction_Ice_Mean(ij:ik),                  & !! in
                cospIN%frac_out,                                               & !! in
                cloudsatDBZe,                                                  & !! in
                cfodd_ntotal, wr_occfreq_ntotal                                ) !! inout
