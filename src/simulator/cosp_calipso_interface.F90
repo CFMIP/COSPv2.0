@@ -94,9 +94,9 @@ CONTAINS
   end subroutine cosp_calipso_init
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_CALIPSO_MASK
+  !  							SUBROUTINE COSP_ASSIGN_calipsoIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CALIPSO_MASK(cospIN,cospgridIN,Npoints,calipsoIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
+  SUBROUTINE COSP_ASSIGN_calipsoIN(cospIN,cospgridIN,Npoints,calipsoIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
      type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
      type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
      integer,intent(in),target :: &
@@ -172,12 +172,12 @@ CONTAINS
           calipsoIN%tautot_ice  => cospIN%tautot_ice_calipso 
      end if
 
-  END SUBROUTINE COSP_CALIPSO_MASK
+  END SUBROUTINE COSP_ASSIGN_calipsoIN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_CALIPSO_CLEAN
+  !  							SUBROUTINE COSP_ASSIGN_calipsoIN_CLEAN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CALIPSO_MASK_CLEAN()
+  SUBROUTINE COSP_ASSIGN_calipsoIN_CLEAN()
     ! Deallocate temporary arrays
     if (allocated(temp_beta_mol_calipso))       deallocate(temp_beta_mol_calipso)
     if (allocated(temp_tau_mol_calipso))        deallocate(temp_tau_mol_calipso)
@@ -188,7 +188,7 @@ CONTAINS
     if (allocated(temp_betatot_ice_calipso))    deallocate(temp_betatot_ice_calipso)
     if (allocated(temp_tautot_ice_calipso))     deallocate(temp_tautot_ice_calipso)
 
-  END SUBROUTINE COSP_CALIPSO_MASK_CLEAN
+  END SUBROUTINE COSP_ASSIGN_calipsoIN_CLEAN
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !	END MODULE

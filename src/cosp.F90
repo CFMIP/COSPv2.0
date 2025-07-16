@@ -53,22 +53,22 @@ MODULE MOD_COSP
                                          modis_histTauCenters,tau_binCenters,            &
                                          cloudsat_preclvl,grLidar532_histBsct,atlid_histBsct
   USE MOD_COSP_MODIS_INTERFACE,      ONLY: cosp_modis_init,       modis_IN, &
-                                           cosp_modis_mask
+                                           COSP_ASSIGN_modisIN
   USE MOD_COSP_RTTOV_INTERFACE,      ONLY: cosp_rttov_init,       cosp_rttov_simulate
   USE MOD_COSP_RTTOV_UTIL,           ONLY: rttov_cfg,             rttov_output
   USE MOD_COSP_MISR_INTERFACE,       ONLY: cosp_misr_init,        misr_IN, &
-                                           cosp_misr_mask,        cosp_misr_mask_clean
+                                           COSP_ASSIGN_misrIN,    COSP_ASSIGN_misrIN_clean
   USE MOD_COSP_ISCCP_INTERFACE,      ONLY: cosp_isccp_init,       isccp_IN, &
-                                           cosp_isccp_mask,       cosp_isccp_mask_clean
+                                           COSP_ASSIGN_isccpIN,   COSP_ASSIGN_isccpIN_clean
   USE MOD_COSP_CALIPSO_INTERFACE,    ONLY: cosp_calipso_init,     calipso_IN, &
-                                           cosp_calipso_mask,     cosp_calipso_mask_clean
+                                           COSP_ASSIGN_calipsoIN, COSP_ASSIGN_calipsoIN_clean
   USE MOD_COSP_ATLID_INTERFACE,      ONLY: cosp_atlid_init,       atlid_IN, &
-                                           cosp_atlid_mask,       cosp_atlid_mask_clean
-  USE MOD_COSP_GRLIDAR532_INTERFACE, ONLY: cosp_grLidar532_init, grLidar532_IN
+                                           COSP_ASSIGN_atlidIN,   COSP_ASSIGN_atlidIN_clean
+  USE MOD_COSP_GRLIDAR532_INTERFACE, ONLY: cosp_grLidar532_init,  grLidar532_IN
   USE MOD_COSP_PARASOL_INTERFACE,    ONLY: cosp_parasol_init,     parasol_in, &
-                                           cosp_parasol_mask,     cosp_parasol_mask_clean
+                                           COSP_ASSIGN_parasolIN, COSP_ASSIGN_parasolIN_clean
   USE MOD_COSP_CLOUDSAT_INTERFACE,   ONLY: cosp_cloudsat_init,    cloudsat_IN, &
-                                           cosp_cloudsat_mask,    cosp_cloudsat_mask_clean
+                                           COSP_ASSIGN_cloudsatIN,COSP_ASSIGN_cloudsatIN_clean
   USE quickbeam,                     ONLY: quickbeam_subcolumn,   quickbeam_column
   USE MOD_ICARUS,                    ONLY: icarus_subcolumn,      icarus_column
   USE MOD_MISR_SIMULATOR,            ONLY: misr_subcolumn,        misr_column
@@ -624,15 +624,15 @@ CONTAINS
 
     ! Indexing order for "cospIN % cospswathsIN" is ISCCP, MISR, CLOUDSAT-CALIPSO, ATLID, PARASOL, MODIS
     if (Lisccp_subcolumn .or. Lmodis_subcolumn) then
-       call COSP_ISCCP_MASK(cospIN,cospgridIN,Npoints,isccpIN,ISCCP_MASK_INDICES)
+       call COSP_ASSIGN_isccpIN(cospIN,cospgridIN,Npoints,isccpIN,ISCCP_MASK_INDICES) !COSP_ASSIGN_isccpIN
     endif
 
     if (Lmisr_subcolumn) then
-       call COSP_MISR_MASK(cospIN,cospgridIN,Npoints,misrIN,MISR_MASK_INDICES)
+       call COSP_ASSIGN_misrIN(cospIN,cospgridIN,Npoints,misrIN,MISR_MASK_INDICES)
     endif
 
     if (Lcalipso_subcolumn) then
-       call COSP_CALIPSO_MASK(cospIN,cospgridIN,Npoints,calipsoIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
+       call COSP_ASSIGN_calipsoIN(cospIN,cospgridIN,Npoints,calipsoIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
     endif
 
     if (LgrLidar532_subcolumn) then 
@@ -646,19 +646,19 @@ CONTAINS
     endif
     
     if (Latlid_subcolumn) then 
-       call COSP_ATLID_MASK(cospIN,cospgridIN,Npoints,atlidIN,ATLID_MASK_INDICES)
+       call COSP_ASSIGN_atlidIN(cospIN,cospgridIN,Npoints,atlidIN,ATLID_MASK_INDICES)
     endif 
     
     if (Lparasol_subcolumn) then
-       call COSP_PARASOL_MASK(cospIN,cospgridIN,Npoints,parasolIN,PARASOL_MASK_INDICES)
+       call COSP_ASSIGN_parasolIN(cospIN,cospgridIN,Npoints,parasolIN,PARASOL_MASK_INDICES)
     endif
 
     if (Lcloudsat_subcolumn) then
-       call COSP_CLOUDSAT_MASK(cospIN,cospgridIN,Npoints,cloudsatIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
+       call COSP_ASSIGN_cloudsatIN(cospIN,cospgridIN,Npoints,cloudsatIN,CSCAL_MASK_INDICES,CSCAL_SWATH_MASK)
     endif
 
     if (Lmodis_subcolumn) then
-       call COSP_MODIS_MASK(cospIN,cospgridIN,Npoints,modisIN,CSCAL_SWATH_MASK,MODIS_CSCAL_MASK_INDICES)
+       call COSP_ASSIGN_modisIN(cospIN,cospgridIN,Npoints,modisIN,CSCAL_SWATH_MASK,MODIS_CSCAL_MASK_INDICES)
     endif
 
     if (Lrttov_column) then
@@ -2165,13 +2165,13 @@ CONTAINS
        nullify(isccpIN%Ncolumns,isccpIN%Nlevels,isccpIN%emsfc_lw,                        &
                isccpIN%skt,isccpIN%qv,isccpIN%at,isccpIN%frac_out,isccpIN%dtau,          &
                isccpIN%dem,isccpIN%phalf,isccpIN%sunlit,isccpIN%pfull)
-       call COSP_ISCCP_MASK_CLEAN()
+       call COSP_ASSIGN_isccpIN_CLEAN()
     endif
 
     if (Lmisr_subcolumn) then
        nullify(misrIN%Ncolumns,misrIN%Nlevels,misrIN%dtau,misrIN%sunlit,  &
                misrIN%zfull,misrIN%at)
-       call COSP_MISR_MASK_CLEAN()
+       call COSP_ASSIGN_misrIN_CLEAN()
     endif
 
     if (Lcalipso_subcolumn) then
@@ -2180,7 +2180,7 @@ CONTAINS
                calipsoIN%tau_mol,calipsoIN%tautot,calipsoIN%tautot_liq,calipsoIN%tautot_ice)
        if (allocated(CSCAL_MASK_INDICES)) deallocate(CSCAL_MASK_INDICES)
        if (allocated(CSCAL_SWATH_MASK)) deallocate(CSCAL_SWATH_MASK)
-       call COSP_CALIPSO_MASK_CLEAN()
+       call COSP_ASSIGN_calipsoIN_CLEAN()
     endif
 
     if (LgrLidar532_subcolumn) then 
@@ -2191,19 +2191,19 @@ CONTAINS
     if (Latlid_subcolumn) then
        nullify(atlidIN%Ncolumns,atlidIN%Nlevels,atlidIN%beta_mol_atlid, &
                atlidIN%betatot_atlid,atlidIN%tau_mol_atlid,atlidIN%tautot_atlid)
-       call COSP_ATLID_MASK_CLEAN()
+       call COSP_ASSIGN_atlidIN_CLEAN()
     endif 
 
     if (Lparasol_subcolumn) then
        nullify(parasolIN%Nlevels,parasolIN%Ncolumns,parasolIN%Nrefl,   &
                parasolIN%tautot_S_liq,parasolIN%tautot_S_ice)
-       call COSP_PARASOL_MASK_CLEAN()
+       call COSP_ASSIGN_parasolIN_CLEAN()
     endif
 
     if (Lcloudsat_subcolumn) then
        nullify(cloudsatIN%Nlevels,cloudsatIN%Ncolumns,cloudsatIN%rcfg,&
                cloudsatIN%kr_vol,cloudsatIN%g_vol,cloudsatIN%z_vol,cloudsatIN%hgt_matrix)
-       call COSP_CLOUDSAT_MASK_CLEAN()
+       call COSP_ASSIGN_cloudsatIN_CLEAN()
        if (allocated(CSCAL_MASK_INDICES)) deallocate(CSCAL_MASK_INDICES)
        if (allocated(CSCAL_SWATH_MASK))   deallocate(CSCAL_SWATH_MASK)
     endif

@@ -74,9 +74,9 @@ CONTAINS
   END SUBROUTINE COSP_MISR_INIT
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_MISR_MASK
+  !  							SUBROUTINE COSP_ASSIGN_misrIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_MISR_MASK(cospIN,cospgridIN,Npoints,misrIN,MISR_MASK_INDICES)
+  SUBROUTINE COSP_ASSIGN_misrIN(cospIN,cospgridIN,Npoints,misrIN,MISR_MASK_INDICES)
      type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
      type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
      integer,intent(in),target :: &
@@ -137,19 +137,19 @@ CONTAINS
           misrIN%at       => cospgridIN%at
      end if
 
-  END SUBROUTINE COSP_MISR_MASK
+  END SUBROUTINE COSP_ASSIGN_misrIN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_MISR_CLEAN
+  !  							SUBROUTINE COSP_ASSIGN_misrIN_CLEAN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_MISR_MASK_CLEAN()
+  SUBROUTINE COSP_ASSIGN_misrIN_CLEAN()
     ! Deallocate temporary arrays
     if (allocated(temp_misr_sunlit))  deallocate(temp_misr_sunlit)
     if (allocated(temp_misr_zfull))   deallocate(temp_misr_zfull)
     if (allocated(temp_misr_at))      deallocate(temp_misr_at)
     if (allocated(temp_misr_dtau))    deallocate(temp_misr_dtau)
 
-  END SUBROUTINE COSP_MISR_MASK_CLEAN
+  END SUBROUTINE COSP_ASSIGN_misrIN_CLEAN
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 							    	END MODULE
