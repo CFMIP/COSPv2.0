@@ -1221,6 +1221,16 @@ CONTAINS
              cospOUT%calipso_cldthinemis(ij:ik)       = R_UNDEF
              cospOUT%calipso_cldlayerphase(ij:ik,:,:) = R_UNDEF
              cospOUT%calipso_lidarcldtmp(ij:ik,:,:)   = R_UNDEF
+             ! Note: The active simulators use R_UNDEF to indicate unretrieved and clear-sky values.
+             ! Decisions on how to treat these values are delegeate to the host user, and fields
+             ! are often set to zero.
+             ! Using R_UNDEF in this way is incompatible with the swath approach, where R_UNDEF means
+             ! that a field should not be used in statistically averaging, etc.
+             ! To avoid this error, when swathing we set R_UNDEF value to zero here.
+             where (temp_calipso_cfad_sr(:,:,:) == R_UNDEF) temp_calipso_cfad_sr(:,:,:) = 0._wp
+             where (temp_calipso_lidarcldphase(:,:,:) == R_UNDEF) temp_calipso_lidarcldphase(:,:,:) = 0._wp
+             where (temp_calipso_lidarcld(:,:) == R_UNDEF) temp_calipso_lidarcld(:,:) = 0._wp
+             ! Unpack into the full lat-lon structure
              if (associated(cospOUT%calipso_cfad_sr))          cospOUT%calipso_cfad_sr(ij+int(CSCAL_MASK_INDICES)-1,:,:)         = temp_calipso_cfad_sr(:,:,:)
              if (associated(cospOUT%calipso_lidarcld))         cospOUT%calipso_lidarcld(ij+int(CSCAL_MASK_INDICES)-1,:)          = temp_calipso_lidarcld(:,:)
              if (associated(cospOUT%calipso_cldlayer))         cospOUT%calipso_cldlayer(ij+int(CSCAL_MASK_INDICES)-1,:)          = temp_calipso_cldlayer(:,:)
@@ -1442,6 +1452,13 @@ CONTAINS
                                  temp_parasolGrid_refl(:,:))
              ! Decode back to the cospOUT shapes
              cospOUT%parasolGrid_refl(ij:ik,:) = R_UNDEF
+             ! Note: The active simulators use R_UNDEF to indicate unretrieved and clear-sky values.
+             ! Decisions on how to treat these values are delegeate to the host user, and fields
+             ! are often set to zero.
+             ! Using R_UNDEF in this way is incompatible with the swath approach, where R_UNDEF means
+             ! that a field should not be used in statistically averaging, etc.
+             ! To avoid this error, when swathing we set R_UNDEF value to zero here.
+             where (temp_parasolGrid_refl(:,:) == R_UNDEF) temp_parasolGrid_refl(:,:) = 0._wp
              if (associated(cospOUT%parasolGrid_refl))   cospOUT%parasolGrid_refl(ij+int(PARASOL_MASK_INDICES)-1,:)   = temp_parasolGrid_refl(:,:)
              deallocate(temp_parasolGrid_refl)
           else
@@ -1490,6 +1507,13 @@ CONTAINS
              cospOUT%cloudsat_cfad_ze(ij:ik,:,:)    = R_UNDEF
              cospOUT%cloudsat_precip_cover(ij:ik,:) = R_UNDEF
              cospOUT%cloudsat_pia(ij:ik)            = R_UNDEF
+             ! Note: The active simulators use R_UNDEF to indicate unretrieved and clear-sky values.
+             ! Decisions on how to treat these values are delegeate to the host user, and fields
+             ! are often set to zero.
+             ! Using R_UNDEF in this way is incompatible with the swath approach, where R_UNDEF means
+             ! that a field should not be used in statistically averaging, etc.
+             ! To avoid this error, when swathing we set R_UNDEF value to zero here.
+             where (temp_cloudsat_cfad_ze(:,:,:) == R_UNDEF) temp_cloudsat_cfad_ze(:,:,:) = 0._wp
              if (associated(cospOUT%cloudsat_cfad_ze))        cospOUT%cloudsat_cfad_ze(ij+int(CSCAL_MASK_INDICES)-1,:,:)     = temp_cloudsat_cfad_ze(:,:,:)
              if (associated(cospOUT%cloudsat_precip_cover))   cospOUT%cloudsat_precip_cover(ij+int(CSCAL_MASK_INDICES)-1,:)  = temp_cloudsat_precip_cover(:,:)
              if (associated(cospOUT%cloudsat_pia))            cospOUT%cloudsat_pia(ij+int(CSCAL_MASK_INDICES)-1)             = temp_cloudsat_pia(:)
