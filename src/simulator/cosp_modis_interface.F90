@@ -110,9 +110,9 @@ contains
   END SUBROUTINE COSP_MODIS_INIT
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_MODIS_MASK
+  !  							SUBROUTINE COSP_ASSIGN_modisIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_MODIS_MASK(cospIN,cospgridIN,Npoints,modisIN,CSCAL_SWATH_MASK,MODIS_CSCAL_MASK_INDICES)
+  SUBROUTINE COSP_ASSIGN_modisIN(cospIN,cospgridIN,Npoints,modisIN,CSCAL_SWATH_MASK,MODIS_CSCAL_MASK_INDICES)
      type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
      type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
      integer,intent(in),target :: &
@@ -189,7 +189,7 @@ contains
          endif               
      end if
 
-  END SUBROUTINE COSP_MODIS_MASK
+  END SUBROUTINE COSP_ASSIGN_modisIN
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE MOD_COSP_Modis_INTERFACE

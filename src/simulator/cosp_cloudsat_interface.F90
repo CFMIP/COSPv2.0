@@ -149,9 +149,9 @@ CONTAINS
   END SUBROUTINE COSP_CLOUDSAT_INIT
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE COSP_CLOUDSAT_MASK
+  ! SUBROUTINE COSP_ASSIGN_cloudsatIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CLOUDSAT_MASK(cospIN, cospgridIN, Npoints, cloudsatIN,                 &
+  SUBROUTINE COSP_ASSIGN_cloudsatIN(cospIN, cospgridIN, Npoints, cloudsatIN,                 &
                                 CSCAL_MASK_INDICES, CSCAL_SWATH_MASK)
     type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
     type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
@@ -214,19 +214,19 @@ CONTAINS
        cloudsatIN%hgt_matrix => cospgridIN%hgt_matrix    
     end if
 
-  END SUBROUTINE COSP_CLOUDSAT_MASK
+  END SUBROUTINE COSP_ASSIGN_cloudsatIN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE COSP_CLOUDSAT_CLEAN
+  ! SUBROUTINE COSP_ASSIGN_cloudsatIN_CLEAN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_CLOUDSAT_MASK_CLEAN()
+  SUBROUTINE COSP_ASSIGN_cloudsatIN_CLEAN()
     ! Deallocate temporary arrays
     if (allocated(temp_z_vol_cloudsat))     deallocate(temp_z_vol_cloudsat)
     if (allocated(temp_kr_vol_cloudsat))    deallocate(temp_kr_vol_cloudsat)
     if (allocated(temp_g_vol_cloudsat))     deallocate(temp_g_vol_cloudsat)
     if (allocated(temp_hgt_matrix))         deallocate(temp_hgt_matrix)
 
-  END SUBROUTINE COSP_CLOUDSAT_MASK_CLEAN
+  END SUBROUTINE COSP_ASSIGN_cloudsatIN_CLEAN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE

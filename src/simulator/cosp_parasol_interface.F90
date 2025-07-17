@@ -93,9 +93,9 @@ contains
   end subroutine COSP_PARASOL_INIT
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_PARASOL_MASK
+  !  							SUBROUTINE COSP_ASSIGN_parasolIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_PARASOL_MASK(cospIN,cospgridIN,Npoints,parasolIN,PARASOL_MASK_INDICES)
+  SUBROUTINE COSP_ASSIGN_parasolIN(cospIN,cospgridIN,Npoints,parasolIN,PARASOL_MASK_INDICES)
      type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
      type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
      integer,intent(in),target :: &
@@ -150,17 +150,17 @@ contains
           parasolIN%tautot_S_ice => cospIN%tautot_S_ice
      end if
 
-  END SUBROUTINE COSP_PARASOL_MASK
+  END SUBROUTINE COSP_ASSIGN_parasolIN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  !  							SUBROUTINE COSP_PARASOL_CLEAN
+  !  							SUBROUTINE COSP_ASSIGN_parasolIN_CLEAN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_PARASOL_MASK_CLEAN()
+  SUBROUTINE COSP_ASSIGN_parasolIN_CLEAN()
     ! Deallocate temporary arrays
     if (allocated(temp_tautot_S_liq))   deallocate(temp_tautot_S_liq)
     if (allocated(temp_tautot_S_ice))    deallocate(temp_tautot_S_ice)
 
-  END SUBROUTINE COSP_PARASOL_MASK_CLEAN
+  END SUBROUTINE COSP_ASSIGN_parasolIN_CLEAN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 								    END MODULE
