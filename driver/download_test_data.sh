@@ -5,16 +5,16 @@ COMPILER=$1
 case $COMPILER in
 
   "gfortran")
-    KGO_VERSION=v005
-    kgo_links=( "https://docs.google.com/uc?export=download&id=1F45ty8ZtuUvBSBS-hESq6avEugHzYeBa" \
-                "https://docs.google.com/uc?export=download&id=1fzFzXzLcYajfEmYmSj3Txw3d9gNGXFLe" \
-                "https://docs.google.com/uc?export=download&id=15_oNojYM_QCjwA0kj2Ve4HDxy9H4m91J" )
+    KGO_VERSION=v006
+    kgo_links=( "https://docs.google.com/uc?export=download&id=1HgtrBVI5-7ypQWxzzMPvAq_5IIE5q9-B" \
+                "https://docs.google.com/uc?export=download&id=17Ah7z2oGiwwZ-yW1JX3Vg81_l7Q1zFf7" \
+                "https://docs.google.com/uc?export=download&id=1c74yf1rMl2lkkkitgMi1pP5dGbZyerNd" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_output.um_global_model_levels.${COMPILER}.kgo" )
     ;;
 
-   "ifort")
+  "ifort")
     KGO_VERSION=v006
     kgo_links=( "https://docs.google.com/uc?export=download&id=121bSDuGNdbkb9WKhJLu9Pwe8KnhUMtDx" \
                 "https://docs.google.com/uc?export=download&id=1JwWJKw8rO1MpDLXFvdWvrqKF5_HbKZAK" )
@@ -22,7 +22,7 @@ case $COMPILER in
                "cosp2_output.um_global.${COMPILER}.kgo" )
     ;;
 
-   "ifx")
+  "ifx")
     KGO_VERSION=v006
     kgo_links=( "https://docs.google.com/uc?export=download&id=1rby-uiuB8G9vVa4JvRUCYNYPPOG5TmLB" \
                 "https://docs.google.com/uc?export=download&id=1SDxQodiDvrwcwfi3ZCMtQITkmHMXIwD-" )
