@@ -6,9 +6,9 @@ case $COMPILER in
 
   "gfortran")
     KGO_VERSION=v005
-    kgo_links=( "https://docs.google.com/uc?export=download&id=15_oNojYM_QCjwA0kj2Ve4HDxy9H4m91J" \
-                "https://docs.google.com/uc?export=download&id=1fzFzXzLcYajfEmYmSj3Txw3d9gNGXFLe" \
-                "https://docs.google.com/uc?export=download&id=1F45ty8ZtuUvBSBS-hESq6avEugHzYeBa" )
+    kgo_links=( "https://docs.google.com/uc?export=download&id=1olgrWzCSpFyPdimFnRfeFxkq5SoIfPDv" \
+                "https://docs.google.com/uc?export=download&id=1B9Too1KSfT7fcWKJj2OeR7cytk56eZO2" \
+                "https://docs.google.com/uc?export=download&id=1ddBYJsdRXy4z7kLrhRq54KvtuO6AjnTq" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_output.um_global_model_levels.${COMPILER}.kgo" )
