@@ -41,7 +41,7 @@ jobs:
         python-version: [3.11]
         include:
           - compiler_short_name: gfortran
-          - kgo_version: v004
+          - kgo_version: v005
     defaults:
       run:
         shell: bash -el {0}
