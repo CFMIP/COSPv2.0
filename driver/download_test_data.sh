@@ -5,10 +5,10 @@ COMPILER=$1
 case $COMPILER in
 
   "gfortran")
-    KGO_VERSION=v004
-    kgo_links=( "https://docs.google.com/uc?export=download&id=1kC9RViPBdAsGcOivpYXxs3hHJ11Kv8IN" \
-                "https://docs.google.com/uc?export=download&id=1X_oOzvY2lf-kyAR-D1E6JfuefkGg1idn" \
-                "https://docs.google.com/uc?export=download&id=1c14qBf9VwYJWYVGCu-Cw35F-qqHx0mSg" )
+    KGO_VERSION=v005
+    kgo_links=( "https://docs.google.com/uc?export=download&id=1olgrWzCSpFyPdimFnRfeFxkq5SoIfPDv" \
+                "https://docs.google.com/uc?export=download&id=1B9Too1KSfT7fcWKJj2OeR7cytk56eZO2" \
+                "https://docs.google.com/uc?export=download&id=1ddBYJsdRXy4z7kLrhRq54KvtuO6AjnTq" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_output.um_global_model_levels.${COMPILER}.kgo" )
