@@ -423,7 +423,7 @@ program cosp2_test
        Ltbrttov, Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,  &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
        Lwr_occfreq, Lcfodd,                                                              &
-       Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, cospOUT)
+       Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, use_vgrid, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
@@ -1059,7 +1059,7 @@ contains
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,x)
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,use_vgrid,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1169,7 +1169,8 @@ contains
          Lptradarflag9,    & ! CLOUDSAT 
          Lradarpia,        & ! CLOUDSAT 
          Lwr_occfreq,      & ! CloudSat+MODIS joint diagnostics
-         Lcfodd              ! CloudSat+MODIS joint diagnostics
+         Lcfodd,           & ! CloudSat+MODIS joint diagnostics
+         use_vgrid
          
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
@@ -1318,11 +1319,23 @@ contains
     if (Ldbze94)        allocate(x%cloudsat_Ze_tot(Npoints,Ncolumns,Nlevels))
     if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,cloudsat_DBZE_BINS,Nlvgrid))
     if (Lptradarflag0 .or. Lptradarflag1 .or. Lptradarflag2 .or. Lptradarflag3 .or. &
-        Lptradarflag4 .or. Lptradarflag5 .or. Lptradarflag6 .or. Lptradarflag7 .or. &
-        Lptradarflag8 .or. Lptradarflag9) then
-       allocate(x%cloudsat_precip_cover(Npoints,cloudsat_DBZE_BINS))
+         Lptradarflag4 .or. Lptradarflag5 .or. Lptradarflag6 .or. Lptradarflag7 .or. &
+         Lptradarflag8 .or. Lptradarflag9) then
+       if (use_vgrid) then
+          allocate(x%cloudsat_precip_cover(Npoints,cloudsat_DBZE_BINS))
+       else
+          print*,'WARNING: CLOUDSAT Precipitation occurrence diagnostics not available when use_vgrid=FALSE.'
+          print*,'WARNING: Turning CLOUDSAT Precipitation occurrence diagnostcs OFF'
+       endif
     endif
-    if (Lradarpia) allocate(x%cloudsat_pia(Npoints))
+    if (Lradarpia) then
+       if (use_vgrid) then
+          allocate(x%cloudsat_pia(Npoints))
+       else
+          print*,'WARNING: CLOUDSAT Precipitation occurrence diagnostics not available when use_vgrid=FALSE.'
+          print*,'WARNING: Turning CLOUDSAT Precipitation occurrence diagnostcs OFF'
+       endif
+    endif
 
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))
