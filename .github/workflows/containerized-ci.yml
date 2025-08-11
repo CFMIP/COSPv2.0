@@ -41,7 +41,7 @@ jobs:
     #
     # Checks-out repository under $GITHUB_WORKSPACE
     #
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     # Set up conda environment
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v3.2.0
