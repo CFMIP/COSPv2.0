@@ -3,7 +3,7 @@
 COMPILER=$1
 
 case $COMPILER in
-https://drive.google.com/file/d/1IzBbnhnfYeaSPLRSvWsWCEzsL_D9_ZKq/view?usp=sharing
+
   "gfortran")
     KGO_VERSION=v006
     kgo_links=( "https://docs.google.com/uc?export=download&id=1HgtrBVI5-7ypQWxzzMPvAq_5IIE5q9-B" \
