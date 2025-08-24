@@ -100,7 +100,7 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
         if vd['xaxis_type'] == 'latitude':
             xticks_labels = None
             xticks = np.arange(-90,91,30)
-            xlabel = 'Latitude (deg)'
+            xlabel = 'Latitude (deg)'          
         if vd['yaxis_type'] == 'pres7':
             yticks_labels = ('1000', '800', '680', '560', '440', '310', '180','')
             yticks = y
