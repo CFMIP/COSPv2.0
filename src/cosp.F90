@@ -1689,12 +1689,12 @@ CONTAINS
           endif
 
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik,1:numMODISTauBins,:) = R_UNDEF
+            !  cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik,1:numMODISTauBins,:) = R_UNDEF
              cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
                 modisJointHistogramIce(:,:,:)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
-             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik,:,:) = R_UNDEF
+            !  cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik,:,:) = R_UNDEF
              cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
                 modisJointHistogramLiq(:,:,:)
           endif
@@ -1737,10 +1737,10 @@ CONTAINS
                 cospOUT%modis_Ice_Water_Path_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
              if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))      &
                 cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))      &
-                cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
-             if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))      &
-                cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF                                
+            !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))      &
+            !     cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+            !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))      &
+            !     cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF                                
           end if
        else
           ! It's nightime everywhere - everything is undefined
@@ -1780,10 +1780,10 @@ CONTAINS
              cospOUT%modis_Ice_Water_Path_Mean(ij:ik) = R_UNDEF
           if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))         &
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, :, :) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))                    &
-             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik, :, :) = R_UNDEF
-          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))                    &
-             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik, :, :) = R_UNDEF             
+         !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))                    &
+         !     cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik, :, :) = R_UNDEF
+         !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))                    &
+         !     cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik, :, :) = R_UNDEF             
        endif
        ! Free up memory (if necessary)
        if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)
