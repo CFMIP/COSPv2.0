@@ -91,7 +91,7 @@ program cosp2_test
        u_wind,    & ! U-component of wind (m/s)
        v_wind,    & ! V-component of wind (m/s)
        sunlit     ! Sunlit flag
-  real(wp),dimension(:),allocatable          :: & ! JKS change to target?
+  real(wp),dimension(:),allocatable          :: &
        year,      & ! Year (CE)
        month,     & ! Month  [1,12]
        day,       & ! Day    [1,31]
@@ -502,13 +502,13 @@ program cosp2_test
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
        Lwr_occfreq, Lcfodd,                                                              &
        rttov_Ninstruments,rttov_configs,                                                 &
-       Npoints, Ncolumns, Nlevels, Nlvgrid_local, cospOUT)
+       Npoints, Ncolumns, Nlevels, Nlvgrid_local, use_vgrid, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
   ! nChunks = # Points to Process (nPoints) / # Points per COSP iteration (nPoints_it)
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if (MOD(nPoints,nPoints_it) .eq. 0) then ! JKS - do not run an extra iteration if Npoints_it divides Npoints cleanly
+  if (MOD(nPoints,nPoints_it) .eq. 0) then
      nChunks = Npoints/Npoints_it
   else 
      nChunks = nPoints/nPoints_it+1
@@ -556,7 +556,7 @@ program cosp2_test
      
      cospIN%emsfc_lw         = emsfc_lw
      cospIN%rcfg_cloudsat    = rcfg_cloudsat
-     cospIN%cfg_rttov        => rttov_configs ! JKS - Not sure why the cloudsat isn't a pointer. The config files for RTTOV are large and I don't want them duplicated in memory
+     cospIN%cfg_rttov        => rttov_configs
      cospIN%cospswathsIN     = cospswathsIN ! Swathing information for each non-RTTOV simulator.
      
      cospstateIN%hgt_matrix  = zlev(start_idx:end_idx,Nlevels:1:-1) ! km
@@ -641,7 +641,7 @@ program cosp2_test
      cospstateIN%rttov_time(:,2)  = minute(start_idx:end_idx)
      cospstateIN%rttov_time(:,3)  = seconds(start_idx:end_idx) 
           
-     cospstateIN%sza         = 0._wp ! => null() didn't work. ! JKS nothing passed in the UKMO input.
+     cospstateIN%sza         = 0._wp ! Hard code to zero for the offline driver.
 
      ! From the data input file
      cospstateIN%u_sfc  = u_wind(start_idx:end_idx)
@@ -1282,8 +1282,8 @@ contains
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    Ninst_rttov,rttov_configs,                   &
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,x)
+                                    Ninst_rttov,rttov_configs,                           &
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,use_vgrid,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1392,7 +1392,8 @@ contains
          Lptradarflag9,    & ! CLOUDSAT 
          Lradarpia,        & ! CLOUDSAT 
          Lwr_occfreq,      & ! CloudSat+MODIS joint diagnostics
-         Lcfodd              ! CloudSat+MODIS joint diagnostics
+         Lcfodd,           & ! CloudSat+MODIS joint diagnostics
+         use_vgrid
          
      integer,intent(in) :: &
           Npoints,         & ! Number of sampled points
@@ -1547,11 +1548,23 @@ contains
     if (Ldbze94)        allocate(x%cloudsat_Ze_tot(Npoints,Ncolumns,Nlevels))
     if (LcfadDbze94)    allocate(x%cloudsat_cfad_ze(Npoints,cloudsat_DBZE_BINS,Nlvgrid))
     if (Lptradarflag0 .or. Lptradarflag1 .or. Lptradarflag2 .or. Lptradarflag3 .or. &
-        Lptradarflag4 .or. Lptradarflag5 .or. Lptradarflag6 .or. Lptradarflag7 .or. &
-        Lptradarflag8 .or. Lptradarflag9) then
-       allocate(x%cloudsat_precip_cover(Npoints,cloudsat_DBZE_BINS))
+         Lptradarflag4 .or. Lptradarflag5 .or. Lptradarflag6 .or. Lptradarflag7 .or. &
+         Lptradarflag8 .or. Lptradarflag9) then
+       if (use_vgrid) then
+          allocate(x%cloudsat_precip_cover(Npoints,cloudsat_DBZE_BINS))
+       else
+          print*,'WARNING: CLOUDSAT Precipitation occurrence diagnostics not available when use_vgrid=FALSE.'
+          print*,'WARNING: Turning CLOUDSAT Precipitation occurrence diagnostcs OFF'
+       endif
     endif
-    if (Lradarpia) allocate(x%cloudsat_pia(Npoints))
+    if (Lradarpia) then
+       if (use_vgrid) then
+          allocate(x%cloudsat_pia(Npoints))
+       else
+          print*,'WARNING: CLOUDSAT Precipitation occurrence diagnostics not available when use_vgrid=FALSE.'
+          print*,'WARNING: Turning CLOUDSAT Precipitation occurrence diagnostcs OFF'
+       endif
+    endif
 
     ! Combined CALIPSO/CLOUDSAT fields
     if (Lclcalipso2)    allocate(x%lidar_only_freq_cloud(Npoints,Nlvgrid))

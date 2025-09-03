@@ -227,6 +227,8 @@ contains
 
     ! Create Cloudsat diagnostics.
     if (lcloudsat) then
+       cloudsat_precip_cover = 0._wp
+       cloudsat_pia          = 0._wp
        if (use_vgrid) then
           ! Regrid in the vertical (*NOTE* This routine requires SFC-2-TOA ordering, so flip
           ! inputs and outputs to maintain TOA-2-SFC ordering convention in COSP2.)
