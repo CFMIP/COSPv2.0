@@ -1283,7 +1283,7 @@ contains
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
                                     Ninst_rttov,rttov_configs,                           &
-                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,use_vgrid,x)
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,use_vgrid,x)
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
