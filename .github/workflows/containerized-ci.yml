@@ -78,6 +78,7 @@ jobs:
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
         ./cosp2_test cosp2_input_nl.um_global.txt
+        ./cosp2_test cosp2_swath_input_nl.um_global.txt
     ###############################################################################
     # Compare results against known good outputs. As above,
     # we split it in as many steps as tests.
@@ -97,6 +98,15 @@ jobs:
         cd driver
         KGO=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global.nc
+        STATS=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.out
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
+    # 3. UM global snapshot with swathing.
+    - name: UM global with swathing against known good output (KGO)
+      if: always()
+      run: |
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_swath_output.um_global.nc
         STATS=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.out
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
     ###############################################################################
