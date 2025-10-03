@@ -343,6 +343,8 @@ contains
        polpart(INDX_LSICE,1:5) = polpartLSICE1
        polpart(INDX_CVICE,1:5) = polpartCVICE1
     endif
+    if (ice_type .eq. 2) then
+    endif
     
     ! Effective radius particles:
     rad_part(1:npoints,1:nlev,INDX_LSLIQ)  = ls_radliq(1:npoints,1:nlev)
