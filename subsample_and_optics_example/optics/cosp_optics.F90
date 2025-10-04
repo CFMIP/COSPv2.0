@@ -291,6 +291,9 @@ contains
          polpartLSICE0 = (/-1.0176e-8_wp,   1.7615e-6_wp, -1.0480e-4_wp,     0.0019_wp,    0.0460_wp/), &
          polpartCVICE1 = (/ 1.3615e-8_wp, -2.04206e-6_wp, 7.51799e-5_wp, 0.00078213_wp, 0.0182131_wp/), &
          polpartLSICE1 = (/ 1.3615e-8_wp, -2.04206e-6_wp, 7.51799e-5_wp, 0.00078213_wp, 0.0182131_wp/)
+    ! ICE-RF parameterization
+    REAL(WP),PARAMETER,dimension(6) :: &
+         a_plates  = (/ 2.068242e-7_wp, -1.028329e+6_wp, 3.402644e+4_wp, 2.548990e+4_wp, -2.334362e+3_wp, 88.1488/)
     ! ##############################################################################
 
     ! Which LIDAR frequency are we using?
@@ -343,8 +346,6 @@ contains
        polpart(INDX_LSICE,1:5) = polpartLSICE1
        polpart(INDX_CVICE,1:5) = polpartCVICE1
     endif
-    if (ice_type .eq. 2) then
-    endif
     
     ! Effective radius particles:
     rad_part(1:npoints,1:nlev,INDX_LSLIQ)  = ls_radliq(1:npoints,1:nlev)
@@ -394,24 +395,59 @@ contains
     ! ##############################################################################
     ! *) Particles alpha, beta and optical thickness
     ! ##############################################################################
-    ! Polynomials kp_lidar derived from Mie theory
-    do i = 1, npart
-      do j = 1, nlev
-        do k = 1, npoints
-          if (rad_part(k,j,i) .gt. 0._wp) then
-            x = rad_part(k,j,i)*1.0e6_wp
-            kp_part(k,j,i) = &
-               polpart(i,1)*x**4 &
-               + polpart(i,2)*x**3 &
-               + polpart(i,3)*x**2 &
-               + polpart(i,4)*x &
-               + polpart(i,5)
-          else
-            kp_part(k,j,i) = 0._wp
-          endif
+    if (ice_type .eq. 2) then
+      ! Polynomials kp_lidar derived from Mie theory
+      do i = 1, 3, 2
+        do j = 1, nlev
+          do k = 1, npoints
+            if (rad_part(k,j,i) .gt. 0._wp) then
+              x = rad_part(k,j,i)*1.0e6_wp
+              kp_part(k,j,i) = &
+                 polpart(i,1)*x**4 &
+                 + polpart(i,2)*x**3 &
+                 + polpart(i,3)*x**2 &
+                 + polpart(i,4)*x &
+                 + polpart(i,5)
+            else
+              kp_part(k,j,i) = 0._wp
+            endif
+          enddo    
+        enddo    
+      enddo
+      ! Ice hydrometeors with Baran's parameterization
+      do i = 2, 4, 2
+        do j = 1, nlev
+          do k = 1, npoints
+            if (rad_part(k,j,i) .gt. 0._wp) then
+              x = rad_part(k,j,i)*1.0e6_wp
+              kp_part(k,j,i) = (a_plates(1) + a_plates(2)*x + a_plates(3)*x**2) / &
+                (1._wp + a_plates(4)*x + a_plates(5)*x**2 + a_plates(6)*x**3)
+            else
+              kp_part(k,j,i) = 0._wp
+            endif
+          enddo    
+        enddo
+      enddo
+    else
+      ! Polynomials kp_lidar derived from Mie theory
+      do i = 1, npart
+        do j = 1, nlev
+          do k = 1, npoints
+            if (rad_part(k,j,i) .gt. 0._wp) then
+              x = rad_part(k,j,i)*1.0e6_wp
+              kp_part(k,j,i) = &
+                 polpart(i,1)*x**4 &
+                 + polpart(i,2)*x**3 &
+                 + polpart(i,3)*x**2 &
+                 + polpart(i,4)*x &
+                 + polpart(i,5)
+            else
+              kp_part(k,j,i) = 0._wp
+            endif
+          enddo    
         enddo    
       enddo    
-    enddo    
+    endif
 
     ! Initialize (if necessary)
     if (lparasol) then
