@@ -50,7 +50,7 @@
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to lidar simulations
   !----------------------------------------------------------------------------------
-  lidar_ice_type=0,    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
+  lidar_ice_type=2,    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
   OVERLAP=3,           !  overlap assumption used by scops: 1=max, 2=rand, 3=max/rand
   !----------------------------------------------------------------------------------
   !---------------- Inputs related to ISCCP simulator
