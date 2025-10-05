@@ -292,8 +292,13 @@ contains
          polpartCVICE1 = (/ 1.3615e-8_wp, -2.04206e-6_wp, 7.51799e-5_wp, 0.00078213_wp, 0.0182131_wp/), &
          polpartLSICE1 = (/ 1.3615e-8_wp, -2.04206e-6_wp, 7.51799e-5_wp, 0.00078213_wp, 0.0182131_wp/)
     ! ICE-RF parameterization
-    REAL(WP),PARAMETER,dimension(6) :: &
-         a_plates  = (/ 2.068242e-7_wp, -1.028329e+6_wp, 3.402644e+4_wp, 2.548990e+4_wp, -2.334362e+3_wp, 88.1488/)
+    REAL(WP),dimension(6),target :: &
+         a_plates  = (/ 2.068242e+7_wp, -1.028329e+6_wp, 3.402644e+4_wp, &
+                        2.548990e+4_wp, -2.334362e+3_wp, 88.1488/)
+    REAL(WP),dimension(6),target :: &
+         a_column  = (/ 22.58486_wp, -0.9720280_wp, 0.02605141_wp, &
+                       -0.0826659_wp, 0.003529035_wp, 1.943549e-5_wp/)
+    REAL(WP),dimension(:),pointer :: a_ice_rf => null()
     ! ##############################################################################
 
     ! Which LIDAR frequency are we using?
@@ -395,7 +400,7 @@ contains
     ! ##############################################################################
     ! *) Particles alpha, beta and optical thickness
     ! ##############################################################################
-    if (ice_type .eq. 2) then
+    if ((ice_type .eq. 2) .or. (ice_type .eq. 3)) then
       ! Polynomials kp_lidar derived from Mie theory
       do i = 1, 3, 2
         do j = 1, nlev
@@ -414,14 +419,16 @@ contains
           enddo    
         enddo    
       enddo
-      ! Ice hydrometeors with Baran's parameterization
+      ! Ice hydrometeors with ICE-RF's parameterization
+      if (ice_type .eq. 2) a_ice_rf => a_plates
+      if (ice_type .eq. 3) a_ice_rf => a_column
       do i = 2, 4, 2
         do j = 1, nlev
           do k = 1, npoints
             if (rad_part(k,j,i) .gt. 0._wp) then
               x = rad_part(k,j,i)*1.0e6_wp
-              kp_part(k,j,i) = (a_plates(1) + a_plates(2)*x + a_plates(3)*x**2) / &
-                (1._wp + a_plates(4)*x + a_plates(5)*x**2 + a_plates(6)*x**3)
+              kp_part(k,j,i) = (a_ice_rf(1) + a_ice_rf(2)*x + a_ice_rf(3)*x**2) / &
+                 (1._wp + a_ice_rf(4)*x + a_ice_rf(5)*x**2 + a_ice_rf(6)*x**3)
             else
               kp_part(k,j,i) = 0._wp
             endif
