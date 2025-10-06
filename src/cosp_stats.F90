@@ -333,8 +333,10 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     real(wp), dimension(Npoints,Ncolumns,Nlevels) :: icod  !! in-cloud optical depth (ICOD)
     logical  :: octop, ocbtm, oslwc
     integer, dimension(Npoints,Ncolumns,Nlevels) :: fracout_int  !! fracout (decimal to integer)
-    fracout_int(:,:,:) = NINT( fracout(:,:,:) )  !! assign an integer subpixcel ID (0=clear-sky; 1=St; 2=Cu)
-
+    !fracout_int(:,:,:) = NINT( fracout(:,:,:) )  !! assign an integer subpixcel ID (0=clear-sky; 1=St; 2=Cu)
+    fracout_int(:,:,:) = 0
+    where (fracout(:,:,:) .eq. 1._wp) fracout_int(:,:,:) = 1
+    where (fracout(:,:,:) .eq. 2._wp) fracout_int(:,:,:) = 2
     !! initialize
     do i = 1, Npoints
        if ( lwp(i) .eq. R_UNDEF ) then  ! for non-sunlit columns
