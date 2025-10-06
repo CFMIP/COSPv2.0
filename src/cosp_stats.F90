@@ -333,17 +333,9 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
     real(wp), dimension(Npoints,Ncolumns,Nlevels) :: icod  !! in-cloud optical depth (ICOD)
     logical  :: octop, ocbtm, oslwc
     integer, dimension(Npoints,Ncolumns,Nlevels) :: fracout_int  !! fracout (decimal to integer)
-    !integer, dimension(Npoints,Ncolumns,Nlevels) :: fracout_int2  !! fracout (decimal to integer)
-    fracout_int(:,:,:) = NINT( fracout(:,:,:) )  !! assign an integer subpixcel ID (0=clear-sky; 1=St; 2=Cu)
-    print *, "fracout(5:10,5:10,5:10):", fracout(5:10,5:10,5:10)
-    print *, "fracout_int(5:10,5:10,5:10):", fracout_int(5:10,5:10,5:10)
     fracout_int(:,:,:) = 0
     where ((fracout(:,:,:) .ge. 0.5_wp) .and. (fracout(:,:,:) .lt. 1.5_wp )) fracout_int(:,:,:) = 1
     where ((fracout(:,:,:) .ge. 1.5_wp) .and. (fracout(:,:,:) .lt. 2.5_wp )) fracout_int(:,:,:) = 2
-    !where (fracout(:,:,:) .eq. 1._wp) fracout_int2(:,:,:) = 1
-    !where (fracout(:,:,:) .eq. 2._wp) fracout_int2(:,:,:) = 2
-    !print *, "fracout_int2(5:10,5:10,5:10):", fracout_int2(5:10,5:10,5:10)
-    !where (fracout /= fracout2) print *, fracout
     !! initialize
     do i = 1, Npoints
        if ( lwp(i) .eq. R_UNDEF ) then  ! for non-sunlit columns
