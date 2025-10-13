@@ -244,9 +244,9 @@ def read_var_to_masked_array(fname, vname, fill_value, Nlat_lon = None):
         long_name: long name attribute.
     """
     f_id = netCDF4.Dataset(fname, 'r')
-    x = np.ma.masked_equal(f_id.variables[vname][:], fill_value)
-    lon = np.ma.masked_equal(f_id.variables['longitude'][:], fill_value)
-    lat = np.ma.masked_equal(f_id.variables['latitude'][:], fill_value)
+    x = np.ma.masked_values(f_id.variables[vname][:], fill_value)
+    lon = np.ma.masked_values(f_id.variables['longitude'][:], fill_value)
+    lat = np.ma.masked_values(f_id.variables['latitude'][:], fill_value)
     units = f_id.variables[vname].getncattr('units')
     long_name = f_id.variables[vname].getncattr('long_name')
     f_id.close()
