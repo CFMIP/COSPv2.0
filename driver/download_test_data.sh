@@ -24,8 +24,8 @@ case $COMPILER in
 
   "ifx")
     KGO_VERSION=v007
-    kgo_links=( "https://docs.google.com/uc?export=download&id=1Ysn1vyTaspF6qfa9i_UaWPIbATlMza_9" \
-                "https://docs.google.com/uc?export=download&id=1o5arV6sFuS1RJew0lySTwA_SJnc40XJK" )
+    kgo_links=( "https://docs.google.com/uc?export=download&id=1KFHd-wsvT5L_9E7FU2OCpePbXvsafqvw" \
+                "https://docs.google.com/uc?export=download&id=1r0pg_cfYlnJsls9QBKrBt0DwW92YI6DA" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" )
     ;;
