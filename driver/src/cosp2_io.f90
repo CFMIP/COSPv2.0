@@ -2267,7 +2267,7 @@ contains
        case ('orography') 
           if (Lpoint) then
              surfelev(1:Npoints) = x1(1:Npoints) 
-          else     
+          else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=surfelev)
           endif
        case ('landmask')

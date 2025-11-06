@@ -158,6 +158,8 @@ MODULE MOD_COSP
           z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
           g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
+     real(wp),allocatable,dimension(:,:,:,:) :: &
+          vfall, vfsqu, zehyd
      real(wp),allocatable,dimension(:,:) :: &
           beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
           beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 

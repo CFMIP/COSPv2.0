@@ -93,6 +93,7 @@ module quickbeam
      logical,  allocatable, dimension(:,:)   :: N_scale_flag
      logical,  allocatable, dimension(:,:,:) :: Z_scale_flag, Z_scale_added_flag
      real(wp), allocatable, dimension(:,:,:) :: Ze_scaled, Zr_scaled, kr_scaled
+     real(wp), allocatable, dimension(:,:,:) :: vf_scaled, vq_scaled
      real(wp), allocatable, dimension(:,:,:) :: fc, rho_eff
      real(wp), allocatable, dimension(:)     :: base_list, step_list
   end type radar_cfg

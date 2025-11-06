@@ -852,7 +852,10 @@ contains
                mr_hydro(:,k,:,1:nHydro)*1000._wp, Reff(:,k,:,1:nHydro)*1.e6_wp,&
                Np(:,k,:,1:nHydro), cospstateIN%pfull, cospstateIN%at,          &
                cospstateIN%qv, cospIN%z_vol_cloudsat(1:nPoints,k,:),           &
-               cospIN%kr_vol_cloudsat(1:nPoints,k,:))
+               cospIN%kr_vol_cloudsat(1:nPoints,k,:), &
+               cospIN%vfall(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%vfsqu(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%zehyd(1:nPoints,k,:,1:N_Hydro) )
           
           ! At each model level, what fraction of the precipitation is frozen?
           where(mr_hydro(:,k,:,I_LSRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_LSSNOW) .gt. 0 .or. &
@@ -989,6 +992,10 @@ contains
                 y%kr_vol_cloudsat(npoints, ncolumns,nlevels),&
                 y%g_vol_cloudsat(npoints,  ncolumns,nlevels),&
                 y%fracPrecipIce(npoints,   ncolumns))
+
+       allocate(y%vfall(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%vfsqu(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%zehyd(npoints, ncolumns, nlevels, N_HYDRO) )
     endif
     if (Lmodis) then
        allocate(y%fracLiq(npoints,        ncolumns,nlevels),&

@@ -34,6 +34,6 @@ MODULE cosp_kinds
   implicit none
   INTEGER, PARAMETER :: sp = SELECTED_REAL_KIND( 6, 37)
   INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(12,307)
-  INTEGER, PARAMETER :: wp = sp
+  INTEGER, PARAMETER :: wp = dp
 
 END MODULE cosp_kinds
