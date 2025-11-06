@@ -1,0 +1,4 @@
+&setup
+ dir='ctrl',
+ tmax=7,
+&end
