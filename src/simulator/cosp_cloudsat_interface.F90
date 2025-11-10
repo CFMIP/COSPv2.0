@@ -106,6 +106,8 @@ CONTAINS
     allocate(rcfg%Ze_scaled(maxhclass,mt_ntt,nRe_types))
     allocate(rcfg%Zr_scaled(maxhclass,mt_ntt,nRe_types))
     allocate(rcfg%kr_scaled(maxhclass,mt_ntt,nRe_types))
+    allocate(rcfg%vf_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW
+    allocate(rcfg%vq_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW
     allocate(rcfg%fc(maxhclass,nd,nRe_types))
     allocate(rcfg%rho_eff(maxhclass,nd,nRe_types))
     allocate(rcfg%base_list(Re_MAX_BIN))
