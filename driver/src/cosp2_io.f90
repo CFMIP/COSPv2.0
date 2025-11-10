@@ -37,7 +37,7 @@ contains
     ! ---------------------------------------------------------------------------------------
     ! Create output file.
     ! ---------------------------------------------------------------------------------------
-    status = nf90_create(path=trim(outFileName),cmode = nf90_clobber,ncid=fileID)
+    status = nf90_create(path=trim(outFileName),cmode=IOR(NF90_NETCDF4,NF90_CLOBBER),ncid=fileID)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
     ! ---------------------------------------------------------------------------------------
