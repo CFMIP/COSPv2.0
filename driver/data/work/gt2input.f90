@@ -22,10 +22,11 @@ program gt2input
        & ,  'surfelev   ' , 'orography  ' &
        & ,  'sunlit     ' , 'sunlit     ' &
        & /), shape=(/ 2,Nv2D /) )
-  integer,parameter :: Nv3D=20
+  integer,parameter :: Nv3D=21
   character(16),parameter :: vname3D(2,Nv3D) = reshape( &
        & (/ 'gdp        ' , 'pfull      ' &
        & ,  'zlev       ' , 'height     ' &
+       & ,  'zlevh      ' , 'height_half' &
        & ,  'temp       ' , 'T_abs      ' &
        & ,  'gdsh       ' , 'qv         ' &
        & ,  'gdrh       ' , 'rh         ' &
@@ -45,10 +46,9 @@ program gt2input
        & ,  'dem_c      ' , 'dem_c      ' &
        & ,  'mr_ozone   ' , 'mr_ozone   ' &
        & /), shape=(/ 2,Nv3D /) )
-  integer,parameter :: Nv3B=2
+  integer,parameter :: Nv3B=1
   character(16),parameter :: vname3B(2,Nv3B) = reshape( &
        & (/ 'gdpm       ' , 'phalf      ' &
-       & ,  'zlevh      ' , 'height_half' &
        & /), shape=(/ 2,Nv3B /) )
   !---
   integer :: fid,vid,xid,yid,zid,bid,hid,tid
@@ -184,9 +184,9 @@ program gt2input
      end do
      close(10)
      
-     if (trim(vname3D(2,n)) == 'height') then
-        out3D = out3D/1000.  ! m -> km
-     end if
+     !if (trim(vname3D(2,n)) == 'height' .or. trim(vname3D(2,n)) == 'height_half') then
+     !   out3D = out3D/1000.  ! m -> km
+     !end if
      
      call nf90_check( nf90_def_var(fid,trim(vname3D(2,n)),NF90_DOUBLE,(/xid,yid,zid/),vid) )
      call nf90_check( nf90_put_var(fid,vid,out3D(:,:,:,tmax),start=(/1,1,1/),count=(/imax,jmax,kmax/)) )
@@ -227,9 +227,6 @@ program gt2input
      call nf90_check( nf90_def_var(fid,trim(vname3B(2,n)),NF90_DOUBLE,(/xid,yid,zid/),vid) )
      if (trim(vname3B(2,n)) == 'phalf' ) then
         call nf90_check( nf90_put_var(fid,vid,out3B(:,:,1:kmax,tmax), &
-             &           start=(/1,1,1/), count=(/imax,jmax,kmax/) ) )
-     else if (trim(vname3B(2,n)) == 'height_half' ) then
-        call nf90_check( nf90_put_var(fid,vid,out3B(:,:,2:kmax+1,tmax)/1000., &
              &           start=(/1,1,1/), count=(/imax,jmax,kmax/) ) )
      end if
   end do
