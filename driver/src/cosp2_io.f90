@@ -10,6 +10,8 @@ module mod_cosp_io
        calipso_binCenters, grLidar532_binCenters, atlid_binCenters,                   &
        CFODD_NDBZE,  CFODD_HISTDBZE, CFODD_HISTDBZEcenters,                           &
        CFODD_NICOD,  CFODD_HISTICOD, CFODD_HISTICODcenters
+  USE MOD_COSP_CONFIG, ONLY: Nlvtemp, NlvdBZe, Nlvdplr, Nlvspwd, &  ! added by DPLRW
+       lvtemp_grid, lvdBZe_grid, lvdplr_grid, lvspwd_grid
   implicit none
 
 contains
@@ -25,8 +27,8 @@ contains
     character(len=256),intent(in) :: outFileName
 
     integer :: fileID,status,ij
-    integer,dimension(20)  :: dimID
-    integer,dimension(150) :: varID
+    integer,dimension(25)  :: dimID
+    integer,dimension(170) :: varID
     integer,dimension(Npoints) :: loc
     integer,dimension(Ncolumns) :: cosp_scol
     integer,dimension(2) :: bnds
@@ -78,6 +80,18 @@ contains
     status = nf90_def_dim(fileID,"CFODD_NDBZE",CFODD_NDBZE,dimID(17))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"CFODD_NICOD",CFODD_NICOD,dimID(18))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+    ! added by DPLRW
+    status = nf90_def_dim(fileID,"Nlvtemp",Nlvtemp,dimID(19))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_def_dim(fileID,"NlvdBZe",NlvdBZe,dimID(20))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_def_dim(fileID,"Nlvdplr",Nlvdplr,dimID(21))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_def_dim(fileID,"Nlvspwd",Nlvspwd,dimID(22))
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_def_dim(fileID,"regimeID",3,dimID(23))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
     ! ---------------------------------------------------------------------------------------
@@ -1415,7 +1429,96 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(147),"standard_name", "modis_in-cloud_optical_depth")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    endif 
+    endif
+
+    ! added by DPLRW
+    if (associated(cospOUT%dplrw_Z)) then
+       ! axes
+       status = nf90_def_var(fileID,"lvtemp_grid",nf90_float,(/dimID(19)/),varID(148))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(148),"long_name","Temperature axis for DPLRW CFED")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(148),"units",        "degree C")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"lvdBZe_grid",nf90_float,(/dimID(20)/),varID(149))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(149),"long_name","dBZe axis for DPLRW CFED")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(149),"units",        "dBZe")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"lvdplr_grid",nf90_float,(/dimID(21)/),varID(150))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(150),"long_name","Doppler velocity axis for DPLRW CFED")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(150),"units",        "m/s")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"lvspwd_grid",nf90_float,(/dimID(22)/),varID(151))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(151),"long_name","spectrum width axis for DPLRW CFED")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(151),"units",        "m/s")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"regimeID",nf90_INT,(/dimID(23)/),varID(152))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(152),"long_name","regime ID: 0=ALL, 1=LS, 2=CU")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(152),"units",        "None")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+       ! variables
+       status = nf90_def_var(fileID,"dplrw_Z",nf90_float,(/dimID(1),dimID(4),dimID(21),dimID(23)/),varID(153))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Doppler velocity/Altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"spwid_Z",nf90_float,(/dimID(1),dimID(4),dimID(22),dimID(23)/),varID(154))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Spectrum width/Altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"Zef94_Z",nf90_float,(/dimID(1),dimID(4),dimID(20),dimID(23)/),varID(155))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Radar reflectivity/Altitude")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+       status = nf90_def_var(fileID,"dplrw_T",nf90_float,(/dimID(1),dimID(19),dimID(21),dimID(23)/),varID(156))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Doppler velocity/Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"spwid_T",nf90_float,(/dimID(1),dimID(19),dimID(22),dimID(23)/),varID(157))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Spectrum width/Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"Zef94_T",nf90_float,(/dimID(1),dimID(19),dimID(20),dimID(23)/),varID(158))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Radar reflectivity/Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+       status = nf90_def_var(fileID,"ZefVd_2",nf90_float,(/dimID(1),dimID(21),dimID(20),dimID(23)/),varID(159))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","Number of samples onto histogram, Radar reflectivity/Doppler velocity")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       
+       status = nf90_def_var(fileID,"gwcum",nf90_float,(/dimID(1),dimID(3)/),varID(160))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"long_name","in-cloud cumulus upward velocity")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(147),"units",        "m/s")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+    end if
     
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
@@ -1453,6 +1556,17 @@ contains
     status = nf90_put_var(fileID,varID(82),bnds)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_put_var(fileID,varID(83),loc)
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    ! added by DPLRW
+    status = nf90_put_var(fileID,varID(148),lvtemp_grid)
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_put_var(fileID,varID(149),lvdBZe_grid)
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_put_var(fileID,varID(150),lvdplr_grid)
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_put_var(fileID,varID(151),lvspwd_grid)
+    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    status = nf90_put_var(fileID,varID(152),(/0,1,2/) )
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! CALIPSO simulator output
@@ -1894,6 +2008,29 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
 
+    ! added by DPLRW
+    if (associated(cospOUT%dplrw_Z))then
+       status = nf90_put_var(fileID,varID(153),cospOUT%dplrw_Z)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(154),cospOUT%spwid_Z)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(155),cospOUT%Zef94_Z)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       write(*,*) 'CFAD!'
+       status = nf90_put_var(fileID,varID(156),cospOUT%dplrw_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(157),cospOUT%spwid_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(158),cospOUT%Zef94_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       write(*,*) 'CFED!'
+       status = nf90_put_var(fileID,varID(159),cospOUT%ZefVd_2)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       write(*,*) '2dPDF!'       
+       status = nf90_put_var(fileID,varID(160),cospOUT%gcumw)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       write(*,*) 'gcumw!'
+    end if
     
     ! Close file
     status = nf90_close(fileID)
@@ -1943,6 +2080,7 @@ contains
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
                                 dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
+                                gwvel, gcumf, & ! added by DPLRW
                                 emsfc_lw,mode,Nlon,Nlat,surfelev)
      
     ! Arguments
@@ -1954,6 +2092,7 @@ contains
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
     real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev
+    real(wp),dimension(Npnts,Nl),intent(out) :: gwvel,gcumf
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
     
@@ -2299,6 +2438,18 @@ contains
              sunlit(1:Npoints) = x1(1:Npoints)
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=sunlit)
+          endif
+       case ('gwvel') ! added by DPLRW
+          if (Lpoint) then
+             gwvel(1:Npoints,:) = x2(1:Npoints,1:Nlevels)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x3=x3,y2=gwvel)
+          endif
+       case ('gcumf')
+          if (Lpoint) then
+             gcumf(1:Npoints,:) = x2(1:Npoints,1:Nlevels)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x3=x3,y2=gcumf)
           endif
        end select
        ! Free memory

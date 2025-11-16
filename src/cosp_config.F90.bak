@@ -361,35 +361,6 @@ MODULE MOD_COSP_CONFIG
     integer, parameter :: &
          cloudsat_preclvl = 39
 
-    ! for DPLRW simulator
-    real(wp),parameter :: &
-         trbl_LS = 0.5, &
-         trbl_CU = 1.0
-    real(wp),parameter :: &
-         lvtemp_MIN = -80., &
-         lvtemp_MAX =  30., &
-         lvtemp_WID =   2., &
-         lvdBZe_MIN = -40., &
-         lvdBZe_MAX =  30., &
-         lvdBZe_WID =   2., &
-         lvdplr_MIN = -6.0, &
-         lvdplr_MAX =  6.0, &
-         lvdplr_WID =  0.2, &
-         lvspwd_MIN =  0.0, &
-         lvspwd_MAX =  5.0, &
-         lvspwd_WID =  0.1
-    integer,parameter :: &
-         Nlvtemp = nint( (lvtemp_MAX-lvtemp_MIN)/lvtemp_WID ), &
-         NlvdBZe = nint( (lvdBZe_MAX-lvdBZe_MIN)/lvdBZe_WID ), &
-         Nlvdplr = nint( (lvdplr_MAX-lvdplr_MIN)/lvdplr_WID ), &
-         Nlvspwd = nint( (lvspwd_MAX-lvspwd_MIN)/lvspwd_WID )
-
-    real(wp),parameter :: &
-         lvtemp_grid(Nlvtemp) = (/( lvtemp_MIN+lvtemp_WID*(i-0.5), i=1,Nlvtemp )/), &
-         lvdBZe_grid(NlvdBZe) = (/( lvdBZe_MIN+lvdBZe_WID*(i-0.5), i=1,NlvdBZe )/), &
-         lvdplr_grid(Nlvdplr) = (/( lvdplr_MIN+lvdplr_WID*(i-0.5), i=1,Nlvdplr )/), &
-         lvspwd_grid(Nlvspwd) = (/( lvspwd_MIN+lvspwd_WID*(i-0.5), i=1,Nlvspwd )/)
-   
     ! ####################################################################################
     ! CLOUDSAT and MODIS joint product information (2018.11.22)
     ! ####################################################################################

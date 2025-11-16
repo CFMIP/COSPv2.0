@@ -22,7 +22,7 @@ program gt2input
        & ,  'surfelev   ' , 'orography  ' &
        & ,  'sunlit     ' , 'sunlit     ' &
        & /), shape=(/ 2,Nv2D /) )
-  integer,parameter :: Nv3D=21
+  integer,parameter :: Nv3D=22
   character(16),parameter :: vname3D(2,Nv3D) = reshape( &
        & (/ 'gdp        ' , 'pfull      ' &
        & ,  'zlev       ' , 'height     ' &
@@ -30,6 +30,7 @@ program gt2input
        & ,  'temp       ' , 'T_abs      ' &
        & ,  'gdsh       ' , 'qv         ' &
        & ,  'gdrh       ' , 'rh         ' &
+       & ,  'gwvel      ' , 'gwvel      ' &       
        & ,  'cf_ttl     ' , 'tca        ' &
        & ,  'cf_cnv     ' , 'cca        ' &
        & ,  'mr_lscliq  ' , 'mr_lsliq   ' &
@@ -46,9 +47,10 @@ program gt2input
        & ,  'dem_c      ' , 'dem_c      ' &
        & ,  'mr_ozone   ' , 'mr_ozone   ' &
        & /), shape=(/ 2,Nv3D /) )
-  integer,parameter :: Nv3B=1
+  integer,parameter :: Nv3B=2
   character(16),parameter :: vname3B(2,Nv3B) = reshape( &
        & (/ 'gdpm       ' , 'phalf      ' &
+       & ,  'gcumf      ' , 'gcumf      ' &
        & /), shape=(/ 2,Nv3B /) )
   !---
   integer :: fid,vid,xid,yid,zid,bid,hid,tid
@@ -227,6 +229,9 @@ program gt2input
      call nf90_check( nf90_def_var(fid,trim(vname3B(2,n)),NF90_DOUBLE,(/xid,yid,zid/),vid) )
      if (trim(vname3B(2,n)) == 'phalf' ) then
         call nf90_check( nf90_put_var(fid,vid,out3B(:,:,1:kmax,tmax), &
+             &           start=(/1,1,1/), count=(/imax,jmax,kmax/) ) )
+     else if (trim(vname3B(2,n)) == 'gcumf' ) then
+        call nf90_check( nf90_put_var(fid,vid,(out3B(:,:,1:kmax,tmax)+out3B(:,:,2:kmax+1,tmax))/2., &
              &           start=(/1,1,1/), count=(/imax,jmax,kmax/) ) )
      end if
   end do

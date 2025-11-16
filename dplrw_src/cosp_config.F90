@@ -36,11 +36,7 @@
 ! June 2015- D. Swales        - Moved hydrometeor class variables to hydro_class_init in
 !                               the module quickbeam_optics.
 ! Mar 2016 - D. Swales        - Added scops_ccfrac. Was previously hardcoded in prec_scops.f90.  
-! Mar 2018 - R. Guzman        - Added LIDAR_NTYPE for the OPAQ diagnostics
-! Apr 2018 - R. Guzman        - Added parameters for GROUND LIDAR and ATLID simulators
-! Nov 2018 - T. Michibata     - Added CloudSat+MODIS Warmrain Diagnostics
-! Mar 2024 - C. Wall          - Added MODIS joint-histogram diagnostics
-!
+! Oct 2018 - T. Michibata     - Inline Diagnostic Driver (IDiD) for MIROC6 interface 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MODULE MOD_COSP_CONFIG
@@ -129,57 +125,35 @@ MODULE MOD_COSP_CONFIG
 
     ! Liquid and Ice particle bins for MODIS joint histogram of optical-depth and particle
     ! size
-    ! Bin edges match Pincus et al. 2023 observational data (doi:10.5194/essd-15-2483-2023)
-    ! Additional Re bins to capture all simulated clouds
     integer :: i,j
     integer,parameter :: &
-         nReffLiq = 8, & ! Number of ReffLiq bins for tau/ReffLiq and LWP/ReffLiq joint-histogram
-         nReffIce = 8 ! Number of ReffIce bins for tau/ReffICE and IWP/ReffIce joint-histogram
+         nReffLiq = 6, & ! Number of bins for tau/ReffLiq joint-histogram
+         nReffIce = 6    ! Number of bins for tau/ReffICE joint-histogram
     real(wp),parameter,dimension(nReffLiq+1) :: &
-         reffLIQ_binBounds = (/0.0, 4.0e-6, 8e-6, 1.0e-5, 1.25e-5, 1.5e-5, 2.0e-5, 3.0e-5, 1.0e-2/)
+         reffLIQ_binBounds = (/0., 8e-6, 1.0e-5, 1.3e-5, 1.5e-5, 2.0e-5, 3.0e-5/)
     real(wp),parameter,dimension(nReffIce+1) :: &
-         reffICE_binBounds = (/0.0,5.0e-6, 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 5.0e-5, 6.0e-5, 1.0e-2/)
+         reffICE_binBounds = (/0., 1.0e-5, 2.0e-5, 3.0e-5, 4.0e-5, 6.0e-5, 9.0e-5/)
     real(wp),parameter,dimension(2,nReffICE) :: &
          reffICE_binEdges = reshape(source=(/reffICE_binBounds(1),((reffICE_binBounds(k),  &
                                     l=1,2),k=2,nReffICE),reffICE_binBounds(nReffICE+1)/),  &
                                     shape = (/2,nReffICE/)) 
     real(wp),parameter,dimension(2,nReffLIQ) :: &
          reffLIQ_binEdges = reshape(source=(/reffLIQ_binBounds(1),((reffLIQ_binBounds(k),  &
-                                    l=1,2),k=2,nReffLIQ),reffLIQ_binBounds(nReffLIQ+1)/),  &
+                                    l=1,2),k=2,nReffLIQ),reffLIQ_binBounds(nReffICE+1)/),  &
                                     shape = (/2,nReffLIQ/))             
     real(wp),parameter,dimension(nReffICE) :: &
          reffICE_binCenters = (reffICE_binEdges(1,:)+reffICE_binEdges(2,:))/2._wp
     real(wp),parameter,dimension(nReffLIQ) :: &
          reffLIQ_binCenters = (reffLIQ_binEdges(1,:)+reffLIQ_binEdges(2,:))/2._wp
 
-    ! LWP and IWP bins for MODIS joint histogram of (1) LWP and droplet size
-    ! and (2) IWP and particle size
-    integer, parameter :: &
-         nLWP = 7, & ! Number of bins for LWP/ReffLiq joint-histogram
-         nIWP = 7    ! Number of bins for IWP/ReffIce joint-histogram
-    real(wp),parameter,dimension(nLWP+1) :: &
-         LWP_binBounds = (/0., 0.01, 0.03, 0.06, 0.10, 0.15, 0.25, 20.0/) ! kg/m2
-    real(wp),parameter,dimension(nIWP+1) :: &
-         IWP_binBounds = (/0., 0.02, 0.05, 0.10, 0.20, 0.40, 1.00, 20.0/) ! kg/m2
-    real(wp),parameter,dimension(2,nLWP) :: &
-         LWP_binEdges = reshape(source=(/LWP_binBounds(1),((LWP_binBounds(k),  &
-                                l=1,2),k=2,nLWP),LWP_binBounds(nLWP+1)/),  &
-                                shape = (/2,nLWP/))
-    real(wp),parameter,dimension(2,nIWP) :: &
-         IWP_binEdges = reshape(source=(/IWP_binBounds(1),((IWP_binBounds(k),  &
-                                l=1,2),k=2,nIWP),IWP_binBounds(nIWP+1)/),  &
-                                shape = (/2,nIWP/))
-    real(wp),parameter,dimension(nLWP) :: &
-         LWP_binCenters = (LWP_binEdges(1,:)+LWP_binEdges(2,:))/2._wp
-    real(wp),parameter,dimension(nIWP) :: &
-         IWP_binCenters = (IWP_binEdges(1,:)+IWP_binEdges(2,:))/2._wp
     ! ####################################################################################  
     ! Constants used by RTTOV.
     ! ####################################################################################  
     integer,parameter :: &
          RTTOV_MAX_CHANNELS = 20
     character(len=256),parameter :: &
-         rttovDir = '/homedata/rguzman/CALIPSO/RTTOV/rttov_11.3/'
+         rttovDir = '/Projects/Clouds/dswales/RTTOV/rttov_11.3/'
+    
     ! ####################################################################################  
     ! Constants used by the PARASOL simulator.
     ! ####################################################################################  
@@ -289,54 +263,32 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter,dimension(nReffLiq+1) :: &
          modis_histReffLiq = reffLIQ_binBounds         ! Effective radius bin boundaries 
     real(wp),parameter,dimension(nReffLiq) :: &
-         modis_histReffLiqCenters = reffLIQ_binCenters ! Effective radius bin centers
-    real(wp),parameter,dimension(2,nReffLiq) :: &
+         modis_histReffLiqCenters = reffICE_binCenters ! Effective radius bin centers
+    real(wp),parameter,dimension(2,nReffICE) :: &
          modis_histReffLiqEdges = reffLIQ_binEdges     ! Effective radius bin edges
-    ! ####################################################################################
-    ! MODIS simulator LWP/ReffLIQ and IWP/ReffIce joint-histogram information
-    ! ####################################################################################
-    ! Liquid
-    integer,parameter :: &
-         numMODISLWPBins = nLWP                        ! Number of bins for joint-histogram
-    real(wp),parameter,dimension(nLWP+1) :: &
-         modis_histLWP = LWP_binBounds                 ! LWP bin boundaries 
-    real(wp),parameter,dimension(nLWP) :: &
-         modis_histLWPCenters = LWP_binCenters         ! LWP bin centers
-    real(wp),parameter,dimension(2,nLWP) :: &
-         modis_histLWPEdges = LWP_binEdges             ! LWP bin edges
-
-    ! Ice
-    integer,parameter :: &
-         numMODISIWPBins = nIWP                        ! Number of bins for joint-histogram
-    real(wp),parameter,dimension(nIWP+1) :: &
-         modis_histIWP = IWP_binBounds                 ! IWP bin boundaries 
-    real(wp),parameter,dimension(nIWP) :: &
-         modis_histIWPCenters = IWP_binCenters         ! IWP bin centers
-    real(wp),parameter,dimension(2,nIWP) :: &
-         modis_histIWPEdges = IWP_binEdges             ! IWP bin edges     
 
     ! ####################################################################################
     ! CLOUDSAT reflectivity histogram information 
     ! ####################################################################################
     integer,parameter :: &
-       CLOUDSAT_DBZE_BINS     =   15, & ! Number of dBZe bins in histogram (cfad)
-       CLOUDSAT_DBZE_MIN      = -100, & ! Minimum value for radar reflectivity
-       CLOUDSAT_DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
-       CLOUDSAT_CFAD_ZE_MIN   =  -50, & ! Lower value of the first CFAD Ze bin
-       CLOUDSAT_CFAD_ZE_WIDTH =    5    ! Bin width (dBZe)
+       DBZE_BINS     =   46, & ! Number of dBZe bins in histogram (cfad)
+       DBZE_MIN      = -100, & ! Minimum value for radar reflectivity
+       DBZE_MAX      =   80, & ! Maximum value for radar reflectivity
+       CFAD_ZE_MIN   =  -60, & ! Lower value of the first CFAD Ze bin
+       CFAD_ZE_WIDTH =    2    ! Bin width (dBZe)
 
-    real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS+1) :: &
-         cloudsat_histRef = (/CLOUDSAT_DBZE_MIN,(/(i, i=int(CLOUDSAT_CFAD_ZE_MIN+CLOUDSAT_CFAD_ZE_WIDTH),&
-                             int(CLOUDSAT_CFAD_ZE_MIN+(CLOUDSAT_DBZE_BINS-1)*CLOUDSAT_CFAD_ZE_WIDTH),    &
-                             int(CLOUDSAT_CFAD_ZE_WIDTH))/),CLOUDSAT_DBZE_MAX/)
-    real(wp),parameter,dimension(2,CLOUDSAT_DBZE_BINS) :: &
+    real(wp),parameter,dimension(DBZE_BINS+1) :: &
+         cloudsat_histRef = (/DBZE_MIN,(/(i, i=int(CFAD_ZE_MIN+CFAD_ZE_WIDTH),           &
+                             int(CFAD_ZE_MIN+(DBZE_BINS-1)*CFAD_ZE_WIDTH),               &
+                             int(CFAD_ZE_WIDTH))/),DBZE_MAX/)
+    real(wp),parameter,dimension(2,DBZE_BINS) :: &
          cloudsat_binEdges = reshape(source=(/cloudsat_histRef(1),((cloudsat_histRef(k), &
-                                   l=1,2),k=2,CLOUDSAT_DBZE_BINS),cloudsat_histRef(CLOUDSAT_DBZE_BINS+1)/),&
-                                   shape = (/2,CLOUDSAT_DBZE_BINS/))     
-    real(wp),parameter,dimension(CLOUDSAT_DBZE_BINS) :: &
-         cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp
+                                   l=1,2),k=2,DBZE_BINS),cloudsat_histRef(DBZE_BINS+1)/),&
+                                   shape = (/2,DBZE_BINS/))     
+    real(wp),parameter,dimension(DBZE_BINS) :: &
+         cloudsat_binCenters = (cloudsat_binEdges(1,:)+cloudsat_binEdges(2,:))/2._wp 
 
-    ! Parameters for Cloudsat near-surface precipitation diagnostics.
+    ! Parameters for Cloudsat near-surface precipitation diagnostics.(Y.Imura 2021.06.17)
     ! Precipitation classes.
     integer, parameter :: &
          nCloudsatPrecipClass = 10
@@ -351,47 +303,20 @@ MODULE MOD_COSP_CONFIG
          pClass_Mixed2        = 7, & ! Mixed-precipitation certain
          pClass_Rain4         = 8, & ! Heavy rain
          pClass_default       = 9    ! Default
-    ! Reflectivity bin boundaries, used by decision tree to classify precipitation type.
+    ! Reflectivity bin boundaries, used by decision tree to classify
+    ! precipitation type.
     real(wp), dimension(4),parameter :: &
          Zenonbinval =(/0._wp, -5._wp, -7.5_wp, -15._wp/)
     real(wp), dimension(6),parameter :: &
          Zbinvallnd = (/10._wp, 5._wp, 2.5_wp, -2.5_wp, -5._wp, -15._wp/)
-    ! Vertical level index(Nlvgrid) for Cloudsat precipitation occurence/frequency diagnostics.
+    ! Vertical level index(Nlvgrid) for Cloudsat precipitation
+    ! occurence/frequency diagnostics.
     ! Level 39 of Nlvgrid(40) is 480-960m.
     integer, parameter :: &
-         cloudsat_preclvl = 39
+         cloudsat_preclvl = 39 
 
-    ! for DPLRW simulator
-    real(wp),parameter :: &
-         trbl_LS = 0.5, &
-         trbl_CU = 1.0
-    real(wp),parameter :: &
-         lvtemp_MIN = -80., &
-         lvtemp_MAX =  30., &
-         lvtemp_WID =   2., &
-         lvdBZe_MIN = -40., &
-         lvdBZe_MAX =  30., &
-         lvdBZe_WID =   2., &
-         lvdplr_MIN = -6.0, &
-         lvdplr_MAX =  6.0, &
-         lvdplr_WID =  0.2, &
-         lvspwd_MIN =  0.0, &
-         lvspwd_MAX =  5.0, &
-         lvspwd_WID =  0.1
-    integer,parameter :: &
-         Nlvtemp = nint( (lvtemp_MAX-lvtemp_MIN)/lvtemp_WID ), &
-         NlvdBZe = nint( (lvdBZe_MAX-lvdBZe_MIN)/lvdBZe_WID ), &
-         Nlvdplr = nint( (lvdplr_MAX-lvdplr_MIN)/lvdplr_WID ), &
-         Nlvspwd = nint( (lvspwd_MAX-lvspwd_MIN)/lvspwd_WID )
-
-    real(wp),parameter :: &
-         lvtemp_grid(Nlvtemp) = (/( lvtemp_MIN+lvtemp_WID*(i-0.5), i=1,Nlvtemp )/), &
-         lvdBZe_grid(NlvdBZe) = (/( lvdBZe_MIN+lvdBZe_WID*(i-0.5), i=1,NlvdBZe )/), &
-         lvdplr_grid(Nlvdplr) = (/( lvdplr_MIN+lvdplr_WID*(i-0.5), i=1,Nlvdplr )/), &
-         lvspwd_grid(Nlvspwd) = (/( lvspwd_MIN+lvspwd_WID*(i-0.5), i=1,Nlvspwd )/)
-   
     ! ####################################################################################
-    ! CLOUDSAT and MODIS joint product information (2018.11.22)
+    ! CLOUDSAT and MODIS joint product information
     ! ####################################################################################
     ! @ COSP_DIAG_WARMRAIN:
     integer, parameter :: CFODD_NCLASS  =    3 ! # of classes for CFODD (classified by MODIS Reff)
@@ -405,8 +330,8 @@ MODULE MOD_COSP_CONFIG
          CFODD_BNDRE = (/5.0e-6, 12.0e-6, 18.0e-6, 35.0e-6/) ! Reff bnds
     real(wp),parameter,dimension(2) :: &
          CFODD_BNDZE = (/-15.0, 0.0/)                        ! dBZe bnds (cloud/drizzle/precip)
-    real(wp),parameter :: CFODD_DBZE_MIN    =  -30.0 ! Minimum value of CFODD dBZe bin
-    real(wp),parameter :: CFODD_DBZE_MAX    =   20.0 ! Maximum value of CFODD dBZe bin
+    real(wp),parameter :: CFODD_DBZE_MIN    =  -40.0 ! Minimum value of CFODD dBZe bin
+    real(wp),parameter :: CFODD_DBZE_MAX    =   30.0 ! Maximum value of CFODD dBZe bin
     real(wp),parameter :: CFODD_ICOD_MIN    =    0.0 ! Minimum value of CFODD ICOD bin
     real(wp),parameter :: CFODD_ICOD_MAX    =   60.0 ! Maximum value of CFODD ICOD bin
     real(wp),parameter :: CFODD_DBZE_WIDTH  =    2.0 ! Bin width (dBZe)
@@ -436,6 +361,57 @@ MODULE MOD_COSP_CONFIG
     real(wp),parameter,dimension(CFODD_NICOD) :: &
          CFODD_HISTICODcenters = (CFODD_HISTICODedges(1,:)+CFODD_HISTICODedges(2,:))/2._wp
 
+#ifdef OPT_DPLRW
+    real(wp),parameter :: &
+         trbl_LS = 0.5, &
+         trbl_CU = 1.0
+
+    integer,parameter :: &
+         N_ISCCP = 9
+
+    real(wp),parameter :: &
+         lvtemp_MIN = -80., &
+         lvtemp_MAX =  30., &
+         lvtemp_WID =   2., &
+         lvdBZe_MIN = -40., &
+         lvdBZe_MAX =  30., &
+         lvdBZe_WID =   2.
+    integer,parameter :: &
+         Nlvtemp = nint( (lvtemp_MAX-lvtemp_MIN)/lvtemp_WID ), &
+         NlvdBZe = nint( (lvdBZe_MAX-lvdBZe_MIN)/lvdBZe_WID )
+
+    real(wp),parameter :: &
+         lvdplr_MIN = -6.0, &
+         lvdplr_MAX =  6.0, &
+         lvdplr_WID =  0.2, &
+         lvspwd_MIN =  0.0, &
+         lvspwd_MAX =  5.0, &
+         lvspwd_WID =  0.1
+
+    integer,parameter :: &
+         Nlvdplr = nint( (lvdplr_MAX-lvdplr_MIN)/lvdplr_WID ), &
+         Nlvspwd = nint( (lvspwd_MAX-lvspwd_MIN)/lvspwd_WID )
+
+    ! real(wp),parameter :: &
+    !      dplrLS_MIN = -6.0, &
+    !      dplrLS_MAX =  6.0, &
+    !      dplrLS_WID =  0.2, &
+    !      spwdLS_MIN =  0.0, &
+    !      spwdLS_MAX =  5.0, &
+    !      spwdLS_WID =  0.1, &
+    !      dplrCU_MIN = -6.0, &
+    !      dplrCU_MAX =  6.0, &
+    !      dplrCU_WID =  0.2, &
+    !      spwdCU_MIN =  0.0, &
+    !      spwdCU_MAX =  5.0, &
+    !      spwdCU_WID =  0.1         
+    ! integer,parameter :: &
+    !      NdplrLS = nint( (dplrLS_MAX-dplrLS_MIN)/dplrLS_WID ), &
+    !      NspwdLS = nint( (spwdLS_MAX-spwdLS_MIN)/spwdLS_WID ), &
+    !      NdplrCU = nint( (dplrCU_MAX-dplrCU_MIN)/dplrCU_WID ), &
+    !      NspwdCU = nint( (spwdCU_MAX-spwdCU_MIN)/spwdCU_WID )
+
+#endif
     ! ####################################################################################
     ! Parameters used by the CALIPSO LIDAR simulator
     ! #################################################################################### 
@@ -456,8 +432,8 @@ MODULE MOD_COSP_CONFIG
 
     integer,parameter  ::     &
        LIDAR_NTEMP = 40, & 
-       LIDAR_NCAT  = 4,  & ! Number of categories for cloudtop heights (high/mid/low/tot)
-       LIDAR_NTYPE = 3     ! Number of categories for OPAQ (opaque/thin cloud + z_opaque)
+       LIDAR_NCAT  = 4     ! Number of categories for cloudtop heights (high/mid/low/tot)
+   !    LIDAR_NTYPE = 3     ! Number of categories for OPAQ (opaque/thin cloud + z_opaque)
     real(wp),parameter,dimension(LIDAR_NTEMP) :: &
        LIDAR_PHASE_TEMP=                                                                 &
        (/-91.5,-88.5,-85.5,-82.5,-79.5,-76.5,-73.5,-70.5,-67.5,-64.5,                    &
@@ -474,59 +450,91 @@ MODULE MOD_COSP_CONFIG
              -18.,   -15., -15., -12., -12.,  -9.,  -9.,  -6.,  -6.,  -3.,               &
               -3.,     0.,   0.,   3.,   3.,   6.,   6.,   9.,   9.,  12.,               &
               12.,    15.,  15.,  18.,  18.,  21.,  21.,  24.,  24., 100. /),            &
-              shape=(/2,40/))        
+              shape=(/2,40/))       
 
     ! ####################################################################################
     ! Parameters used by the GROUND LIDAR simulator
     ! #################################################################################### 
     ! GROUND LIDAR backscatter histogram bins 
-!    real(wp),parameter ::     &
-!       S_cld       = 5.0,     & ! Threshold for cloud detection
-!       S_att       = 0.01,    & !
-!       S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
-    real(wp),parameter,dimension(SR_BINS+1) :: &
-         grLidar532_histBsct = (/-1.,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0,  &
-                                 60.0,80.0,999./)         ! Backscatter histogram bins
-    real(wp),parameter,dimension(2,SR_BINS) :: &
-         grLidar532_binEdges = reshape(source=(/grLidar532_histBsct(1),((grLidar532_histBsct(k),  &
-                                    l=1,2),k=2,SR_BINS),grLidar532_histBsct(SR_BINS+1)/),   &
-                                    shape = (/2,SR_BINS/))     
-    real(wp),parameter,dimension(SR_BINS) :: &
-         grLidar532_binCenters = (grLidar532_binEdges(1,:)+grLidar532_binEdges(2,:))/2._wp  
+    !    real(wp),parameter ::     &
+    !       S_cld       = 5.0,     & ! Threshold for cloud detection
+    !       S_att       = 0.01,    & !
+    !        S_cld_att   = 30.        ! Threshold for undefined cloud phase detection
+    !real(wp),parameter,dimension(SR_BINS+1) :: &
+    !     grLidar532_histBsct = (/-1.,0.01,1.2,3.0,5.0,7.0,10.0,15.0,20.0,25.0,30.0,40.0,50.0,  &
+    !                             60.0,80.0,999./)         ! Backscatter histogram bins
+    !real(wp),parameter,dimension(2,SR_BINS) :: &
+    !     grLidar532_binEdges = reshape(source=(/grLidar532_histBsct(1),((grLidar532_histBsct(k),  &
+    !                                l=1,2),k=2,SR_BINS),grLidar532_histBsct(SR_BINS+1)/),   &
+    !                                shape = (/2,SR_BINS/))
+    !real(wp),parameter,dimension(SR_BINS) :: &
+    !     grLidar532_binCenters = (grLidar532_binEdges(1,:)+grLidar532_binEdges(2,:))/2._wp
 
 !    integer,parameter  ::     &
-!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot)
+!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights
+!       (high/mid/low/tot)
 
     ! ####################################################################################
     ! Parameters used by the ATLID LIDAR simulator
     ! #################################################################################### 
     ! ATLID LIDAR backscatter histogram bins 
-    real(wp),parameter ::     &
-       S_cld_atlid       = 1.74,    & ! Threshold for cloud detection
-       S_att_atlid       = 0.01,    & !
-       S_cld_att_atlid   = 6.67        ! Threshold for undefined cloud phase detection
-    real(wp),parameter,dimension(SR_BINS+1) :: &
-         atlid_histBsct = (/-1.,0.01,1.03,1.38,1.74,2.07,2.62,3.65,4.63,5.63,6.67,8.8,11.25,  &
-                                 13.2,17.2,999./)         ! Backscatter histogram bins
-    real(wp),parameter,dimension(2,SR_BINS) :: &
-         atlid_binEdges = reshape(source=(/atlid_histBsct(1),((atlid_histBsct(k),  &
-                                    l=1,2),k=2,SR_BINS),atlid_histBsct(SR_BINS+1)/),   &
-                                    shape = (/2,SR_BINS/))     
-    real(wp),parameter,dimension(SR_BINS) :: &
-         atlid_binCenters = (atlid_binEdges(1,:)+atlid_binEdges(2,:))/2._wp  
-
+    !real(wp),parameter ::    &
+    !   S_cld_atlid       = 1.74,    & ! Threshold for cloud detection
+    !   S_att_atlid       = 0.01,    & !
+    !   S_cld_att_atlid   = 6.67        ! Threshold for undefined cloud phase detection
+    !real(wp),parameter,dimension(SR_BINS+1) :: &
+    !     atlid_histBsct = (/-1.,0.01,1.03,1.38,1.74,2.07,2.62,3.65,4.63,5.63,6.67,8.8,11.25,  &
+    !                             13.2,17.2,999./)         ! Backscatter histogram bins
+    !real(wp),parameter,dimension(2,SR_BINS) :: &
+    !     atlid_binEdges = reshape(source=(/atlid_histBsct(1),((atlid_histBsct(k),  &
+    !                                l=1,2),k=2,SR_BINS),atlid_histBsct(SR_BINS+1)/),   &
+    !                                shape = (/2,SR_BINS/))
+    !real(wp),parameter,dimension(SR_BINS) :: &
+    !     atlid_binCenters = (atlid_binEdges(1,:)+atlid_binEdges(2,:))/2._wp
+!
 !    integer,parameter  ::     &
-!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights (high/mid/low/tot)
+!       LIDAR_NCAT  = 4       ! Number of categories for cloudtop heights
+!       (high/mid/low/tot) 
 
     ! ####################################################################################
     ! New vertical grid used by CALIPSO and CLOUDSAT L3 (set up during initialization)
     ! ####################################################################################
     integer :: &
-         Nlvgrid      ! Number of levels in New grid
+         Nlvgrid      ! Number of levels in output vgrid
+                      ! defined in cosp_INIT in cosp.F90
     real(wp),dimension(:),allocatable :: &
        vgrid_zl,  & ! New grid bottoms
        vgrid_zu,  & ! New grid tops
        vgrid_z,   & ! New grid center
        dz           ! dZ
 
+! #ifdef OPT_DPLRW
+!   contains
+!     subroutine dplrw_dims_init(cosp_input_nl)
+!       character(128),intent(in) :: cosp_input_nl
+!       integer :: ifile,ieof,jfpar
+!       logical :: first
+!       save first
+!       data first /.true./
+
+!       if (first) then
+!          call iflopn( ifile,ieof,cosp_input_nl,'Read','(*)' )
+!          rewind( ifile )
+!          read(ifile,nml=dplrw_dims)
+!          close( ifile )
+         
+!          Nlvtemp = nint((lvtemp_MAX-lvtemp_MIN)/lvtemp_WID)+1
+!          NlvdBZe = nint((lvdBZe_MAX-lvdBZe_MIN)/lvdBZe_WID)+1
+!          NdplrLS = nint((dplrLS_MAX-dplrLS_MIN)/dplrLS_WID)+1
+!          NdplrCV = nint((dplrCV_MAX-dplrCV_MIN)/dplrCV_WID)+1
+
+!          call getjfp(jfpar)
+!          write(jfpar,*) '@@@@@ dplrw CFAD dims setup @@@@@'
+!          call flush(jfpar)
+
+!          first = .false.
+!       end if
+
+!     end subroutine dplrw_dims_init
+! #endif
 END MODULE MOD_COSP_CONFIG

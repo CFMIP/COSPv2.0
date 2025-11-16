@@ -149,4 +149,6 @@
   !- CloudSat+MODIS joint diagnostics
   Lwr_occfreq=.true.,
   Lcfodd=.true.
+  ! Doppler capability
+  Ldplrw=.true.,
 /
