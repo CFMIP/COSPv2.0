@@ -35,7 +35,6 @@
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
 MODULE MOD_COSP
   USE COSP_KINDS,                  ONLY: wp
   USE MOD_COSP_CONFIG,             ONLY: R_UNDEF,PARASOL_NREFL,LIDAR_NCAT,LIDAR_NTYPE, SR_BINS,&
@@ -62,6 +61,7 @@ MODULE MOD_COSP
   USE MOD_COSP_PARASOL_INTERFACE,    ONLY: cosp_parasol_init,     parasol_in
   USE MOD_COSP_CLOUDSAT_INTERFACE,   ONLY: cosp_cloudsat_init,    cloudsat_IN
   USE quickbeam,                     ONLY: quickbeam_subcolumn,   quickbeam_column, radar_cfg
+  USE quickbeam,                     ONLY: quickbeam_dplrw  ! for DPLRW
   USE MOD_ICARUS,                    ONLY: icarus_subcolumn,      icarus_column
   USE MOD_MISR_SIMULATOR,            ONLY: misr_subcolumn,        misr_column
   USE MOD_LIDAR_SIMULATOR,           ONLY: lidar_subcolumn,       lidar_column
@@ -124,6 +124,11 @@ MODULE MOD_COSP
           cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
           fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
+
+     ! added by DPLRW
+     real(wp),allocatable,dimension(:,:) :: &
+          gwvel,               & ! grid verical velocity                  (m/s)
+          gcumf                  ! grid cumulus mass flux                 (kg/m^2/s)
   end type cosp_column_inputs
 
   ! ######################################################################################
@@ -159,7 +164,7 @@ MODULE MOD_COSP
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
           g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
      real(wp),allocatable,dimension(:,:,:,:) :: &
-          vfall, vfsqu, zehyd
+          vfall, vfsqu, zehyd, krhyd    ! for DPLRW, each hydrometeor
      real(wp),allocatable,dimension(:,:) :: &
           beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
           beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 
@@ -310,6 +315,13 @@ MODULE MOD_COSP
      real(wp),dimension(:,:),    pointer :: &
           wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
 
+     ! Doppler capability of radar (CloudSat/QuickBeam)
+     real(wp),dimension(:,:,:,:),pointer :: &
+          dplrw_Z => null(), spwid_Z => null(), Zef94_Z => null(), &
+          dplrw_T => null(), spwid_T => null(), Zef94_T => null(), &
+          ZefVd_2 => null()
+     real(wp),dimension(:,:),pointer :: &
+          gcumw => null()
   end type cosp_outputs
 
 CONTAINS
@@ -366,7 +378,8 @@ CONTAINS
          Lcloudsat_tcc,        & !
          Lcloudsat_tcc2,       & !         
          Llidar_only_freq_cloud, & ! On/Off switch from joint Calipso/Cloudsat product
-         Lcloudsat_modis_wr      ! On/Off switch from joint CloudSat/MODIS warm rain product
+         Lcloudsat_modis_wr,   & ! On/Off switch from joint CloudSat/MODIS warm rain product
+         Ldplrw                  ! On/Off switch for Doppler simulator with CloudSat
     logical :: &
          ok_lidar_cfad    = .false., &
          ok_lidar_cfad_grLidar532 = .false., & 
@@ -450,6 +463,7 @@ CONTAINS
     Lcloudsat_tcc       = .false.
     Lcloudsat_tcc2      = .false.
     Lcloudsat_modis_wr  = .false.
+    Ldplrw              = .false.
 
     ! CLOUDSAT subcolumn
     if (associated(cospOUT%cloudsat_Ze_tot)) Lcloudsat_subcolumn = .true.
@@ -621,6 +635,12 @@ CONTAINS
        Lcloudsat_subcolumn = .true.
        Lcloudsat_modis_wr  = .true. ! WR: warm rain product
     endif
+
+    ! Doppler capability of radar (CloudSat)
+    if (associated(cospOUT%dplrw_Z)) then
+       Ldplrw = .true.
+       Lcloudsat_subcolumn = .true.
+    end if
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2b) Error Checking
@@ -1300,6 +1320,23 @@ CONTAINS
           deallocate(out1D_3)
           nullify(cospOUT%cloudsat_precip_cover)
        endif
+
+       ! for DPLRW
+       if (Ldplrw) then
+          call quickbeam_dplrw(cospIN%Npoints, cospIN%Ncolumns, cospIN%Nlevels, &
+               cospIN%rcfg_cloudsat, &
+               cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half, cospgridIN%surfelev, &
+               cospgridIN%at, cospgridIN%pfull, &
+               cospgridIN%gwvel, cospgridIN%gcumf, &
+               cospIN%vfall, cospIN%vfsqu, cospIN%zehyd, &
+               cospIN%g_vol_cloudsat, cospIN%krhyd, &
+               cospOUT%gcumw(ij:ik,:), &
+               cospOUT%dplrw_Z(ij:ik,:,:,:), cospOUT%spwid_T(ij:ik,:,:,:), &
+               cospOUT%Zef94_T(ij:ik,:,:,:), &
+               cospOUT%dplrw_T(ij:ik,:,:,:), cospOUT%spwid_T(ij:ik,:,:,:), &
+               cospOUT%Zef94_T(ij:ik,:,:,:), &
+               cospOUT%ZefVd_2(ij:ik,:,:,:) )
+       end if
     endif
 
     ! MODIS

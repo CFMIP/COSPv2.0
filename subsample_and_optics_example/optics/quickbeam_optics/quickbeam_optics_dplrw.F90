@@ -85,7 +85,7 @@ contains
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
        Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol, &
-       vfall, vfsqu, zehyd )
+       vfall, vfsqu, zehyd, krhyd )
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -114,7 +114,7 @@ contains
 
     ! OUTPUTS for DPLRW
     real(wp),intent(out), dimension(nprof, ngate, N_HYDRO) :: &
-         vfall, vfsqu, zehyd
+         vfall, vfsqu, zehyd, krhyd
 
     ! INTERNAL VARIABLES   
     integer :: &
@@ -154,6 +154,7 @@ contains
     vfall    = 0._wp
     vfsqu    = 0._wp
     zehyd    = 0._wp
+    krhyd    = 0._wp
 
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
@@ -352,6 +353,7 @@ contains
                 vfall(pr,k,tp) = vf/ze
                 vfsqu(pr,k,tp) = vq/ze
                 zehyd(pr,k,tp) = ze
+                krhyd(pr,k,tp) = kr
                 
                 ! Construct Ze_scaled, Zr_scaled, and kr_scaled ... if we can
                 if ( .not. rcfg%Z_scale_flag(tp,itt,iRe_type) ) then
