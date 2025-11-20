@@ -550,10 +550,13 @@ contains
                              gwvel, gcumf, &
                              vfall_in, vfsqu_in, zehyd_in, &
                              g_vol, krhyd_in, &
+                             vtrm3_in, vtrm0_in, mmnt3_in, mmnt0_in, &
                              gcumw, &
                              dplrw_Z, spwid_Z, Zef94_Z, &
                              dplrw_T, spwid_T, Zef94_T, &
-                             ZefVd_2 )
+                             ZefVd_2, &
+                             vfall_Z, gridw_Z, &
+                             vfall_T, gridw_T, ZefVf_2 )
     USE MOD_COSP_CONFIG,      ONLY: Nlvgrid, N_HYDRO, &
                                     trbl_LS, trbl_CU, &
                                     Nlvtemp, lvtemp_WID, lvtemp_MAX, lvtemp_MIN, &
@@ -569,6 +572,8 @@ contains
     logical,dimension(npoints,ncolumns,nlevels,N_HYDRO) :: flags
     real(wp),intent(in),dimension(npoints,ncolumns,nlevels,N_HYDRO) :: vfall_in, vfsqu_in, zehyd_in
     real(wp),dimension(npoints,ncolumns,nlevels,N_HYDRO) :: vfall, vfsqu, zehyd
+    real(wp),intent(in),dimension(npoints,ncolumns,nlevels,N_HYDRO) :: vtrm3_in,vtrm0_in,mmnt3_in,mmnt0_in
+    real(wp),dimension(npoints,ncolumns,nlevels,N_HYDRO) :: vtrm3,vtrm0,mmnt3,mmnt0
     !===
     real(wp),intent(out),dimension(npoints,nlevels) :: gcumw
     !===
@@ -589,13 +594,22 @@ contains
     real(wp),intent(out),dimension(npoints,NlvdBZe,Nlvtemp,0:2) :: Zef94_T
     real(wp),intent(out),dimension(npoints,Nlvdplr,NlvdBZe,0:2) :: ZefVd_2
     !===
-    integer :: dbin, sbin, zbin, tbin, hbin
+    real(wp),intent(out),dimension(npoints,Nlvdplr,Nlvgrid,0:2,3) :: vfall_Z
+    real(wp),intent(out),dimension(npoints,Nlvdplr,Nlvgrid,0:2)   :: gridw_Z
+    real(wp),intent(out),dimension(npoints,Nlvdplr,Nlvtemp,0:2,3) :: vfall_T
+    real(wp),intent(out),dimension(npoints,Nlvdplr,Nlvtemp,0:2)   :: gridw_T
+    real(wp),intent(out),dimension(npoints,Nlvdplr,NlvdBZe,0:2,3) :: ZefVf_2
+    !===
+    integer :: dbin, sbin, zbin, tbin, hbin, vbin, wbin
     integer :: i,j,k,n,is,js,id,tp
     real(wp) :: zesum(0:2),vdmn(0:2),swmn(0:2)
+    real(wp) :: vfmn(0:2,3),gwmn(0:2),m0sum(0:2),m3sum(0:2)
     real(wp) :: intp,es,qs,Tvs
     real(wp),dimension(Npoints,Nlvdplr,Nlevels,0:2) :: workD
     real(wp),dimension(Npoints,Nlvspwd,Nlevels,0:2) :: workS
     real(wp),dimension(Npoints,NlvdBZe,Nlevels,0:2) :: workZ
+    real(wp),dimension(Npoints,Nlvdplr,Nlevels,0:2,3) :: workV
+    real(wp),dimension(Npoints,Nlvdplr,Nlevels,0:2) :: workW
 
     integer,parameter :: &
          I_LSCLIQ = 1, & ! Large-scale (stratiform) liquid 
@@ -612,46 +626,51 @@ contains
          I_LSC = 1, &    ! stratiform clouds
          I_CVC = 2       ! convective clouds
 
+    ! @@@@@ convert: convective mass flux -> cumulus vertical velocity
+    do k=1,nlevels
+       do i=1,npoints
+          if (at(i,k) < 0._wp .or. pfull(i,k) < 0._wp) then
+             gcumw(i,k) = 0._wp
+             flags(i,:,k,:) = .false.
+          else
+             es = 611.*exp( (2.5e+6 + 3.4e+5*(1-sign(1._wp,at(i,k)-273.15))/2._wp)/461. * (1./273.15 - 1./at(i,k)) )
+             qs = (es/pfull(i,k)) * (287./461.)
+             
+             Tvs = at(i,k)*( (1+qs/(287./461.))/(1+qs) )
+             gcumw(i,k) = gcumf(i,k) * (287.*Tvs/pfull(i,k))
+             
+          end if
+       end do
+    end do
+
     ! @@@@@ flag check @@@@@
     flags = .true.
     do j=1,ncolumns
-       where (gwvel < R_UNDEF*0.1_wp)
+       where (gwvel < R_UNDEF * 0.1_wp)
           flags(:,j,:,I_LSCLIQ) = .false.
           flags(:,j,:,I_LSCICE) = .false.
           flags(:,j,:,I_LSRAIN) = .false.
           flags(:,j,:,I_LSSNOW) = .false.
           flags(:,j,:,I_LSGRPL) = .false.
        end where
-    end do
-    do k=1,nlevels
-       do j=1,ncolumns
-          where (gcumf(:,k) < R_UNDEF*0.1_wp)
-             flags(:,j,k,I_CVCLIQ) = .false.
-             flags(:,j,k,I_CVCICE) = .false.
-             flags(:,j,k,I_CVRAIN) = .false.
-             flags(:,j,k,I_CVSNOW) = .false.
-          end where
-       end do
+
+       where (gcumf < R_UNDEF * 0.1_wp)
+          flags(:,j,:,I_CVCLIQ) = .false.
+          flags(:,j,:,I_CVCICE) = .false.
+          flags(:,j,:,I_CVRAIN) = .false.
+          flags(:,j,:,I_CVSNOW) = .false.
+       end where
     end do
     where (flags)
        vfall = vfall_in ; vfsqu = vfsqu_in ; zehyd = zehyd_in ; krhyd = krhyd_in
+       vtrm3 = vtrm3_in ; vtrm0 = vtrm0_in ; mmnt3 = mmnt3_in ; mmnt0 = mmnt0_in
     elsewhere
        vfall = 0._wp    ; vfsqu = 0._wp    ; zehyd = 0._wp    ; krhyd = 0._wp
+       vtrm3 = 0._wp    ; vtrm0 = 0._wp    ; mmnt3 = 0._wp    ; mmnt0 = 0._wp
     end where
 
     hgt_bnd(:,1:Nlevels) = hgt_matrix_half
     hgt_bnd(:,Nlevels+1) = surfelev
-
-    ! @@@@@ convert: convective mass flux -> cumulus vertical velocity
-    do k=1,nlevels
-       do i=1,npoints
-          es = 611.*exp( (2.5e+6 + 3.4e+5*(1-sign(1._wp,at(i,k)-273.15))/2._wp)/461. * (1./273.15 - 1./at(i,k)) )
-          qs = (es/pfull(i,k)) * (287./461.)
-
-          Tvs = at(i,k)*( (1+qs/(287./461.))/(1+qs) )
-          gcumw(i,k) = gcumf(i,k) * (287.*Tvs/pfull(i,k))
-       end do
-    end do
 
     ! @@@@@ attenuation: gas, LShyd, and CUhyd
     if (rcfg%radar_at_layer_one) then
@@ -689,10 +708,10 @@ contains
     end do
 
     ! @@@@@ Initialiation
-    dplrw_Z = 0._wp ; spwid_Z = 0._wp ; Zef94_Z = 0._wp
-    dplrw_T = 0._wp ; spwid_T = 0._wp ; Zef94_T = 0._wp
+    dplrw_Z = 0._wp ; spwid_Z = 0._wp ; Zef94_Z = 0._wp ; vfall_Z = 0._wp ; gridw_Z = 0._wp
+    dplrw_T = 0._wp ; spwid_T = 0._wp ; Zef94_T = 0._wp ; vfall_T = 0._wp ; gridw_T = 0._wp
     ZefVd_2 = 0._wp
-    workD = 0._wp ; workS = 0._wp ; workZ = 0._wp
+    workD = 0._wp ; workS = 0._wp ; workZ = 0._wp ; workV = 0._wp ; workW = 0._wp
 
     ! @@@@@ statistics
     do k=1,nlevels
@@ -717,6 +736,8 @@ contains
              end do
 
              zesum(I_ALC) = zesum(I_LSC) + zesum(I_CVC)
+             if (zesum(I_LSC) <= 0 .and. zesum(I_CVC) <= 0.) cycle
+             
              vdmn(I_ALC) = ( vdmn(I_LSC)+gwvel(i,k)*zesum(I_LSC) + vdmn(I_CVC)+gcumw(i,k)*zesum(I_CVC) ) / (zesum(I_LSC)+zesum(I_CVC))
              swmn(I_ALC) = ( swmn(I_LSC) + 2*gwvel(i,k)*vdmn(I_LSC) + gwvel(i,k)**2*zesum(I_LSC) + &
                              swmn(I_CVC) + 2*gcumw(i,k)*vdmn(I_CVC) + gcumw(i,k)**2*zesum(I_CVC) ) / (zesum(I_LSC)+zesum(I_CVC))
@@ -731,8 +752,48 @@ contains
              swmn(I_CVC) = sqrt(trbl_CU**2 + swmn(I_CVC)/zesum(I_CVC)-vdmn(I_CVC)**2/zesum(I_CVC)**2)
              vdmn(I_CVC) = vdmn(I_CVC)/zesum(I_CVC) + gcumw(i,k)
 
+             ! ~~~
+             vfmn = 0._wp ; gwmn = 0._wp ; m3sum = 0._wp ; m0sum = 0._wp
+             do tp=1,N_HYDRO
+                if (tp==I_LSCLIQ .or. tp==I_LSCICE .or. tp==I_LSRAIN .or. tp==I_LSSNOW .or. tp==I_LSGRPL) then
+                   vfmn(I_LSC,1) = vfmn(I_LSC,1) + vfall(i,j,k,tp)*zehyd(i,j,k,tp)
+                   vfmn(I_LSC,2) = vfmn(I_LSC,2) + vtrm3(i,j,k,tp)*mmnt3(i,j,k,tp)
+                   vfmn(I_LSC,3) = vfmn(I_LSC,3) + vtrm0(i,j,k,tp)*mmnt0(i,j,k,tp)
+
+                   m3sum(I_LSC)  = m3sum(I_LSC)  + mmnt3(i,j,k,tp)
+                   m0sum(I_LSC)  = m0sum(I_LSC)  + mmnt0(i,j,k,tp)
+
+                   gwmn(I_ALC)   = gwmn(I_ALC)   + gwvel(i,k)*zehyd(i,j,k,tp)
+                else if (tp==I_CVCLIQ .or. tp==I_CVCICE .or. tp==I_CVRAIN .or. tp==I_CVSNOW) then
+                   vfmn(I_CVC,1) = vfmn(I_CVC,1) + vfall(i,j,k,tp)*zehyd(i,j,k,tp)
+                   vfmn(I_CVC,2) = vfmn(I_CVC,2) + vtrm3(i,j,k,tp)*mmnt3(i,j,k,tp)
+                   vfmn(I_CVC,3) = vfmn(I_CVC,3) + vtrm0(i,j,k,tp)*mmnt0(i,j,k,tp)
+
+                   m3sum(I_CVC)  = m3sum(I_CVC)  + mmnt3(i,j,k,tp)
+                   m0sum(I_CVC)  = m0sum(I_CVC)  + mmnt0(i,j,k,tp)
+
+                   gwmn(I_ALC)   = gwmn(I_ALC)   + gcumw(i,k)*zehyd(i,j,k,tp)
+                end if
+
+                vfmn(I_ALC,1) = vfmn(I_ALC,1) + vfall(i,j,k,tp)*zehyd(i,j,k,tp)
+                vfmn(I_ALC,2) = vfmn(I_ALC,2) + vtrm3(i,j,k,tp)*mmnt3(i,j,k,tp)
+                vfmn(I_ALC,3) = vfmn(I_ALC,3) + vtrm0(i,j,k,tp)*mmnt0(i,j,k,tp)
+
+                m3sum(I_ALC)  = m3sum(I_ALC)  + mmnt3(i,j,k,tp)
+                m0sum(I_ALC)  = m0sum(I_ALC)  + mmnt0(i,j,k,tp)
+             end do
+             do tp=0,2
+                vfmn(tp,1) = vfmn(tp,1)/zesum(tp)
+                vfmn(tp,2) = vfmn(tp,2)/m3sum(tp)
+                vfmn(tp,3) = vfmn(tp,3)/m0sum(tp)
+             end do
+             gwmn(I_ALC) = gwmn(I_ALC)/zesum(I_ALC)
+             gwmn(I_LSC) = gwvel(i,k)
+             gwmn(I_CVC) = gcumw(i,k)
+
              do tp=0,2
                 if (zesum(tp) <= 0._wp) cycle
+
                 zbin = floor( ((10*log10(zesum(tp))-att_gas(i,k)-att_hyd(i,j,k,I_ALC)) - lvdBZe_MIN)/lvdBZe_WID ) + 1
                 if (zbin < 1      ) cycle
                 if (zbin > NlvdBZe) cycle
@@ -754,6 +815,23 @@ contains
                 spwid_T(i,sbin,tbin,tp) = spwid_T(i,sbin,tbin,tp) + 1._wp
 
                 ZefVd_2(i,dbin,zbin,tp) = ZefVd_2(i,dbin,zbin,tp) + 1._wp
+
+                ! ~~~
+                do id=1,3
+                   vbin = floor( (vfmn(tp,id) - lvdplr_MIN)/lvdplr_WID ) + 1
+                   if (vbin < 1      ) vbin = 1
+                   if (vbin > Nlvdplr) vbin = Nlvdplr
+                   workV(i,vbin,hbin,tp,id)   = workV(i,vbin,hbin,tp,id)   + 1._wp
+                   vfall_T(i,vbin,tbin,tp,id) = vfall_T(i,vbin,tbin,tp,id) + 1._wp
+                   ZefVf_2(i,vbin,zbin,tp,id) = ZefVf_2(i,vbin,zbin,tp,id) + 1._wp
+                end do
+
+                wbin = floor( (gwmn(tp) - lvdplr_MIN)/lvdplr_WID ) + 1
+                if (wbin < 1      ) wbin = 1
+                if (wbin > Nlvdplr) wbin = Nlvdplr
+                workW(i,wbin,hbin,tp)   = workW(i,wbin,hbin,tp)   + 1._wp
+                gridw_T(i,wbin,tbin,tp) = gridw_T(i,wbin,tbin,tp) + 1._wp
+                
              end do
              
           end do
@@ -774,6 +852,18 @@ contains
           call cosp_change_vertical_grid(npoints,NlvdBZe,Nlevels, &
                hgt_matrix(:,nlevels:1:-1),hgt_matrix_half(:,nlevels:1:-1),workZ(:,1:NlvdBZe,nlevels:1:-1,tp), &
                Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),Zef94_Z(:,1:NlvdBZe,1:Nlvgrid,tp))
+
+          ! ~~~
+          do id=1,3
+             call cosp_change_vertical_grid(npoints,Nlvdplr,Nlevels, &
+                  hgt_matrix(:,nlevels:1:-1),hgt_matrix_half(:,nlevels:1:-1),workV(:,1:Nlvdplr,nlevels:1:-1,tp,id), &
+                  Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),vfall_Z(:,1:Nlvdplr,1:Nlvgrid,tp,id))
+          end do
+
+          call cosp_change_vertical_grid(npoints,Nlvdplr,Nlevels, &
+               hgt_matrix(:,nlevels:1:-1),hgt_matrix_half(:,nlevels:1:-1),workW(:,1:Nlvdplr,nlevels:1:-1,tp), &
+               Nlvgrid,vgrid_zl(Nlvgrid:1:-1),vgrid_zu(Nlvgrid:1:-1),gridw_Z(:,1:Nlvdplr,1:Nlvgrid,tp))
+
        end do
        where (dplrw_Z < 0._wp)
           dplrw_Z = 0._wp
@@ -784,11 +874,24 @@ contains
        where (Zef94_Z < 0._wp)
           Zef94_Z = 0._wp
        end where
+       where (vfall_Z < 0._wp)
+          vfall_Z = 0._wp
+       end where
+       where (gridw_Z < 0._wp)
+          gridw_Z = 0._wp
+       end where
+
     else
        do tp=0,2
           dplrw_Z(:,1:Nlvdplr,1:Nlvgrid,tp) = workD(:,1:Nlvdplr,Nlevels:1:-1,tp)
           spwid_Z(:,1:Nlvspwd,1:Nlvgrid,tp) = workS(:,1:Nlvspwd,Nlevels:1:-1,tp)
           Zef94_Z(:,1:NlvdBZe,1:Nlvgrid,tp) = workZ(:,1:NlvdBZe,Nlevels:1:-1,tp)
+          
+          do id=1,3
+             vfall_Z(:,1:Nlvdplr,1:Nlvgrid,tp,id) = workV(:,1:Nlvdplr,Nlevels:1:-1,tp,id)
+          end do
+          gridw_Z(:,1:Nlvdplr,1:Nlvgrid,tp) = workW(:,1:Nlvdplr,Nlevels:1:-1,tp)
+
        end do
     end if
     

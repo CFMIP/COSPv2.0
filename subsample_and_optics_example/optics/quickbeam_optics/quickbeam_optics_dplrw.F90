@@ -85,7 +85,8 @@ contains
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
        Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol, &
-       vfall, vfsqu, zehyd, krhyd )
+       vfall, vfsqu, zehyd, krhyd, &
+       vtrm3, vtrm0, mmnt3, mmnt0 )
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -114,7 +115,8 @@ contains
 
     ! OUTPUTS for DPLRW
     real(wp),intent(out), dimension(nprof, ngate, N_HYDRO) :: &
-         vfall, vfsqu, zehyd, krhyd
+         vfall, vfsqu, zehyd, krhyd, &
+         vtrm3, vtrm0, mmnt3, mmnt0
 
     ! INTERNAL VARIABLES   
     integer :: &
@@ -128,6 +130,7 @@ contains
 
     ! INTERNAL VARIABLES for DPLRW
     real(wp) :: vf,vq
+    real(wp) :: vt3,vt0,D3int,D0int
     real(wp),dimension(:),allocatable :: fall_speed
 
     real(wp),dimension(:),allocatable :: &
@@ -155,6 +158,10 @@ contains
     vfsqu    = 0._wp
     zehyd    = 0._wp
     krhyd    = 0._wp
+    vtrm3    = 0._wp
+    vtrm0    = 0._wp
+    mmnt3    = 0._wp
+    mmnt0    = 0._wp
 
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
@@ -302,7 +309,8 @@ contains
                         & fall_speed)
                    call zeff(rcfg%freq,Deq,Ni,ns,rcfg%k2,t_kelvin,phase,rcfg%do_ray, &
                         ze,zr,kr,xxa,xxa,rhoi, &
-                        fall_speed, vf, vq)
+                        fall_speed, vf, vq, &
+                        vt3, vt0, D3int, D0int)
 
                    ! Test compares total number concentration with sum of discrete samples 
                    ! The second test, below, compares ab initio and "scaled" computations 
@@ -355,6 +363,11 @@ contains
                 zehyd(pr,k,tp) = ze
                 krhyd(pr,k,tp) = kr
                 
+                vtrm3(pr,k,tp) = vt3/D3int
+                vtrm0(pr,k,tp) = vt0/D0int
+                mmnt3(pr,k,tp) = D3int
+                mmnt0(pr,k,tp) = D0int
+
                 ! Construct Ze_scaled, Zr_scaled, and kr_scaled ... if we can
                 if ( .not. rcfg%Z_scale_flag(tp,itt,iRe_type) ) then
                    if (iRe_type>1) then
@@ -896,7 +909,7 @@ contains
   ! ##############################################################################################
   ! ##############################################################################################
   subroutine zeff(freq,D,N,nsizes,k2,tt,ice,xr,z_eff,z_ray,kr,qe,qs,rho_e, &
-       fall_speed, vf, vq)
+       fall_speed, vf, vq, vt3, vt0, D3int, D0int)
     ! ##############################################################################################
     ! Purpose:
     !   Simulates radar return of a volume given DSD of spheres
@@ -952,6 +965,8 @@ contains
          kr            ! Attenuation coefficient (db km^-1)
     real(wp), intent(out) :: &
          vf, vq        ! Ze weighted 
+    real(wp), intent(out) :: &
+         vt0, vt3, D3int, D0int ! for terminal velocity
     
     ! Internal Variables
     integer                     :: correct_for_rho ! Correct for density flag
@@ -1084,6 +1099,43 @@ contains
     const   = ((wl*wl*wl*wl)/(pi*pi*pi*pi*pi))*(1._wp/k2)
     vq = fall_sum*const*0.25_wp*pi*1E18
     
+    ! <---------- vf_sum for terminal velocity --------->
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*(n(1)*1E6)*D0(1)*D0(1)*D0(1)
+    else
+       xtemp = fall_speed*N0*D0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    vt3 = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = (n(1)*1E6)*D0(1)*D0(1)*D0(1)
+    else
+       xtemp = N0*D0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    D3int = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*(n(1)*1E6)
+    else
+       xtemp = fall_speed*N0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    vt0 = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = (n(1)*1E6)
+    else
+       xtemp = N0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    D0int = fall_sum
+
     ! z_ray = sum[D^6*N(D)*deltaD]
     if (xr == 1) then
        z0_ray = 0._wp
@@ -1383,18 +1435,25 @@ contains
    ! SINGLE MOMENT PARAMETERS
    integer,parameter,dimension(N_HYDRO) :: &
                     ! LSL  LSI  LSR  LSS  CVL  CVI  CVR  CVS  LSG    
-       HCLASS1_TYPE  = (/5,   1,   2,   2,   5,   1,   2,   2,   2/), & ! 
+!       HCLASS1_TYPE  = (/5,   1,   2,   2,   5,   1,   2,   2,   2/), & ! 
+       HCLASS1_TYPE  = (/1,   1,   1,   1,   1,   1,   2,   2,   1/), & ! 
        HCLASS1_PHASE = (/0,   1,   0,   1,   0,   1,   0,   1,   1/)    ! 
    real(wp),parameter,dimension(N_HYDRO) ::&
                       ! LSL   LSI    LSR    LSS    CVL   CVI    CVR    CVS    LSG    
        HCLASS1_DMIN = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,   -1.,   -1.,   -1.  /),  &
        HCLASS1_DMAX = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,   -1.,   -1.,   -1.  /),  &
-       HCLASS1_APM  = (/524., 110.8, 524.,   -1.,  524., 110.8, 524.,   -1.,   -1.  /),  &
-       HCLASS1_BPM  = (/  3.,   2.91,  3.,   -1.,    3.,   2.91,  3.,   -1.,   -1.  /),  &
-       HCLASS1_RHO  = (/ -1.,  -1.,   -1.,  100.,   -1.,  -1.,   -1.,  100.,  400.  /),  &
-       HCLASS1_P1   = (/ -1.,  -1.,    8.e6,  3.e6, -1.,  -1.,    8.e6,  3.e6,  4.e6/),  & 
-       HCLASS1_P2   = (/  6.,  40.,   -1.,   -1.,    6.,  40.,   -1.,   -1.,   -1.   /), & 
-       HCLASS1_P3   = (/  0.3,  2.,   -1.,   -1.,    0.3,  2.,   -1.,   -1.,   -1.   /)
+!       HCLASS1_APM  = (/524., 110.8, 524.,   -1.,  524., 110.8, 524.,   -1.,   -1.  /),  &
+!       HCLASS1_BPM  = (/  3.,   2.91,  3.,   -1.,    3.,   2.91,  3.,   -1.,   -1.  /),  &
+!       HCLASS1_RHO  = (/ -1.,  -1.,   -1.,  100.,   -1.,  -1.,   -1.,  100.,  400.  /),  &
+       HCLASS1_APM  = (/524.,  -1.,  524.,   -1.,  524.,  -1.,  524.,   -1.,   -1.  /),  &
+       HCLASS1_BPM  = (/  3.,  -1.,    3.,   -1.,    3.,  -1.,    3.,   -1.,   -1.  /),  &
+       HCLASS1_RHO  = (/ -1., 500.,   -1.,  250.,   -1., 500.,   -1.,  250.,  500.  /),  &
+!       HCLASS1_P1   = (/ -1.,  -1.,    8.e6,  3.e6, -1.,  -1.,    8.e6,  3.e6,  4.e6/),  & 
+!       HCLASS1_P2   = (/  6.,  40.,   -1.,   -1.,    6.,  40.,   -1.,   -1.,   -1.   /), & 
+!       HCLASS1_P3   = (/  0.3,  2.,   -1.,   -1.,    0.3,  2.,   -1.,   -1.,   -1.   /)
+       HCLASS1_P1   = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,    8.e6,  3.e6, -1.  /),  & 
+       HCLASS1_P2   = (/  6.,  40.,   20.,   40.,    6.,  40.,   -1.,   -1.,   60.  /),  & 
+       HCLASS1_P3   = (/  1.,   1.,    5.,    1.,    1.,   5.,   -1.,   -1.,    1.  /)
 
     ! TWO MOMENT PARAMETERS
     integer,parameter,dimension(N_HYDRO) :: &
@@ -1414,8 +1473,8 @@ contains
        HCLASS2_P3   = (/ -2,      1,      1,      1,    -2,     1,    1,      1,    1/) 
 
     integer,parameter,dimension(N_HYDRO) :: &
-         ! type1 -> p1*D^p2 ; type2 -> Posselt and Lohmann (2008) Eq.11                                  
-         !         LSL  LSI  LSR  LSS  CVL  CVI  CVR  CVS  LSG                                           
+         ! type1 -> p1*D^p2 ; type2 -> Posselt and Lohmann (2008) Eq.11
+         !         LSL  LSI  LSR  LSS  CVL  CVI  CVR  CVS  LSG
          ftype = (/   2,   1,   2,   1,   2,   1,   1,   1,   1 /),&
          fvscs = (/   0,   0,   0,   0,   0,   0,   1,   1,   0 /)
 
