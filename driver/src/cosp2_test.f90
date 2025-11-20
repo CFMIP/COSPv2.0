@@ -742,7 +742,11 @@ contains
              endif
 
              ! cumulus mass flux, added by DPLRW
-             cospstateIN%gcumf(j,k) = cospstateIN%gcumf(j,k)/cca(j,k)
+             if (cca(j,k) > 0._wp .and. cca(j,k) <= 1._wp) then
+                cospstateIN%gcumf(j,k) = cospstateIN%gcumf(j,k)/cca(j,k)
+             else
+                cospstateIN%gcumf(j,k) = R_UNDEF
+             end if
           enddo
        enddo
        deallocate(frac_ls,prec_ls,frac_cv,prec_cv)
@@ -862,7 +866,7 @@ contains
              cospIN%g_vol_cloudsat(i,:,j)=g_vol(i,j)
           end do
        end do
-       
+
        ! Loop over all subcolumns
        allocate(fracPrecipIce(nPoints,nColumns,nLevels))
        fracPrecipIce(:,:,:) = 0._wp
@@ -875,8 +879,12 @@ contains
                cospIN%vfall(1:nPoints,k,:,1:N_Hydro),                      &
                cospIN%vfsqu(1:nPoints,k,:,1:N_Hydro),                      &
                cospIN%zehyd(1:nPoints,k,:,1:N_Hydro),                      &
-               cospIN%krhyd(1:nPoints,k,:,1:N_Hydro) )
-          
+               cospIN%krhyd(1:nPoints,k,:,1:N_Hydro), &
+               cospIN%vtrm3(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%vtrm0(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%mmnt3(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%mmnt0(1:nPoints,k,:,1:N_Hydro) )
+
           ! At each model level, what fraction of the precipitation is frozen?
           where(mr_hydro(:,k,:,I_LSRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_LSSNOW) .gt. 0 .or. &
                 mr_hydro(:,k,:,I_CVRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_CVSNOW) .gt. 0 .or. &
@@ -1013,10 +1021,16 @@ contains
                 y%g_vol_cloudsat(npoints,  ncolumns,nlevels),&
                 y%fracPrecipIce(npoints,   ncolumns))
 
+       ! added by DPLRW
        allocate(y%vfall(npoints, ncolumns, nlevels, N_HYDRO), &
                 y%vfsqu(npoints, ncolumns, nlevels, N_HYDRO), &
                 y%zehyd(npoints, ncolumns, nlevels, N_HYDRO), &
                 y%krhyd(npoints, ncolumns, nlevels, N_HYDRO) )
+       allocate(y%vtrm3(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%vtrm0(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%mmnt3(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%mmnt0(npoints, ncolumns, nlevels, N_HYDRO) )
+
     endif
     if (Lmodis) then
        allocate(y%fracLiq(npoints,        ncolumns,nlevels),&
@@ -1398,6 +1412,14 @@ contains
        allocate(x%ZefVd_2(Npoints, Nlvdplr, NlvdBZe, 0:2))
        
        allocate(x%gcumw(Npoints, Nlevels))
+
+       allocate(x%vfall_Z(Npoints, Nlvdplr, Nlvgrid, 0:2, 3))
+       allocate(x%gridw_Z(Npoints, Nlvdplr, Nlvgrid, 0:2))
+       allocate(x%vfall_T(Npoints, Nlvdplr, Nlvtemp, 0:2, 3))
+       allocate(x%gridw_T(Npoints, Nlvdplr, Nlvtemp, 0:2))
+
+       allocate(x%ZefVf_2(Npoints, Nlvdplr, NlvdBZe, 0:2, 3))
+       
     end if
 
   end subroutine construct_cosp_outputs
@@ -1449,6 +1471,11 @@ contains
     if (allocated(y%vfsqu))               deallocate(y%vfsqu)
     if (allocated(y%zehyd))               deallocate(y%zehyd)
     if (allocated(y%krhyd))               deallocate(y%krhyd)
+    if (allocated(y%vtrm3))               deallocate(y%vtrm3)
+    if (allocated(y%vtrm0))               deallocate(y%vtrm0)
+    if (allocated(y%mmnt3))               deallocate(y%mmnt3)
+    if (allocated(y%mmnt0))               deallocate(y%mmnt0)
+    
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
@@ -1832,7 +1859,25 @@ contains
         deallocate(y%gcumw) ; nullify(y%gcumw)
      end if
      
+     if (associated(y%vfall_Z)) then
+        deallocate(y%vfall_Z) ; nullify(y%vfall_Z)
+     end if
+     if (associated(y%gridw_Z)) then
+        deallocate(y%gridw_Z) ; nullify(y%gridw_Z)
+     end if
+
+     if (associated(y%vfall_T)) then
+        deallocate(y%vfall_T) ; nullify(y%vfall_T)
+     end if
+     if (associated(y%gridw_T)) then
+        deallocate(y%gridw_T) ; nullify(y%gridw_T)
+     end if
+
+     if (associated(y%ZefVf_2)) then
+        deallocate(y%ZefVf_2) ; nullify(y%ZefVf_2)
+     end if
+
+
    end subroutine destroy_cosp_outputs
   
  end program cosp2_test
-

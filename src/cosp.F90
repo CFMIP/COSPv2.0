@@ -164,7 +164,8 @@ MODULE MOD_COSP
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
           g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
      real(wp),allocatable,dimension(:,:,:,:) :: &
-          vfall, vfsqu, zehyd, krhyd    ! for DPLRW, each hydrometeor
+          vfall, vfsqu, zehyd, krhyd, &    ! for DPLRW, each hydrometeor
+          vtrm3, vtrm0, mmnt3, mmnt0
      real(wp),allocatable,dimension(:,:) :: &
           beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
           beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 
@@ -319,7 +320,10 @@ MODULE MOD_COSP
      real(wp),dimension(:,:,:,:),pointer :: &
           dplrw_Z => null(), spwid_Z => null(), Zef94_Z => null(), &
           dplrw_T => null(), spwid_T => null(), Zef94_T => null(), &
-          ZefVd_2 => null()
+          ZefVd_2 => null(), &
+          gridw_Z => null(), gridw_T => null()
+     real(wp),dimension(:,:,:,:,:),pointer :: &
+          vfall_Z => null(), vfall_T => null(), ZefVf_2 => null()
      real(wp),dimension(:,:),pointer :: &
           gcumw => null()
   end type cosp_outputs
@@ -1330,12 +1334,16 @@ CONTAINS
                cospgridIN%gwvel, cospgridIN%gcumf, &
                cospIN%vfall, cospIN%vfsqu, cospIN%zehyd, &
                cospIN%g_vol_cloudsat, cospIN%krhyd, &
+               cospIN%vtrm3, cospIN%vtrm0, cospIN%mmnt3, cospIN%mmnt0, &
                cospOUT%gcumw(ij:ik,:), &
-               cospOUT%dplrw_Z(ij:ik,:,:,:), cospOUT%spwid_T(ij:ik,:,:,:), &
-               cospOUT%Zef94_T(ij:ik,:,:,:), &
+               cospOUT%dplrw_Z(ij:ik,:,:,:), cospOUT%spwid_Z(ij:ik,:,:,:), &
+               cospOUT%Zef94_Z(ij:ik,:,:,:), &
                cospOUT%dplrw_T(ij:ik,:,:,:), cospOUT%spwid_T(ij:ik,:,:,:), &
                cospOUT%Zef94_T(ij:ik,:,:,:), &
-               cospOUT%ZefVd_2(ij:ik,:,:,:) )
+               cospOUT%ZefVd_2(ij:ik,:,:,:), &
+               cospOUT%vfall_Z(ij:ik,:,:,:,:), cospOUT%gridw_Z(ij:ik,:,:,:), &
+               cospOUT%vfall_T(ij:ik,:,:,:,:), cospOUT%gridw_T(ij:ik,:,:,:), &
+               cospOUT%ZefVf_2(ij:ik,:,:,:,:) )
        end if
     endif
 
