@@ -94,6 +94,7 @@ module quickbeam
      logical,  allocatable, dimension(:,:,:) :: Z_scale_flag, Z_scale_added_flag
      real(wp), allocatable, dimension(:,:,:) :: Ze_scaled, Zr_scaled, kr_scaled
      real(wp), allocatable, dimension(:,:,:) :: vf_scaled, vq_scaled
+     real(wp), allocatable, dimension(:,:,:) :: v3_scaled, v0_scaled, m3_scaled, m0_scaled
      real(wp), allocatable, dimension(:,:,:) :: fc, rho_eff
      real(wp), allocatable, dimension(:)     :: base_list, step_list
   end type radar_cfg
@@ -710,13 +711,13 @@ contains
     ! @@@@@ Initialiation
     dplrw_Z = 0._wp ; spwid_Z = 0._wp ; Zef94_Z = 0._wp ; vfall_Z = 0._wp ; gridw_Z = 0._wp
     dplrw_T = 0._wp ; spwid_T = 0._wp ; Zef94_T = 0._wp ; vfall_T = 0._wp ; gridw_T = 0._wp
-    ZefVd_2 = 0._wp
+    ZefVd_2 = 0._wp ; ZefVd_2 = 0._wp
     workD = 0._wp ; workS = 0._wp ; workZ = 0._wp ; workV = 0._wp ; workW = 0._wp
 
     ! @@@@@ statistics
-    do k=1,nlevels
-       do j=1,ncolumns
           do i=1,npoints
+       do j=1,ncolumns
+    do k=1,nlevels
              tbin = floor( ( (at(i,k)-273.15) - lvtemp_MIN)/lvtemp_WID ) + 1
              hbin = k
              if (tbin < 1 .or. tbin > Nlvtemp) cycle
@@ -791,8 +792,18 @@ contains
              gwmn(I_LSC) = gwvel(i,k)
              gwmn(I_CVC) = gcumw(i,k)
 
+
              do tp=0,2
                 if (zesum(tp) <= 0._wp) cycle
+
+                !if (tp > 0) write(*,*) 'test 6: ',tp,vfmn(tp,1),zesum(tp)
+                !if (tp > 0) write(*,*) 'test 3: ',tp,vfmn(tp,2),m3sum(tp)
+                !if (tp > 0) write(*,*) 'test 0: ',tp,vfmn(tp,3),m0sum(tp)
+
+                !if (tp==1) write(*,'(a,3(x,I5))')    'test grd: ',i,j,k
+                !if (tp==1) write(*,'(a,8(x,ES10.3))') 'test v6 : ',vfall(i,j,k,1:8)
+                !if (tp==1) write(*,'(a,8(x,ES10.3))') 'test v3 : ',vtrm3(i,j,k,1:8)
+                !if (tp==1) write(*,'(a,8(x,ES10.3))') 'test v0 : ',vtrm0(i,j,k,1:8)
 
                 zbin = floor( ((10*log10(zesum(tp))-att_gas(i,k)-att_hyd(i,j,k,I_ALC)) - lvdBZe_MIN)/lvdBZe_WID ) + 1
                 if (zbin < 1      ) cycle

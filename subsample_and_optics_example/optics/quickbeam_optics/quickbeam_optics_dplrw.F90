@@ -352,6 +352,11 @@ contains
                    
                    vf = rcfg%vf_scaled(tp,itt,iRe_type) * scale_factor
                    vq = rcfg%vq_scaled(tp,itt,iRe_type) * scale_factor
+
+                   vt3 = rcfg%v3_scaled(tp,itt,iRe_type) * scale_factor
+                   vt0 = rcfg%v0_scaled(tp,itt,iRe_type) * scale_factor
+                   D3int = rcfg%m3_scaled(tp,itt,iRe_type) * scale_factor
+                   D0int = rcfg%m0_scaled(tp,itt,iRe_type) * scale_factor
                 endif  ! end z_scaling
                 
                 kr_vol(pr,k) = kr_vol(pr,k) + kr
@@ -380,6 +385,11 @@ contains
 
                       rcfg%vf_scaled(tp,itt,iRe_type) = vf/ scale_factor
                       rcfg%vq_scaled(tp,itt,iRe_type) = vq/ scale_factor
+
+                      rcfg%v3_scaled(tp,itt,iRe_type) = vt3/ scale_factor
+                      rcfg%v0_scaled(tp,itt,iRe_type) = vt0/ scale_factor
+                      rcfg%m3_scaled(tp,itt,iRe_type) = D3int/ scale_factor
+                      rcfg%m0_scaled(tp,itt,iRe_type) = D0int/ scale_factor
                    endif
                 endif
              enddo   ! end loop of tp (hydrometeor type)
