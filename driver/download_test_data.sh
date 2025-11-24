@@ -8,26 +8,32 @@ case $COMPILER in
     KGO_VERSION=v006
     kgo_links=( "https://docs.google.com/uc?export=download&id=1HgtrBVI5-7ypQWxzzMPvAq_5IIE5q9-B" \
                 "https://docs.google.com/uc?export=download&id=17Ah7z2oGiwwZ-yW1JX3Vg81_l7Q1zFf7" \
-                "https://docs.google.com/uc?export=download&id=1IzBbnhnfYeaSPLRSvWsWCEzsL_D9_ZKq" )
+                "https://docs.google.com/uc?export=download&id=1IzBbnhnfYeaSPLRSvWsWCEzsL_D9_ZKq" \
+                "https://docs.google.com/uc?export=download&id=1qqwHbMSuD38GcIVIbqsmJehHjSQEW2Mk" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
-               "cosp2_output.um_global_model_levels.${COMPILER}.kgo" )
+               "cosp2_output.um_global_model_levels.${COMPILER}.kgo" \
+               "cosp2_swath_output.um_global.${COMPILER}.kgo" )
     ;;
 
   "ifort")
     KGO_VERSION=v006
     kgo_links=( "https://docs.google.com/uc?export=download&id=121bSDuGNdbkb9WKhJLu9Pwe8KnhUMtDx" \
-                "https://docs.google.com/uc?export=download&id=1JwWJKw8rO1MpDLXFvdWvrqKF5_HbKZAK" )
+                "https://docs.google.com/uc?export=download&id=1JwWJKw8rO1MpDLXFvdWvrqKF5_HbKZAK" \
+                "https://docs.google.com/uc?export=download&id=1bkLKYHQqZdskVZsCH_XiWIayf0PFzz5U" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
-               "cosp2_output.um_global.${COMPILER}.kgo" )
+               "cosp2_output.um_global.${COMPILER}.kgo" \
+               "cosp2_swath_output.um_global.${COMPILER}.kgo" )
     ;;
 
   "ifx")
     KGO_VERSION=v006
     kgo_links=( "https://docs.google.com/uc?export=download&id=1rby-uiuB8G9vVa4JvRUCYNYPPOG5TmLB" \
-                "https://docs.google.com/uc?export=download&id=1SDxQodiDvrwcwfi3ZCMtQITkmHMXIwD-" )
+                "https://docs.google.com/uc?export=download&id=1SDxQodiDvrwcwfi3ZCMtQITkmHMXIwD-" \
+                "https://docs.google.com/uc?export=download&id=1llJMOnQRIws8DLkEs8svTO8GTM_29DF6" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
-               "cosp2_output.um_global.${COMPILER}.kgo" )
+               "cosp2_output.um_global.${COMPILER}.kgo" \
+               "cosp2_swath_output.um_global.${COMPILER}.kgo" )
     ;;
 
   *)
