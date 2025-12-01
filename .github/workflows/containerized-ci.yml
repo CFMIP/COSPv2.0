@@ -21,7 +21,7 @@ jobs:
         - compiler: ifx
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
         # Common variables
-        - kgo_version: v006
+        - kgo_version: v007
     defaults:
       run:
         shell: bash -el {0}
