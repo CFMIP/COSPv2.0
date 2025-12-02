@@ -3,25 +3,18 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   Containerized-CI:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ifort, ifx]
+        compiler: [ifx]
         include:
-        # Flags and KGOs for Intel Fortran Compiler Classic
-        - compiler: ifort
-          fcflags: -m64 -g -traceback -heap-arrays -assume realloc_lhs -extend-source 132 -check bounds,uninit,pointers,stack -stand f08
         # Flags and KGOs for Intel Fortran Compiler
         - compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-        # Set container images
-        - compiler: ifort
           image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
-        - compiler: ifx
-          image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
-        # Common variables
-        - kgo_version: v006
+       # Common variables
+        - kgo_version: v007
     defaults:
       run:
         shell: bash -el {0}
