@@ -39,7 +39,7 @@ The offline drivers read sample snapshots from the Met Office Unified Model, use
 # Running the offline tests
 
  1. Build the drivers.
-    1. Edit the files in `model-interface/` if necessary. By default COSP is built using double-precision real variables and printing any error messages to the standard output.
+    1. Edit the files in `model-interface/` if necessary. By default COSP is built using single-precision real variables and printing any error messages to the standard output.
     1. In `build/` edit `Makefile.conf` to reflect the choice of compiler, compiler flags, and library names and locations.
     1. In `build/`, `make driver` will build a COSP library, a separate library with the example mapping from model state to COSP inputs, and the `cosp2_test` executable, which is then copied to `driver/run`.
 
