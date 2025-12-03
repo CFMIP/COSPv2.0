@@ -698,7 +698,7 @@ CONTAINS
        ! Below only needed for all-sky RTTOV calculation
        rttovIN%rttov_date => cospgridIN%rttov_date
        rttovIN%rttov_time => cospgridIN%rttov_time
-       rttovIN%sza        => cospgridIN%sza ! JKS make optional? Defeats the purpose of the "associated" check in cosp_rttov_v13.
+       rttovIN%sza        => cospgridIN%sza
        rttovIN%tca        => cospgridIN%tca
        rttovIN%cldLiq     => cospgridIN%cloudLiq
        rttovIN%cldIce     => cospgridIN%cloudIce
@@ -1689,12 +1689,12 @@ CONTAINS
           endif
 
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce)) then
-            !  cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik,1:numMODISTauBins,:) = R_UNDEF
+             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik,1:numMODISTauBins,:) = 0.0
              cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
                 modisJointHistogramIce(:,:,:)
           endif
           if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq)) then
-            !  cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik,:,:) = R_UNDEF
+             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik,:,:) = 0.0
              cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%sunlit(:))-1, 1:numMODISTauBins,:) = &
                 modisJointHistogramLiq(:,:,:)
           endif
@@ -1830,7 +1830,6 @@ CONTAINS
            if (cospIN % cfg_rttov(i) % Lrttov_pc) then 
                allocate(rttov_bt_clear(rttovIN%Npoints,cospIN  % cfg_rttov(i) % nchan_out)) ! all-sky brightness temp
                allocate(rttov_rad_clear(rttovIN%Npoints,cospIN % cfg_rttov(i) % nchan_out)) ! all-sky radiance
-               ! Init to R_UNDEF - JKS check
                rttov_bt_clear(:,:)  = R_UNDEF
                rttov_rad_clear(:,:) = R_UNDEF
                ! Run simulator
