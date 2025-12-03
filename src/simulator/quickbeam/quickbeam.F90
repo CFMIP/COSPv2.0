@@ -46,6 +46,7 @@
 !     Also removed called to AVINT for gas and hydrometeor attenuation and replaced with simple
 !     summation. (Roger Marchand)
 ! May 2015 - D. Swales - Modified for COSPv2.0
+! Jun 2025 - J.K. Shaw - Parameters and DDT moved to cosp_stats.F90 for interface swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 module quickbeam
   USE COSP_KINDS,           ONLY: wp
@@ -55,48 +56,10 @@ module quickbeam
                                   pClass_Rain4, pClass_default, Zenonbinval, Zbinvallnd,    &
                                   N_HYDRO,nCloudsatPrecipClass,cloudsat_preclvl
 
-  USE MOD_COSP_STATS,       ONLY: COSP_LIDAR_ONLY_CLOUD,hist1D,COSP_CHANGE_VERTICAL_GRID
+  USE MOD_COSP_STATS,       ONLY: COSP_LIDAR_ONLY_CLOUD,hist1D,COSP_CHANGE_VERTICAL_GRID,   &
+                                  maxhclass,nRe_types,nd,mt_ntt,Re_BIN_LENGTH,Re_MAX_BIN,   &
+                                  dmin,dmax,radar_cfg
   implicit none
-
-  integer,parameter :: &
-       maxhclass     = 20,  & ! Qucikbeam maximum number of hydrometeor classes.
-       nRe_types     = 550, & ! Quickbeam maximum number or Re size bins allowed in N and Z_scaled look up table.
-       nd            = 85,  & ! Qucikbeam number of discrete particles used in construction DSDs.
-       mt_ntt        = 39,  & ! Quickbeam number of temperatures in mie LUT.
-       Re_BIN_LENGTH = 10,  & ! Quickbeam minimum Re interval in scale LUTs  
-       Re_MAX_BIN    = 250    ! Quickbeam maximum Re interval in scale LUTs
-  real(wp),parameter :: &
-       dmin          = 0.1, & ! Quickbeam minimum size of discrete particle
-       dmax          = 10000. ! Quickbeam maximum size of discrete particle
-  
-  !djs logical :: radar_at_layer_one   ! If true radar is assume to be at the edge 
-                                  ! of the first layer, if the first layer is the
-                                  ! surface than a ground-based radar.   If the
-                                  ! first layer is the top-of-atmosphere, then
-                                  ! a space borne radar.
-
-  ! ##############################################################################################
-  type radar_cfg
-     ! Radar properties
-     real(wp) :: freq,k2
-     integer  :: nhclass               ! Number of hydrometeor classes in use
-     integer  :: use_gas_abs, do_ray
-     logical  :: radar_at_layer_one    ! If true radar is assume to be at the edge 
-                                       ! of the first layer, if the first layer is the
-                                       ! surface than a ground-based radar.   If the
-                                       ! first layer is the top-of-atmosphere, then
-                                       ! a space borne radar.
-     
-     ! Variables used to store Z scale factors
-     character(len=240)                             :: scale_LUT_file_name
-     logical                                        :: load_scale_LUTs, update_scale_LUTs
-     logical,  allocatable, dimension(:,:)   :: N_scale_flag
-     logical,  allocatable, dimension(:,:,:) :: Z_scale_flag, Z_scale_added_flag
-     real(wp), allocatable, dimension(:,:,:) :: Ze_scaled, Zr_scaled, kr_scaled
-     real(wp), allocatable, dimension(:,:,:) :: fc, rho_eff
-     real(wp), allocatable, dimension(:)     :: base_list, step_list
-  end type radar_cfg
-
 contains
   ! ######################################################################################
   ! SUBROUTINE quickbeam_subcolumn

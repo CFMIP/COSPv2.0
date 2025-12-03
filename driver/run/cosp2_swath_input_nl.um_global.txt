@@ -36,7 +36,7 @@
   DINPUT='./',  ! Directory where the input files are located. Useful when processing multiple files.
                 ! Leave blank ('') if you are using the full path in FINPUT.
   FINPUT='../data/inputs/UKMO/cosp_input.um_global.nc', ! List input NetCDF files
-  FOUTPUT='../data/outputs/UKMO/cosp2_output.um_global.nc',
+  FOUTPUT='../data/outputs/UKMO/cosp2_swath_output.um_global.nc',
   !----------------------------------------------------------------------------------
   !--------------- Inputs related to radar simulations
   !----------------------------------------------------------------------------------
@@ -79,6 +79,27 @@
                                  ! determined cloud-top temperature. This is the
                                  ! default value since V4.0 of the ISCCP simulator.
                                  ! ONLY APPLICABLE IF top_height EQUALS 1 or 3
+  !----------------------------------------------------------------------------------
+  !-------------- Swathing inputs
+  !----------------------------------------------------------------------------------
+  N_SWATHS_ISCCP=2,
+  SWATH_LOCALTIMES_ISCCP=5.25,18.0,
+  SWATH_WIDTHS_ISCCP=2000,2000,
+  N_SWATHS_MISR=2,
+  SWATH_LOCALTIMES_MISR=6.5,18.25,
+  SWATH_WIDTHS_MISR=2000,2000,
+  N_SWATHS_MODIS=2,
+  SWATH_LOCALTIMES_MODIS=5.75,13.5,
+  SWATH_WIDTHS_MODIS=2000,2000,
+  N_SWATHS_CSCAL=2,
+  SWATH_LOCALTIMES_CSCAL=6.75,19.25,
+  SWATH_WIDTHS_CSCAL=2000,2000,
+  N_SWATHS_PARASOL=2,
+  SWATH_LOCALTIMES_PARASOL=6.75,19,
+  SWATH_WIDTHS_PARASOL=2000,2000,
+  N_SWATHS_ATLID=2,
+  SWATH_LOCALTIMES_ATLID=7.25,19.5,
+  SWATH_WIDTHS_ATLID=2000,2000,
   !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------

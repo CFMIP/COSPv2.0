@@ -29,62 +29,92 @@
 ! History
 ! May 2015 - D. Swales - Original version
 ! Apr 2015 - D. Swales - Modified for RTTOVv11.3
+! Jun 2025 - J.K. Shaw - Added RTTOVv13.2 integration and swathing. rttov_cfg moved to cosp_rttov_util.F90
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_RTTOV_INTERFACE
-  USE COSP_KINDS, ONLY: wp
+  USE COSP_KINDS,          ONLY: wp
+  USE MOD_COSP_RTTOV,      ONLY: rttov_IN
+  USE MOD_COSP_RTTOV_UTIL, ONLY: rttov_cfg,             rttov_output
   IMPLICIT NONE
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! TYPE rttov_in
-  ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  type rttov_in
-     integer,pointer :: &
-          nPoints,      & ! Number of profiles to simulate
-          nLevels,      & ! Number of levels
-          nSubCols,     & ! Number of subcolumns
-          month           ! Month (needed for surface emissivity calculation)
-     real(wp),pointer :: &
-          zenang,       & ! Satellite zenith angle
-          co2,          & ! Carbon dioxide 
-          ch4,          & ! Methane 
-          n2o,          & ! n2o 
-          co              ! Carbon monoxide
-     real(wp),dimension(:),pointer :: &
-          surfem          ! Surface emissivities for the channels
-     real(wp),dimension(:),pointer :: &
-          h_surf,       & ! Surface height
-          u_surf,       & ! U component of surface wind
-          v_surf,       & ! V component of surface wind
-          t_skin,       & ! Surface skin temperature
-          p_surf,       & ! Surface pressure
-          t2m,          & ! 2 m Temperature
-          q2m,          & ! 2 m Specific humidity
-          lsmask,       & ! land-sea mask
-          latitude,     & ! Latitude
-          longitude,    & ! Longitude
-          seaice          ! Sea-ice? 
-     real(wp),dimension(:,:),pointer :: &
-          p,            & ! Pressure @ model levels
-          ph,           & ! Pressure @ model half levels
-          t,            & ! Temperature 
-          q,            & ! Specific humidity
-          o3              ! Ozone
-     
-     ! These fields below are needed ONLY for the RTTOV all-sky brightness temperature
-     real(wp),dimension(:,:),pointer :: &
-          tca,          & ! Cloud fraction
-          cldIce,       & ! Cloud ice
-          cldLiq,       & ! Cloud liquid
-          fl_rain,      & ! Precipitation flux (startiform+convective rain) (kg/m2/s)
-          fl_snow         ! Precipitation flux (stratiform+convective snow)
-  end type rttov_in
+
+
 CONTAINS
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE cosp_rttov_init
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  SUBROUTINE COSP_RTTOV_INIT()
+  SUBROUTINE COSP_RTTOV_INIT(Lrttov,Nlevels,Ninstruments,instrument_namelists,       &
+                             rttov_configs,unitn,debug)
 
+      logical,intent(inout) :: &
+          Lrttov
+      integer,intent(in) :: &
+          Nlevels,   &
+          Ninstruments
+      type(character(len=128)), dimension(Ninstruments)     :: & 
+          instrument_namelists   ! Array of paths to RTTOV instrument namelists      
+      type(rttov_cfg), dimension(:), intent(out), allocatable :: & ! intent(out)?
+          rttov_configs
+      integer,intent(in),Optional :: unitn ! Used for io limits
+      logical,intent(in),Optional :: debug
+          
+      Lrttov = .false.
+      allocate(rttov_configs(Ninstruments))
+      
+      print*,'Running COSP_RTTOV_INIT from STUB files.', &
+        'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
+       
   END SUBROUTINE COSP_RTTOV_INIT
+  
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE DESTROY_RTTOV_CONFIG
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE DESTROY_RTTOV_CONFIG(rttovConfig)
+  
+      type(rttov_cfg),intent(inout) :: &
+          rttovConfig
+    
+      if (allocated(rttovConfig % iChannel))              deallocate(rttovConfig % iChannel)
+      if (allocated(rttovConfig % iChannel_out))          deallocate(rttovConfig % iChannel_out)
+      if (allocated(rttovConfig % emisChannel))           deallocate(rttovConfig % emisChannel)
+      if (allocated(rttovConfig % reflChannel))           deallocate(rttovConfig % reflChannel)
+      if (allocated(rttovConfig % rttov_localtime))       deallocate(rttovConfig % rttov_localtime)
+      if (allocated(rttovConfig % rttov_localtime_width)) deallocate(rttovConfig % rttov_localtime_width)
+      if (allocated(rttovConfig % swath_mask))            deallocate(rttovConfig % swath_mask)
+
+  END SUBROUTINE DESTROY_RTTOV_CONFIG  
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_rttov_simulate
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_RTTOV_SIMULATE(rttovIN,rttovConfig,error,                        & ! Inputs
+                                 bt_total,bt_clear,                                & ! Brightness Temp Outputs
+                                 rad_total,rad_clear,rad_cloudy,                   & ! Radiance Outputs
+                                 refl_total,refl_clear,                            & ! Reflectance Outputs
+                                 debug)      
+
+    type(rttov_in),intent(in) :: &
+        rttovIN
+    type(rttov_cfg),intent(inout) :: &
+        rttovConfig
+    character(len=128) :: &
+        error     ! Error messages (only populated if error encountered)         
+    real(wp),intent(inout),dimension(rttovIN%nPoints,rttovConfig%nchan_out),optional :: &
+        bt_total,                          &        ! All-sky
+        bt_clear,                          &        ! Clear-sky
+        rad_total,                         &        ! All-sky
+        rad_clear,                         &        ! Clear-sky
+        rad_cloudy,                        &        ! Cloudy-sky
+        refl_total,                        &        ! All-sky
+        refl_clear                                  ! Clear-sky        
+    logical,intent(in),optional :: &
+        debug        
+
+    print*,'Running COSP_RTTOV_SIMULATE from STUB files.', &
+             'To run RTTOV, compile COSP after setting environmental variable "RTTOV"'
+
+  END SUBROUTINE COSP_RTTOV_SIMULATE
+  
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
