@@ -968,6 +968,7 @@ CONTAINS
                           cospOUT%isccp_meanptop(ij:ik),cospOUT%isccp_meantaucld(ij:ik), &
                           cospOUT%isccp_totalcldarea(ij:ik),cospOUT%isccp_meantb(ij:ik))
        cospOUT%isccp_fq(ij:ik,:,:) = cospOUT%isccp_fq(ij:ik,:,7:1:-1)
+       print*,'cospOUT%isccp_totalcldarea(985:1020):   ',cospOUT%isccp_totalcldarea(985:1020) ! Values not zeroed here.
 
        ! Check if there is any value slightly greater than 1
        where ((cospOUT%isccp_totalcldarea > 1.0-1.e-5) .and.                             &
