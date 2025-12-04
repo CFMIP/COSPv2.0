@@ -791,13 +791,13 @@ CONTAINS
                              isccp_boxttop(:,:),isccp_meantbclr(:))
        ! Store output (if requested)
        print*,'After icarus_subcolumn'
-       print*,'isccp_boxtau(20, :):   ',isccp_boxtau(20, :)
-       print*,'isccp_boxtau(990, :):   ',isccp_boxtau(990, :)
+       print*,'isccp_boxtau(120, :):   ',isccp_boxtau(120, :)
+       print*,'isccp_boxptop(120, :):   ',isccp_boxptop(120, :)
        if (associated(cospOUT%isccp_boxtau)) then
           cospOUT%isccp_boxtau(ij:ik,:)  = isccp_boxtau
        endif
-       print*,'cospOUT%isccp_boxtau(990, :):   ',cospOUT%isccp_boxtau(990, :)
-       print*,'cospOUT%isccp_boxtau(1020, :):   ',cospOUT%isccp_boxtau(1020, :)
+       print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
+       print*,'cospOUT%isccp_boxptop(120, :):   ',cospOUT%isccp_boxptop(120, :)
        if (associated(cospOUT%isccp_boxptop)) then
           cospOUT%isccp_boxptop(ij:ik,:) = isccp_boxptop
        endif
@@ -968,10 +968,9 @@ CONTAINS
        ! Call simulator
        ! Check if isccp_boxtau values have been modified
        print*, 'Before icarus_column'
-       print*,'isccp_boxtau(20, :):  ',isccp_boxtau(20, :)
-       print*,'isccp_boxtau(990, :):   ',isccp_boxtau(990, :)
-       print*,'cospOUT%isccp_boxtau(990, :):   ',cospOUT%isccp_boxtau(990, :)
-       print*,'cospOUT%isccp_boxtau(1020, :):  ',cospOUT%isccp_boxtau(1020, :)
+       print*,'isccp_boxtau(120, :):   ',isccp_boxtau(120, :)
+       print*,'isccp_boxptop(120, :):   ',isccp_boxptop(120, :)
+       print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
        call icarus_column(isccpIN%npoints, isccpIN%ncolumns,isccp_boxtau(:,:),           &
                           isccp_boxptop(:,:)/100._wp, isccpIN%sunlit,isccp_boxttop,      &
                           cospOUT%isccp_fq(ij:ik,:,:),                                   &
@@ -979,7 +978,7 @@ CONTAINS
                           cospOUT%isccp_meanptop(ij:ik),cospOUT%isccp_meantaucld(ij:ik), &
                           cospOUT%isccp_totalcldarea(ij:ik),cospOUT%isccp_meantb(ij:ik))
        cospOUT%isccp_fq(ij:ik,:,:) = cospOUT%isccp_fq(ij:ik,:,7:1:-1)
-       print*,'cospOUT%isccp_totalcldarea(985:1020):   ',cospOUT%isccp_totalcldarea(985:1020)
+       print*,'cospOUT%isccp_totalcldarea(100:150):   ',cospOUT%isccp_totalcldarea(100:150)
 
        ! Check if there is any value slightly greater than 1
        where ((cospOUT%isccp_totalcldarea > 1.0-1.e-5) .and.                             &
