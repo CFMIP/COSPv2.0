@@ -961,7 +961,6 @@ CONTAINS
        endif
 
        ! Call simulator
-       ! Check if isccp_boxtau values have been modified
        call icarus_column(isccpIN%npoints, isccpIN%ncolumns,isccp_boxtau(:,:),           &
                           isccp_boxptop(:,:)/100._wp, isccpIN%sunlit,isccp_boxttop,      &
                           cospOUT%isccp_fq(ij:ik,:,:),                                   &
