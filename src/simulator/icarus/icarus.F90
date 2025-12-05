@@ -559,6 +559,11 @@ contains
     endwhere
     
     ! Compute column quantities and joint-histogram
+    ! JKS print statements here
+    print*,"merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp) ", &
+      merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp)
+    print*,"boxtau(120,1:ncol) ",boxtau(120,1:ncol)
+    print*,"boxptop(120,1:ncol) ",boxptop(120,1:ncol)
     do j=1,npoints 
        ! Subcolumns that are cloudy(true) and not(false)
        box_cloudy2(1:ncol) = merge(.true.,.false.,boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
@@ -572,7 +577,8 @@ contains
                fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins)/ncol
           
           ! Column cloud area
-          totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
+         !  totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
+          totalcldarea(j) = real(sum(merge(1,0,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)),wp)/ncol
              
           ! Subcolumn cloud albedo
           !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&

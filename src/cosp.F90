@@ -797,10 +797,10 @@ CONTAINS
           cospOUT%isccp_boxtau(ij:ik,:)  = isccp_boxtau
        endif
        print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
-       print*,'cospOUT%isccp_boxptop(120, :):   ',cospOUT%isccp_boxptop(120, :)
        if (associated(cospOUT%isccp_boxptop)) then
           cospOUT%isccp_boxptop(ij:ik,:) = isccp_boxptop
        endif
+       print*,'cospOUT%isccp_boxptop(120, :):   ',cospOUT%isccp_boxptop(120, :)
        if (associated(cospOUT%isccp_meantbclr)) then
           cospOUT%isccp_meantbclr(ij:ik) = isccp_meantbclr
        endif
