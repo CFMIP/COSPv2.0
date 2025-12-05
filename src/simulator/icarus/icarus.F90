@@ -614,7 +614,7 @@ contains
     where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp
     where(fq_isccp     .ne. output_missing_value) fq_isccp     = fq_isccp*100._wp
     
-   end SUBROUTINE ICARUS_column
+  end SUBROUTINE ICARUS_column
   
   subroutine cosp_simulator_optics(dim1,dim2,dim3,flag,varIN1,varIN2,varOUT)
     ! INPUTS
