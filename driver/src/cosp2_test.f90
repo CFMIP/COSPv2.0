@@ -1273,6 +1273,19 @@ contains
     if (Lclcalipsoopaque .or. Lclcalipsothin .or. Lclcalipsozopaque .or. Lclcalipsoopacity) then 
         allocate(x%calipso_lidarcldtype(Npoints,Nlvgrid,LIDAR_NTYPE+1))
     endif
+    ! These 2 outputs are part of the calipso output type, but are not controlled by an 
+    ! logical switch in the output namelist, so if all other fields are on, then allocate
+    if (LlidarBetaMol532 .or. Latb532        .or. LcfadLidarsr532 .or. Lclcalipso  .or.  &
+        Lclcalipsoice    .or. Lclcalipsoliq  .or. Lclcalipsoun    .or. Lclcalipso2 .or.  &
+        Lclhcalipso      .or. Lclmcalipso    .or. Lcllcalipso     .or. Lcltcalipso .or.  &
+        Lclcalipsotmp    .or. Lclcalipsoice  .or. Lclcalipsotmpun .or.                   &
+        Lclcalipsotmpliq .or. Lcllcalipsoice .or. Lclmcalipsoice  .or.                   &
+        Lclhcalipsoice   .or. Lcltcalipsoice .or. Lcllcalipsoliq  .or.                   &
+        Lclmcalipsoliq   .or. Lclhcalipsoliq .or. Lcltcalipsoliq  .or.                   &
+        Lcllcalipsoun    .or. Lclmcalipsoun  .or. Lclhcalipsoun   .or. Lcltcalipsoun) then
+       allocate(x%calipso_tau_tot(Npoints,Ncolumns,Nlevels))       
+       allocate(x%calipso_temp_tot(Npoints,Nlevels))               
+    endif
 
     ! GROUND LIDAR @ 532NM simulator
     if (LlidarBetaMol532gr) allocate(x%grLidar532_beta_mol(Npoints,Nlevels))
@@ -1427,6 +1440,10 @@ contains
         deallocate(y%calipso_beta_mol)
         nullify(y%calipso_beta_mol)
      endif
+     if (associated(y%calipso_temp_tot))          then
+        deallocate(y%calipso_temp_tot)
+        nullify(y%calipso_temp_tot)     
+     endif
      if (associated(y%calipso_betaperp_tot))      then
         deallocate(y%calipso_betaperp_tot)
         nullify(y%calipso_betaperp_tot)     
@@ -1434,6 +1451,10 @@ contains
      if (associated(y%calipso_beta_tot))          then
         deallocate(y%calipso_beta_tot)    
         nullify(y%calipso_beta_tot)     
+     endif
+     if (associated(y%calipso_tau_tot))           then
+        deallocate(y%calipso_tau_tot) 
+        nullify(y%calipso_tau_tot)     
      endif
      if (associated(y%calipso_lidarcldphase))     then
         deallocate(y%calipso_lidarcldphase)
