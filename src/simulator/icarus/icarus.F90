@@ -564,6 +564,7 @@ contains
       merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp)
     print*,"boxtau(120,1:ncol) .gt. isccp_taumin ", boxtau(120,1:ncol) .gt. isccp_taumin
     print*,"ncol ", ncol
+    print*,"tauchk ", tauchk
     print*,"Full mask: ", merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp) &
       .and. boxtau(120,1:ncol) .gt. isccp_taumin
     print*,"Expected fraction: ", count(merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp) &
@@ -574,7 +575,10 @@ contains
     print*,"boxptop(120,1:ncol) ",boxptop(120,1:ncol)
     do j=1,npoints 
        ! Subcolumns that are cloudy(true) and not(false)
-       box_cloudy2(1:ncol) = merge(.true.,.false.,boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
+      !  box_cloudy2(1:ncol) = merge(.true.,.false.,boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
+       do ibox = 1, ncol
+          box_cloudy2(ibox) = (boxtau(j,ibox) .gt. tauchk .and. boxptop(j,ibox) .gt. 0._wp)
+       end do
 
        ! Compute joint histogram and column quantities for points that are sunlit and cloudy
        if (sunlit(j) .eq.1 .or. isccp_top_height .eq. 3) then 
