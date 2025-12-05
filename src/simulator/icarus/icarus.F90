@@ -498,7 +498,8 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: j,ilev,ilev2,cld_count,cld_ptop,ibox
+    INTEGER :: j,ilev,ilev2,cld_count,ibox
+    REAL(WP) :: cld_ptop
     REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
 
@@ -605,7 +606,7 @@ contains
           end do
           ! Compute averages. Unsure why normalizing ptop and albedo to ncol and not cld_count
           totalcldarea(j) = real(cld_count, wp)/ncol
-          meanptop(j) = cld_count/ncol
+          meanptop(j) = cld_ptop/ncol
           meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
              
           ! Subcolumn cloud albedo
