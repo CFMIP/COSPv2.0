@@ -565,6 +565,7 @@ contains
     print*,"boxtau(120,1:ncol) .gt. isccp_taumin ", boxtau(120,1:ncol) .gt. isccp_taumin
     print*,"ncol ", ncol
     print*,"Full mask: ", merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp) .and. boxtau(120,1:ncol) .gt. isccp_taumin
+    print*,"Expected fraction: ", count(merge(.true.,.false.,boxtau(120,1:ncol) .gt. tauchk .and. boxptop(120,1:ncol) .gt. 0._wp) .and. boxtau(120,1:ncol) .gt. isccp_taumin)
     print*,"boxtau(120,1:ncol) ",boxtau(120,1:ncol)
     print*,"boxptop(120,1:ncol) ",boxptop(120,1:ncol)
     do j=1,npoints 
@@ -599,6 +600,7 @@ contains
           meanptop(j) = sum(boxptop(j,1:ncol),box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)/ncol
        endif
     enddo
+    print*,"1. totalcldarea(118:124) ", totalcldarea(118:124)
     
     ! Compute mean cloud properties. Set to mssing value in the event that totalcldarea=0
     where(totalcldarea(1:npoints) .gt. 0._wp)
@@ -620,7 +622,7 @@ contains
     ! Represent in percent
     where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp
     where(fq_isccp     .ne. output_missing_value) fq_isccp     = fq_isccp*100._wp
-    
+    print*,"2. totalcldarea(118:124) ", totalcldarea(118:124)
     
   end SUBROUTINE ICARUS_column
   

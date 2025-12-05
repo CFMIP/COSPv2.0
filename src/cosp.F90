@@ -790,17 +790,17 @@ CONTAINS
                              isccp_boxtau(:,:),isccp_boxptop(:,:),                       &
                              isccp_boxttop(:,:),isccp_meantbclr(:))
        ! Store output (if requested)
-       print*,'After icarus_subcolumn'
-       print*,'isccp_boxtau(120, :):   ',isccp_boxtau(120, :)
-       print*,'isccp_boxptop(120, :):   ',isccp_boxptop(120, :)
+      !  print*,'After icarus_subcolumn'
+      !  print*,'isccp_boxtau(120, :):   ',isccp_boxtau(120, :)
+      !  print*,'isccp_boxptop(120, :):   ',isccp_boxptop(120, :)
        if (associated(cospOUT%isccp_boxtau)) then
           cospOUT%isccp_boxtau(ij:ik,:)  = isccp_boxtau
        endif
-       print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
+      !  print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
        if (associated(cospOUT%isccp_boxptop)) then
           cospOUT%isccp_boxptop(ij:ik,:) = isccp_boxptop
        endif
-       print*,'cospOUT%isccp_boxptop(120, :):   ',cospOUT%isccp_boxptop(120, :)
+      !  print*,'cospOUT%isccp_boxptop(120, :):   ',cospOUT%isccp_boxptop(120, :)
        if (associated(cospOUT%isccp_meantbclr)) then
           cospOUT%isccp_meantbclr(ij:ik) = isccp_meantbclr
        endif
@@ -970,7 +970,7 @@ CONTAINS
        print*, 'Before icarus_column'
        print*,'isccp_boxtau(120, :):   ',isccp_boxtau(120, :)
        print*,'isccp_boxptop(120, :):   ',isccp_boxptop(120, :)
-       print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
+      !  print*,'cospOUT%isccp_boxtau(120, :):   ',cospOUT%isccp_boxtau(120, :)
        call icarus_column(isccpIN%npoints, isccpIN%ncolumns,isccp_boxtau(:,:),           &
                           isccp_boxptop(:,:)/100._wp, isccpIN%sunlit,isccp_boxttop,      &
                           cospOUT%isccp_fq(ij:ik,:,:),                                   &
