@@ -214,16 +214,6 @@ contains
        status = nf90_put_att(fileID,varID(10),"standard_name", "volume_attenuated_backwards_scattering_function_in_air")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    if (associated(cospOUT%calipso_tau_tot)) then
-       status = nf90_def_var(fileID,"calipso_tau",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(11))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(11),"long_name","CALIPSO optical-thickness @ 0.67microns")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(11),"units",        "1")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(11),"standard_name", "atmosphere_optical_thickness_due_to_cloud")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))       
-    endif
     if (associated(cospOUT%calipso_lidarcldphase)) then
        ! Ice
        status = nf90_def_var(fileID,"clcalipsoice",nf90_float, (/dimID(1),dimID(4)/),varID(58))
@@ -1462,10 +1452,6 @@ contains
     endif
     if (associated(cospOUT%calipso_beta_tot)) then
        status = nf90_put_var(fileID,varID(10),cospOUT%calipso_beta_tot)
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    endif
-    if (associated(cospOUT%calipso_tau_tot)) then
-       status = nf90_put_var(fileID,varID(11),cospOUT%calipso_tau_tot)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
     if (associated(cospOUT%calipso_lidarcldphase)) then
