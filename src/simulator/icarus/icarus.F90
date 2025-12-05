@@ -588,38 +588,57 @@ contains
                isccp_histPres,numISCCPPresBins,fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins))
           fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins) = &
                fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins)/ncol
+
+          ! Column cloud area
+          totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
+             
+          ! Subcolumn cloud albedo
+          !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
+          !     0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+          where(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+             albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
+          elsewhere
+             albedocld(j,1:ncol) = 0._wp
+          endwhere
           
+          ! Column cloud albedo
+          meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
+          
+          ! Column cloud top pressure
+          meanptop(j) = sum(boxptop(j,1:ncol),box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)/ncol
+
           ! Column cloud area
          !  totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
          !  totalcldarea(j) = real(sum(merge(1,0,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)),wp)/ncol
-          cld_count = 0
-          cld_ptop = 0.0_wp
-          ! Look over subcolumns and accumulate cloud fraction, albedo and cloud top pressure.
-          do ibox = 1, ncol
-             if (box_cloudy2(ibox) .and. boxtau(j,ibox) .gt. isccp_taumin) then
-                cld_count = cld_count + 1
-                cld_ptop = cld_ptop + boxptop(j,ibox)
-                albedocld(j,ibox) = (boxtau(j,ibox)**0.895_wp)/((boxtau(j,ibox)**0.895_wp)+6.82_wp)
-             else
-                albedocld(j,ibox) = 0._wp
-             end if
-          end do
+         !  cld_count = 0
+         !  cld_ptop = 0.0_wp
+         !  ! Look over subcolumns and accumulate cloud fraction, albedo and cloud top pressure.
+         !  do ibox = 1, ncol
+         !     if (box_cloudy2(ibox) .and. boxtau(j,ibox) .gt. isccp_taumin) then
+         !        cld_count = cld_count + 1
+         !        cld_ptop = cld_ptop + boxptop(j,ibox)
+         !        albedocld(j,ibox) = (boxtau(j,ibox)**0.895_wp)/((boxtau(j,ibox)**0.895_wp)+6.82_wp)
+         !     else
+         !        albedocld(j,ibox) = 0._wp
+         !     end if
+         !  end do
           ! Compute averages. Unsure why normalizing ptop and albedo to ncol and not cld_count
-          totalcldarea(j) = real(cld_count, wp)/ncol
-          meanptop(j) = cld_ptop/ncol
-          meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
+         !  totalcldarea(j) = real(cld_count, wp)/ncol
+         !  meanptop(j) = cld_ptop/ncol
+         !  meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
              
           ! Subcolumn cloud albedo
           !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
           !     0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
          !  where(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
-         !     albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
+            !  albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
          !  elsewhere
-         !     albedocld(j,1:ncol) = 0._wp
+            !  albedocld(j,1:ncol) = 0._wp
          !  endwhere
-          
+
           ! Column cloud albedo
-          
+         !  meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
+
           ! Column cloud top pressure
          !  meanptop(j) = sum(boxptop(j,1:ncol),box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)/ncol
        endif
