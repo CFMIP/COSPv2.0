@@ -260,7 +260,6 @@ contains
     do j=1,npoints
 
        ! Subcolumns that are cloudy(true) and not(false)
-      !  box_cloudy(1:ncol) = merge(.true.,.false.,tau(j,1:ncol) .gt. tauchk)
        do ibox = 1, ncol
           box_cloudy(ibox) = (tau(j,ibox) .gt. tauchk)
        end do

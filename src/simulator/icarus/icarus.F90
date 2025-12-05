@@ -498,8 +498,7 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: j,ilev,ilev2,cld_count,ibox
-    REAL(WP) :: cld_ptop
+    INTEGER :: j,ilev,ilev2,ibox
     REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
 
@@ -591,7 +590,6 @@ contains
           
           ! Column cloud top pressure
           meanptop(j) = sum(boxptop(j,1:ncol),box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)/ncol
-
        endif
     enddo
     
@@ -616,7 +614,7 @@ contains
     where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp
     where(fq_isccp     .ne. output_missing_value) fq_isccp     = fq_isccp*100._wp
     
-  end SUBROUTINE ICARUS_column
+   end SUBROUTINE ICARUS_column
   
   subroutine cosp_simulator_optics(dim1,dim2,dim3,flag,varIN1,varIN2,varOUT)
     ! INPUTS
