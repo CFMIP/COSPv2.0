@@ -1266,7 +1266,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq)) then
-       status = nf90_def_var(fileID,"clmodis",nf90_float, (/dimID(1),dimID(5),dimID(7)/),varID(148))
+       status = nf90_def_var(fileID,"clmodis_liq",nf90_float, (/dimID(1),dimID(5),dimID(7)/),varID(148))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(148),"long_name","MODIS joint-PDF of liquid cloud top pressure and optical depth")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -1276,7 +1276,7 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice)) then
-       status = nf90_def_var(fileID,"clmodis",nf90_float, (/dimID(1),dimID(5),dimID(7)/),varID(149))
+       status = nf90_def_var(fileID,"clmodis_ice",nf90_float, (/dimID(1),dimID(5),dimID(7)/),varID(149))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(149),"long_name","MODIS joint-PDF of ice cloud top pressure and optical depth")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))

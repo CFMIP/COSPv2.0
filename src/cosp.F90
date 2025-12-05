@@ -468,7 +468,7 @@ CONTAINS
         associated(cospOUT%modis_Ice_Water_Path_Mean)                      .or.          &
         associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)  .or.          &
         associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq) .or.       &
-        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))           &
        Lmodis_subcolumn    = .true.
 
     ! ISCCP subcolumn
@@ -591,7 +591,7 @@ CONTAINS
         associated(cospOUT%modis_Ice_Water_Path_Mean)                      .or.          &
         associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)  .or.          &
         associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq) .or.       &
-        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice)) then
        Lmodis_column    = .true.
        Lmodis_subcolumn = .true.
     endif
