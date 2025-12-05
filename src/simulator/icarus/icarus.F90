@@ -498,7 +498,7 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: j,ilev,ilev2,cld_count,ibox
+    INTEGER :: j,ilev,ilev2,cld_count,cld_ptop,ibox
     REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
 
@@ -592,27 +592,35 @@ contains
          !  totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
          !  totalcldarea(j) = real(sum(merge(1,0,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)),wp)/ncol
           cld_count = 0
+          cld_ptop = 0.0_wp
+          ! Look over subcolumns and accumulate cloud fraction, albedo and cloud top pressure.
           do ibox = 1, ncol
              if (box_cloudy2(ibox) .and. boxtau(j,ibox) .gt. isccp_taumin) then
                 cld_count = cld_count + 1
+                cld_ptop = cld_ptop + boxptop(j,ibox)
+                albedocld(j,ibox) = (boxtau(j,ibox)**0.895_wp)/((boxtau(j,ibox)**0.895_wp)+6.82_wp)
+             else
+                albedocld(j,ibox) = 0._wp
              end if
           end do
-          totalcldarea(j) = real(cld_count, wp) / ncol
+          ! Compute averages. Unsure why normalizing ptop and albedo to ncol and not cld_count
+          totalcldarea(j) = real(cld_count, wp)/ncol
+          meanptop(j) = cld_count/ncol
+          meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
              
           ! Subcolumn cloud albedo
           !albedocld(j,1:ncol) = merge((boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp),&
           !     0._wp,box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
-          where(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
-             albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
-          elsewhere
-             albedocld(j,1:ncol) = 0._wp
-          endwhere
+         !  where(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)
+         !     albedocld(j,1:ncol) = (boxtau(j,1:ncol)**0.895_wp)/((boxtau(j,1:ncol)**0.895_wp)+6.82_wp)
+         !  elsewhere
+         !     albedocld(j,1:ncol) = 0._wp
+         !  endwhere
           
           ! Column cloud albedo
-          meanalbedocld(j) = sum(albedocld(j,1:ncol))/ncol
           
           ! Column cloud top pressure
-          meanptop(j) = sum(boxptop(j,1:ncol),box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)/ncol
+         !  meanptop(j) = sum(boxptop(j,1:ncol),box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin)/ncol
        endif
     enddo
     print*,"1. totalcldarea(118:124) ", totalcldarea(118:124)
