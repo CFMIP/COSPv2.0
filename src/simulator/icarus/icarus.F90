@@ -498,7 +498,7 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: j,ilev,ilev2, cld_count
+    INTEGER :: j,ilev,ilev2,cld_count,ibox
     REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
 
