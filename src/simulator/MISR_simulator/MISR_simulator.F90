@@ -246,7 +246,7 @@ contains
          fq_MISR_TAU_v_CTH ! Joint histogram of cloud-cover and tau
 
     ! INTERNAL VARIABLES
-    INTEGER :: j, ibox
+    INTEGER :: j
     LOGICAL,dimension(ncol) :: box_cloudy 
     real(wp),dimension(npoints,ncol) :: tauWRK,box_MISR_ztopWRK
     ! ############################################################################
@@ -260,9 +260,7 @@ contains
     do j=1,npoints
 
        ! Subcolumns that are cloudy(true) and not(false)
-       do ibox = 1, ncol
-          box_cloudy(ibox) = (tau(j,ibox) .gt. tauchk)
-       end do
+       box_cloudy(1:ncol) = (tau(j,1:ncol) .gt. tauchk)
 
        ! Fill optically thin clouds with fill value
        where(.not. box_cloudy(1:ncol)) tauWRK(j,1:ncol)  = -999._wp

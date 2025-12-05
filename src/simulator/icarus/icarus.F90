@@ -498,7 +498,7 @@ contains
          fq_isccp         ! The fraction of the model grid box covered by clouds
 
     ! Local Variables
-    INTEGER :: j,ilev,ilev2,ibox
+    INTEGER :: j,ilev,ilev2
     REAL(WP),dimension(npoints,ncol) :: albedocld
     LOGICAL, dimension(npoints,ncol) :: box_cloudy
 
@@ -561,9 +561,6 @@ contains
     ! Compute column quantities and joint-histogram
     do j=1,npoints 
        ! Subcolumns that are cloudy(true) and not(false)
-      !  do ibox = 1, ncol
-      !     box_cloudy2(ibox) = (boxtau(j,ibox) .gt. tauchk .and. boxptop(j,ibox) .gt. 0._wp)
-      !  end do
        box_cloudy2(1:ncol) = (boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
 
        ! Compute joint histogram and column quantities for points that are sunlit and cloudy
