@@ -208,6 +208,10 @@ if __name__ == '__main__':
         print(red_colour +
               "===== ERROR: files differ in the number of variables." +
               std_colour)
+        print("===== Variables in KGO but not Test: ", 
+              [i for i in kgo_vars if i not in tst_vars])
+        print("===== Variables in Test but not KGOs: ",
+              [i for i in tst_vars if i not in kgo_vars])
         print("===== Variables in KGO: ", nkgo)
         print(kgo_vars)
         print("===== Variables in Test: ", ntst)
