@@ -160,11 +160,21 @@ if __name__ == '__main__':
                              "bigger than tolerances.")
     parser.add_argument("--stats_file", default=None,
                         help="Output file for summary statistics.")
+    parser.add_argument("--exclude_vars", nargs='*', default=[],
+                        help="List of variables to exclude from comparison.")
     args = parser.parse_args()
 
     # Get list of variables
-    kgo_vars = get_var_list(args.kgo_file)
-    tst_vars = get_var_list(args.tst_file)
+    kgo_vars = list(get_var_list(args.kgo_file))
+    tst_vars = list(get_var_list(args.tst_file))
+
+    # Remove "excluded" variables
+    for var in args.exclude_vars:
+        if var in kgo_vars:
+            kgo_vars.remove(var)
+        if var in tst_vars:
+            tst_vars.remove(var)
+
     nkgo = len(kgo_vars)
     ntst = len(tst_vars)
 
@@ -200,6 +210,10 @@ if __name__ == '__main__':
     # Check if large differences should be treated as errors
     if args.noerror: errored = False
 
+    # Clearly state when variables are not included in comparisons
+    if len(args.exclude_vars) > 0:
+        print("===== Summary Statistics exclude: ", args.exclude_vars)
+
     # Error if files have different number variables. If the number 
     # of variables is the same but they have different names, it will
     # fail in summary_stats.
@@ -208,6 +222,10 @@ if __name__ == '__main__':
         print(red_colour +
               "===== ERROR: files differ in the number of variables." +
               std_colour)
+        print("===== Variables in KGO but not Test: ", 
+              [i for i in kgo_vars if i not in tst_vars])
+        print("===== Variables in Test but not KGOs: ",
+              [i for i in tst_vars if i not in kgo_vars])
         print("===== Variables in KGO: ", nkgo)
         print(kgo_vars)
         print("===== Variables in Test: ", ntst)
