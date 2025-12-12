@@ -260,7 +260,7 @@ contains
     do j=1,npoints
 
        ! Subcolumns that are cloudy(true) and not(false)
-       box_cloudy(1:ncol) = merge(.true.,.false.,tau(j,1:ncol) .gt. tauchk)
+       box_cloudy(1:ncol) = (tau(j,1:ncol) .gt. tauchk)
 
        ! Fill optically thin clouds with fill value
        where(.not. box_cloudy(1:ncol)) tauWRK(j,1:ncol)  = -999._wp

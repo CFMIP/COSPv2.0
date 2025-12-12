@@ -201,14 +201,12 @@ MODULE MOD_COSP
           modis_Liquid_Water_Path_Mean => null(),          & ! L3 MODIS retrieved liquid water path
           modis_Ice_Water_Path_Mean => null()                ! L3 MODIS retrieved ice water path
      real(wp),pointer,dimension(:,:,:) ::  &
-          modis_Optical_Thickness_vs_Cloud_Top_Pressure => null(), & ! Tau/Pressure joint histogram
-          modis_Optical_Thickness_vs_ReffICE => null(),            & ! Tau/ReffICE joint histogram
-          modis_Optical_Thickness_vs_ReffLIQ => null()               ! Tau/ReffLIQ joint histogram
-
-     real(wp),pointer,dimension(:,:,:) ::  &
+          modis_Optical_Thickness_vs_Cloud_Top_Pressure => null(),     & ! Tau/Pressure joint histogram
           modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq => null(), & ! Tau/Pressure Liq joint histogram
           modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice => null(), & ! Tau/Pressure Ice joint histogram
-          modis_LWP_vs_ReffLIQ => null(), &                              ! LWP/ReffLIQ joint histogram
+          modis_Optical_Thickness_vs_ReffICE => null(),                & ! Tau/ReffICE joint histogram
+          modis_Optical_Thickness_vs_ReffLIQ => null(),                & ! Tau/ReffLIQ joint histogram
+          modis_LWP_vs_ReffLIQ => null(),                              & ! LWP/ReffLIQ joint histogram
           modis_IWP_vs_ReffICE => null()                                 ! IWP/ReffICE joint histogram
 
      ! Joint CloudSat+MODIS simulators outputs
@@ -455,7 +453,9 @@ CONTAINS
         associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean)            .or.          &
         associated(cospOUT%modis_Liquid_Water_Path_Mean)                   .or.          &
         associated(cospOUT%modis_Ice_Water_Path_Mean)                      .or.          &
-        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))               &
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)  .or.          &
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq) .or.       &
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))           &
        Lmodis_subcolumn    = .true.
 
     ! ISCCP subcolumn
@@ -574,7 +574,9 @@ CONTAINS
         associated(cospOUT%modis_Cloud_Top_Pressure_Total_Mean)            .or.          &
         associated(cospOUT%modis_Liquid_Water_Path_Mean)                   .or.          &
         associated(cospOUT%modis_Ice_Water_Path_Mean)                      .or.          &
-        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)  .or.          &
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq) .or.       &
+        associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice)) then
        Lmodis_column    = .true.
        Lmodis_subcolumn = .true.
     endif
@@ -1733,10 +1735,10 @@ CONTAINS
                 cospOUT%modis_Ice_Water_Path_Mean(ij+int(modisIN%notSunlit(:))-1) = R_UNDEF
              if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))      &
                 cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
-            !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))      &
-            !     cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
-            !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))      &
-            !     cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF                                
+             if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq))      &
+                cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))      &
+                cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
           end if
        else
           ! It's nightime everywhere - everything is undefined
@@ -1776,10 +1778,10 @@ CONTAINS
              cospOUT%modis_Ice_Water_Path_Mean(ij:ik) = R_UNDEF
           if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure))         &
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure(ij:ik, :, :) = R_UNDEF
-         !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))                    &
-         !     cospOUT%modis_Optical_Thickness_vs_ReffIce(ij:ik, :, :) = R_UNDEF
-         !  if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))                    &
-         !     cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij:ik, :, :) = R_UNDEF             
+          if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq))      &
+             cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))      &
+             cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
        endif
        ! Free up memory (if necessary)
        if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)
