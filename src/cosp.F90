@@ -97,7 +97,6 @@ MODULE MOD_COSP
      real(wp),dimension(:,:,:),pointer :: &
           calipso_betaperp_tot => null(),  & ! Total backscattered signal
           calipso_beta_tot => null(),      & ! Total backscattered signal
-          calipso_tau_tot => null(),       & ! Optical thickness integrated from top to level z
           calipso_lidarcldphase => null(), & ! 3D "lidar" phase cloud fraction
           calipso_lidarcldtype => null(),  & ! 3D "lidar" OPAQ type fraction
           calipso_cldlayerphase => null(), & ! low, mid, high-level lidar phase cloud cover
@@ -110,8 +109,7 @@ MODULE MOD_COSP
           calipso_cldtypetemp => null(),   & ! opaque and thin cloud temperature  
           calipso_cldtypemeanz => null(),  & ! opaque and thin cloud altitude 
           calipso_cldtypemeanzse => null(),& ! same as just above with respect to SE
-          calipso_beta_mol => null(),      & ! Molecular backscatter
-          calipso_temp_tot => null()
+          calipso_beta_mol => null()         ! Molecular backscatter
      real(wp), dimension(:),pointer :: &
           calipso_cldthinemis => null(),   & ! thin cloud emissivity 
           calipso_srbval => null()           ! SR bins in cfad_sr
@@ -470,9 +468,7 @@ CONTAINS
        Lmisr_subcolumn     = .true.
 
     ! CALIPOSO subcolumn
-    if (associated(cospOUT%calipso_tau_tot)                                .or.          &
-        associated(cospOUT%calipso_beta_mol)                               .or.          &
-        associated(cospOUT%calipso_temp_tot)                               .or.          &
+    if (associated(cospOUT%calipso_beta_mol)                               .or.          &
         associated(cospOUT%calipso_betaperp_tot)                           .or.          &
         associated(cospOUT%calipso_beta_tot))                                            &
        Lcalipso_subcolumn  = .true.
