@@ -9,7 +9,7 @@ case $COMPILER in
     kgo_links=( "https://docs.google.com/uc?export=download&id=12ZIE-NQs9KWWCIHEVd-JAEA1zBSx7auy" \
                 "https://docs.google.com/uc?export=download&id=1ImbdhbOYsLsb-yFc7C9Ku3tJSFVclRne" \
                 "https://docs.google.com/uc?export=download&id=1d0qdXtUUl26EsjmaVd0Q8OuSsduS-uMI" \
-                "https://docs.google.com/uc?export=download&id=1d0qdXtUUl26EsjmaVd0Q8OuSsduS-uMI" )
+                "https://docs.google.com/uc?export=download&id=1qoAxONib-zdH6SJ0hGol0gwqFd9NILDN" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_output.um_global_model_levels.${COMPILER}.kgo" \
@@ -30,7 +30,7 @@ case $COMPILER in
     KGO_VERSION=v007
     kgo_links=( "https://docs.google.com/uc?export=download&id=1iTe6vqRGgetLUF1QUzvKJ3Hust4cy4VO" \
                 "https://docs.google.com/uc?export=download&id=1hj1tTU_nq2P9fZfODYzWh2od4CE6PkCT" \
-                "https://docs.google.com/uc?export=download&id=1hj1tTU_nq2P9fZfODYzWh2od4CE6PkCT" )
+                "https://docs.google.com/uc?export=download&id=1uX-82D4viqTUN19G37dWI21RB5mHXpkW" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_swath_output.um_global.${COMPILER}.kgo" )
