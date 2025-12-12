@@ -1279,6 +1279,26 @@ contains
        status = nf90_put_att(fileID,varID(53),"standard_name", "cloud_area_fraction_in_atmosphere_layer")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
     endif
+    if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq)) then
+       status = nf90_def_var(fileID,"clmodis_liq",nf90_float, (/dimID(1),dimID(5),dimID(7)/),varID(148))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(148),"long_name","MODIS joint-PDF of liquid cloud top pressure and optical depth")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(148),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+       status = nf90_put_att(fileID,varID(148),"standard_name", "cloud_area_fraction_in_atmosphere_layer_liq")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+    endif
+    if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice)) then
+       status = nf90_def_var(fileID,"clmodis_ice",nf90_float, (/dimID(1),dimID(5),dimID(7)/),varID(149))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(149),"long_name","MODIS joint-PDF of ice cloud top pressure and optical depth")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(149),"units",        "%")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+       status = nf90_put_att(fileID,varID(149),"standard_name", "cloud_area_fraction_in_atmosphere_layer_ice")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status)) 
+    endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffICE)) then
        status = nf90_def_var(fileID,"modis_Optical_Thickness_vs_ReffICE",nf90_float, (/dimID(1),dimID(5),dimID(16)/),varID(54))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
@@ -1961,6 +1981,14 @@ contains
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)) then          			   
        status = nf90_put_var(fileID,varID(53),cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
+    if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq)) then          			   
+       status = nf90_put_var(fileID,varID(148),cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
+    endif
+    if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice)) then          			   
+       status = nf90_put_var(fileID,varID(149),cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))  
     endif
     if (associated(cospOUT%modis_Optical_Thickness_vs_ReffICE)) then

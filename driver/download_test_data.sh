@@ -5,11 +5,11 @@ COMPILER=$1
 case $COMPILER in
 
   "gfortran")
-    KGO_VERSION=v006
-    kgo_links=( "https://docs.google.com/uc?export=download&id=1HgtrBVI5-7ypQWxzzMPvAq_5IIE5q9-B" \
-                "https://docs.google.com/uc?export=download&id=17Ah7z2oGiwwZ-yW1JX3Vg81_l7Q1zFf7" \
-                "https://docs.google.com/uc?export=download&id=1IzBbnhnfYeaSPLRSvWsWCEzsL_D9_ZKq" \
-                "https://docs.google.com/uc?export=download&id=1qqwHbMSuD38GcIVIbqsmJehHjSQEW2Mk" )
+    KGO_VERSION=v007
+    kgo_links=( "https://docs.google.com/uc?export=download&id=12ZIE-NQs9KWWCIHEVd-JAEA1zBSx7auy" \
+                "https://docs.google.com/uc?export=download&id=1ImbdhbOYsLsb-yFc7C9Ku3tJSFVclRne" \
+                "https://docs.google.com/uc?export=download&id=1d0qdXtUUl26EsjmaVd0Q8OuSsduS-uMI" \
+                "https://docs.google.com/uc?export=download&id=1d0qdXtUUl26EsjmaVd0Q8OuSsduS-uMI" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_output.um_global_model_levels.${COMPILER}.kgo" \
@@ -28,9 +28,9 @@ case $COMPILER in
 
   "ifx")
     KGO_VERSION=v007
-    kgo_links=( "https://docs.google.com/uc?export=download&id=1epHiss6ESy2rDuBsQwXn-8KAyjmAip6j" \
-                "https://docs.google.com/uc?export=download&id=16KKAP_GFmY30d-_NR90Y_Lj0zlisYDRH" \
-                "https://docs.google.com/uc?export=download&id=16KKAP_GFmY30d-_NR90Y_Lj0zlisYDRH" )
+    kgo_links=( "https://docs.google.com/uc?export=download&id=1iTe6vqRGgetLUF1QUzvKJ3Hust4cy4VO" \
+                "https://docs.google.com/uc?export=download&id=1hj1tTU_nq2P9fZfODYzWh2od4CE6PkCT" \
+                "https://docs.google.com/uc?export=download&id=1hj1tTU_nq2P9fZfODYzWh2od4CE6PkCT" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" )
