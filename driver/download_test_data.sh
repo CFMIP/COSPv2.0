@@ -33,8 +33,7 @@ case $COMPILER in
                 "https://docs.google.com/uc?export=download&id=1hj1tTU_nq2P9fZfODYzWh2od4CE6PkCT" )
     out_type=( "cosp2_output_um.${COMPILER}.kgo" \
                "cosp2_output.um_global.${COMPILER}.kgo" \
-               "cosp2_output.um_global.${COMPILER}.kgo" )
-              #  "cosp2_swath_output.um_global.${COMPILER}.kgo" )
+               "cosp2_swath_output.um_global.${COMPILER}.kgo" )
     ;;
 
   *)
