@@ -98,7 +98,7 @@ jobs:
       if: always()
       run: |
         cd driver
-        KGO=data/outputs/UKMO/cosp2_output.um_global.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
+        KGO=data/outputs/UKMO/cosp2_swath_output.um_global.${{ matrix.compiler }}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_swath_output.um_global.nc
         STATS=data/outputs/UKMO/cosp2_swath_output.um_global.${{ matrix.compiler }}.out
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL} --stats_file=${STATS}
