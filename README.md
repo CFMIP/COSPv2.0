@@ -1,3 +1,7 @@
+# About this fork
+
+This is development code for Doppler velocity simulator. Therefore, the codes are subject to change. This is being prepared for merging into COSP2.
+
 # About COSP
 
 The CFMIP Observation Simulator Package (COSP) takes the models representation of the
