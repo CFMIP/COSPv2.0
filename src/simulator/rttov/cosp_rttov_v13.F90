@@ -29,7 +29,7 @@
 ! History
 ! March 2016 - M. Johnston - Original version
 ! April 2016 - D. Swales   - Modified for use in COSPv2.0
-! JKS fill this in when working :)
+! December 2025 - J. Shaw  - Updated for RTTOV v13
 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -48,6 +48,7 @@ module mod_cosp_rttov
   use mod_cosp_config,     only : N_HYDRO
   use cosp_phys_constants, only : mdry=>amd,mH2O=>amw,mO3=>amO3,mCO2=>amCO2,              &
                                   mCH4=>amCH4,mN2O=>amN2O,mCO=>amCO,mSO2=>amSO2
+  use mod_cosp_error,      only : errorMessage
 
 
   ! The rttov_emis_atlas_data type must be imported separately
@@ -74,24 +75,7 @@ module mod_cosp_rttov
 #include "rttov_print_opts.interface"
 #include "rttov_print_profile.interface"
 #include "rttov_get_pc_predictindex.interface"
-
-! checking inputs
-!#include "rttov_dealloc_coef_scatt.interface"
-!#include "rttov_dealloc_coef.interface"
-!#include "rttov_dealloc_coef_pccomp.interface"
-
-! Includes when directly inputting cloud optical parameters
-! #include "rttov_init_opt_param.interface"
-! #include "rttov_bpr_init.interface"
-! #include "rttov_bpr_calc.interface"
-! #include "rttov_bpr_dealloc.interface"
-! #include "rttov_legcoef_calc.interface"
 #include "rttov_calc_solar_angles.interface"
-       
-  ! Scattering coefficients (read in once during initialization)
-! JKS - KISS
-!  type(rttov_scatt_coef) :: &
-!       coef_scatt      
 
   ! module-wides variables for input. Not sure if unsafe for threading.
   !====================
@@ -104,7 +88,7 @@ module mod_cosp_rttov
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
   type rttov_IN
-     integer(kind=jpim),pointer :: & ! JKS trying this
+     integer(kind=jpim),pointer :: &
           nPoints,      & ! Number of profiles to simulate
           nLevels,      & ! Number of levels
           nSubCols        ! Number of subcolumns
@@ -171,7 +155,7 @@ contains
 
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE cosp_rttov_swath - JKS
+  ! SUBROUTINE cosp_rttov_swath
   ! ------------------------------------------------------
   ! Determine which gridcells should be swathed.
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -203,7 +187,7 @@ contains
     real(kind=jprb), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
         sat_lon,        & ! Central longitude of the instrument.
         dlon,           & ! distance to satellite longitude in degrees
-        dx                ! distance to satellite longitude in km?
+        dx                ! distance to satellite longitude in km
 
     logical(kind=jplm), dimension(rttovIN % nPoints,rttov_Nlocaltime) :: &
         swath_mask_all    ! Mask of logicals over all local times
@@ -243,12 +227,11 @@ contains
     else
         inst_swath_mask(:)  = .true. ! Compute on all columns in no local times are passed.
     end if
-    if (verbose) print*,'inst_swath_mask:  ',inst_swath_mask
 
   end subroutine cosp_rttov_swath
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ! SUBROUTINE rttov_allocate - JKS
+  ! SUBROUTINE rttov_allocate
   ! ------------------------------------------------------
   ! 3. Allocate RTTOV input and output structures
   ! 4. Build the list of profile/channel indices in inst_chanprof
@@ -320,9 +303,9 @@ contains
     inst_nchanprof = inst_nChannels_rec * inst_nprof
     
     if (verbose) then
-        print*,'inst_nprof:          ',inst_nprof
-        print*,'inst_nChannels_rec:  ',inst_nChannels_rec
-        print*,'inst_nchanprof:      ',inst_nchanprof
+        call errorMessage('inst_nChannels_rec:  ' // CHAR(inst_nChannels_rec))
+        call errorMessage('inst_nchanprof:      ' // CHAR(inst_nchanprof))
+        call errorMessage('inst_nprof:          ' // CHAR(inst_nprof))
     end if
     
     ! Allocate structures for rttov_direct
@@ -360,7 +343,6 @@ contains
         inst_chanprof(nch)%chan = inst_iChannel(jch) ! Example code used channel_list
         end do
     end do
-    if (verbose) print*,'Done with "cosp_rttov_allocate"'
         
   end subroutine cosp_rttov_allocate
 
@@ -448,29 +430,20 @@ contains
     ! Determine the total number of radiances to simulate (nchanprof).
     inst_npred_pc  = SIZE(inst_predictindex)
     inst_nchanprof = inst_npred_pc * inst_nprof  ! Size of chanprof array is total number of predictors over all profiles
-    
-    ! if (verbose) then
-    !     print*,'inst_nprof:          ',inst_nprof
-    !     print*,'inst_nChannels_rec:  ',inst_nChannels_rec
-    !     print*,'inst_nchanprof:      ',inst_nchanprof
-    ! end if
 
     ! Determine the number of reconstructed radiances per profile (nchannels_rec)    
     if (allocated(inst_iChannel_out))             deallocate(inst_iChannel_out) ! Reset because this variable is internal and used by multiple instruments.
     if (inst_opts % rt_ir % pc % addradrec) then
       if (inst_nchannels_rec < 0) then
         ! If the number of channels is negative, don't reconstruct radiances at all
-        if (verbose) print*,'radrec 1.'
         inst_opts % rt_ir % pc % addradrec = .FALSE.
       else if (inst_nchannels_rec == 0) then
         ! If the number of channels is set to 0 then reconstruct all instrument channels
-        if (verbose) print*,'radrec 2.'
         inst_nchannels_rec = inst_coefs % coef % fmv_chn
         allocate(inst_iChannel_out(inst_nchannels_rec))
         inst_iChannel_out    = (/ (j, j = 1, inst_nchannels_rec) /)
       else
         ! Otherwise read the channel list from the file
-        if (verbose) print*,'radrec 3.'
         allocate(inst_iChannel_out(inst_nchannels_rec))
         inst_iChannel_out    = inst_iChannel_in
       endif
@@ -610,7 +583,6 @@ contains
           ! Ensure j is within bounds
           if (j > size(inst_profiles)) then
               call rttov_error('Profile index out of bounds in main loop', lalloc = .false.)
-              if (verbose) print*,"Went too far for inst_profiles in main loop"
               exit
           end if
           ! To imitate CAM6-RRTMG, set a model top index. If inst_extend_atmos==1 then just increment that index by one and retroactively apply it to the top layer.
@@ -625,7 +597,7 @@ contains
               modeltop_index = 2
               inst_profiles(j)%p(1) = 1e-4
               inst_profiles(j)%p(2) = 2.25
-              inst_profiles(j)%p(3:inst_profiles(j)%nlevels) = rttovIN%ph(i, 2:rttovIN%nlevels) * 1e-2 ! JKS confirm correct indices.
+              inst_profiles(j)%p(3:inst_profiles(j)%nlevels) = rttovIN%ph(i, 2:rttovIN%nlevels) * 1e-2
           end if
 
           ! Handle the top and bottom levels separately.
@@ -759,7 +731,7 @@ contains
 
           ! Viewing angles
           inst_profiles(j)%zenangle      = inst_zenang ! pass in from cosp
-          inst_profiles(j)%azangle       = 0. ! hard-coded in rttov9 int JKS-?
+          inst_profiles(j)%azangle       = 0. ! hard-coded
 
           inst_profiles(j)%latitude      = rttovIN%latitude(i)
           inst_profiles(j)%longitude     = rttovIN%longitude(i)
@@ -769,7 +741,7 @@ contains
           if (associated(rttovIN%sza)) then
              inst_profiles(j)%sunzenangle   = rttovIN%sza(i) ! SZA in degrees
           else
-             if (verbose) print*,'No solar zenith angle passed. Setting to zero.'
+             if (verbose) call errorMessage("cosp_rttov_v14: No solar zenith angle passed. Setting to zero.")
              inst_profiles(j)%sunzenangle   = 0.
           end if
           inst_profiles(j)%sunazangle    = 0. ! hard-coded in like rttov9
@@ -804,7 +776,7 @@ contains
           !   2 => ppmv over moist air
           !   1=> kg/kg over moist air (default)
           !   0 (or less) => ppmv over dry air
-          ! JKS added 3 => kg/kg over dry air, which requires conversion.
+          !   3 => kg/kg over dry air, which requires conversion.
           if (inst_gas_units .eq. 3) then
             ! Convert to ppmv over dry air
             inst_profiles(j)%s2m%q     = (inst_profiles(j)%s2m%q / (1.0 - inst_profiles(j)%s2m%q)) * mdry / mH2O * 1.e6
@@ -816,14 +788,6 @@ contains
             inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * mdry / mCO * 1.e6
             inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * mdry / mSO2 * 1.e6
             inst_profiles(j)%gas_units  =  0
-            ! Alternately, convert kg/kg/ over dry air to kg/kg over moist air
-            ! inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * (1.0 - inst_profiles(j)%q(:))
-            ! inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * (1.0 - inst_profiles(j)%q(:))
-            ! inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * (1.0 - inst_profiles(j)%q(:))
-            ! inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * (1.0 - inst_profiles(j)%q(:))
-            ! inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * (1.0 - inst_profiles(j)%q(:))
-            ! inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * (1.0 - inst_profiles(j)%q(:))
-            ! inst_profiles(j)%gas_units  =  1
           else
             inst_profiles(j)%gas_units  =  inst_gas_units
           end if
@@ -860,7 +824,6 @@ contains
             j = j + 1 ! Increment profile counter      
             if (j > size(inst_profiles)) then
                 call rttov_error('Profile index out of bounds in Lrttov_cld loop', lalloc = .false.)
-                if (verbose) print*,"Went too far for inst_profiles in Lrttov_cld loop"
                 exit
             end if
             ! Cloud scheme stuff. Values are on layers, not levels like the gas concentrations.
@@ -889,26 +852,7 @@ contains
         end if
       end do
     end if
-    
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ! Only add the aerosol fields if simulating aerosol.
-    ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    if (Lrttov_aer) then
-    
-      ! Set aerosol mass mixing ratio units
-      inst_profiles%mmr_cldaer =  .true. ! kg/kg for cloud and aerosol (default)       
-      ! Read in aerosol profiles
-!      j = 0 ! Initialize input
-!      do i = 1,rttovIN%nPoints
-!        if (i .gt. rttovIN%nPoints)
-!        if (inst_swath_mask(i)) then ! only added masked columns to profiles
-!            j = j + 1 ! Increment profile counter   
-!            inst_profiles(j)%aerosols(naertyp,nlayers) = rttovIN%aerosols ! Aerosols in different modes (see User Guide pg 80)
-!        end if
-!      end do
-    end if
-        
+
     if (Lrttov_solar) then
 
       ! Populate longitude, latitude, time, and date profile fields
@@ -921,7 +865,6 @@ contains
             ! Ensure j is within bounds
             if (j > size(inst_profiles)) then
                 call rttov_error('Profile index out of bounds in Lrttov_solar loop', lalloc = .false.)
-                if (verbose) print*,"Went too far for inst_profiles in Lrttov_solar loop"
                 exit
             end if
             inst_profiles(j)%date(:) = rttovIN%rttov_date(i,:)
@@ -932,59 +875,8 @@ contains
       ! Call functions to calculate the appropriate solar zenith and azimuthal angles.
       call RTTOV_CALC_SOLAR_ANGLES(errorstatus, inst_profiles)
       call rttov_error('Error when calling RTTOV_CALC_SOLAR_ANGLES', lalloc = .false.)
-    
-!      if (verbose) then
-!        print*,'inst_profiles(:))%sunzenangle:    ',inst_profiles(:)%sunzenangle
-!        print*,'inst_profiles(:))%sunazangle:     ',inst_profiles(:)%sunazangle      
-!        print*,'inst_profiles(:))%zenangle:       ',inst_profiles(:)%zenangle      
-!        print*,'inst_profiles(:))%azangle:        ',inst_profiles(:)%azangle      
-!      end if
+
     end if
-
-    ! if (verbose) then ! JKS remove at some point
-    !     print*,"inst_profiles(1)%gas_units: ",inst_profiles(1)%gas_units
-    !     print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
-    !     print*,"inst_profiles(1)%s2m%t:    ",inst_profiles(1)%s2m%t
-    !     print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
-    !     print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
-    !     print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
-    !     print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
-    !     print*,'inst_profiles(1)%ch4(:):     ',inst_profiles(1)%ch4(:)
-    !     print*,'inst_profiles(1)%o3(:):     ',inst_profiles(1)%o3(:)
-    !     print*,'inst_profiles(1)%n2o(:):    ',inst_profiles(1)%n2o(:)
-    ! end if
-
-    ! if (verbose) then
-        ! print*,'inst_profiles(1)%nlevels:  ',inst_profiles(1)%nlevels
-        ! print*,'inst_profiles(1)%nlayers:  ',inst_profiles(1)%nlayers        
-    !     print*,'shape(rttovIN%t): ', shape(rttovIN%t)
-    !     print*,'shape(rttovIN%p): ', shape(rttovIN%p)
-    !     print*,'shape(rttovIN%ph): ', shape(rttovIN%ph)
-    !     print*,'shape(inst_profiles(1)%p(:)):     ',shape(inst_profiles(1)%p(:))
-    !     print*,'shape(inst_profiles(1)%t(:)):     ',shape(inst_profiles(1)%t(:))
-    !     print*,'shape(inst_profiles(1)%q(:)):     ',shape(inst_profiles(1)%q(:))
-    !     print*,'shape(inst_profiles(1)%cfrac(:)):     ',shape(inst_profiles(1)%cfrac(:))
-    !     print*,'shape(rttovIN%tca(1,:)):  ',shape(rttovIN%tca(1,:))
-        ! print*,'rttovIN%ph(1,:): ', rttovIN%ph(1,:)
-        ! print*,'rttovIN%p(1,:): ', rttovIN%p(1,:)
-        ! print*,'rttovIN%t(1,:): ', rttovIN%t(1,:)
-        ! print*,'rttovIN%q(1,:): ', rttovIN%q(1,:)
-        ! print*,'rttovIN%o3(1,:): ', rttovIN%o3(1,:)
-        ! print*,'inst_profiles(1)%p(:):     ',inst_profiles(1)%p(:)
-        ! print*,'inst_profiles(1)%t(:):     ',inst_profiles(1)%t(:)
-        ! print*,'inst_profiles(1)%q(:):     ',inst_profiles(1)%q(:)
-        ! print*,'inst_profiles(1)%o3(:):     ',inst_profiles(1)%o3(:)
-        ! print*,'inst_profiles(1)%cfrac:    ',inst_profiles(1)%cfrac
-    !     print*,'inst_profiles(1)%co2(:):   ',inst_profiles(1)%co2(:)
-    !     print*,'inst_profiles(1)%skin%t:   ',inst_profiles(1)%skin%t
-    !     print*,'inst_profiles(1)%s2m%t:    ',inst_profiles(1)%s2m%t
-    !     print*,'inst_profiles(1)%s2m%p:    ',inst_profiles(1)%s2m%p
-    ! end if    
-    
-    ! JKS - nothing to check here, this will never trigger.
-    ! call rttov_error('error in aerosol profile initialization' , lalloc = .true.)
-    
-    ! JKS To-do: set up scattering profiles (MW only) (rttov_profile_cloud)
 
   end subroutine cosp_rttov_construct_profiles
 
@@ -1109,25 +1001,22 @@ contains
 
     ! Local variables
     logical :: verbose = .false.
-    
+    character(len=80) :: msg
+
     if (present(debug)) verbose = debug
-    
+
     if (verbose) then
-        print*,'shape(inst_chanprof%prof):      ',shape(inst_chanprof%prof)
-        print*,'shape(inst_chanprof%chan):      ',shape(inst_chanprof%chan)
-        print*,'shape(inst_profiles):           ',shape(inst_profiles)
-        print*,'inst_profiles(1)'
+        write(msg, '("shape(inst_chanprof%prof):", *(1x, i0))') shape(inst_chanprof%prof)
+        call errorMessage(trim(msg))
+        write(msg, '("shape(inst_chanprof%chan):", *(1x, i0))') shape(inst_chanprof%chan)
+        call errorMessage(trim(msg))
+        write(msg, '("shape(inst_profiles):", *(1x, i0))') shape(inst_profiles)
+        call errorMessage(trim(msg))
+        call errorMessage('inst_profiles(1):           ')
         call rttov_print_profile(inst_profiles(1))
-        print*,'inst_profiles(size(inst_profiles))'
-        call rttov_print_profile(inst_profiles(size(inst_profiles)))
     end if
 
-!    print*,'NTHRDS tests'
-!    print*,'inst_profiles(:)%s2m%p:    ',inst_profiles(:)%s2m%p
-!    print*,'inst_profiles(1)%p_surf:         ',inst_profiles(1)%p    
-    
     if (inst_nthreads <= 1) then
-      if (verbose) print*,'Calling rttov_direct'
       call rttov_direct(                &
               errorstatus,              &! out   error flag
               inst_chanprof,            &! in    channel and profile index structure
@@ -1141,7 +1030,6 @@ contains
               calcrefl    = inst_calcrefl,   &! in    flag for internal BRDF calcs
               reflectance = inst_reflectance) ! inout input/output BRDFs per channel
     else
-      if (verbose) print*,'Calling rttov_parallel_direct'
       call rttov_parallel_direct(       &
               errorstatus,              &! out   error flag
               inst_chanprof,            &! in    channel and profile index structure
@@ -1213,7 +1101,6 @@ contains
     if (present(debug)) verbose = debug
     
     if (inst_nthreads <= 1) then
-      if (verbose) print*,'Calling rttov_direct (PC-RTTOV)'
       call rttov_direct(                 &
               errorstatus,               &! out   error flag
               inst_chanprof,             &! in    channel and profile index structure
@@ -1227,7 +1114,6 @@ contains
               pccomp       = inst_pccomp,&! inout computed PC scores
               channels_rec = inst_channels_rec) ! in    reconstructed channel list
     else
-      if (verbose) print*,'Calling rttov_parallel_direct (PC-RTTOV)'
       call rttov_parallel_direct(         &
               errorstatus,                &! out   error flag
               inst_chanprof,              &! in    channel and profile index structure
@@ -1382,17 +1268,20 @@ contains
     ! Local iterators. i is the gridcell index. j is the swath cells index.
     integer :: i, j
     logical :: verbose = .false.
-    
+    character(len=80) :: msg
+
     if (present(debug)) verbose = debug
-    
+
     if (verbose) then
-        print*,'shape(bt_total):   ',shape(bt_clear)
-        print*,'shape(rad_total):  ',shape(rad_clear)
-        print*,'nPoints:   ',nPoints
-        print*,'inst_nchannels_rec: ',inst_nchannels_rec
-        print*,'size(inst_pccomp%bt_pccomp):   ',size(inst_pccomp%bt_pccomp)
-        print*,'size(inst_pccomp%total_pccomp):   ',size(inst_pccomp%total_pccomp)
-        print*,'inst_nchannels_rec * nPoints:   ',inst_nchannels_rec * nPoints
+        write(msg, '("shape(bt_clear):", *(1x, i0))') shape(bt_clear)
+        call errorMessage(trim(msg))
+        write(msg, '("shape(rad_clear):", *(1x, i0))') shape(rad_clear)
+        call errorMessage(trim(msg))
+        call errorMessage('nPoints:           ' // CHAR(nPoints))
+        call errorMessage('inst_nchannels_rec: ' // CHAR(inst_nchannels_rec))
+        call errorMessage('size(inst_pccomp%bt_pccomp): ' // CHAR(size(inst_pccomp%bt_pccomp)))
+        call errorMessage('size(inst_pccomp%total_pccomp):   ' // CHAR(size(inst_pccomp%total_pccomp)))
+        call errorMessage('inst_nchannels_rec * nPoints:   ' // CHAR(inst_nchannels_rec * nPoints))
     end if
 
     ! Documentation for RTTOV radiance structure in RTTOV User Guide pg 166
@@ -1587,8 +1476,8 @@ contains
     ! Normal procedure where ptarget falls within [p1,p2]
     if ((ptarget .gt. p1) .and. (ptarget .lt. p2)) then 
         ztarget = z1 + (z2-z1) * log(ptarget / p1) / log(p2 / p1)
-    elseif (ptarget .lt. p1) then ! Top of model level. ptarget may be zero...
-        ztarget = z1 ! Just set it to the layer value?? Not sure how to handle this if ptarget=0. I think that this is fine. We're basically out of range.
+    elseif (ptarget .lt. p1) then ! May fail is ptarget=0
+        ztarget = z1 
     elseif (ptarget .gt. p2) then ! surface level
         ztarget = z2 + (z2-z1) * log(ptarget / p2) / log(p2 / p1)
     end if
