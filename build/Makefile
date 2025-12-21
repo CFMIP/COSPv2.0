@@ -128,8 +128,8 @@ cosp_cloudsat_interface.o   : cosp_kinds.o cosp_config.o quickbeam.o cosp_stats.
 quickbeam.o                 : cosp_kinds.o cosp_stats.o
 
 # RTTOV Simulator code dependencies (only one interface and one RTTOV simulator are used at a time)
-cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_rttov_v13.o cosp_rttov_util.o
-cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_constants.o
+cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_errorHandling.o cosp_rttov_v13.o cosp_rttov_util.o
+cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_errorHandling.o cosp_constants.o
 cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
 cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 # RTTOV utility code dependencies

@@ -334,10 +334,6 @@ program cosp2_test
   open(10,file=cosp_output_namelist,status='unknown')
   read(10,nml=cosp_output)
   close(10)
- 
-  ! Jonah namelist checking area
-  print*,'rttov_verbose:   ',rttov_verbose
-  print*,'rttov_Ninstruments:    ',rttov_Ninstruments
 
   ! Shift the namelists read in into a shorter array for cosp_init:    
   allocate(rttov_instrument_namelists_final(rttov_Ninstruments)) 

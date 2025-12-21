@@ -35,6 +35,7 @@ MODULE MOD_COSP_RTTOV_INTERFACE
   USE COSP_KINDS,          ONLY: wp
   use MOD_COSP_RTTOV,      ONLY: rttov_in                              
   USE MOD_COSP_RTTOV_UTIL, ONLY: rttov_cfg,             rttov_output
+  use MOD_COSP_ERROR,      ONLY: errorMessage
 
   ! rttov_const contains useful RTTOV constants
   USE rttov_const, ONLY :     &
@@ -178,7 +179,7 @@ CONTAINS
         ipcreg,        &
         npcscores
         
-    ! JKS for orbital swathing
+    ! For orbital swathing
     integer(kind=jpim)     ::  &   
         rttov_Nlocaltime,          & ! Number of orbits
         rttov_gas_units,           & ! RTTOV units for trace gases: 0 ppmv over dry air, 1 kg/kg over moist air, 2 ppmv over moist air, 3 kg/kg over dry air
@@ -190,13 +191,15 @@ CONTAINS
         rttov_localtime,           & ! RTTOV subsetting by local time in hours [0,24]
         rttov_localtime_width        ! Width of satellite swath (km).
                 
-    ! JKS for checking errors in filenames.
+    ! For checking errors in filenames.
     character(len=256) :: imsg  !<-- some suitable length, say XX=256      
     integer            :: erro
     integer(kind=jplm) :: errorstatus              ! Return error status of RTTOV subroutine calls
     integer(kind=jpim) :: alloc_status(60)
                
     logical :: verbose = .false.
+    character(len=32) :: flag
+    character(len=80) :: msg
     if (present(debug)) verbose = debug
                
     ! Init. variables to false.
@@ -255,10 +258,10 @@ CONTAINS
     if (present(unitn)) then
         open(unitn,file=namelist_filepath,status='unknown',iostat=erro,iomsg=imsg)
         if (erro > 0) then
-            print*,'Error reading in "namelist_filepath" in COSP_RTTOV_INIT_S'
-            print*,'erro:                ', erro
-            print*,'imsg:                ', imsg
-            print*,'namelist_filepath:   ',namelist_filepath
+            call errorMessage('Error reading in "namelist_filepath" in COSP_RTTOV_INIT_S')
+            call errorMessage('erro:              ' // CHAR(erro))
+            call errorMessage('imsg:              ' // imsg)
+            call errorMessage('namelist_filepath: ' // namelist_filepath)
             errorstatus = 1
             call rttov_exit(errorstatus)                
         end if
@@ -267,10 +270,10 @@ CONTAINS
     else
         open(10,file=namelist_filepath,status='unknown',iostat=erro,iomsg=imsg)
         if (erro > 0) then
-            print*,'Error reading in "namelist_filepath" in COSP_RTTOV_INIT_S'
-            print*,'erro:                ', erro
-            print*,'imsg:                ', imsg
-            print*,'namelist_filepath:   ',namelist_filepath
+            call errorMessage('Error reading in "namelist_filepath" in COSP_RTTOV_INIT_S')
+            call errorMessage('erro:              ' // CHAR(erro))
+            call errorMessage('imsg:              ' // imsg)
+            call errorMessage('namelist_filepath: ' // namelist_filepath)
             errorstatus = 1
             call rttov_exit(errorstatus)                
         end if      
@@ -332,7 +335,7 @@ CONTAINS
     ! General configuration options
     rttov_config % opts % config % do_checkinput    = .true.
     rttov_config % opts % config % apply_reg_limits = .false. ! True in v11
-    rttov_config % opts % config % verbose          = .false.  ! JKS suppress for now
+    rttov_config % opts % config % verbose          = .false.
     rttov_config % opts % config % opdep13_gas_clip = .true.
 
     ! Declare RTTOV namelist fields
@@ -356,7 +359,6 @@ CONTAINS
     rttov_config % opts % rt_all % transmittances_only = .false.
     
     ! MW-only radiative transfer options:
-    ! JKS make this optional?
     rttov_config % opts % rt_mw % clw_data             = .false.
     rttov_config % opts % rt_mw % clw_scheme           = 2       ! Default = 2/Rosenkranz
     rttov_config % opts % rt_mw % clw_cloud_top        = 322     ! Default is 322 hPa
@@ -374,7 +376,7 @@ CONTAINS
     rttov_config % opts % rt_ir % solar_sea_brdf_model    = 2
     rttov_config % opts % rt_ir % ir_sea_emis_model       = 2
 
-    ! User options - JKS
+    ! User options
     ! Duplicate for STUB functionality
     rttov_config % Lrttov_aer                             = Lrttov_aer
     rttov_config % Lrttov_cld                             = Lrttov_cld
@@ -482,7 +484,7 @@ CONTAINS
         ! Ensure input number of channels is not higher than number stored in coefficient file
         if (nchannels_rec > rttov_config % coefs % coef % fmv_chn) then
             nchannels_rec = rttov_config % coefs % coef % fmv_chn
-            if (verbose) print*,'nchannels_rec cap hit'
+            if (verbose) call errorMessage('nchannels_rec cap hit')
         end if            
     end if   
                           
@@ -501,7 +503,7 @@ CONTAINS
 
     ! Handle different radiance reconstruction options
     if (nchannels_rec < 0) then
-        print*,'The namelist variable "nchannels_rec" is negative, rttov_direct call will fail. Exiting.'
+        call errorMessage('The namelist variable "nchannels_rec" is negative, rttov_direct call will fail. Exiting.')
         errorstatus = errorstatus_fatal
         call rttov_exit(errorstatus)
         ! If the number of channels is negative, don't reconstruct radiances at all
@@ -548,27 +550,39 @@ CONTAINS
     endif
     
     if (verbose) then
-        print*,'rttov_config % nchan_out:         ',rttov_config % nchan_out
-        print*,'rttov_config % Lrttov_bt:         ',rttov_config % Lrttov_bt
-        print*,'rttov_config % Lrttov_rad:        ',rttov_config % Lrttov_rad
-        print*,'rttov_config % Lrttov_refl:       ',rttov_config % Lrttov_refl
-        print*,'rttov_config % Lrttov_cld:        ',rttov_config % Lrttov_cld
-        print*,'rttov_config % Lrttov_aer:        ',rttov_config % Lrttov_aer
-        print*,'rttov_config % Lrttov_pc:         ',rttov_config % Lrttov_pc
-        print*,'rttov_config % Lrttov_solar:      ',rttov_config % Lrttov_solar
-        print*,'rttov_config % opts % rt_ir % grid_box_avg_cloud:   ',rttov_config % opts % rt_ir % grid_box_avg_cloud
-        print*,'rttov_config % opts % rt_ir % do_nlte_correction:     ',rttov_config % opts % rt_ir % do_nlte_correction
-        print*,'rttov_config % rttov_Nlocaltime:        ',rttov_config % rttov_Nlocaltime
-        print*,'rttov_config % rttov_localtime:         ',rttov_config % rttov_localtime
-        print*,'rttov_config % rttov_localtime_width:   ',rttov_config % rttov_localtime_width
-        print*,'rttov_config % rttov_extendatmos:       ',rttov_config % rttov_extendatmos
-        print*,'rttov_config % gas_units:               ',rttov_config % gas_units
-        print*,'rttov_config % clw_scheme:              ',rttov_config % clw_scheme
-        print*,'rttov_config % ice_scheme:              ',rttov_config % ice_scheme
-        print*,'rttov_config % icede_param:             ',rttov_config % icede_param
-        call rttov_print_opts(rttov_config % opts) ! JKS testing
-    end if     
-        
+        call errorMessage('RTTOV configuration:')
+        call errorMessage('rttov_config % nchan_out:         ' // trim(adjustl(CHAR(rttov_config % nchan_out))))
+        write(flag, '(L1)') rttov_config%Lrttov_bt
+        call errorMessage('rttov_config % Lrttov_bt:         ' // trim(flag))
+        write(flag, '(L1)') rttov_config%Lrttov_rad
+        call errorMessage('rttov_config % Lrttov_rad:        ' // trim(flag))
+        write(flag, '(L1)') rttov_config%Lrttov_refl
+        call errorMessage('rttov_config % Lrttov_refl:       ' // trim(flag))
+        write(flag, '(L1)') rttov_config%Lrttov_cld
+        call errorMessage('rttov_config % Lrttov_cld:        ' // trim(flag))
+        write(flag, '(L1)') rttov_config%Lrttov_aer
+        call errorMessage('rttov_config % Lrttov_aer:        ' // trim(flag))
+        write(flag, '(L1)') rttov_config%Lrttov_pc
+        call errorMessage('rttov_config % Lrttov_pc:         ' // trim(flag))
+        write(flag, '(L1)') rttov_config%Lrttov_solar
+        call errorMessage('rttov_config % Lrttov_solar:      ' // trim(flag))
+        write(flag, '(L1)') rttov_config % opts % rt_ir % grid_box_avg_cloud
+        call errorMessage('rttov_config % opts % rt_ir % grid_box_avg_cloud:   ' // trim(flag))
+        write(flag, '(L1)') rttov_config % opts % rt_ir % do_nlte_correction
+        call errorMessage('rttov_config % opts % rt_ir % do_nlte_correction:     ' // trim(flag))
+        call errorMessage('rttov_config % rttov_Nlocaltime:        ' // trim(adjustl(CHAR(rttov_config % rttov_Nlocaltime))))
+        write(msg, '("shape(inst_chanprof%prof):", *(1x, i0))') rttov_config % rttov_localtime
+        call errorMessage('rttov_config % rttov_localtime:         ' // trim(msg))
+        write(msg, '("shape(inst_chanprof%prof):", *(1x, i0))') rttov_config % rttov_localtime_width
+        call errorMessage('rttov_config % rttov_localtime_width:   ' // trim(msg))
+        call errorMessage('rttov_config % rttov_extendatmos:       ' // trim(CHAR(rttov_config % rttov_extendatmos)))
+        call errorMessage('rttov_config % gas_units:               ' // trim(CHAR(rttov_config % gas_units)))
+        call errorMessage('rttov_config % clw_scheme:              ' // trim(CHAR(rttov_config % clw_scheme)))
+        call errorMessage('rttov_config % ice_scheme:              ' // trim(CHAR(rttov_config % ice_scheme)))
+        call errorMessage('rttov_config % icede_param:             ' // trim(CHAR(rttov_config % icede_param)))
+        call rttov_print_opts(rttov_config % opts)
+    end if
+
     ! subsub routines
     contains
       ! Wrapper function for exiting RTTOV and reporting the error
@@ -667,7 +681,7 @@ CONTAINS
                                         error,verbose)
         endif
     else
-        if (verbose) print*,'empty chunk'
+        if (verbose) call errorMessage('empty chunk')
     endif
 
   END SUBROUTINE COSP_RTTOV_SIMULATE
