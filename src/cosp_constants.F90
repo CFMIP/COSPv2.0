@@ -27,8 +27,8 @@
 ! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !
 ! History:
-! May 2015- D. Swales - Original version
-!
+! May  2015 - D. Swales - Original version
+! June 2025 - J.K. Shaw - Added earth radius for COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE cosp_math_constants
   USE cosp_kinds, only: wp
@@ -54,7 +54,8 @@ MODULE cosp_phys_constants
        amCO2 = 44.0096_wp,      & ! CO2     [g/mol]
        amCH4 = 16.0426_wp,      & ! Methane [g/mol]
        amN2O = 44.0129_wp,      & ! N2O     [g/mol]
-       amCO  = 28.0102_wp         ! CO      [g/mol]
+       amCO  = 28.0102_wp,      & ! CO      [g/mol]
+       amSO2 = 64.0640_wp         ! SO2     [g/mol]
 
   ! WMO/SI value
   REAL(wp), PARAMETER :: &
@@ -68,5 +69,9 @@ MODULE cosp_phys_constants
        rv  = 461.51_wp,         & ! Gas constant for water vapor [J/K/Kg]
        cpv = 1869.46_wp,        & ! Specific heat at constant pressure for water vapor [J/K/Kg]
        km  = 1.38e-23_wp          ! Boltzmann constant [J/K]
+
+  ! RTTOV constants
+  REAL(wp), PARAMETER :: &
+       radius_earth = 6371.0            ! Earth's radius in km (mean volumetric)
 
 END MODULE cosp_phys_constants
