@@ -17,22 +17,27 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE write_cosp2_output
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, lev, lon, lat, cospOUT, outFileName)
-    integer,intent(in) :: Npoints, Ncolumns, Nlevels
+  subroutine write_cosp2_output(Npoints, Ncolumns, Nlevels, Ninst_rttov, lev, lon, lat, cospOUT, outFileName)
+    integer,intent(in) :: Npoints, Ncolumns, Nlevels, Ninst_rttov
     real(wp),dimension(Npoints),intent(in) :: lon,lat
     real(wp),dimension(Nlevels),intent(in) :: lev
     type(cosp_outputs),intent(in) :: cospOUT
     character(len=256),intent(in) :: outFileName
 
-    integer :: fileID,status,ij
-    integer,dimension(20)  :: dimID
-    integer,dimension(150) :: varID
+    integer :: fileID,status,ij,i,ii
+    integer,dimension(50) :: dimID
+    integer,dimension(250) :: varID
     integer,dimension(Npoints) :: loc
     integer,dimension(Ncolumns) :: cosp_scol
     integer,dimension(2) :: bnds
+    character(len=8) :: &
+        fmt,   & ! format descriptor for flexible RTTOV output
+        i_str
+        
     loc=(/(ij,ij=1,Npoints)/)
     cosp_scol=(/(ij,ij=1,Ncolumns)/)
     bnds=(/(ij,ij=1,2)/)
+    fmt = '(I3.3)' ! an integer of width 3 with zeros at the left
 
     ! ---------------------------------------------------------------------------------------
     ! Create output file.
@@ -79,9 +84,18 @@ contains
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     status = nf90_def_dim(fileID,"CFODD_NICOD",CFODD_NICOD,dimID(18))
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
+    
+    ! Define instrument channel indices for multiple RTTOV instruments
+    if (allocated(cospOUT%rttov_outputs)) then
+        do i=1,Ninst_rttov
+            write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
+            status = nf90_def_dim(fileID,"RTTOV_CHAN_INST"//trim(i_str),cospOUT % rttov_outputs(i) % nchan_out,dimID(20+i)) ! Start at 100 for RTTOV output channel dimensions
+            if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+        end do
+    end if
+    
     ! ---------------------------------------------------------------------------------------
-    ! Define varaibles
+    ! Define variables
     ! ---------------------------------------------------------------------------------------
     ! Longitude
     status = nf90_def_var(fileID,"longitude",  nf90_float, (/dimID(1)/),varID(1))
@@ -1427,6 +1441,129 @@ contains
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif 
     
+    
+    ! ---------------------------------------------------------------------------------------
+    ! RTTOV - JKS
+    ! ---------------------------------------------------------------------------------------
+        
+    ! Define instrument channel indices for multiple RTTOV instruments
+    ii = 165 ! RTTOV variable indices start at 165
+    if (allocated(cospOUT%rttov_outputs)) then
+        do i=1,Ninst_rttov
+            write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
+            if (associated(cospOUT%rttov_outputs(i)%channel_indices)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"RTTOV_CHAN_INST"//trim(i_str),nf90_float, (/dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Channel Indices")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "1")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_ichan")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif           
+            if (associated(cospOUT%rttov_outputs(i)%bt_total)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_bt_total_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV All-sky Brightness Temperature")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_bt")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%bt_clear)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_bt_clear_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Clear-sky Brightness Temperature")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_bt")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%rad_total)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_rad_total_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV All-sky Radiance")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_rad")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif    
+            if (associated(cospOUT%rttov_outputs(i)%rad_clear)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_rad_clear_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Clear-sky Radiance")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_rad")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif    
+            if (associated(cospOUT%rttov_outputs(i)%rad_cloudy)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_rad_cloudy_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Cloudy-sky Radiance")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_cloudysky_rad")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif    
+            if (associated(cospOUT%rttov_outputs(i)%refl_total)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_refl_total_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV All-sky Reflectance")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "unitless")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%refl_clear)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_refl_clear_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Clear-sky Reflectance")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "unitless")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_refl")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif    
+            if (associated(cospOUT%rttov_outputs(i)%bt_total_pc)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_bt_clear_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","PC-RTTOV Clear-sky Brightness Temperature")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "pcrttov_clearsky_bt")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif    
+            if (associated(cospOUT%rttov_outputs(i)%rad_total_pc)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_rad_clear_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","PC-RTTOV Clear-sky Radiance")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "pcrttov_clearsky_rad")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+        end do
+    end if
+    
     ! ---------------------------------------------------------------------------------------
     ! Exit define mode
     ! ---------------------------------------------------------------------------------------
@@ -1907,7 +2044,64 @@ contains
        status = nf90_put_var(fileID,varID(147),CFODD_HISTICODcenters)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-
+    
+    ! Define instrument channel indices for multiple RTTOV instruments
+    ii = 165 ! RTTOV variable indices start at 166
+    if (allocated(cospOUT%rttov_outputs)) then
+        do i=1,Ninst_rttov
+            write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
+            if (associated(cospOUT%rttov_outputs(i)%channel_indices)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%channel_indices)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif            
+            if (associated(cospOUT%rttov_outputs(i)%bt_total)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%bt_total)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%bt_clear)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%bt_clear)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%rad_total)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_total)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%rad_clear)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_clear)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif    
+            if (associated(cospOUT%rttov_outputs(i)%rad_cloudy)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_cloudy)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%refl_total)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%refl_total)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%refl_clear)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%refl_clear)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%bt_total_pc)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%bt_total_pc)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%rad_total_pc)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_total_pc)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif            
+        end do  
+    end if
     
     ! Close file
     status = nf90_close(fileID)
@@ -1956,8 +2150,9 @@ contains
   SUBROUTINE NC_READ_INPUT_FILE(fname,Npnts,Nl,Nhydro,lon,lat,p,ph,z,zh,T,qv,rh,tca,cca, &
                                 mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow, &
                                 fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,dem_s,  &
-                                dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                                emsfc_lw,mode,Nlon,Nlat,surfelev)
+                                dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,   &
+                                emsfc_lw,mode,Nlon,Nlat,surfelev,year,month,day,         &
+                                hour,minute,seconds)
      
     ! Arguments
     character(len=512),intent(in) :: fname ! File name
@@ -1967,7 +2162,8 @@ contains
          mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain,fl_lssnow,fl_lsgrpl, &
          fl_ccrain,fl_ccsnow,dtau_s,dtau_c,dem_s,dem_c,mr_ozone
     real(wp),dimension(Npnts,Nl,Nhydro),intent(out) :: Reff
-    real(wp),dimension(Npnts),intent(out) :: skt,landmask,u_wind,v_wind,sunlit,surfelev
+    real(wp),dimension(Npnts),intent(out) :: skt,psfc,landmask,u_wind,v_wind,sunlit,surfelev, &
+                                             year,month,day,hour,minute,seconds
     real(wp),intent(out) :: emsfc_lw
     integer,intent(out) :: mode,Nlon,Nlat
     
@@ -2278,6 +2474,12 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=skt)
           endif
+       case ('psfc')
+          if (Lpoint) then
+             psfc(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=psfc)
+          endif          
        case ('orography') 
           if (Lpoint) then
              surfelev(1:Npoints) = x1(1:Npoints) 
@@ -2314,6 +2516,42 @@ contains
           else
              call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=sunlit)
           endif
+       case ('year')
+          if (Lpoint) then
+             year(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=year)
+          endif
+       case ('month')
+          if (Lpoint) then
+             month(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=month)
+          endif
+       case ('day')
+          if (Lpoint) then
+             day(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=day)
+          endif          
+       case ('hour')
+          if (Lpoint) then
+             hour(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=hour)
+          endif
+       case ('minute')
+          if (Lpoint) then
+             minute(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=minute)
+          endif  
+       case ('second')
+          if (Lpoint) then
+             seconds(1:Npoints) = x1(1:Npoints)
+          else
+             call map_ll_to_point(Na,Nb,Npoints,x2=x2,y1=seconds)
+          endif            
        end select
        ! Free memory
        if (vrank == 1) deallocate(x1)

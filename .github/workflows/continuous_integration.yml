@@ -102,6 +102,7 @@ jobs:
         cd driver/run
         ./cosp2_test cosp2_input_nl.txt
         ./cosp2_test cosp2_input_nl.um_global.txt
+        ./cosp2_test cosp2_swath_input_nl.um_global.txt
     # 2. UM global snapshot. Diagnostics on model levels.
     - name: UM global snapshot. Diagnostics on model levels.
       run: |
@@ -134,6 +135,14 @@ jobs:
         KGO=data/outputs/UKMO/cosp2_output.um_global_model_levels.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
         TST=data/outputs/UKMO/cosp2_output.um_global_model_levels.nc
         python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
+    # 4. UM global snapshot with swathing. 
+    - name: UM global with swathing against known good output (KGO)
+      if: always()
+      run: |
+        cd driver
+        KGO=data/outputs/UKMO/cosp2_swath_output.um_global.${F90_SHORT_NAME}.kgo.$KGO_VERSION.nc
+        TST=data/outputs/UKMO/cosp2_swath_output.um_global.nc
+        python compare_to_kgo.py ${KGO} ${TST} --atol=${ATOL} --rtol=${RTOL}
     ###############################################################################
     # Produce plots when it fails during global snapshot tests,
     # and create a tarball with outputs.
@@ -151,7 +160,7 @@ jobs:
         fi
         cd data/outputs/UKMO
         tar --ignore-failed-read -czf outputs.${{ matrix.compiler }}.UKMO.tgz cosp2_output.um_global.nc \
-          cosp2_output_um.nc cosp2_output.um_global_model_levels.nc *.png \
+          cosp2_output_um.nc cosp2_swath_output.um_global.nc cosp2_output.um_global_model_levels.nc *.png \
           cosp2_output.um_global.out
         ls -lh
     ###############################################################################
