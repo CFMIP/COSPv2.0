@@ -37,6 +37,7 @@
 !                             - Added phase 3D/3Dtemperature/Map output variables in diag_lidar 
 ! May 2015 - D. Swales        - Modified for cosp2.0 
 ! Nov 2018 - T. Michibata     - Added CloudSat+MODIS Warmrain Diagnostics
+! Jun 2025 - J.K. Shaw.       - Added COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_STATS
   USE COSP_KINDS, ONLY: wp
@@ -52,12 +53,176 @@ MODULE MOD_COSP_STATS
             CFODD_ICOD_MIN,   CFODD_ICOD_MAX,   &
             CFODD_DBZE_WIDTH, CFODD_ICOD_WIDTH, &
             CFODD_HISTDBZE,   CFODD_HISTICOD,   &
-            WR_NREGIME
-  USE COSP_PHYS_CONSTANTS,  ONLY: tmelt
-
+            WR_NREGIME,       VGRID_ZU,         &
+            VGRID_ZL,         VGRID_Z,          &
+            DZ
+  USE COSP_PHYS_CONSTANTS,  ONLY: tmelt, radius_earth
+  USE COSP_MATH_CONSTANTS, ONLY: pi
+  USE MOD_COSP_RTTOV_UTIL, ONLY: rttov_cfg
   IMPLICIT NONE
-CONTAINS
 
+  ! ######################################################################################
+  ! Quickbeam parameters
+  integer,parameter :: &
+       maxhclass     = 20,  & ! Qucikbeam maximum number of hydrometeor classes.
+       nRe_types     = 550, & ! Quickbeam maximum number or Re size bins allowed in N and Z_scaled look up table.
+       nd            = 85,  & ! Qucikbeam number of discrete particles used in construction DSDs.
+       mt_ntt        = 39,  & ! Quickbeam number of temperatures in mie LUT.
+       Re_BIN_LENGTH = 10,  & ! Quickbeam minimum Re interval in scale LUTs  
+       Re_MAX_BIN    = 250    ! Quickbeam maximum Re interval in scale LUTs
+  real(wp),parameter :: &
+       dmin          = 0.1, & ! Quickbeam minimum size of discrete particle
+       dmax          = 10000. ! Quickbeam maximum size of discrete particle
+
+  ! ######################################################################################
+  ! TYPE cosp_column_inputs
+  ! ######################################################################################
+  type cosp_column_inputs
+     integer :: &
+          Npoints,             & ! Number of gridpoints.
+          Ncolumns,            & ! Number of columns.
+          Nlevels                ! Number of levels.
+
+     integer,allocatable,dimension(:) :: &
+          sunlit                 ! Sunlit flag                            (0-1)
+
+     real(wp),allocatable,dimension(:,:) :: &
+          at,                  & ! Temperature                            (K)
+          pfull,               & ! Pressure                               (Pa)
+          phalf,               & ! Pressure at half-levels                (Pa)
+          qv,                  & ! Specific humidity                      (kg/kg)
+          co2,                 & ! CO2                                    (kg/kg)
+          ch4,                 & ! Methane                                (kg/kg)
+          n2o,                 & ! N2O                                    (kg/kg)
+          co,                  & ! CO                                     (kg/kg)
+          so2,                 & ! SO2                                    (kg/kg)
+          hgt_matrix,          & ! Height of atmosphere layer             (km)
+          hgt_matrix_half        ! Height of bottom interface of atm layer(km)
+                                 ! First level contains the bottom of the top layer.
+                                 ! Last level contains the bottom of the surface layer.
+
+     real(wp),allocatable,dimension(:) :: &
+          land,                & ! Land/Sea mask                          (0 for ocean, 1 for land)
+          skt,                 & ! Surface temperature                    (K)
+          surfelev               ! Surface Elevation                      (m)
+     ! Fields used ONLY by RTTOV
+     real(wp),allocatable,dimension(:) :: &
+          u_sfc,               & ! Surface u-wind                         (m/s)
+          v_sfc,               & ! Surface v-wind                         (m/s)
+          t2m,                 & ! 2-meter temperature                    (K)
+          q2m,                 & ! 2-meter specific humidity              (kg/kg)
+          lat,                 & ! Latitude                               (deg)
+          lon,                 & ! Longitude                              (deg)
+          sza,                 & ! Solar Zenith Angle in degrees
+          psfc,                & ! Surface pressure                       (Pa)
+          rttov_sfcmask          ! Mask for RTTOV surface types (0 for ocean, 1 for land, 2 for sea ice)
+
+      real(wp),allocatable,dimension(:,:) :: &
+          o3,                  & ! Ozone                                  (kg/kg)
+          tca,                 & ! Total layer cloud fraction             (0-1)
+          cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
+          cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
+          DeffLiq,             & ! Cloud liquid effective diameter        (um)
+          DeffIce,             & ! Cloud ice effective diameter           (um)
+          rttov_date,          & ! Date of the profile as year (e.g. 2013), month (1-12), and day (1-31)
+          rttov_time,          & ! Time of profile as hour, minute, second.
+          emis_in,             & ! Surface emissivity (point,channel)     (1)
+          refl_in,             & ! Surface reflectance (point,channel)    (1)          
+          fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
+          fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
+  end type cosp_column_inputs
+
+
+  ! ######################################################################################
+  ! TYPE swath_inputs
+  ! ######################################################################################  
+  type swath_inputs
+
+     integer ::                            &
+          N_inst_swaths = 0
+     real(wp),dimension(20) ::      &
+          inst_localtimes,                 &
+          inst_localtime_widths
+
+  end type swath_inputs
+
+  type radar_cfg
+     ! Radar properties
+     real(wp) :: freq,k2
+     integer  :: nhclass               ! Number of hydrometeor classes in use
+     integer  :: use_gas_abs, do_ray
+     logical  :: radar_at_layer_one    ! If true radar is assume to be at the edge 
+                                       ! of the first layer, if the first layer is the
+                                       ! surface than a ground-based radar.   If the
+                                       ! first layer is the top-of-atmosphere, then
+                                       ! a space borne radar.
+     
+     ! Variables used to store Z scale factors
+     character(len=240)                             :: scale_LUT_file_name
+     logical                                        :: load_scale_LUTs, update_scale_LUTs
+     logical, dimension(maxhclass,nRe_types)        :: N_scale_flag
+     logical, dimension(maxhclass,mt_ntt,nRe_types) :: Z_scale_flag,Z_scale_added_flag
+     real(wp),dimension(maxhclass,mt_ntt,nRe_types) :: Ze_scaled,Zr_scaled,kr_scaled
+     real(wp),dimension(maxhclass,nd,nRe_types)     :: fc, rho_eff
+     real(wp),dimension(Re_MAX_BIN)                 :: base_list,step_list
+
+  end type radar_cfg
+
+  ! ######################################################################################
+  ! TYPE cosp_optical_inputs
+  ! ######################################################################################
+  type cosp_optical_inputs
+     integer :: &
+          Npoints,             & ! Number of gridpoints.
+          Ncolumns,            & ! Number of columns.
+          Nlevels,             & ! Number of levels.
+          Npart,               & ! Number of cloud meteors for LIDAR simulators.
+          Nrefl,               & ! Number of reflectances for PARASOL simulator
+          Ninst_rttov            ! Number of RTTOV instruments
+     real(wp),pointer :: &
+          emis_grey => null()    ! Greybody (spectrally flat) emissivity value for RTTOV          
+     real(wp) :: &
+          emsfc_lw               ! Surface emissivity @ 11micron
+     real(wp),allocatable,dimension(:,:,:) :: &
+          frac_out,            & ! Cloud fraction
+          tau_067,             & ! Optical depth @ 0.67micron
+          emiss_11,            & ! Emissivity @ 11 micron
+          fracLiq,             & ! Fraction of optical-depth due to liquid (MODIS)
+          asym,                & ! Assymetry parameter @ 3.7micron (MODIS)
+          ss_alb,              & ! Single-scattering albedo @ 3.7micron (MODIS)
+          betatot_calipso,     & ! Lidar backscatter coefficient (calipso @ 532nm)
+          betatot_grLidar532,  & ! Lidar backscatter coefficient (ground-lidar @ 532nm)
+          betatot_atlid,       & ! Lidar backscatter coefficient (atlid @ 355nm)
+          betatot_ice_calipso, & ! Lidar backscatter coefficient ICE (calipso @ 532nm)
+          betatot_liq_calipso, & ! Lidar backscatter coefficient LIQUID (calipso @ 532nm)
+          tautot_calipso,      & ! Lidar Optical thickness (calipso @ 532nm)
+          tautot_grLidar532,   & ! Lidar Optical thickness (ground-lidar @ 532nm)  
+          tautot_atlid,        & ! Lidar Optical thickness (atlid @ 355nm)
+          tautot_ice_calipso,  & ! Lidar Ice Optical thickness (calipso @ 532nm)
+          tautot_liq_calipso,  & ! Lidar Liquid Optical thickness (calipso @ 532nm)
+          z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
+          kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
+          g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
+     real(wp),allocatable,dimension(:,:) :: &
+          beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
+          beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 
+          beta_mol_atlid,      & ! Lidar molecular backscatter coefficient (atlid @ 355nm)
+          tau_mol_calipso,     & ! Lidar molecular optical depth (calipso @ 532nm)
+          tau_mol_grLidar532,  & ! Lidar molecular optical depth (ground-lidar @ 532nm) 
+          tau_mol_atlid,       & ! Lidar molecular optical depth (atlid @ 355nm)
+          tautot_S_liq,        & ! Parasol Liquid water optical thickness, from TOA to SFC
+          tautot_S_ice,        & ! Parasol Ice water optical thickness, from TOA to SFC
+          fracPrecipIce          ! Fraction of precipitation which is frozen (1).
+     type(radar_cfg) :: &
+          rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
+     type(rttov_cfg),dimension(:),pointer :: &
+          cfg_rttov              ! RTTOV configuration information (multiple instruments)
+     type(swath_inputs),dimension(6) :: & ! Could be a pointer but fine
+          cospswathsIN 
+  end type cosp_optical_inputs
+
+
+CONTAINS
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !---------- SUBROUTINE COSP_CHANGE_VERTICAL_GRID ----------------
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -506,4 +671,111 @@ END SUBROUTINE COSP_CHANGE_VERTICAL_GRID
        enddo
     enddo
   end subroutine hist2D
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE cosp_cleanUp
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine cosp_cleanUp()  
+    deallocate(vgrid_zl,vgrid_zu,vgrid_z,dz)
+  end subroutine cosp_cleanUp
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE compute_orbitmasks
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  subroutine compute_orbitmasks(Npoints,Nlocaltimes,localtimes,localtime_widths,      &
+                                lat,lon,month,day,hour,minute,swath_mask_out,Nswathed_out)
+
+    ! Inputs
+    integer,intent(in) :: &
+    Npoints,         &
+    Nlocaltimes
+
+    real(wp),dimension(Nlocaltimes),intent(in) :: &
+    localtimes,        &
+    localtime_widths
+
+    real(wp),dimension(Npoints),intent(in) :: &
+    lat,     &
+    lon,     &
+    month,   &
+    day,     &
+    hour,    &
+    minute
+
+    ! Output
+    logical,dimension(Npoints),intent(out) :: &
+    swath_mask_out    ! Mask of reals over all gridcells
+    integer,intent(out) :: &
+    Nswathed_out
+
+    ! Local variables
+    integer :: i   ! iterator
+
+    real(wp),dimension(Npoints,Nlocaltimes) :: &
+    sat_lon,        & ! Central longitude of the instrument.
+    dlon,           & ! distance to satellite longitude in degrees
+    dx                ! distance to satellite longitude in km?       
+
+    logical,dimension(Npoints,Nlocaltimes) :: &
+    swath_mask_all    ! Mask of logicals over all local times, gridcells  
+
+    integer, dimension(Npoints) :: &
+    rttov_DOY         ! Array of day of year values
+    real(wp), dimension(Npoints) :: &
+    localtime_offsets ! Offset values to avoid striping with hourly RT calls. [hours]
+    ! Compute the day of the year and determine the localtime offset
+    do i=1,Npoints
+      call get_DOY(int(month(i)), int(day(i)), rttov_DOY(i))
+    end do
+    localtime_offsets = (mod(rttov_DOY(:), 5) - 2) / 5.0  ! Need to cast to real
+
+    ! Iterate over local times
+    swath_mask_all(:,:) = .false.
+    do i=1,Nlocaltimes
+      ! Calculate the central longitude for each gridcell and orbit
+      sat_lon(:,i) = 15.0 * (localtimes(i) + localtime_offsets - (hour + minute / 60))
+      ! Calculate distance (in degrees) from each grid cell to the satellite central long
+      dlon(:,i) = mod((lon - sat_lon(:,i) + 180.0), 360.0) - 180.0             
+      ! calculate distance to satellite in km. Remember to convert to radians for cos/sine calls
+      dx(:,i)   = dlon(:,i) * (pi/180.0) * COS(lat * pi / 180) * radius_earth
+      ! Determine if a gridcell falls in the swath width
+      where (abs(dx(:,i))<(localtime_widths(i)*0.5))
+        swath_mask_all(:,i) = .true.
+      end where        
+    end do
+
+    ! Mask is true where values should be calculated
+    swath_mask_out = ANY( swath_mask_all(:,:),2) ! Compute mask by collapsing the localtimes dimension
+    Nswathed_out   = count(swath_mask_out) ! Number of gridcells that should be calculated.
+
+  end subroutine compute_orbitmasks
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE get_DOY
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+  subroutine get_DOY(month, day, DOY)
+
+   integer,intent(in) :: &
+       month,   &
+       day
+   integer,intent(out) :: &
+       DOY
+
+   ! This subroutine does not handle leap years because it is not relevant to the purpose.
+   ! Simple look-up table for DOY.
+   if (month .eq. 1)  DOY = day
+   if (month .eq. 2)  DOY = 31 + day
+   if (month .eq. 3)  DOY = 59 + day
+   if (month .eq. 4)  DOY = 90 + day
+   if (month .eq. 5)  DOY = 120 + day
+   if (month .eq. 6)  DOY = 151 + day
+   if (month .eq. 7)  DOY = 181 + day
+   if (month .eq. 8)  DOY = 212 + day
+   if (month .eq. 9)  DOY = 243 + day
+   if (month .eq. 10) DOY = 273 + day
+   if (month .eq. 11) DOY = 304 + day
+   if (month .eq. 12) DOY = 334 + day
+
+ end subroutine get_DOY
+
 END MODULE MOD_COSP_STATS
