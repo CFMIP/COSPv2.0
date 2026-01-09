@@ -1,0 +1,41 @@
+# Base Docker image from earth-system-radiation includes 
+# OneAPI compiler chain, netCDF, Python
+FROM earthsystemradiation/rte-rrtmgp-ci:oneapi
+
+ENV fileid="1g61nacsXMgXn9KG0xSUODs-qX4mkuqmb" filename="rttov132.tar.xz"
+
+# gpg and xz needed for unpacking the tar file 
+# hdf5 (serial) needed for RTTOV
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get --yes install --no-install-recommends \
+     gpg xz-utils \
+     libhdf5-dev
+
+#
+# Pull an encrypted RTTOV v13.2 tarball from Google Drive; dearmor and unpack; delete original tarball
+#   De-armor RTTOV tarball with passkey (should be hidden with github secrets) ${{ secrets.RTTOV_TARFILE_KEY }}
+#
+RUN curl -L "https://drive.usercontent.google.com/download?id=${fileid}&confirm=xxx" -o ${filename}.gpg && \
+    gpg --quiet --batch --yes --decrypt \
+        --passphrase=${{ secrets.RTTOV_TARFILE_KEY }} --output ${filename} ${filename}.gpg && \
+    rm -f ./RTTOV_src && mkdir ./RTTOV_src && tar -xf ${filename} -C ./RTTOV_src/ && rm ${filename} ${filename}.gpg
+
+#
+# Copy in a new ifx arch file; append to Makefile.inc
+#
+WORKDIR /RTTOV_src/
+RUN --mount=type=bind,source=rttov-Makefile-inc,target=/tmp/Makefile-inc-patch \
+    cat /tmp/Makefile-inc-patch >> build/Makefile.inc && \
+    rm -f build/arch/ifx 
+ADD rttov-ifx-arch-file build/arch/ifx
+
+WORKDIR src/
+ENV myarch="ifx" clean="n" installdir="/RTTOV_build/" lapack=0 f2py=0 gui=0 hdf5=0 netcdf=1
+
+RUN ../build/Makefile.PL RTTOV_HDF=${hdf5} RTTOV_F2PY=${f2py} RTTOV_USER_LAPACK=${lapack} && \
+    make ARCH=$myarch INSTALLDIR=$installdir clean $makeflags && \
+    make ARCH=$myarch INSTALLDIR=$installdir $makeflags
+
+RUN wget -np -l1 \ 
+  https://nwp-saf.eumetsat.int/downloads/rtcoef_rttov13/rttov13pred101L/rtcoef_eos_2_airs_l1c_7gas.H5 \
+  -P../../RTTOV_coefs/
