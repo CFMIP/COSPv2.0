@@ -1,4 +1,5 @@
-ARG TOOLCHAIN
+ARG TOOLCHAIN 
+ARG rttov_arch
 FROM add-netcdf:$TOOLCHAIN
 
 ENV fileid="1g61nacsXMgXn9KG0xSUODs-qX4mkuqmb" filename="rttov132.tar.xz"
