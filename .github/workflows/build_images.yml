@@ -6,7 +6,7 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   docker:
     strategy:
-      fail-fast: false  # Disable fail-fast
+      fail-fast: false
       matrix:
         toolchain:  [oneapi]
     runs-on: ubuntu-latest
