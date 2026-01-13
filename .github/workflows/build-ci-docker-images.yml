@@ -22,6 +22,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           file: containers/Dockerfile-${{ matrix.toolchain }}-minimal
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
           tags: minimal-toolchain:${{ matrix.toolchain }}
 
       - name: Build add-netcdf:${{ matrix.toolchain }}
