@@ -1,6 +1,6 @@
-ARG TOOLCHAIN 
+ARG TOOLCHAIN
 ARG rttov_arch
-FROM add-netcdf:$TOOLCHAIN
+FROM add-python:$TOOLCHAIN
 
 ENV fileid="1g61nacsXMgXn9KG0xSUODs-qX4mkuqmb" filename="rttov132.tar.xz"
 
@@ -30,7 +30,7 @@ RUN --mount=type=bind,source=rttov-Makefile-inc,target=/tmp/Makefile-inc-patch \
 ADD containers/rttov-ifx-arch-file build/arch/ifx
 
 WORKDIR src/
-ENV myarch=$rttov_arch installdir="/RTTOV_build/" lapack=0 f2py=0 gui=0 hdf5=0 netcdf=1
+ENV myarch=${rttov_arch} installdir="/RTTOV_build/" lapack=0 f2py=0 gui=0 hdf5=0 netcdf=1
 
 RUN ../build/Makefile.PL RTTOV_HDF=${hdf5} RTTOV_F2PY=${f2py} RTTOV_USER_LAPACK=${lapack} && \
     make ARCH=$myarch INSTALLDIR=$installdir clean $makeflags && \

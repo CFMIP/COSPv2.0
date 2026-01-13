@@ -36,8 +36,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           file: containers/Dockerfile-add-python
-          env: rttov_arch=${{ matrix.rttov_arch }}
-          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}, rttov_arch=${{ matrix.rttov_arch }}
           tags: add-python:${{ matrix.toolchain }}
 
       - name: Build add-RTTOV:${{ matrix.toolchain }}
