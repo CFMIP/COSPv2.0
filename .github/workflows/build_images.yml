@@ -48,4 +48,4 @@ jobs:
           build-args: TOOLCHAIN=${{ matrix.toolchain }}
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/CFMIP/cospv2.0-ci:${{ matrix.toolchain }}
+            ghcr.io/cfmip/cospv2.0-ci:${{ matrix.toolchain }}
