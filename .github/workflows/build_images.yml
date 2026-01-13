@@ -1,7 +1,7 @@
 name: COSPv2 Base Images Build
 run-name: CI Image Build for COSPv2
 
-on: [push]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   docker:
