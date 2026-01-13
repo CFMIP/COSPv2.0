@@ -21,8 +21,8 @@ RUN curl https://downloads.unidata.ucar.edu/netcdf-fortran/$NFVERSION/netcdf-for
          CFLAGS='-O2' \
          FCFLAGS='-O2 -fPIC' \
          --disable-static || \
-       { cat ./config.log; exit 1; } } \
-  && make -j \
+       { cat ./config.log; exit 1; } } 
+RUN make -j \
   && make install \
   && cd .. \
   && rm -rf netcdf-fortran-$NFVERSION \
