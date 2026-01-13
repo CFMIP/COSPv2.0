@@ -27,7 +27,7 @@ WORKDIR /RTTOV_src/
 RUN --mount=type=bind,source=rttov-Makefile-inc,target=/tmp/Makefile-inc-patch \
     cat /tmp/Makefile-inc-patch >> build/Makefile.inc && \
     rm -f build/arch/ifx 
-ADD rttov-ifx-arch-file build/arch/ifx
+ADD containers/rttov-ifx-arch-file build/arch/ifx
 
 WORKDIR src/
 ENV myarch=$rttov_arch installdir="/RTTOV_build/" lapack=0 f2py=0 gui=0 hdf5=0 netcdf=1
