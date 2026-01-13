@@ -48,4 +48,4 @@ jobs:
           build-args: TOOLCHAIN=${{ matrix.toolchain }}
           push: ${{ github.ref == 'refs/heads/feature/containerized_ci_rttov' }}
           tags: |
-            dustinswales/cosp-ci:${{ matrix.toolchain }}
+            ghcr.io/dustinswales/cosp2-ci:${{ matrix.toolchain }}
