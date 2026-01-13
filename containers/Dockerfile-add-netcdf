@@ -14,7 +14,7 @@ RUN apt-get update \
 
 # Install NetCDF Fortran
 #   The version must be compitible with NetCDF C installed above
-ARG NFVERSION=4.5.4
+ARG NFVERSION=4.6.2
 RUN curl https://downloads.unidata.ucar.edu/netcdf-fortran/$NFVERSION/netcdf-fortran-$NFVERSION.tar.gz | tar xz \
   && cd netcdf-fortran-$NFVERSION \
   && { ./configure \
