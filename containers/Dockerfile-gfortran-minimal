@@ -17,4 +17,4 @@ RUN apt-get update \
       gfortran-13 \
       gfortran-14 
 
-ENV FC=gfortran CC=gcc
+ENV FC=gfortran CC=gcc F77=gfortran
