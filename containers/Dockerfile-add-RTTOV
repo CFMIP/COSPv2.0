@@ -15,9 +15,10 @@ RUN apt-get update \
 # Pull an encrypted RTTOV v13.2 tarball from Google Drive; dearmor and unpack; delete original tarball
 #   De-armor RTTOV tarball with passkey (should be hidden with github secrets) ${{ secrets.RTTOV_TARFILE_KEY }}
 #
+RUN cat "${rttov_tarfile_key}" && cat ${rttov_tarfile_key}
 RUN curl -L "https://drive.usercontent.google.com/download?id=${fileid}&confirm=xxx" -o ${filename}.gpg && \
     gpg --quiet --batch --yes --decrypt \
-        --passphrase="${{ github.event.inputs.rttov_tarfile_key }}" --output ${filename} ${filename}.gpg && \
+        --passphrase="${rttov_tarfile_key}" --output ${filename} ${filename}.gpg && \
     rm -f ./RTTOV_src && mkdir ./RTTOV_src && tar -xf ${filename} -C ./RTTOV_src/ && rm ${filename} ${filename}.gpg
 
 #
