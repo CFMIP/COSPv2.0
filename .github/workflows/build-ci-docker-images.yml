@@ -1,0 +1,46 @@
+name: COSP - Build CI Docker Images
+run-name: CI Image Build
+
+on: [push]
+
+jobs:
+  docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:  [oneapi, gfortran]
+        include:
+        - toolchain: oneapi
+          rttov_arch: ifx
+        - toolchain: gfortran
+          rttov_arch: gfortran
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build minimal-toolchain:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: Dockerfile-${{ matrix.toolchain }}-minimal
+          tags: minimal-toolchain:${{ matrix.toolchain }}
+
+      - name: Build add-netcdf:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: Dockerfile-add-netcdf
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-netcdf:${{ matrix.toolchain }}
+
+      - name: Build add-python:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: Dockerfile-add-python
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-python:${{ matrix.toolchain }}
+
+      - name: Build add-RTTOV:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: Dockerfile-add-RTTOV
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-rttov:${{ matrix.toolchain }}

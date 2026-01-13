@@ -1,0 +1,20 @@
+FROM ubuntu:24.04
+
+# Extend and update the package registry
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get --yes install --no-install-recommends \
+      ca-certificates \
+      curl \
+      wget \
+      gpg \
+      binutils \
+      g++ \
+      gcc \
+      libc-dev \
+      make \
+      git \
+      gfortran-12 \
+      gfortran-13 \
+      gfortran-14 
+
+ENV FC=gfortran CC=gcc
