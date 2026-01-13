@@ -17,7 +17,7 @@ RUN apt-get update \
 #
 RUN curl -L "https://drive.usercontent.google.com/download?id=${fileid}&confirm=xxx" -o ${filename}.gpg
 RUN gpg --quiet --batch --yes --decrypt \
-        --passphrase="$rttov_tarfile_key" --output ${filename} ${filename}.gpg && \
+        --passphrase="${rttov_tarfile_key}" --output ${filename} ${filename}.gpg && \
     rm -f ./RTTOV_src && mkdir ./RTTOV_src && tar -xf ${filename} -C ./RTTOV_src/ && rm ${filename} ${filename}.gpg
 
 #
