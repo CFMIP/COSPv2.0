@@ -1,0 +1,50 @@
+name: COSP Base Images Build
+run-name: CI Image Build for COSP
+
+on: [push]
+
+jobs:
+  docker:
+    strategy:
+      fail-fast: false  # Disable fail-fast
+      matrix:
+        toolchain:  [oneapi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build minimal-toolchain:${{ matrix.toolchain }}
+        uses: containers/build-push-action@v6
+        with:
+          file: containers/Dockerfile-${{ matrix.toolchain }}-minimal
+          tags: minimal-toolchain:${{ matrix.toolchain }}
+
+      - name: Build add-netcdf:${{ matrix.toolchain }}
+        uses: containers/build-push-action@v6
+        with:
+          file: containers/Dockerfile-add-netcdf
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-netcdf:${{ matrix.toolchain }}
+
+      - name: Build add-python:${{ matrix.toolchain }}
+        uses: containers/build-push-action@v6
+        with:
+          file: containers/Dockerfile-add-python
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-python:${{ matrix.toolchain }}
+
+      - name: Log in to DockerHub
+        if: ${{ github.ref == 'refs/heads/feature/containerized_ci_rttov' }}
+        uses: containers/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and push cosp-ci:${{ matrix.toolchain }}
+        uses: containers/build-push-action@v6
+        with:
+          file: containers/Dockerfile-finalize
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          push: ${{ github.ref == 'refs/heads/feature/containerized_ci_rttov' }}
+          tags: |
+            dustinswales/cosp-ci:${{ matrix.toolchain }}
