@@ -1,5 +1,5 @@
-name: COSP Base Images Build
-run-name: CI Image Build for COSP
+name: COSPv2 Base Images Build
+run-name: CI Image Build for COSPv2
 
 on: [push]
 
