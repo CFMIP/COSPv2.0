@@ -44,6 +44,7 @@ jobs:
         env: 
           rttov_tarfile_key: ${{ secrets.RTTOV_TARFILE_KEY }}
         with:
+          rttov_tarfile_key: ${{ secrets.RTTOV_TARFILE_KEY }}
           file: containers/Dockerfile-add-RTTOV
           build-args: |
             TOOLCHAIN=${{ matrix.toolchain }}
