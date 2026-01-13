@@ -46,6 +46,6 @@ jobs:
         with:
           file: containers/Dockerfile-add-RTTOV
           build-args: |
-            TOOLCHAIN= ${{ matrix.toolchain }}
+            TOOLCHAIN=${{ matrix.toolchain }}
             RTTOV_ARCH=${{ matrix.rttov_arch }}
           tags: add-rttov:${{ matrix.toolchain }}
