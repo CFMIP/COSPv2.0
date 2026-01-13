@@ -34,7 +34,7 @@ jobs:
           tags: add-python:${{ matrix.toolchain }}
 
       - name: Log in to the Container registry
-        if: ${{ github.ref == 'refs/heads/feature/containerized_ci_rttov' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -46,6 +46,6 @@ jobs:
         with:
           file: containers/Dockerfile-finalize
           build-args: TOOLCHAIN=${{ matrix.toolchain }}
-          push: ${{ github.ref == 'refs/heads/feature/containerized_ci_rttov' }}
+          push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/dustinswales/cospv2.0-ci:${{ matrix.toolchain }}
+            ghcr.io/CFMIP/cospv2.0-ci:${{ matrix.toolchain }}
