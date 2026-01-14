@@ -39,6 +39,14 @@ jobs:
           build-args: TOOLCHAIN=${{ matrix.toolchain }}
           tags: add-python:${{ matrix.toolchain }}
 
+      - name: Log in to the Github container registry
+        if: ${{ github.ref == 'refs/heads/master' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build add-RTTOV:${{ matrix.toolchain }}
         uses: docker/build-push-action@v6
         with:
@@ -48,4 +56,4 @@ jobs:
             RTTOV_ARCH=${{ matrix.rttov_arch }}
           secrets: |
             "RTTOV_TARFILE_KEY=${{ secrets.RTTOV_TARFILE_KEY }}"
-          tags: add-rttov:${{ matrix.toolchain }}
+          tags: ghcr.io/cfmip/cospv2.0-ci:${{ matrix.toolchain }}

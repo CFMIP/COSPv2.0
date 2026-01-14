@@ -20,7 +20,8 @@ RUN curl https://downloads.unidata.ucar.edu/netcdf-fortran/$NFVERSION/netcdf-for
   && { ./configure \
          CFLAGS='-O2' \
          FCFLAGS='-O2 -fPIC' \
-         --disable-static || \
+         --disable-static \ 
+         --prefix=/usr || \
        { cat ./config.log; exit 1; } } 
 RUN cd netcdf-fortran-$NFVERSION \
   && make -j \
