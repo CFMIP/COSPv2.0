@@ -2,26 +2,26 @@
 ! Copyright (c) 2015, Regents of the University of Colorado
 ! All rights reserved.
 !
-! Redistribution and use in source and binary forms, with or without modification, are
+! Redistribution and use in source and binary forms, with or without modification, are 
 ! permitted provided that the following conditions are met:
 !
-! 1. Redistributions of source code must retain the above copyright notice, this list of
+! 1. Redistributions of source code must retain the above copyright notice, this list of 
 !    conditions and the following disclaimer.
 !
 ! 2. Redistributions in binary form must reproduce the above copyright notice, this list
-!    of conditions and the following disclaimer in the documentation and/or other
+!    of conditions and the following disclaimer in the documentation and/or other 
 !    materials provided with the distribution.
 !
-! 3. Neither the name of the copyright holder nor the names of its contributors may be
+! 3. Neither the name of the copyright holder nor the names of its contributors may be 
 !    used to endorse or promote products derived from this software without specific prior
 !    written permission.
 !
-! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+! THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+! EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+! MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
+! THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+! SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+! OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
 ! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 ! LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ! OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -30,16 +30,17 @@
 ! May 2015 - D. Swales - Original version
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_CLOUDSAT_INTERFACE
+  USE MOD_COSP_CONFIG, ONLY: DBZE_BINS,CFAD_ZE_MIN,CFAD_ZE_WIDTH,SR_BINS,DBZE_MAX,       &
+                             DBZE_MIN
   USE COSP_KINDS,      ONLY: wp
-  USE quickbeam,       ONLY: quickbeam_init,radar_cfg,Re_MAX_BIN,Re_BIN_LENGTH, &
-                             maxhclass, nRe_types, nd, mt_ntt
+  USE quickbeam,       ONLY: quickbeam_init,radar_cfg,Re_MAX_BIN,Re_BIN_LENGTH
   IMPLICIT NONE
-
+         
   ! Directory where LUTs will be stored
   character(len=120) :: RADAR_SIM_LUT_DIRECTORY = './'
   logical :: RADAR_SIM_LOAD_scale_LUTs_flag   = .false.
   logical :: RADAR_SIM_UPDATE_scale_LUTs_flag = .false.
-  
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE cloudsat_IN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -54,6 +55,16 @@ MODULE MOD_COSP_CLOUDSAT_INTERFACE
           kr_vol(:,:,:),     & ! Attenuation coefficient hydro (dB/km)
           g_vol(:,:,:),      & ! Attenuation coefficient gases (dB/km)
           g_to_vol_in(:,:)     ! Gaseous atteunation, radar to vol (dB)
+#ifdef OPT_DPLRW
+     real(wp),pointer ::        &
+          gridw(:,:,:,:),   &
+          vfzef(:,:,:,:),   &
+          zehyd(:,:,:,:),   &
+          reffs(:,:,:,:)
+     logical, pointer ::        &
+          flag_Hydro(:,:,:,:)
+#endif
+
      type(radar_cfg),pointer :: rcfg   ! Radar simulator configuration
   end type cloudsat_IN
 
@@ -79,44 +90,30 @@ CONTAINS
          load_LUT
     character(len=64),intent(in) :: &
        cloudsat_micro_scheme
-
+    
     ! OUTPUTS
     type(radar_cfg) :: &
          rcfg           !
-
+    
     ! LOCAL VARIABLES
     character(len=240) :: LUT_file_name
     logical       :: local_load_LUT
     integer       :: j
-
+    
     if (present(load_LUT)) then
        local_load_LUT = load_LUT
     else
        local_load_LUT = RADAR_SIM_LOAD_scale_LUTs_flag
     endif
     
+!    write(*,*) 'RADAR_SIM microphysics scheme is set to: ',&
+!                trim(cloudsat_micro_scheme)
+    
     ! LUT file name
     LUT_file_name = trim(RADAR_SIM_LUT_DIRECTORY) // &
          trim(cloudsat_micro_scheme)
-
+    
     ! Initialize for NEW radar-configurarion derived type (radar_cfg)
-    allocate(rcfg%N_scale_flag(maxhclass,nRe_types))
-    allocate(rcfg%Z_scale_flag(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%Z_scale_added_flag(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%Ze_scaled(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%Zr_scaled(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%kr_scaled(maxhclass,mt_ntt,nRe_types))
-    allocate(rcfg%vf_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW
-    allocate(rcfg%vq_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW
-    allocate(rcfg%v3_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW debug
-    allocate(rcfg%v0_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW debug
-    allocate(rcfg%m3_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW debug
-    allocate(rcfg%m0_scaled(maxhclass,mt_ntt,nRe_types)) ! for DPLRW debug
-    allocate(rcfg%fc(maxhclass,nd,nRe_types))
-    allocate(rcfg%rho_eff(maxhclass,nd,nRe_types))
-    allocate(rcfg%base_list(Re_MAX_BIN))
-    allocate(rcfg%step_list(Re_MAX_BIN))
-
     rcfg%freq                = radar_freq
     rcfg%k2                  = k2
     rcfg%use_gas_abs         = use_gas_abs
@@ -132,11 +129,11 @@ CONTAINS
     rcfg%Ze_scaled           = 0._wp
     rcfg%Zr_scaled           = 0._wp
     rcfg%kr_scaled           = 0._wp
-
+    
     ! Set up Re bin "structure" for z_scaling
     rcfg%base_list(1)=0
     do j=1,Re_MAX_BIN
-       rcfg%step_list(j)=0.1_wp+0.1_wp*((j-1)**1.5_wp)
+       rcfg%step_list(j)=0.1_wp+0.1_wp*((j-1)**1.5)
        if(rcfg%step_list(j)>Re_BIN_LENGTH) then
           rcfg%step_list(j)=Re_BIN_LENGTH
        endif
@@ -144,7 +141,7 @@ CONTAINS
           rcfg%base_list(j)=rcfg%base_list(j-1)+floor(Re_BIN_LENGTH/rcfg%step_list(j-1))
        endif
     enddo
-
+    
     ! Set flag denoting position of radar
     if (surface_radar == 1) then
        rcfg%radar_at_layer_one = .false.
