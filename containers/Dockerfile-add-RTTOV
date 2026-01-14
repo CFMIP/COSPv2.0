@@ -1,8 +1,9 @@
 ARG TOOLCHAIN
 ARG RTTOV_ARCH
+ARG RTTOV_TARFILE_KEY
 FROM add-python:$TOOLCHAIN
 
-ENV fileid="1g61nacsXMgXn9KG0xSUODs-qX4mkuqmb" filename="rttov132.tar.xz"
+ENV fileid="1g61nacsXMgXn9KG0xSUODs-qX4mkuqmb" filename="rttov132.tar.xz" 
 
 # gpg and xz needed for unpacking the tar file 
 # hdf5 (serial) needed for RTTOV
@@ -15,13 +16,10 @@ RUN apt-get update \
 # Pull an encrypted RTTOV v13.2 tarball from Google Drive; dearmor and unpack; delete original tarball
 #   De-armor RTTOV tarball with passkey (should be hidden with github secrets) ${{ secrets.RTTOV_TARFILE_KEY }}
 #
-RUN echo "${rttov_tarfile_key}" 
-RUN echo ${rttov_tarfile_key}
-RUN echo ${{ secrets.RTTOV_TARFILE_KEY }}
 
 RUN curl -L "https://drive.usercontent.google.com/download?id=${fileid}&confirm=xxx" -o ${filename}.gpg && \
     gpg --quiet --batch --yes --decrypt \
-        --passphrase="${rttov_tarfile_key}" --output ${filename} ${filename}.gpg && \
+        --passphrase="$RTTOV_TARFILE_KEY" --output ${filename} ${filename}.gpg && \
     rm -f ./RTTOV_src && mkdir ./RTTOV_src && tar -xf ${filename} -C ./RTTOV_src/ && rm ${filename} ${filename}.gpg
 
 #

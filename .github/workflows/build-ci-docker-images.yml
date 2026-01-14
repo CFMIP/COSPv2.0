@@ -41,11 +41,10 @@ jobs:
 
       - name: Build add-RTTOV:${{ matrix.toolchain }}
         uses: docker/build-push-action@v6
-        env: 
-          rttov_tarfile_key: ${{ secrets.RTTOV_TARFILE_KEY }}
         with:
           file: containers/Dockerfile-add-RTTOV
           build-args: |
             TOOLCHAIN=${{ matrix.toolchain }}
             RTTOV_ARCH=${{ matrix.rttov_arch }}
+            RTTOV_TARFILE_KEY=${{ secrets.RTTOV_TARFILE_KEY }}
           tags: add-rttov:${{ matrix.toolchain }}
