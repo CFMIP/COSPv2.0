@@ -12,7 +12,7 @@ jobs:
         # Flags and KGOs for Intel Fortran Compiler
         - compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-          image: ghcr.io/cfmip/cospv2.0-ci:oneapi
+          image: ghcr.io/dustinswales/cospv2.0-ci:oneapi
        # Common variables
         - kgo_version: v007
     defaults:
