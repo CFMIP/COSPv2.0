@@ -32,11 +32,11 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 module mod_quickbeam_optics
   USE COSP_KINDS,          ONLY: wp,dp
-  USE array_lib,           ONLY: infind,infindl,infindi
-  USE math_lib,            ONLY: path_integral,avint
+  USE array_lib,           ONLY: infind
+  USE math_lib,            ONLY: path_integral,avint,gamma
   USE optics_lib,          ONLY: m_wat,m_ice,MieInt
   USE cosp_math_constants, ONLY: pi
-  USE cosp_phys_constants, ONLY: rhoice,rholiq
+  USE cosp_phys_constants, ONLY: rhoice  
   use quickbeam,           ONLY: radar_cfg,dmin,dmax,Re_BIN_LENGTH,  &
                                  Re_MAX_BIN,nRe_types,nd,maxhclass
   use mod_cosp_config,     ONLY: N_HYDRO
@@ -48,10 +48,9 @@ module mod_quickbeam_optics
      real(wp),dimension(maxhclass) :: p1,p2,p3,dmin,dmax,apm,bpm,rho
      integer, dimension(maxhclass) :: dtype,phase
 
-#ifdef OPT_DPLRW
+     ! for DPLRW
      integer, dimension(N_HYDRO) :: ftype,fvscs
-     real(wp),dimension(N_HYDRO) :: f1,f2,f3     
-#endif
+     real(wp),dimension(N_HYDRO) :: f1,f2,f3
   END TYPE size_distribution
   
   ! Parameters
@@ -63,7 +62,7 @@ module mod_quickbeam_optics
   real(wp),dimension(cnt_ice) :: mt_tti 
   real(wp),dimension(cnt_liq) :: mt_ttl
   real(wp),dimension(nd)      :: D
-  logical :: lQuickbeamInit
+  !logical :: lQuickbeamInit
   
 contains
   ! ######################################################################################
@@ -78,19 +77,16 @@ contains
     do j=2,nd
        D(j) = D(j-1)*exp((log(dmax)-log(dmin))/(nd-1))
     enddo
-    lQuickbeamInit = .true.
+    !lQuickbeamInit = .true.
   end subroutine quickbeam_optics_init
   
   ! ######################################################################################
   ! SUBROUTINE QUICKBEAM_OPTICS
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
-                              Np_matrix, p_matrix, t_matrix, sh_matrix,cmpGases,         &
-                              z_vol,kr_vol,g_vol,                                        &
-#ifdef OPT_DPLRW
-                              vfall, vfsqu, zehyd,                                       &
-#endif
-                              g_vol_in,g_vol_out)
+       Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol, &
+       vfall, vfsqu, zehyd, krhyd, &
+       vtrm3, vtrm0, mmnt3, mmnt0 )
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -111,46 +107,33 @@ contains
          hm_matrix        ! Table of hydrometeor mixing ratios (g/kg)
     real(wp),intent(inout),dimension(nprof,ngate,rcfg%nhclass) :: &
          Np_matrix        ! Table of hydrometeor number concentration.  0 ==> use defaults. (units = 1/kg)
-    logical,intent(inout) :: &
-         cmpGases         ! Compute gaseous attenuation for all profiles
-    
+
     ! OUTPUTS
     real(wp),intent(out), dimension(nprof, ngate) :: &
          z_vol,         & ! Effective reflectivity factor (mm^6/m^3)
-         kr_vol,        & ! Attenuation coefficient hydro (dB/km)
-         g_vol            ! Attenuation coefficient gases (dB/km)
-#ifdef OPT_DPLRW 
+         kr_vol           ! Attenuation coefficient hydro (dB/km)
+
+    ! OUTPUTS for DPLRW
     real(wp),intent(out), dimension(nprof, ngate, N_HYDRO) :: &
-         vfall, vfsqu, zehyd
-!    real(wp),intent(out), dimension(nprof, ngate, N_HYDRO) :: &
-!         reffs, hymix
-#endif
-      
-    ! OPTIONAL
-    real(wp),dimension(nprof,ngate),optional :: &
-         g_vol_in,g_vol_out
-    
-    ! INTERNAL VARIABLES
+         vfall, vfsqu, zehyd, krhyd, &
+         vtrm3, vtrm0, mmnt3, mmnt0
+
+    ! INTERNAL VARIABLES   
     integer :: &
          phase, ns,tp,j,k,pr,itt,iRe_type,n 
-    integer,dimension(nprof,ngate) :: &
-         ittl,itti
     logical :: &
-         g_vol_in_present,g_vol_out_present
-    logical,dimension(nprof,ngate) :: &
          hydro
     real(wp) :: &
          t_kelvin,Re_internal
     real(wp) :: &
-         kr,ze,zr,scale_factor,Re,Np,base,step
-#ifdef OPT_DPLRW
-    real(wp) :: vf,sq
-    real(wp),dimension(nd) :: fall_speed
-#endif
-    real(wp),dimension(nprof,ngate) :: &
-         rho_a
+         rho_a,kr,ze,zr,scale_factor,Re,Np,base,step
 
-    real(wp),dimension(nd) :: &
+    ! INTERNAL VARIABLES for DPLRW
+    real(wp) :: vf,vq
+    real(wp) :: vt3,vt0,D3int,D0int
+    real(wp),dimension(:),allocatable :: fall_speed
+
+    real(wp),dimension(:),allocatable :: &
          Deq,     & ! Discrete drop sizes (um)
          Ni,      & ! Discrete concentrations (cm^-3 um^-1)
          rhoi,    & ! Discrete densities (kg m^-3)
@@ -167,63 +150,37 @@ contains
     real(wp), parameter :: &
          one_third   = 1._wp/3._wp    !
 
-    g_vol_in_present  = present(g_vol_in)
-    g_vol_out_present = present(g_vol_out)
-    
     ! Initialization
-    if (.not. lQuickbeamInit) call quickbeam_optics_init()
     z_vol    = 0._wp
     z_ray    = 0._wp
     kr_vol   = 0._wp
-#ifdef OPT_DPLRW
-    vfall = 0._wp
-    vfsqu = 0._wp
-    zehyd = 0._wp
-#endif
+    vfall    = 0._wp
+    vfsqu    = 0._wp
+    zehyd    = 0._wp
+    krhyd    = 0._wp
+    vtrm3    = 0._wp
+    vtrm0    = 0._wp
+    mmnt3    = 0._wp
+    mmnt0    = 0._wp
 
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
-          if (g_vol_in_present) then
-             g_vol(pr,k) = g_vol_in(pr,k)
-          endif
-          
-          ! Gas attenuation (only need to do this for the first subcolumn (i.e. cmpGases=true)
-          if (cmpGases) then
-             if (rcfg%use_gas_abs == 1 .or. (rcfg%use_gas_abs == 2 .and. pr .eq. 1)) then
-                g_vol(pr,k) = gases(p_matrix(pr,k),t_matrix(pr,k),sh_matrix(pr,k),rcfg%freq)
-             endif
-          endif
-          
           ! Determine if hydrometeor(s) present in volume
-          hydro(pr,k) = .false.
-          do j=1,N_HYDRO
+          hydro = .false.
+          do j=1,rcfg%nhclass
              if ((hm_matrix(pr,k,j) > 1E-12) .and. (sd%dtype(j) > 0)) then
-                hydro(pr,k) = .true.
+                hydro = .true.
                 exit
              endif
           enddo
-       enddo
-    enddo
 
-    do k=1,ngate       ! Loop over each profile (nprof)
-       do pr=1,nprof
+          t_kelvin = t_matrix(pr,k)
           ! If there is hydrometeor in the volume
-          if (hydro(pr,k)) then
-             t_kelvin = t_matrix(pr,k)
-             rho_a(pr,k) = (p_matrix(pr,k))/(287._wp*(t_kelvin))
-             ittl(pr,k) = infindl(mt_ttl,t_kelvin)
-             itti(pr,k) = infindi(mt_tti,t_kelvin)
-          endif
-       enddo
-    enddo
+          if (hydro) then
+             rho_a = (p_matrix(pr,k))/(287._wp*(t_kelvin))
              
-             do tp=1,N_HYDRO    ! Loop over hydrometeor type
-    do k=1,ngate       ! Loop over each profile (nprof)
-       do pr=1,nprof
-          if (hydro(pr,k)) then
-!          if (flag_hydro(pr,k,tp)) then !!! @@@@@@ modified by YN @@@@@@
-             t_kelvin = t_matrix(pr,k)
-             
+             ! Loop over hydrometeor type
+             do tp=1,rcfg%nhclass
                 Re_internal = re_matrix(pr,k,tp)
 
                 if (hm_matrix(pr,k,tp) <= 1E-12) cycle
@@ -232,26 +189,25 @@ contains
                 !   These tables have regular steps -- exploit this and abandon infind
                 phase = sd%phase(tp)
                 if (phase==0) then
-                   itt = ittl(pr,k)
+                   itt = infind(mt_ttl,t_kelvin)
                 else
-                   itt = itti(pr,k)
+                   itt = infind(mt_tti,t_kelvin) 
                 endif
-
+                
                 ! Compute effective radius from number concentration and distribution parameters
-                if ( abs(Re_internal) < 1E-12) then
-                   call calc_Re(hm_matrix(pr,k,tp),Np_matrix(pr,k,tp),rho_a(pr,k), &
+                if (Re_internal .eq. 0) then
+                   call calc_Re(hm_matrix(pr,k,tp),Np_matrix(pr,k,tp),rho_a, &
                         sd%dtype(tp),sd%apm(tp),sd%bpm(tp),sd%rho(tp),sd%p1(tp),sd%p2(tp),sd%p3(tp),Re)
                    Re_internal=Re
                    !re_matrix(pr,k,tp)=Re
                 else
                    if (Np_matrix(pr,k,tp) > 0) then
-                      !call errorMessage('WARNING(optics/quickbeam_optics.f90): Re and Np set for the same volume & hydrometeor type.  Np is being ignored.')
-                      call errorMessage('WARNING(optics/quickbeam_optics.f90):Np is being ignored.')
+                      call errorMessage('WARNING(optics/quickbeam_optics.f90): Re and Np set for the same volume & hydrometeor type.  Np is being ignored.')
                    endif
                    Re = Re_internal
                    !Re = re_matrix(pr,k,tp)
                 endif
-
+                
                 ! Index into particle size dimension of scaling tables 
                 iRe_type=1
                 if(Re.gt.0) then
@@ -267,6 +223,7 @@ contains
                    if (iRe_type.lt.1) iRe_type=1
                    Re=step*(iRe_type+0.5_wp)    ! set value of Re to closest value allowed in LUT.
                    iRe_type=iRe_type+base-int(n*Re_BIN_LENGTH/step)
+                   
                    ! Make sure iRe_type is within bounds
                    if (iRe_type.ge.nRe_types) then
                       !write(*,*) 'Warning: size of Re exceed value permitted ', &
@@ -280,15 +237,12 @@ contains
                       !if (.not. DO_LUT_TEST) re_matrix(pr,k,tp)=Re
                    endif
                 endif
-!                if (iRe_type==nRe_types) write(*,'(2I6,7(x,E10.3))') tp,itt,&
-!                     & sh_matrix(pr,k),re_matrix(pr,k,tp),hm_matrix(pr,k,tp),np_matrix(pr,k,tp),&
-!                     & p_matrix(pr,k),t_matrix(pr,k)
                 
                 ! Use Ze_scaled, Zr_scaled, and kr_scaled ... if know them
                 ! if not we will calculate Ze, Zr, and Kr from the distribution parameters
 !                if( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. .not. DO_LUT_TEST)  then
 !                   ! can use z scaling
-!                   scale_factor=rho_a(pr,k)*hm_matrix(pr,k,tp)
+!                   scale_factor=rho_a*hm_matrix(pr,k,tp)
 !                   zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
 !                   ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
 !                   kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
@@ -298,20 +252,20 @@ contains
                    select case(sd%dtype(tp))
                    case(4)
                       ns = 1
-!                      allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
-                      Di(ns) = sd%p1(tp)
-                      Ni(ns) = 0._wp
+                      allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
+                      Di = sd%p1(tp)
+                      Ni = 0._wp
                    case default
                       ns = nd   ! constant defined in simulator/quickbeam.f90
-!                      allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
+                      allocate(Di(ns),Ni(ns),rhoi(ns),xxa(ns),Deq(ns))
                       Di = D
                       Ni = 0._wp
                    end select
                    call dsd(hm_matrix(pr,k,tp),re_internal,Np_matrix(pr,k,tp), &
-                        Di,Ni,ns,sd%dtype(tp),rho_a(pr,k),t_kelvin, &
+                        Di,Ni,ns,sd%dtype(tp),rho_a,t_kelvin, &
                         sd%dmin(tp),sd%dmax(tp),sd%apm(tp),sd%bpm(tp), &
                         sd%rho(tp),sd%p1(tp),sd%p2(tp),sd%p3(tp))
-
+                   
                    ! Calculate particle density
                    if (phase == 1) then
                       if (sd%rho(tp) < 0) then
@@ -350,17 +304,13 @@ contains
                    xxa(1:ns) = -9.9_wp
                    rhoi = rcfg%rho_eff(tp,1:ns,iRe_type)
 
-#ifdef OPT_DPLRW
-                   ! Deq [um] -> [m]
-                   call fall_velocity(ns,Deq(1:ns)*1e-6,sd,p_matrix(pr,k),t_matrix(pr,k),tp,fall_speed(1:ns))
-#endif
-
+                   allocate(fall_speed(ns))
+                   call fall_velocity(ns,Deq*1e-6,sd,p_matrix(pr,k),t_matrix(pr,k),tp,&
+                        & fall_speed)
                    call zeff(rcfg%freq,Deq,Ni,ns,rcfg%k2,t_kelvin,phase,rcfg%do_ray, &
-                             ze,zr,kr,xxa,xxa,rhoi                                   &
-#ifdef OPT_DPLRW
-                             ,fall_speed(1:ns),vf,sq                  &
-#endif
-                            )
+                        ze,zr,kr,xxa,xxa,rhoi, &
+                        fall_speed, vf, vq, &
+                        vt3, vt0, D3int, D0int)
 
                    ! Test compares total number concentration with sum of discrete samples 
                    ! The second test, below, compares ab initio and "scaled" computations 
@@ -372,7 +322,7 @@ contains
                    ! NOTE: if .not. DO_LUT_TEST, then you are checking the LUT approximation 
                    ! not just the DSD representation given by Ni
                    if(Np_matrix(pr,k,tp)>0 .and. DO_NP_TEST ) then
-                      Np = path_integral(Ni,Di,1,ns-1)/rho_a(pr,k)*1.E6_wp
+                      Np = path_integral(Ni,Di,1,ns-1)/rho_a*1.E6_wp
                       ! Note: Representation is not great or small Re < 2 
                       if( (Np_matrix(pr,k,tp)-Np)/Np_matrix(pr,k,tp)>0.1 ) then
                          call errorMessage('ERROR(optics/quickbeam_optics.f90): Error: Np input does not match sum(N)')
@@ -380,12 +330,13 @@ contains
                    endif
 
                    ! Clean up space
-!                   deallocate(Di,Ni,rhoi,xxa,Deq)
+                   deallocate(Di,Ni,rhoi,xxa,Deq)
+                   deallocate(fall_speed)
 
                    ! LUT test code
                    ! This segment of code compares full calculation to scaling result
                    if ( rcfg%Z_scale_flag(tp,itt,iRe_type) .and. DO_LUT_TEST )  then
-                      scale_factor=rho_a(pr,k)*hm_matrix(pr,k,tp)
+                      scale_factor=rho_a*hm_matrix(pr,k,tp)
                       ! if more than 2 dBZe difference print error message/parameters.
                       if ( abs(10*log10(ze) - 10*log10(rcfg%Ze_scaled(tp,itt,iRe_type) * &
                            scale_factor)) > 2 ) then
@@ -394,47 +345,57 @@ contains
                    endif
                 else
                    ! Use z scaling
-                   scale_factor=rho_a(pr,k)*hm_matrix(pr,k,tp)
+                   scale_factor=rho_a*hm_matrix(pr,k,tp)
                    zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
                    ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
                    kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
-#ifdef OPT_DPLRW
+                   
                    vf = rcfg%vf_scaled(tp,itt,iRe_type) * scale_factor
-                   sq = rcfg%sq_scaled(tp,itt,iRe_type) * scale_factor
-#endif
-                endif  ! end z_scaling
+                   vq = rcfg%vq_scaled(tp,itt,iRe_type) * scale_factor
 
+                   vt3 = rcfg%v3_scaled(tp,itt,iRe_type) * scale_factor
+                   vt0 = rcfg%v0_scaled(tp,itt,iRe_type) * scale_factor
+                   D3int = rcfg%m3_scaled(tp,itt,iRe_type) * scale_factor
+                   D0int = rcfg%m0_scaled(tp,itt,iRe_type) * scale_factor
+                endif  ! end z_scaling
+                
                 kr_vol(pr,k) = kr_vol(pr,k) + kr
                 z_vol(pr,k)  = z_vol(pr,k)  + ze
                 z_ray(pr,k)  = z_ray(pr,k)  + zr
-#ifdef OPT_DPLRW
+
                 vfall(pr,k,tp) = vf/ze
-                vfsqu(pr,k,tp) = sq/ze
+                vfsqu(pr,k,tp) = vq/ze
                 zehyd(pr,k,tp) = ze
-#endif
+                krhyd(pr,k,tp) = kr
+                
+                vtrm3(pr,k,tp) = vt3/D3int
+                vtrm0(pr,k,tp) = vt0/D0int
+                mmnt3(pr,k,tp) = D3int
+                mmnt0(pr,k,tp) = D0int
 
                 ! Construct Ze_scaled, Zr_scaled, and kr_scaled ... if we can
                 if ( .not. rcfg%Z_scale_flag(tp,itt,iRe_type) ) then
                    if (iRe_type>1) then
-                      scale_factor=rho_a(pr,k)*hm_matrix(pr,k,tp)
+                      scale_factor=rho_a*hm_matrix(pr,k,tp)
                       rcfg%Ze_scaled(tp,itt,iRe_type) = ze/ scale_factor
                       rcfg%Zr_scaled(tp,itt,iRe_type) = zr/ scale_factor
                       rcfg%kr_scaled(tp,itt,iRe_type) = kr/ scale_factor
-#ifdef OPT_DPLRW
-                      rcfg%vf_scaled(tp,itt,iRe_type) = vf/ scale_factor
-                      rcfg%sq_scaled(tp,itt,iRe_type) = sq/ scale_factor
-#endif
                       rcfg%Z_scale_flag(tp,itt,iRe_type) = .true.
                       rcfg%Z_scale_added_flag(tp,itt,iRe_type)=.true.
+
+                      rcfg%vf_scaled(tp,itt,iRe_type) = vf/ scale_factor
+                      rcfg%vq_scaled(tp,itt,iRe_type) = vq/ scale_factor
+
+                      rcfg%v3_scaled(tp,itt,iRe_type) = vt3/ scale_factor
+                      rcfg%v0_scaled(tp,itt,iRe_type) = vt0/ scale_factor
+                      rcfg%m3_scaled(tp,itt,iRe_type) = D3int/ scale_factor
+                      rcfg%m0_scaled(tp,itt,iRe_type) = D0int/ scale_factor
                    endif
                 endif
+             enddo   ! end loop of tp (hydrometeor type)
           endif
        enddo
     enddo
-             enddo   ! end loop of tp (hydrometeor type)
-
-    ! Only need to compute gaseous absorption for the first subcolumn, so turn off after first call.
-    cmpGases=.false.
     
     where(kr_vol(:,:) <= EPSILON(kr_vol)) 
        ! Volume is hydrometeor-free	
@@ -524,7 +485,7 @@ contains
              ! fixed Roj. Dec. 2010 -- after comment by S. Mcfarlane
              vu = (1/(0.2714_wp + 0.00057145_wp*Np*rho_a*1E-6))**2 ! units of Nt = Np*rhoa = #/cm^3
           else
-             call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for Np')
+             call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for Np in each volume with Morrison/Martin Scheme.')
              return
           endif
        elseif (abs(local_p3+1) > 1E-8) then
@@ -532,8 +493,7 @@ contains
           vu = local_p3 
        else
           ! vu isn't specified
-          !call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for vu for Modified Gamma distribution')
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for vun')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for vu for Modified Gamma distribution')
           return
        endif
        
@@ -545,12 +505,11 @@ contains
              if( abs(p1+1) > 1E-8 ) then  !   use default number concentration   
                 local_Np = p1 ! total number concentration / pa --- units kg^-1
              else
-                !call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p1=Dm [um] or p2=Np [1/kg]) for Modified Gamma distribution')
-                call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value')
+                call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p1=Dm [um] or p2=Np [1/kg]) for Modified Gamma distribution')
                 return
              endif
           else
-             local_Np=Np
+             local_Np=Np;    
           endif
           D0 = 1E6 * ( Q*1E-3*gamma(vu)/(apm*local_Np*gamma(vu+bpm)) )**(1/bpm)  ! units = microns
        endif
@@ -567,12 +526,12 @@ contains
        if((abs(p1+1) > 1E-8) ) then   ! N0 has been specified, determine ld
           N0   = p1
           tmp1 = 1._wp/(1._wp+bpm)
-          ld   = ((apm*gamma(1.+bpm)*N0)/(rho_a*Q*1E-3))**tmp1
+          ld   = ((apm*gamma(1._wp+bpm)*N0)/(rho_a*Q*1E-3))**tmp1
           ld   = ld/1E6                     ! set units to microns^-1
        elseif (abs(p2+1) > 1E-8) then  ! lambda=ld has been specified as default
           ld = p2     ! should have units of microns^-1 
        else
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p1=No or p2=lambda) for Exponential distribution')
           return
        endif
        Re = 1.5_wp/ld 
@@ -588,7 +547,7 @@ contains
        
        Re=0._wp  ! Not supporting LUT approach for power-law ...
        if(Np>0) then
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Variable Np not supported')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Variable Np not supported for Power Law distribution')
           return
        endif
        
@@ -600,7 +559,7 @@ contains
        
        Re = p1
        if(Np>0) then
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Variable Np not supported')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Variable Np not supported for Monodispersed distribution')
           return
        endif
        
@@ -617,7 +576,7 @@ contains
           !set natural log width
           log_sigma_g = local_p3 
        else
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for sigma_g')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify a value for sigma_g when using a Log-Normal distribution')
           return
        endif
        
@@ -630,7 +589,7 @@ contains
           elseif(abs(p2+1) < 1E-8) then
              local_Np=p1
           else
-             call errorMessage('ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default')
+             call errorMessage('ERROR(optics/quickbeam_optics.f90:Calc_Re): Must specify Np or default value (p2=Rg or p1=Np) for Log-Normal distribution')
           endif
           log_sigma_g = p3
           tmp1        = (Q*1E-3)/(2._wp**bpm*apm*local_Np)
@@ -765,7 +724,7 @@ contains
              ! fixed Roj. Dec. 2010 -- after comment by S. Mcfarlane
              vu = (1/(0.2714_wp + 0.00057145_wp*Np*rho_a*1E-6))**2._wp ! units of Nt = Np*rhoa = #/cm^3
           else
-             call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for Np')
+             call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for Np in each volume with Morrison/Martin Scheme.')
              return
           endif
        elseif (abs(p3+1) > 1E-8) then
@@ -773,7 +732,7 @@ contains
           vu = p3 
        else
           ! vu isn't specified
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for vu')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Must specify a value for vu for Modified Gamma distribution')
           return
        endif
        
@@ -808,23 +767,23 @@ contains
        
        if(Re>0) then
           ld = 1.5_wp/Re   ! units 1/um
-          fc = (ld*1E6)**(1.+bpm)/(apm*gamma(1+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
+          fc = (ld*1E6)**(1.+bpm)/(apm*gamma(1._wp+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
           N  = fc*rho_a*(Q*1E-3)
        elseif (abs(p1+1) > 1E-8) then
           ! Use N0 default value
           N0   = p1
           tmp1 = 1._wp/(1._wp+bpm)
-          fc   = ((apm*gamma(1.+bpm)*N0)**tmp1)*(D*1E-6)
+          fc   = ((apm*gamma(1._wp+bpm)*N0)**tmp1)*(D*1E-6)
           N    = (N0*exp(-1._wp*fc*(1._wp/(rho_a*Q*1E-3))**tmp1)) * 1E-12
        elseif (abs(p2+1) > 1E-8) then
           ! Use default value for lambda 
           ld = p2
-          fc = (ld*1E6)**(1._wp+bpm)/(apm*gamma(1+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
+          fc = (ld*1E6)**(1._wp+bpm)/(apm*gamma(1._wp+bpm))*exp(-1._wp*(ld*1E6)*(D*1E-6))*1E-12
           N  = fc*rho_a*(Q*1E-3)
        else
           ! ld "parameterized" from temperature (carry over from original Quickbeam).
           ld = 1220._wp*10._wp**(-0.0245_wp*tc)*1E-6
-          N0 = ((ld*1E6)**(1._wp+bpm)*Q*1E-3*rho_a)/(apm*gamma(1+bpm))
+          N0 = ((ld*1E6)**(1._wp+bpm)*Q*1E-3*rho_a)/(apm*gamma(1._wp+bpm))
           N  = (N0*exp(-ld*D)) * 1E-12
        endif
        
@@ -838,10 +797,10 @@ contains
     case(3)
        
        if(Re>0) then
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Variable Re not supported')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Variable Re not supported for Power-Law distribution')
           return
        elseif(Np>0) then
-          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Variable Np not supported')
+          call errorMessage('FATAL ERROR(optics/quickbeam_optics.f90:dsd): Variable Np not supported for Power-Law distribution')
           return
        endif
        
@@ -959,11 +918,8 @@ contains
   end subroutine dsd
   ! ##############################################################################################
   ! ##############################################################################################
-  subroutine zeff(freq,D,N,nsizes,k2,tt,ice,xr,z_eff,z_ray,kr,qe,qs,rho_e &
-#ifdef OPT_DPLRW
-                 ,fall_speed,vf,sq                                     &
-#endif
-                 )
+  subroutine zeff(freq,D,N,nsizes,k2,tt,ice,xr,z_eff,z_ray,kr,qe,qs,rho_e, &
+       fall_speed, vf, vq, vt3, vt0, D3int, D0int)
     ! ##############################################################################################
     ! Purpose:
     !   Simulates radar return of a volume given DSD of spheres
@@ -1009,20 +965,18 @@ contains
          tt       ! Hydrometeor temperature (K)
     real(wp), intent(inout) :: &
          k2            ! |K|^2, -1=use frequency dependent default
-#ifdef OPT_DPLRW
     real(wp), intent(in), dimension(nsizes) :: &
-         fall_speed          ! defined in fall_velocity
-#endif
+         fall_speed    ! droplet fall speed
     
     ! Outputs
     real(wp), intent(out) :: &
          z_eff,      & ! Unattenuated effective reflectivity factor (mm^6/m^3)
          z_ray,      & ! Reflectivity factor, Rayleigh only (mm^6/m^3)
          kr            ! Attenuation coefficient (db km^-1)
-#ifdef OPT_DPLRW
     real(wp), intent(out) :: &
-         vf,sq
-#endif
+         vf, vq        ! Ze weighted 
+    real(wp), intent(out) :: &
+         vt0, vt3, D3int, D0int ! for terminal velocity
     
     ! Internal Variables
     integer                     :: correct_for_rho ! Correct for density flag
@@ -1049,10 +1003,7 @@ contains
          conv_f  = 0.299792458    ! Conversion for radar frequency (to m)
     complex(wp),dimension(nsizes) ::&
          m0             ! Complex index of refraction
-#ifdef OPT_DPLRW
-    real(wp)                   :: &
-         fall_sum
-#endif
+    real(wp) :: fall_sum ! temporal array for DPLRW
     
     ! Initialize
     z0_ray = 0._wp
@@ -1061,7 +1012,7 @@ contains
     D0 = d*conv_d
     N0 = n*conv_n
     wl = conv_f/freq
-
+    
     ! // dielectric constant |k^2| defaults
     if (k2 < 0) then
        k2 = 0.933_wp
@@ -1137,7 +1088,7 @@ contains
     ! DS2014 STOP
     kr = k_sum*0.25_wp*pi*(1000._wp*cr)
 
-#ifdef OPT_DPLRW
+    ! <---------- vf_sum --------->
     fall_sum = 0._wp
     if (size(D0) == 1) then
        fall_sum = fall_speed(1)*qbsca(1)*(n(1)*1E6)*D0(1)*D0(1)
@@ -1156,9 +1107,45 @@ contains
        call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
     end if
     const   = ((wl*wl*wl*wl)/(pi*pi*pi*pi*pi))*(1._wp/k2)
-    sq = fall_sum*const*0.25_wp*pi*1E18
-#endif
+    vq = fall_sum*const*0.25_wp*pi*1E18
     
+    ! <---------- vf_sum for terminal velocity --------->
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*(n(1)*1E6)*D0(1)*D0(1)*D0(1)
+    else
+       xtemp = fall_speed*N0*D0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    vt3 = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = (n(1)*1E6)*D0(1)*D0(1)*D0(1)
+    else
+       xtemp = N0*D0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    D3int = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*(n(1)*1E6)
+    else
+       xtemp = fall_speed*N0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    vt0 = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = (n(1)*1E6)
+    else
+       xtemp = N0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    D0int = fall_sum
+
     ! z_ray = sum[D^6*N(D)*deltaD]
     if (xr == 1) then
        z0_ray = 0._wp
@@ -1318,7 +1305,6 @@ contains
     ! Term1
     sumo = 0._wp
     aux1 = 1.1_wp*e_th
-!NEC$ unroll(nbands_o2)
     do i=1,nbands_o2
        aux2   = f/v0(i)
        aux3   = v0(i)-f
@@ -1343,7 +1329,6 @@ contains
     ! Term3
     sumo = 0._wp
     aux1 = 4.8_wp*e_th
-!NEC$ unroll(nbands_h2o)
     do i=1,nbands_h2o
        aux2    = f/v1(i)
        aux3    = v1(i)-f
@@ -1398,7 +1383,6 @@ contains
     !   08/23/2006  placed into subroutine form (Roger Marchand)
     !   June 2010   New interface to support "radar_simulator_params" structure
     !   12/22/2014  Moved radar simulator (CLOUDSAT) configuration initialization to cloudsat_init
-    !   FEB 2023    Modify to allow control from namelist, added by YN
     ! ##############################################################################################
 
     ! ####################################################################################
@@ -1453,10 +1437,10 @@ contains
     logical,intent(in) :: &
        lsingle, & ! True -> use single moment
        ldouble    ! True -> use two moment 
-
+                     
     ! OUTPUTS
     type(size_distribution),intent(out) ::&
-         sd
+         sd              !
 
    ! SINGLE MOMENT PARAMETERS
    integer,parameter,dimension(N_HYDRO) :: &
@@ -1471,15 +1455,15 @@ contains
 !       HCLASS1_APM  = (/524., 110.8, 524.,   -1.,  524., 110.8, 524.,   -1.,   -1.  /),  &
 !       HCLASS1_BPM  = (/  3.,   2.91,  3.,   -1.,    3.,   2.91,  3.,   -1.,   -1.  /),  &
 !       HCLASS1_RHO  = (/ -1.,  -1.,   -1.,  100.,   -1.,  -1.,   -1.,  100.,  400.  /),  &
-       HCLASS1_APM  = (/524.,   -1., 524.,   -1.,  524.,  -1.,  524.,   -1.,   -1.  /),  &
-       HCLASS1_BPM  = (/  3.,   -1.,   3.,   -1.,    3.,  -1.,    3.,   -1.,   -1.  /),  &
-       HCLASS1_RHO  = (/ -1.,  500.,  -1.,  250.,   -1., 500.,   -1.,  250.,  500.  /), &
+       HCLASS1_APM  = (/524.,  -1.,  524.,   -1.,  524.,  -1.,  524.,   -1.,   -1.  /),  &
+       HCLASS1_BPM  = (/  3.,  -1.,    3.,   -1.,    3.,  -1.,    3.,   -1.,   -1.  /),  &
+       HCLASS1_RHO  = (/ -1., 500.,   -1.,  250.,   -1., 500.,   -1.,  250.,  500.  /),  &
 !       HCLASS1_P1   = (/ -1.,  -1.,    8.e6,  3.e6, -1.,  -1.,    8.e6,  3.e6,  4.e6/),  & 
 !       HCLASS1_P2   = (/  6.,  40.,   -1.,   -1.,    6.,  40.,   -1.,   -1.,   -1.   /), & 
 !       HCLASS1_P3   = (/  0.3,  2.,   -1.,   -1.,    0.3,  2.,   -1.,   -1.,   -1.   /)
-       HCLASS1_P1   = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,  8e+6,  3e+6,   -1.  /),  & 
+       HCLASS1_P1   = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,    8.e6,  3.e6, -1.  /),  & 
        HCLASS1_P2   = (/  6.,  40.,   20.,   40.,    6.,  40.,   -1.,   -1.,   60.  /),  & 
-       HCLASS1_P3   = (/  1.,   1.,    5.,    1.,    1.,   1.,   -1.,   -1.,    1.  /)
+       HCLASS1_P3   = (/  1.,   1.,    5.,    1.,    1.,   5.,   -1.,   -1.,    1.  /)
 
     ! TWO MOMENT PARAMETERS
     integer,parameter,dimension(N_HYDRO) :: &
@@ -1497,8 +1481,7 @@ contains
        HCLASS2_P1   = (/ -1,     -1,     -1,     -1,    -1,    -1,   -1,     -1,   -1/), &
        HCLASS2_P2   = (/ -1,     -1,     -1,     -1,    -1,    -1,   -1,     -1,   -1/), &
        HCLASS2_P3   = (/ -2,      1,      1,      1,    -2,     1,    1,      1,    1/) 
-    
-#ifdef OPT_DPLRW
+
     integer,parameter,dimension(N_HYDRO) :: &
          ! type1 -> p1*D^p2 ; type2 -> Posselt and Lohmann (2008) Eq.11
          !         LSL  LSI  LSR  LSS  CVL  CVI  CVR  CVS  LSG
@@ -1506,12 +1489,11 @@ contains
          fvscs = (/   0,   0,   0,   0,   0,   0,   1,   1,   0 /)
 
     real(wp),parameter,dimension(N_HYDRO) :: &
-         !          LSL       LSI       LSR       LSS       CVL       CVI       CVR       CVS       LSG
-         f1   = (/  9.65   ,  1.107  ,  9.65   ,  3.321  ,  9.65   ,  1.107  ,  8.42E+2,  4.84   , 19.3     /),&
-         f2   = (/ 10.43   ,  0.22   , 10.43   ,  0.22   , 10.43   ,  0.22   ,  0.8    ,  0.25   ,  0.37    /),&
-         f3   = (/  6.00E+2,  0.00   ,  6.00E+2,  0.00   ,  6.00E+2,  0.00   ,  0.00   ,  0.00   ,  0.00    /)    
-#endif
-
+         !          LSL       LSI       LSR       LSS       CVL       CVI       CVR       CVS       LSG  
+         f1   = (/  9.65   ,  1.107  ,  9.65   ,  3.321  ,  9.65   ,  1.107  ,  8.42E+2,  4.84   , 19.3  /),&
+         f2   = (/ 10.43   ,  0.22   , 10.43   ,  0.22   , 10.43   ,  0.22   ,  0.8    ,  0.25   ,  0.37 /),&
+         f3   = (/  6.00E+2,  0.00   ,  6.00E+2,  0.00   ,  6.00E+2,  0.00   ,  0.00   ,  0.00   ,  0.00 /)
+    
     if (lsingle) then    
        sd%dtype(1:N_HYDRO) = HCLASS1_TYPE(1:N_HYDRO)
        sd%phase(1:N_HYDRO) = HCLASS1_PHASE(1:N_HYDRO)
@@ -1536,33 +1518,31 @@ contains
        sd%p2(1:N_HYDRO)    = HCLASS2_P2(1:N_HYDRO)
        sd%p3(1:N_HYDRO)    = HCLASS2_P3(1:N_HYDRO)
     endif
-
-#ifdef OPT_DPLRW
+    
     sd%ftype = ftype
     sd%fvscs = fvscs
     sd%f1    = f1
     sd%f2    = f2
     sd%f3    = f3
-#endif
-  end subroutine hydro_class_init    
+    
+  end subroutine hydro_class_init
 
-#ifdef OPT_DPLRW
   subroutine fall_velocity(nsizes,D0,sd,p_matrix,t_matrix,tp,fall)
     implicit none
-    integer,intent(in)   :: & 
+    integer,intent(in)   :: &
          nsizes,tp
     real(wp),intent(in), dimension(nsizes) :: &
-         D0              ! [m], equivalent volume spheres
+         D0              ! [m], equivalent volume spheres                                                
     type(size_distribution),intent(in) :: &
          sd
     real(wp),intent(in) :: &
          p_matrix,t_matrix
     real(wp),intent(out),dimension(nsizes) :: &
-         fall            ! positive = ascending, [m/s]
+         fall            ! positive = ascending, [m/s]                                                   
 
-    ! internal work
+    ! internal work                                                                                      
     real(wp) :: rho,rho0
-    integer,parameter  :: &  ! same index as in subsample_and_optics
+    integer,parameter  :: &  ! same index as in subsample_and_optics                                     
          LSCLIQ = 1,      &
          LSCICE = 2,      &
          LSRAIN = 3,      &
@@ -1571,7 +1551,7 @@ contains
          CVCICE = 6,      &
          CVRAIN = 7,      &
          CVSNOW = 8,      &
-         LSGRPL = 9       
+         LSGRPL = 9
     real(wp),dimension(N_HYDRO) :: vscs_fct
 
     rho0 = 101300/273.15/287
@@ -1579,11 +1559,11 @@ contains
     vscs_fct  = merge(sqrt(rho0/rho),1._wp,sd%fvscs==1)
 
     if (sd%ftype(tp) == 1) then
-       ! p1 * D^p2
+       ! p1 * D^p2                                                                                       
        fall = -1 * vscs_fct(tp) * &
             ( sd%f1(tp) * D0**sd%f2(tp) + sd%f3(tp) )
     else if (sd%ftype(tp) == 2) then
-       ! Posselt and Lohmann (2008), Eq.11
+       ! Posselt and Lohmann (2008), Eq.11                                                               
        fall = -1 * vscs_fct(tp) * &
             ( sd%f1(tp) - sd%f2(tp)*exp(-1*sd%f3(tp)*D0) + (sd%f2(tp)-sd%f1(tp))*exp(-5*sd%f3(tp)*D0) )
     else
@@ -1592,5 +1572,5 @@ contains
     end if
 
   end subroutine fall_velocity
-#endif
+  
 end module mod_quickbeam_optics
