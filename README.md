@@ -1,6 +1,8 @@
 # About this fork
 
-This is development code for Doppler velocity simulator. Therefore, the codes are subject to change. This is being prepared for merging into COSP2.
+This is development code for Doppler velocity simulator, accomodating to EarthCARE's CPR. Therefore, the codes are subject to change. This is being prepared for merging into COSP2.
+
+## How to use this fork
 
 # About COSP
 
