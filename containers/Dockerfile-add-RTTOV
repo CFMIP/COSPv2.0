@@ -30,11 +30,11 @@ RUN --mount=type=bind,source=containers/rttov-Makefile-inc,target=/tmp/Makefile-
 ADD containers/rttov-ifx-arch-file build/arch/ifx
 
 WORKDIR /RTTOV_src/src/
-ENV installdir="/RTTOV_build/" lapack=0 f2py=0 gui=0 hdf5=0
+ENV installdir="/RTTOV_build/" lapack=0 f2py=0 gui=0 hdf5=0 arch=$RTTOV_ARCH
 
 RUN ../build/Makefile.PL RTTOV_HDF=${hdf5} RTTOV_F2PY=${f2py} RTTOV_USER_LAPACK=${lapack}
-RUN make ARCH=$RTTOV_ARCH INSTALLDIR=$installdir clean $makeflags 
-RUN make ARCH=$RTTOV_ARCH INSTALLDIR=$installdir       $makeflags
+RUN make ARCH=$arch INSTALLDIR=$installdir clean $makeflags 
+RUN make ARCH=$arch INSTALLDIR=$installdir       $makeflags
 
 RUN wget -np -l1 \ 
   https://nwp-saf.eumetsat.int/downloads/rtcoef_rttov13/rttov13pred101L/rtcoef_eos_2_airs_l1c_7gas.H5 \
