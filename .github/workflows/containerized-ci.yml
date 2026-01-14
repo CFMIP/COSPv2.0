@@ -1,5 +1,5 @@
 name: Continuous integration in containers
-on: [workflow_dispatch]
+on: [push, workflow_dispatch]
 
 jobs:
   Containerized-CI:
@@ -7,25 +7,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ifx]
+        toolchain: [oneapi, gfortran]
         include:
         # Flags and KGOs for Intel Fortran Compiler
-        - compiler: ifx
+        - toolchain: oneapi
+          compiler: ifx
           fcflags: -debug -traceback -O0 -heap-arrays -assume realloc_lhs -extend-source 132 -stand f08
-          image: ghcr.io/earth-system-radiation/rte-rrtmgp-ci:oneapi
+        - toolchain: gfortran
+          compiler: gfortran
+          fcflags: -O3 -ffree-line-length-none -fcheck=bounds -finit-real=nan
        # Common variables
         - kgo_version: v007
     defaults:
       run:
         shell: bash -el {0}
     container:
-      image: ${{ matrix.image }}
+      image: ghcr.io/cfmip/cospv2.0-ci:${{ matrix.toolchain }}
     env:
       F90: ${{ matrix.compiler }}
       FC:  ${{ matrix.compiler }}
       F90FLAGS:  ${{ matrix.fcflags }}
       # Make variables:
-      NFHOME: /opt/netcdf-fortran
+      NFHOME: /usr
       # KGO tests variables
       ATOL: 0.0
       RTOL: 0.0
@@ -35,15 +38,6 @@ jobs:
     # Checks-out repository under $GITHUB_WORKSPACE
     #
     - uses: actions/checkout@v6
-    # Set up conda environment
-    - name: Setup conda environment
-      uses: conda-incubator/setup-miniconda@v3.2.0
-      with:
-        auto-update-conda: true
-        activate-environment: ci-env
-        environment-file: build/environment.yml
-        python-version: ${{ matrix.python-version }}
-        auto-activate-base: false
 
     ###############################################################################
     # Build COSP and retrieve input and test files

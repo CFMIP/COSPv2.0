@@ -36,6 +36,6 @@ ARG RTTOV_ARCH
 RUN make ARCH=$RTTOV_ARCH INSTALLDIR=$installdir clean $makeflags 
 RUN make ARCH=$RTTOV_ARCH INSTALLDIR=$installdir       $makeflags
 
-RUN wget -np -l1 \ 
-  https://nwp-saf.eumetsat.int/downloads/rtcoef_rttov13/rttov13pred101L/rtcoef_eos_2_airs_l1c_7gas.H5 \
-  -P../../RTTOV_coefs/
+# RUN wget -np -l1 \ 
+#  https://nwp-saf.eumetsat.int/downloads/rtcoef_rttov13/rttov13pred101L/rtcoef_eos_2_airs_l1c_7gas.H5 \
+#  -P../../RTTOV_coefs/
