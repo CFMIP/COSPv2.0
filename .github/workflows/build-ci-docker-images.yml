@@ -47,5 +47,5 @@ jobs:
             TOOLCHAIN=${{ matrix.toolchain }}
             RTTOV_ARCH=${{ matrix.rttov_arch }}
           secrets: |
-            RTTOV_TARFILE_KEY=${{ secrets.RTTOV_TARFILE_KEY }}
+            "RTTOV_TARFILE_KEY=${{ secrets.RTTOV_TARFILE_KEY }}"
           tags: add-rttov:${{ matrix.toolchain }}
