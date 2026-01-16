@@ -1,6 +1,15 @@
 # About this fork
 
-This is development code for Doppler velocity simulator. Therefore, the codes are subject to change. This is being prepared for merging into COSP2.
+This is development code for Doppler velocity simulator, accomodating to EarthCARE's CPR. Therefore, the codes are subject to change. This is being prepared for merging into COSP2.
+
+The developing codes are stored in `dplrw_src`, and links are provided so that each can be referenced from its original directory.
+
+## How to use this fork
+
+1. To make input dataset in NetCDF format, execute `exe.gt2input.out` in `driver/data/work`.
+2. Run `make driver`.
+3. Run `./cosp2_test cosp2_MIROCtest.txt`, and a result file is generated in `driver/data/MIROC_outputs/ctrl_MIROC-COSP2.nc`.
+4. Python notebooks for visualization are stored in `driver/check`.
 
 # About COSP
 
