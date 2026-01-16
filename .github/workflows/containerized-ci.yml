@@ -1,5 +1,5 @@
 name: Continuous integration in containers
-on: [workflow_dispatch]
+on: [push]
 
 jobs:
   Containerized-CI:

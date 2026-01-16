@@ -1,7 +1,7 @@
 name: COSP - Build CI Docker Images
 run-name: CI Image Build
 
-on: [push]
+on: [workflow_dispatch]
 
 jobs:
   docker:
