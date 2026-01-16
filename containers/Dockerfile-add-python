@@ -1,0 +1,20 @@
+#
+# Install Python3 and a small set of packages
+#
+
+ARG TOOLCHAIN
+FROM add-netcdf:$TOOLCHAIN
+
+# Install Python
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get --yes install --no-install-recommends \
+      python-is-python3 \
+      python3 \
+      python3-pip \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install packages from build/environment.yml 
+RUN pip3 install  --break-system-packages \
+      netCDF4 \
+      cartopy \ 
+      matplotlib

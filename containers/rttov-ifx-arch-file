@@ -1,0 +1,19 @@
+FC=ifx
+FC77=ifx
+CC=gcc
+LDFLAGS_ARCH=
+CFLAGS_ARCH=
+FFLAGS_ARCH=-fPIC -O3 -fp-model source
+AR=ar r
+
+# Loop unrolling causes ifort v13 and later to take a long time to compile these subroutines
+FFLAGS_ARCH_rttov_opdep_9_ad=-fPIC -O3 -unroll0 -fp-model source
+FFLAGS_ARCH_rttov_opdep_9_k=-fPIC -O3 -unroll0 -fp-model source
+FFLAGS_ARCH_rttov_opdep_13_ad=-fPIC -O3 -unroll0 -fp-model source
+FFLAGS_ARCH_rttov_opdep_13_k=-fPIC -O3 -unroll0 -fp-model source
+
+# -fp-model source ensures more consistent floating point results
+
+F2PY=f2py --fcompiler=intelem
+F2PYFLAGS_ARCH="-fPIC"
+F2PYLDFLAGS_ARCH=

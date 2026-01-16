@@ -1,0 +1,60 @@
+name: COSP - Build CI Docker Images
+run-name: CI Image Build
+
+on: [workflow_dispatch]
+
+jobs:
+  docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:  [oneapi, gfortran]
+        include:
+        - toolchain: oneapi
+          rttov_arch: ifx
+        - toolchain: gfortran
+          rttov_arch: gfortran
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build minimal-toolchain:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: containers/Dockerfile-${{ matrix.toolchain }}-minimal
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: minimal-toolchain:${{ matrix.toolchain }}
+
+      - name: Build add-netcdf:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: containers/Dockerfile-add-netcdf
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-netcdf:${{ matrix.toolchain }}
+
+      - name: Build add-python:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: containers/Dockerfile-add-python
+          build-args: TOOLCHAIN=${{ matrix.toolchain }}
+          tags: add-python:${{ matrix.toolchain }}
+
+      - name: Log in to the Github container registry
+        if: ${{ github.ref == 'refs/heads/add-containers' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: CFMIP
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build add-RTTOV:${{ matrix.toolchain }}
+        uses: docker/build-push-action@v6
+        with:
+          file: containers/Dockerfile-add-RTTOV
+          build-args: |
+            TOOLCHAIN=${{ matrix.toolchain }}
+            RTTOV_ARCH=${{ matrix.rttov_arch }}
+          secrets: |
+            "RTTOV_TARFILE_KEY=${{ secrets.RTTOV_TARFILE_KEY }}"
+          tags: ghcr.io/cfmip/cospv2.0-ci:${{ matrix.toolchain }}
+          push: True

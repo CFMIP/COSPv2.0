@@ -27,7 +27,8 @@
 
 # Workflow for continuous integration tests
 name: Continuous integration gfortran compilers
-on: [push, pull_request, workflow_dispatch]
+# on: [push, pull_request, workflow_dispatch]
+on: [pull_request, workflow_dispatch]
 
 jobs:
   # This workflow contains a single job called "ci_gfortran"
