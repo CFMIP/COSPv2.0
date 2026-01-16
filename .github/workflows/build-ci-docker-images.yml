@@ -57,3 +57,4 @@ jobs:
           secrets: |
             "RTTOV_TARFILE_KEY=${{ secrets.RTTOV_TARFILE_KEY }}"
           tags: ghcr.io/cfmip/cospv2.0-ci:${{ matrix.toolchain }}
+          push: True
