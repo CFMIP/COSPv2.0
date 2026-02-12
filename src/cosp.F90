@@ -1739,6 +1739,14 @@ CONTAINS
                 cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
              if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))      &
                 cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_LWP_vs_ReffLIQ))      &
+                cospOUT%modis_LWP_vs_ReffLIQ(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_IWP_vs_ReffICE))      &
+                cospOUT%modis_IWP_vs_ReffICE(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))      &
+                cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+             if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))      &
+                cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
           end if
        else
           ! It's nightime everywhere - everything is undefined
@@ -1782,6 +1790,14 @@ CONTAINS
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
           if (associated(cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice))      &
              cospOUT%modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_LWP_vs_ReffLIQ))      &
+             cospOUT%modis_LWP_vs_ReffLIQ(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_IWP_vs_ReffICE))      &
+             cospOUT%modis_IWP_vs_ReffICE(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffIce))      &
+             cospOUT%modis_Optical_Thickness_vs_ReffIce(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
+          if (associated(cospOUT%modis_Optical_Thickness_vs_ReffLiq))      &
+             cospOUT%modis_Optical_Thickness_vs_ReffLiq(ij+int(modisIN%notSunlit(:))-1, :, :) = R_UNDEF
        endif
        ! Free up memory (if necessary)
        if (allocated(modisRetrievedTau))               deallocate(modisRetrievedTau)

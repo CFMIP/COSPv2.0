@@ -167,6 +167,7 @@ contains
          if (allocated(CSCAL_SWATH_MASK)) then
             allocate(MODIS_CSCAL_SWATH_MASK(Npoints))
             MODIS_CSCAL_SWATH_MASK = (.not. (MODIS_SWATH_MASK .and. CSCAL_SWATH_MASK)) ! Gridcells not seen by both MODIS and CSCAL should be set to zero
+            if (.not. allocated(MODIS_CSCAL_MASK_INDICES)) allocate(MODIS_CSCAL_MASK_INDICES(count(MODIS_CSCAL_SWATH_MASK)))
             MODIS_CSCAL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = MODIS_CSCAL_SWATH_MASK)
          end if
       else
