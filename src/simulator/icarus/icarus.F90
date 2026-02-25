@@ -561,7 +561,7 @@ contains
     ! Compute column quantities and joint-histogram
     do j=1,npoints 
        ! Subcolumns that are cloudy(true) and not(false)
-       box_cloudy2(1:ncol) = merge(.true.,.false.,boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
+       box_cloudy2(1:ncol) = (boxtau(j,1:ncol) .gt. tauchk .and. boxptop(j,1:ncol) .gt. 0._wp)
 
        ! Compute joint histogram and column quantities for points that are sunlit and cloudy
        if (sunlit(j) .eq.1 .or. isccp_top_height .eq. 3) then 
@@ -570,7 +570,7 @@ contains
                isccp_histPres,numISCCPPresBins,fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins))
           fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins) = &
                fq_isccp(j,1:numISCCPTauBins,1:numISCCPPresBins)/ncol
-          
+
           ! Column cloud area
           totalcldarea(j) = real(count(box_cloudy2(1:ncol) .and. boxtau(j,1:ncol) .gt. isccp_taumin),wp)/ncol
              
@@ -611,7 +611,6 @@ contains
     ! Represent in percent
     where(totalcldarea .ne. output_missing_value) totalcldarea = totalcldarea*100._wp
     where(fq_isccp     .ne. output_missing_value) fq_isccp     = fq_isccp*100._wp
-    
     
   end SUBROUTINE ICARUS_column
   

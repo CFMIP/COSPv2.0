@@ -28,10 +28,17 @@
 !
 ! History
 ! May 2015 - D. Swales - Original version
+! Jun 2025 - J.K. Shaw - Added COSP-RTTOV integration and swathing
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_PARASOL_INTERFACE
   USE COSP_KINDS,  ONLY: WP
+  use mod_cosp_stats,  ONLY: compute_orbitmasks,cosp_optical_inputs,cosp_column_inputs
   implicit none
+
+  ! Module variables
+  real(wp),dimension(:,:),target,allocatable :: &
+      temp_tautot_S_liq,             &
+      temp_tautot_S_ice
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !									TYPE cosp_parasol
@@ -65,8 +72,9 @@ MODULE MOD_COSP_PARASOL_INTERFACE
   !										TYPE parasol_in
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   TYPE parasol_IN
+     integer         :: &
+        Npoints          ! Number of horizontal gridpoints
      integer,pointer :: &
-        Npoints,       & ! Number of horizontal gridpoints
         Nlevels,       & ! Number of vertical levels
         Ncolumns,      & ! Number of columns
         Nrefl            ! Number of angles for which the reflectance is computed
@@ -83,6 +91,76 @@ contains
   SUBROUTINE COSP_PARASOL_INIT()
     
   end subroutine COSP_PARASOL_INIT
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  !  							SUBROUTINE COSP_ASSIGN_parasolIN
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_ASSIGN_parasolIN(cospIN,cospgridIN,Npoints,parasolIN,PARASOL_MASK_INDICES)
+     type(cosp_optical_inputs),intent(in),target :: cospIN     ! Optical inputs to COSP simulator
+     type(cosp_column_inputs), intent(in),target :: cospgridIN ! Host model inputs to COSP
+     integer,intent(in),target :: &
+         Npoints
+     type(parasol_IN),intent(inout) :: &
+         parasolIN
+     integer,dimension(:),allocatable,intent(out) :: & ! Array containing the indices of the swath masks, already allocated?
+         PARASOL_MASK_INDICES
+
+     ! Local variables
+     logical,dimension(:),allocatable :: & ! Mask of reals over all local times
+         PARASOL_SWATH_MASK
+     integer, target :: &
+         N_PARASOL_SWATHED,  &
+         i
+
+     if (cospIN % cospswathsIN(5) % N_inst_swaths .gt. 0) then
+         allocate(PARASOL_SWATH_MASK(Npoints))
+         ! Do swathing to figure out which cells to simulate on
+         call compute_orbitmasks(Npoints,                                                &
+                                 cospIN % cospswathsIN(5) % N_inst_swaths,               &
+                                 cospIN % cospswathsIN(5) % inst_localtimes,             &
+                                 cospIN % cospswathsIN(5) % inst_localtime_widths,       &
+                                 cospgridIN%lat, cospgridIN%lon,                         &
+                                 cospgridIN%rttov_date(:,2), cospgridIN%rttov_date(:,3), & ! Time fields: month, dayofmonth
+                                 cospgridIN%rttov_time(:,1), cospgridIN%rttov_time(:,2), & ! Time fields: hour, minute
+                                 PARASOL_SWATH_MASK,N_PARASOL_SWATHED) ! Output: logical mask array
+         parasolIN%Npoints = N_PARASOL_SWATHED
+         parasolIN%Ncolumns => cospIN%Ncolumns
+         allocate(PARASOL_MASK_INDICES(N_PARASOL_SWATHED))
+         PARASOL_MASK_INDICES = pack((/ (i, i = 1, Npoints ) /),mask = PARASOL_SWATH_MASK)
+         deallocate(PARASOL_SWATH_MASK)
+         if (parasolIN%Npoints .gt. 0) then
+             ! Allocate swathed arrays.
+             allocate(temp_tautot_S_liq(parasolIN%Npoints,cospIN%Ncolumns),                  &
+                      temp_tautot_S_ice(parasolIN%Npoints,cospIN%Ncolumns))
+             ! Encode step: Read only appropriate values into the new temp arrays.
+             temp_tautot_S_liq(:,:)          = cospIN%tautot_S_liq(int(PARASOL_MASK_INDICES),:)
+             temp_tautot_S_ice(:,:)          = cospIN%tautot_S_ice(int(PARASOL_MASK_INDICES),:)
+
+             parasolIN%Nlevels      => cospIN%Nlevels
+             parasolIN%Nrefl        => cospIN%Nrefl
+             parasolIN%tautot_S_liq => temp_tautot_S_liq
+             parasolIN%tautot_S_ice => temp_tautot_S_ice
+         endif
+     else  
+          parasolIN%Npoints      =  Npoints
+          parasolIN%Ncolumns => cospIN%Ncolumns
+          parasolIN%Nlevels      => cospIN%Nlevels
+          parasolIN%Nrefl        => cospIN%Nrefl
+          parasolIN%tautot_S_liq => cospIN%tautot_S_liq
+          parasolIN%tautot_S_ice => cospIN%tautot_S_ice
+     end if
+
+  END SUBROUTINE COSP_ASSIGN_parasolIN
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  !  							SUBROUTINE COSP_ASSIGN_parasolIN_CLEAN
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  SUBROUTINE COSP_ASSIGN_parasolIN_CLEAN()
+    ! Deallocate temporary arrays
+    if (allocated(temp_tautot_S_liq))   deallocate(temp_tautot_S_liq)
+    if (allocated(temp_tautot_S_ice))    deallocate(temp_tautot_S_ice)
+
+  END SUBROUTINE COSP_ASSIGN_parasolIN_CLEAN
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! 								    END MODULE
