@@ -88,6 +88,111 @@ MODULE MOD_COSP
   logical :: linitialization ! Initialization flag
 
   ! ######################################################################################
+  ! TYPE cosp_column_inputs
+  ! ######################################################################################
+  type cosp_column_inputs
+     integer :: &
+          Npoints,             & ! Number of gridpoints.
+          Ncolumns,            & ! Number of columns.
+          Nlevels                ! Number of levels.
+
+     integer,allocatable,dimension(:) :: &
+          sunlit                 ! Sunlit flag                            (0-1)
+
+     real(wp),allocatable,dimension(:,:) :: &
+          at,                  & ! Temperature                            (K)
+          pfull,               & ! Pressure                               (Pa)
+          phalf,               & ! Pressure at half-levels                (Pa)
+          qv,                  & ! Specific humidity                      (kg/kg)
+          hgt_matrix,          & ! Height of atmosphere layer             (km)
+          hgt_matrix_half        ! Height of bottom interface of atm layer(km)
+                                 ! First level contains the bottom of the top layer.
+                                 ! Last level contains the bottom of the surface layer.
+
+     real(wp),allocatable,dimension(:) :: &
+          land,                & ! Land/Sea mask                          (0-1)
+          skt,                 & ! Surface temperature                    (K)
+          surfelev               ! Surface Elevation                      (m)
+     ! Fields used ONLY by RTTOV
+     integer :: &
+          month                  ! Month for surface emissivty atlas      (1-12)
+     real(wp) :: &
+          zenang,              & ! Satellite zenith angle for RTTOV       (deg)
+          co2,                 & ! CO2                                    (kg/kg)
+          ch4,                 & ! Methane                                (kg/kg)
+          n2o,                 & ! N2O                                    (kg/kg)
+          co                     ! CO                                     (kg/kg)
+     real(wp),allocatable,dimension(:) :: &
+          emis_sfc,            & ! Surface emissivity                     (1)
+          u_sfc,               & ! Surface u-wind                         (m/s)
+          v_sfc,               & ! Surface v-wind                         (m/s)
+          seaice,              & ! Sea-ice fraction                       (0-1)
+          lat,                 & ! Latitude                              (deg)
+          lon                    ! Longitude                              (deg)
+     real(wp),allocatable,dimension(:,:) :: &
+          o3,                  & ! Ozone                                  (kg/kg)
+          tca,                 & ! Total column cloud fraction            (0-1)
+          cloudIce,            & ! Cloud ice water mixing ratio           (kg/kg)
+          cloudLiq,            & ! Cloud liquid water mixing ratio        (kg/kg)
+          fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
+          fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
+
+     ! added by DPLRW
+     real(wp),allocatable,dimension(:,:) :: &
+          gwvel,               & ! grid verical velocity                  (m/s)
+          gcumf                  ! grid cumulus mass flux                 (kg/m^2/s)
+  end type cosp_column_inputs
+
+  ! ######################################################################################
+  ! TYPE cosp_optical_inputs
+  ! ######################################################################################
+  type cosp_optical_inputs
+     integer :: &
+          Npoints,             & ! Number of gridpoints.
+          Ncolumns,            & ! Number of columns.
+          Nlevels,             & ! Number of levels.
+          Npart,               & ! Number of cloud meteors for LIDAR simulators.
+          Nrefl                  ! Number of reflectances for PARASOL simulator
+     real(wp) :: &
+          emsfc_lw               ! Surface emissivity @ 11micron
+     real(wp),allocatable,dimension(:,:,:) :: &
+          frac_out,            & ! Cloud fraction
+          tau_067,             & ! Optical depth @ 0.67micron
+          emiss_11,            & ! Emissivity @ 11 micron
+          fracLiq,             & ! Fraction of optical-depth due to liquid (MODIS)
+          asym,                & ! Assymetry parameter @ 3.7micron (MODIS)
+          ss_alb,              & ! Single-scattering albedo @ 3.7micron (MODIS)
+          betatot_calipso,     & ! Lidar backscatter coefficient (calipso @ 532nm)
+          betatot_grLidar532,  & ! Lidar backscatter coefficient (ground-lidar @ 532nm)
+          betatot_atlid,       & ! Lidar backscatter coefficient (atlid @ 355nm)
+          betatot_ice_calipso, & ! Lidar backscatter coefficient ICE (calipso @ 532nm)
+          betatot_liq_calipso, & ! Lidar backscatter coefficient LIQUID (calipso @ 532nm)
+          tautot_calipso,      & ! Lidar Optical thickness (calipso @ 532nm)
+          tautot_grLidar532,   & ! Lidar Optical thickness (ground-lidar @ 532nm)  
+          tautot_atlid,        & ! Lidar Optical thickness (atlid @ 355nm)
+          tautot_ice_calipso,  & ! Lidar Ice Optical thickness (calipso @ 532nm)
+          tautot_liq_calipso,  & ! Lidar Liquid Optical thickness (calipso @ 532nm)
+          z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
+          kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
+          g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
+     real(wp),allocatable,dimension(:,:,:,:) :: &
+          vfall, vfsqu, zehyd, krhyd, &    ! for DPLRW, each hydrometeor
+          vtrm3, vtrm0, mmnt3, mmnt0
+     real(wp),allocatable,dimension(:,:) :: &
+          beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
+          beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 
+          beta_mol_atlid,      & ! Lidar molecular backscatter coefficient (atlid @ 355nm)
+          tau_mol_calipso,     & ! Lidar molecular optical depth (calipso @ 532nm)
+          tau_mol_grLidar532,  & ! Lidar molecular optical depth (ground-lidar @ 532nm) 
+          tau_mol_atlid,       & ! Lidar molecular optical depth (atlid @ 355nm)
+          tautot_S_liq,        & ! Parasol Liquid water optical thickness, from TOA to SFC
+          tautot_S_ice,        & ! Parasol Ice water optical thickness, from TOA to SFC
+          fracPrecipIce          ! Fraction of precipitation which is frozen (1).
+     type(radar_cfg), allocatable :: &
+          rcfg_cloudsat          ! Radar configuration information (CLOUDSAT)
+  end type cosp_optical_inputs
+
+  ! ######################################################################################
   ! TYPE cosp_outputs
   ! ######################################################################################
   type cosp_outputs
@@ -96,6 +201,7 @@ MODULE MOD_COSP
      real(wp),dimension(:,:,:),pointer :: &
           calipso_betaperp_tot => null(),  & ! Total backscattered signal
           calipso_beta_tot => null(),      & ! Total backscattered signal
+          calipso_tau_tot => null(),       & ! Optical thickness integrated from top to level z
           calipso_lidarcldphase => null(), & ! 3D "lidar" phase cloud fraction
           calipso_lidarcldtype => null(),  & ! 3D "lidar" OPAQ type fraction
           calipso_cldlayerphase => null(), & ! low, mid, high-level lidar phase cloud cover
@@ -108,7 +214,8 @@ MODULE MOD_COSP
           calipso_cldtypetemp => null(),   & ! opaque and thin cloud temperature  
           calipso_cldtypemeanz => null(),  & ! opaque and thin cloud altitude 
           calipso_cldtypemeanzse => null(),& ! same as just above with respect to SE
-          calipso_beta_mol => null()         ! Molecular backscatter
+          calipso_beta_mol => null(),      & ! Molecular backscatter
+          calipso_temp_tot => null()
      real(wp), dimension(:),pointer :: &
           calipso_cldthinemis => null(),   & ! thin cloud emissivity 
           calipso_srbval => null()           ! SR bins in cfad_sr
@@ -134,6 +241,7 @@ MODULE MOD_COSP
           atlid_beta_mol => null()      ! ATLID Molecular backscatter 
      real(wp), dimension(:),pointer :: & 
           atlid_srbval => null()        ! SR bins in cfad_sr
+
 
      ! PARASOL outputs
      real(wp),dimension(:,:,:),pointer :: &
@@ -200,25 +308,25 @@ MODULE MOD_COSP
           modis_Liquid_Water_Path_Mean => null(),          & ! L3 MODIS retrieved liquid water path
           modis_Ice_Water_Path_Mean => null()                ! L3 MODIS retrieved ice water path
      real(wp),pointer,dimension(:,:,:) ::  &
-          modis_Optical_Thickness_vs_Cloud_Top_Pressure => null(),     & ! Tau/Pressure joint histogram
+          modis_Optical_Thickness_vs_Cloud_Top_Pressure => null(), & ! Tau/Pressure joint histogram
+          modis_Optical_Thickness_vs_ReffICE => null(),            & ! Tau/ReffICE joint histogram
+          modis_Optical_Thickness_vs_ReffLIQ => null()               ! Tau/ReffLIQ joint histogram
+
+     real(wp),pointer,dimension(:,:,:) ::  &
           modis_Optical_Thickness_vs_Cloud_Top_Pressure_Liq => null(), & ! Tau/Pressure Liq joint histogram
           modis_Optical_Thickness_vs_Cloud_Top_Pressure_Ice => null(), & ! Tau/Pressure Ice joint histogram
-          modis_Optical_Thickness_vs_ReffICE => null(),                & ! Tau/ReffICE joint histogram
-          modis_Optical_Thickness_vs_ReffLIQ => null(),                & ! Tau/ReffLIQ joint histogram
-          modis_LWP_vs_ReffLIQ => null(),                              & ! LWP/ReffLIQ joint histogram
+          modis_LWP_vs_ReffLIQ => null(), &                              ! LWP/ReffLIQ joint histogram
           modis_IWP_vs_ReffICE => null()                                 ! IWP/ReffICE joint histogram
+
+     ! RTTOV outputs
+     real(wp),pointer :: &
+          rttov_tbs(:,:) => null() ! Brightness Temperature
 
      ! Joint CloudSat+MODIS simulators outputs
      real(wp),dimension(:,:,:,:),pointer :: &
           cfodd_ntotal => null()       ! # of CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
      real(wp),dimension(:,:),    pointer :: &
           wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
-
-     ! RTTOV outputs
-     integer                    :: &
-         Ninst_rttov
-     type(rttov_output),dimension(:),allocatable :: &
-         rttov_outputs
 
      ! Doppler capability of radar (CloudSat/QuickBeam)
      real(wp),dimension(:,:,:,:),pointer :: &
@@ -230,7 +338,6 @@ MODULE MOD_COSP
           vfall_Z => null(), vfall_T => null(), ZefVf_2 => null()
      real(wp),dimension(:,:),pointer :: &
           gcumw => null()
-
   end type cosp_outputs
 
 CONTAINS

@@ -66,10 +66,14 @@ program cosp2_test
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+  use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID
+  use mod_cosp_config,     ONLY: Nlvdplr, Nlvspwd, NlvdBZe, Nlvtemp  ! added by DPLRW
+=======
   use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID,cosp_optical_inputs,           &
                                  cosp_column_inputs,radar_cfg,cosp_cleanUp
-  use mod_cosp_config,     ONLY: Nlvdplr, Nlvspwd, NlvdBZe, Nlvtemp  ! added by DPLRW
   use MOD_COSP_RTTOV_UTIL, only: rttov_cfg
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   
   implicit none
 
@@ -230,9 +234,12 @@ program cosp2_test
              Lclmodis,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,           &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
+<<<<<<< HEAD:driver/src/cosp2_test.f90
              Lwr_occfreq, Lcfodd, &
              Ldplrw ! for DPLRW
-
+=======
+             Lwr_occfreq,Lcfodd
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -258,9 +265,13 @@ program cosp2_test
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
+<<<<<<< HEAD:driver/src/cosp2_test.f90
                        Lwr_occfreq, Lcfodd, &
                        Ldplrw
 
+=======
+                       Lwr_occfreq, Lcfodd
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   ! Local variables
   logical :: &
        lsingle     = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
@@ -385,7 +396,10 @@ program cosp2_test
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),psfc(Npoints),landmask(Npoints),          &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
+<<<<<<< HEAD:driver/src/cosp2_test.f90
            gwvel(Npoints,Nlevels),gcumf(Npoints,Nlevels), & ! added by DPLRW
+           frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints))
+=======
            frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),year(Npoints),           &
            month(Npoints),day(Npoints),hour(Npoints),minute(Npoints),seconds(Npoints))
 
@@ -396,15 +410,21 @@ program cosp2_test
   hour(:)    = R_UNDEF
   minute(:)  = R_UNDEF
   seconds(:) = R_UNDEF
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
 
   fileIN = trim(dinput)//trim(finput)
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
-                          dem_s,dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,   &
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+                          dem_s,dem_c,skt,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
                           gwvel, gcumf, & ! added by DPLRW
-                          emsfc_lw,geomode,Nlon,Nlat,surfelev,                           &
-                          year,month,day,hour,minute,seconds)
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev)
+=======
+                          dem_s,dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev,year,month,day,hour,       &
+                          minute,seconds)
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -445,8 +465,13 @@ program cosp2_test
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+  if (Ltbrttov) Lrttov = .true.
+  if (Ldplrw) Lcloudsat = .true. ! added by DPLRW
+=======
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
+  
   if (rttov_Ninstruments .gt. 0)  Lrttov = .true.
-  if (Ldplrw) Lcloudsat = .true. ! added by DPLRW  
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -482,7 +507,11 @@ program cosp2_test
        rttov_Ninstruments, rttov_instrument_namelists_final, rttov_configs,              &
        debug=rttov_verbose)
   call cpu_time(driver_time(3))
+<<<<<<< HEAD:driver/src/cosp2_test.f90
 
+=======
+    
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived type.
   ! *NOTE* The "construct/destroy" subroutines are local to this module and should be
@@ -509,8 +538,14 @@ program cosp2_test
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,            &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
-       Lwr_occfreq, Lcfodd, rttov_Ninstruments, rttov_config, Ldplrw,                    &
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+       Lwr_occfreq, Lcfodd, Ldplrw,                                                      &
+       Npoints, Ncolumns, Nlevels, Nlvgrid_local, rttov_Nchannels, use_vgrid, cospOUT)
+=======
+       Lwr_occfreq, Lcfodd,                                                              &
+       rttov_Ninstruments,rttov_configs,                                                 &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, use_vgrid, cospOUT)
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Break COSP up into pieces and loop over each COSP 'chunk'.
@@ -590,10 +625,10 @@ program cosp2_test
      ! cospstateIN%hgt_matrix_half(:,1) contains the bottom of the top layer.
      ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
-     
-     ! added by DPLRW
+<<<<<<< HEAD:driver/src/cosp2_test.f90
      cospstateIN%gwvel(:,1:Nlevels) = gwvel(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%gcumf(:,1:Nlevels) = gcumf(start_idx:end_idx,Nlevels:1:-1)
+=======
      
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
@@ -675,8 +710,7 @@ program cosp2_test
      ! The weighted Reff is given by: Reff_net = (M_1 + M_2) / (M_1/Reff_1 + M_2/Reff_2)
      cospstateIN%DeffLiq(:,:) = 0._wp ! Initialize for zero everywhere.
      where ((mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
-         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / &
-              & (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
      elsewhere (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ)
      elsewhere (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
@@ -685,8 +719,7 @@ program cosp2_test
      
      cospstateIN%DeffIce(:,:) = 0._wp ! Initialize for zero everywhere.
      where ((mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
-         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / &
-              & (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
      elsewhere (mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE)
      elsewhere (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
@@ -702,6 +735,7 @@ program cosp2_test
      ! Inputs not supplied in the UKMO test data
      cospstateIN%rttov_sfcmask = landmask(start_idx:end_idx)       ! (0=ocn,1=land,2=seaice). No sea ice in UKMO input here.
 
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Generate subcolumns and compute optical inputs.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -728,9 +762,13 @@ program cosp2_test
      end do
      
      call cpu_time(driver_time(7))
+<<<<<<< HEAD:driver/src/cosp2_test.f90
 
+  enddo
+=======
   end do
 
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
   print*,'Time to initialize:       ',driver_time(3)-driver_time(2)
   print*,'Time to construct types:  ',driver_time(4)-driver_time(3)
@@ -1263,7 +1301,12 @@ contains
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE construct_cospstateIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%     
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+  subroutine construct_cospstateIN(npoints,nlevels,nchan,y)
+    
+=======
   subroutine construct_cospstateIN(npoints,nlevels,y)
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
     ! Inputs
     integer,intent(in) :: &
          npoints, & ! Number of horizontal gridpoints
@@ -1328,8 +1371,14 @@ contains
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    Ninst_rttov,rttov_configs, Ldplrw,                   &
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+                                    Ldplrw, & ! added by DPLRW
+                                    Npoints,Ncolumns,Nlevels,Nlvgrid,Nchan,use_vgrid,x)
+    
+=======
+                                    Ninst_rttov,rttov_configs,                           &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,use_vgrid,x)
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
      ! Inputs
      logical,intent(in) :: &
          Lpctisccp,        & ! ISCCP mean cloud top pressure
@@ -1718,7 +1767,7 @@ contains
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
     if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
-
+<<<<<<< HEAD:driver/src/cosp2_test.f90
     if (allocated(y%rcfg_cloudsat%N_scale_flag))       deallocate(y%rcfg_cloudsat%N_scale_flag)
     if (allocated(y%rcfg_cloudsat%Z_scale_flag))       deallocate(y%rcfg_cloudsat%Z_scale_flag)
     if (allocated(y%rcfg_cloudsat%Z_scale_added_flag)) deallocate(y%rcfg_cloudsat%Z_scale_added_flag)
@@ -1738,8 +1787,9 @@ contains
     if (allocated(y%mmnt3))               deallocate(y%mmnt3)
     if (allocated(y%mmnt0))               deallocate(y%mmnt0)
     
+=======
     if (associated(y%cfg_rttov))          nullify(y%cfg_rttov)
-
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
@@ -1780,9 +1830,13 @@ contains
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
-
+<<<<<<< HEAD:driver/src/cosp2_test.f90
+    if (allocated(y%hgt_matrix_half)) deallocate(y%hgt_matrix_half)    
+    if (allocated(y%surfelev))        deallocate(y%surfelev)
     if (allocated(y%gwvel))           deallocate(y%gwvel)
     if (allocated(y%gcumf))           deallocate(y%gcumf)
+=======
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
     
   end subroutine destroy_cospstateIN
   
@@ -2102,6 +2156,7 @@ contains
         deallocate(y%wr_occfreq_ntotal)
         nullify(y%wr_occfreq_ntotal)
      endif
+<<<<<<< HEAD:driver/src/cosp2_test.f90
 
      ! added by DPLRW
      if (associated(y%dplrw_Z)) then
@@ -2150,6 +2205,9 @@ contains
         deallocate(y%ZefVf_2) ; nullify(y%ZefVf_2)
      end if
 
+
+=======
+     
      ! RTTOV multi-instrument
      if (allocated(y%rttov_outputs)) then
          do i=1,y % Ninst_rttov ! Iterate over each instrument
@@ -2197,6 +2255,7 @@ contains
          deallocate(y%rttov_outputs)
      end if
      
+>>>>>>> upstream/master:driver/src/cosp2_test.F90
    end subroutine destroy_cosp_outputs
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
