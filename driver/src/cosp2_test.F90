@@ -64,12 +64,12 @@ program cosp2_test
   USE mod_scops,           ONLY: scops
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
+  use MOD_COSP_RTTOV_UTIL, only: rttov_cfg
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
   use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID,cosp_optical_inputs,           &
                                  cosp_column_inputs,radar_cfg,cosp_cleanUp
   use mod_cosp_config,     ONLY: Nlvdplr, Nlvspwd, NlvdBZe, Nlvtemp  ! added by DPLRW
-  use MOD_COSP_RTTOV_UTIL, only: rttov_cfg
   
   implicit none
 
@@ -594,7 +594,7 @@ program cosp2_test
      ! added by DPLRW
      cospstateIN%gwvel(:,1:Nlevels) = gwvel(start_idx:end_idx,Nlevels:1:-1)
      cospstateIN%gcumf(:,1:Nlevels) = gcumf(start_idx:end_idx,Nlevels:1:-1)
-     
+
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
    !   cospstateIN%emis_in(:,:) = 1._wp
@@ -1284,7 +1284,6 @@ contains
              y%fl_snow(nPoints,nLevels),y%fl_rain(nPoints,nLevels),                      &
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
              y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),y%sza(nPoints))
-
 
     ! added by DPLRW
     allocate(y%gwvel(npoints,nlevels),y%gcumf(npoints,nlevels))

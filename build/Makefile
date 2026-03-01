@@ -70,7 +70,7 @@ COSP_OBJS = cosp.o cosp_config.o cosp_stats.o cosp_constants.o cosp_errorHandlin
 ifdef RTTOV
 COSP_OBJS += cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_rttov_util.o
 else
-COSP_OBJS += cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o #cosp_rttov_utilSTUB.o
+COSP_OBJS += cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
 endif
 
 
@@ -105,8 +105,8 @@ ifdef RTTOV
 cosp.o                      : cosp_rttov_interface_v13.o cosp_rttov_v13.o cosp_rttov_util.o
 cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o cosp_rttov_util.o
 else
-cosp.o                      : cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o #cosp_rttov_utilSTUB.o
-cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o #cosp_rttov_utilSTUB.o
+cosp.o                      : cosp_rttov_interfaceSTUB.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
+cosp_stats.o                : cosp_kinds.o cosp_config.o cosp_constants.o cosp_rttov_utilSTUB.o
 endif
 
 cosp_constants.o            : cosp_kinds.o
@@ -130,11 +130,11 @@ quickbeam.o                 : cosp_kinds.o cosp_stats.o
 # RTTOV Simulator code dependencies (only one interface and one RTTOV simulator are used at a time)
 cosp_rttov_interface_v13.o  : cosp_kinds.o cosp_config.o cosp_errorHandling.o cosp_rttov_v13.o cosp_rttov_util.o
 cosp_rttov_v13.o            : cosp_kinds.o cosp_config.o cosp_errorHandling.o cosp_constants.o
-cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o #cosp_rttov_utilSTUB.o
+cosp_rttov_interfaceSTUB.o  : cosp_kinds.o cosp_config.o cosp_rttovSTUB.o cosp_rttov_utilSTUB.o
 cosp_rttovSTUB.o            : cosp_kinds.o cosp_config.o cosp_constants.o
 # RTTOV utility code dependencies
 cosp_rttov_util.o           : cosp_kinds.o
-#cosp_rttov_utilSTUB.o       : cosp_kinds.o
+cosp_rttov_utilSTUB.o       : cosp_kinds.o
 
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
