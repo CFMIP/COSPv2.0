@@ -2359,6 +2359,7 @@ contains
 
        status = nf90_put_var(fileID,varID(166),cospOUT%ZefVf_2)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+    end if
     
     ! Define instrument channel indices for multiple RTTOV instruments
     ii = 167 ! RTTOV variable indices start at 167
@@ -2416,14 +2417,14 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif            
         end do
-    end if
+     end if
     
-    ! Close file
-    status = nf90_close(fileID)
-    if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
-  end subroutine write_cosp2_output
-
+     ! Close file
+     status = nf90_close(fileID)
+     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+     
+   end subroutine write_cosp2_output
+   
 
 
 

@@ -39,7 +39,8 @@ module mod_quickbeam_optics
   USE cosp_phys_constants, ONLY: rhoice  
   use quickbeam,           ONLY: dmin,dmax,Re_BIN_LENGTH,  &
                                  Re_MAX_BIN,nRe_types,nd,maxhclass
-  use mod_cosp_config,     ONLY: radar_cfg,N_HYDRO
+  use mod_cosp_config,     ONLY: N_HYDRO
+  use mod_cosp_stats,      ONLY: radar_cfg
   use mod_cosp_error,      ONLY: errorMessage
   implicit none
 

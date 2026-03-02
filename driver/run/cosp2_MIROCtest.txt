@@ -80,17 +80,30 @@
                                  ! default value since V4.0 of the ISCCP simulator.
                                  ! ONLY APPLICABLE IF top_height EQUALS 1 or 3
   !----------------------------------------------------------------------------------
+  !-------------- Swathing inputs
+  !----------------------------------------------------------------------------------
+  N_SWATHS_ISCCP=2,
+  SWATH_LOCALTIMES_ISCCP=5.25,18.0,
+  SWATH_WIDTHS_ISCCP=2000,2000,
+  N_SWATHS_MISR=2,
+  SWATH_LOCALTIMES_MISR=6.5,18.25,
+  SWATH_WIDTHS_MISR=2000,2000,
+  N_SWATHS_MODIS=2,
+  SWATH_LOCALTIMES_MODIS=5.75,13.5,
+  SWATH_WIDTHS_MODIS=2000,2000,
+  N_SWATHS_CSCAL=2,
+  SWATH_LOCALTIMES_CSCAL=6.75,19.25,
+  SWATH_WIDTHS_CSCAL=2000,2000,
+  N_SWATHS_PARASOL=2,
+  SWATH_LOCALTIMES_PARASOL=6.75,19,
+  SWATH_WIDTHS_PARASOL=2000,2000,
+  N_SWATHS_ATLID=2,
+  SWATH_LOCALTIMES_ATLID=7.25,19.5,
+  SWATH_WIDTHS_ATLID=2000,2000,
+  !----------------------------------------------------------------------------------
   !-------------- RTTOV inputs
   !----------------------------------------------------------------------------------
-  rttov_Platform=1,    ! satellite platform
-  rttov_Satellite=15,  ! satellite
-  rttov_Instrument=5,  ! instrument
-  rttov_Nchannels=3,   ! Number of channels to be computed
-  rttov_Channels=1,2,3,        ! Channel numbers (please be sure that you supply Nchannels)
-  rttov_Surfem=0.0,0.0,0.0,  ! Surface emissivity (please be sure that you supply Nchannels)
-  rttov_ZenAng=50.0, ! Satellite Zenith Angle
-  CO2=5.241e-04, ! Mixing ratios of trace gases
-  CH4=9.139e-07,
-  N2O=4.665e-07,
-  CO=2.098e-07
+!  rttov_Ninstruments=1,
+!  rttov_instrument_namelists='instrument_nls/cosp2_rttov_inst1.txt',
+  rttov_verbose=.false.
 /
