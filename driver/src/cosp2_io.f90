@@ -888,7 +888,7 @@ contains
        status = nf90_put_att(fileID,varID(87),"standard_name", "solar_zenith_angle")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     endif
-    
+
     ! Cloudsat simulator output
     if (associated(cospOUT%cloudsat_Ze_tot)) then
        status = nf90_def_var(fileID,"dbze94",nf90_float, (/dimID(1),dimID(2),dimID(3)/),varID(22))
@@ -1080,7 +1080,7 @@ contains
        status = nf90_put_att(fileID,varID(32),"standard_name", "cloud_area_fraction_in_atmosphere_layer")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))         
     endif
-    
+
     ! MISR simulator output
     if (associated(cospOUT%misr_fq)) then
        status = nf90_def_var(fileID,"clMISR",nf90_float, (/dimID(1),dimID(5),dimID(8)/),varID(33))
@@ -1459,128 +1459,128 @@ contains
     ! added by DPLRW
     if (associated(cospOUT%dplrw_Z)) then
        ! axes
-       status = nf90_def_var(fileID,"lvtemp_grid",nf90_float,(/dimID(19)/),varID(148))
+       status = nf90_def_var(fileID,"lvtemp_grid",nf90_float,(/dimID(19)/),varID(150))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(148),"long_name","Temperature axis for DPLRW CFED")
+       status = nf90_put_att(fileID,varID(150),"long_name","Temperature axis for DPLRW CFED")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(148),"units",        "degree C")
+       status = nf90_put_att(fileID,varID(150),"units",        "degree C")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"lvdBZe_grid",nf90_float,(/dimID(20)/),varID(149))
+       status = nf90_def_var(fileID,"lvdBZe_grid",nf90_float,(/dimID(20)/),varID(151))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(149),"long_name","dBZe axis for DPLRW CFED")
+       status = nf90_put_att(fileID,varID(151),"long_name","dBZe axis for DPLRW CFED")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(149),"units",        "dBZe")
+       status = nf90_put_att(fileID,varID(151),"units",        "dBZe")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"lvdplr_grid",nf90_float,(/dimID(21)/),varID(150))
+       status = nf90_def_var(fileID,"lvdplr_grid",nf90_float,(/dimID(21)/),varID(152))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(150),"long_name","Doppler velocity axis for DPLRW CFED")
+       status = nf90_put_att(fileID,varID(152),"long_name","Doppler velocity axis for DPLRW CFED")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(150),"units",        "m/s")
+       status = nf90_put_att(fileID,varID(152),"units",        "m/s")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"lvspwd_grid",nf90_float,(/dimID(22)/),varID(151))
+       status = nf90_def_var(fileID,"lvspwd_grid",nf90_float,(/dimID(22)/),varID(153))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(151),"long_name","spectrum width axis for DPLRW CFED")
+       status = nf90_put_att(fileID,varID(153),"long_name","spectrum width axis for DPLRW CFED")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(151),"units",        "m/s")
+       status = nf90_put_att(fileID,varID(153),"units",        "m/s")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"regimeID",nf90_INT,(/dimID(23)/),varID(152))
+       status = nf90_def_var(fileID,"regimeID",nf90_INT,(/dimID(23)/),varID(154))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(152),"long_name","regime ID: 0=ALL, 1=LS, 2=CU")
+       status = nf90_put_att(fileID,varID(154),"long_name","regime ID: 0=ALL, 1=LS, 2=CU")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(152),"units",        "None")
+       status = nf90_put_att(fileID,varID(154),"units",        "None")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"nrmlzdID",nf90_INT,(/dimID(24)/),varID(153))
+       status = nf90_def_var(fileID,"nrmlzdID",nf90_INT,(/dimID(24)/),varID(155))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(153),"long_name","normalized ID: 1=Ze, 2=mass, 3=number")
+       status = nf90_put_att(fileID,varID(155),"long_name","normalized ID: 1=Ze, 2=mass, 3=number")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(153),"units",        "None")
+       status = nf90_put_att(fileID,varID(155),"units",        "None")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
        ! variables
-       status = nf90_def_var(fileID,"dplrw_Z",nf90_float,(/dimID(1),dimID(21),dimID(4),dimID(23)/),varID(154))
+       status = nf90_def_var(fileID,"dplrw_Z",nf90_float,(/dimID(1),dimID(21),dimID(4),dimID(23)/),varID(156))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(154),"long_name","Number of samples onto histogram, Doppler velocity/Altitude")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(154),"units",        "#")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"spwid_Z",nf90_float,(/dimID(1),dimID(22),dimID(4),dimID(23)/),varID(155))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(155),"long_name","Number of samples onto histogram, Spectrum width/Altitude")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(155),"units",        "#")
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"Zef94_Z",nf90_float,(/dimID(1),dimID(20),dimID(4),dimID(23)/),varID(156))
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(156),"long_name","Number of samples onto histogram, Radar reflectivity/Altitude")
+       status = nf90_put_att(fileID,varID(156),"long_name","Number of samples onto histogram, Doppler velocity/Altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(156),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
-       status = nf90_def_var(fileID,"dplrw_T",nf90_float,(/dimID(1),dimID(21),dimID(19),dimID(23)/),varID(157))
+       status = nf90_def_var(fileID,"spwid_Z",nf90_float,(/dimID(1),dimID(22),dimID(4),dimID(23)/),varID(157))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(157),"long_name","Number of samples onto histogram, Doppler velocity/Temperature")
+       status = nf90_put_att(fileID,varID(157),"long_name","Number of samples onto histogram, Spectrum width/Altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(157),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"spwid_T",nf90_float,(/dimID(1),dimID(22),dimID(19),dimID(23)/),varID(158))
+       status = nf90_def_var(fileID,"Zef94_Z",nf90_float,(/dimID(1),dimID(20),dimID(4),dimID(23)/),varID(158))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(158),"long_name","Number of samples onto histogram, Spectrum width/Temperature")
+       status = nf90_put_att(fileID,varID(158),"long_name","Number of samples onto histogram, Radar reflectivity/Altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(158),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"Zef94_T",nf90_float,(/dimID(1),dimID(20),dimID(19),dimID(23)/),varID(159))
+
+       status = nf90_def_var(fileID,"dplrw_T",nf90_float,(/dimID(1),dimID(21),dimID(19),dimID(23)/),varID(159))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(159),"long_name","Number of samples onto histogram, Radar reflectivity/Temperature")
+       status = nf90_put_att(fileID,varID(159),"long_name","Number of samples onto histogram, Doppler velocity/Temperature")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(159),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
-       status = nf90_def_var(fileID,"ZefVd_2",nf90_float,(/dimID(1),dimID(21),dimID(20),dimID(23)/),varID(160))
+       status = nf90_def_var(fileID,"spwid_T",nf90_float,(/dimID(1),dimID(22),dimID(19),dimID(23)/),varID(160))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(160),"long_name","Number of samples onto histogram, Radar reflectivity/Doppler velocity")
+       status = nf90_put_att(fileID,varID(160),"long_name","Number of samples onto histogram, Spectrum width/Temperature")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(160),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       
-       status = nf90_def_var(fileID,"gwcum",nf90_float,(/dimID(1),dimID(3)/),varID(161))
+       status = nf90_def_var(fileID,"Zef94_T",nf90_float,(/dimID(1),dimID(20),dimID(19),dimID(23)/),varID(161))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(161),"long_name","in-cloud cumulus upward velocity")
+       status = nf90_put_att(fileID,varID(161),"long_name","Number of samples onto histogram, Radar reflectivity/Temperature")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(161),"units",        "m/s")
+       status = nf90_put_att(fileID,varID(161),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       !~~~
-       status = nf90_def_var(fileID,"vfall_Z",nf90_float,(/dimID(1),dimID(21),dimID(4),dimID(23),dimID(24)/),varID(162))
+       status = nf90_def_var(fileID,"ZefVd_2",nf90_float,(/dimID(1),dimID(21),dimID(20),dimID(23)/),varID(162))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(162),"long_name","Number of samples onto histogram, terminal velocity/Altitude")
+       status = nf90_put_att(fileID,varID(162),"long_name","Number of samples onto histogram, Radar reflectivity/Doppler velocity")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(162),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"gridw_Z",nf90_float,(/dimID(1),dimID(21),dimID(4),dimID(23)/),varID(163))
+       
+       status = nf90_def_var(fileID,"gwcum",nf90_float,(/dimID(1),dimID(3)/),varID(163))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(163),"long_name","Number of samples onto histogram, grid w velocity/Altitude")
+       status = nf90_put_att(fileID,varID(163),"long_name","in-cloud cumulus upward velocity")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(163),"units",        "#")
+       status = nf90_put_att(fileID,varID(163),"units",        "m/s")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_def_var(fileID,"vfall_T",nf90_float,(/dimID(1),dimID(21),dimID(19),dimID(23),dimID(24)/),varID(164))
+       !~~~
+       status = nf90_def_var(fileID,"vfall_Z",nf90_float,(/dimID(1),dimID(21),dimID(4),dimID(23),dimID(24)/),varID(164))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(164),"long_name","Number of samples onto histogram, terminal velocity/Temperature")
+       status = nf90_put_att(fileID,varID(164),"long_name","Number of samples onto histogram, terminal velocity/Altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(164),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_def_var(fileID,"gridw_T",nf90_float,(/dimID(1),dimID(21),dimID(19),dimID(23)/),varID(165))
+       status = nf90_def_var(fileID,"gridw_Z",nf90_float,(/dimID(1),dimID(21),dimID(4),dimID(23)/),varID(165))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(165),"long_name","Number of samples onto histogram, grid w velocity/Temperature")
+       status = nf90_put_att(fileID,varID(165),"long_name","Number of samples onto histogram, grid w velocity/Altitude")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(165),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_def_var(fileID,"ZefVf_2",nf90_float,(/dimID(1),dimID(21),dimID(20),dimID(23),dimID(24)/),varID(166))
+       status = nf90_def_var(fileID,"vfall_T",nf90_float,(/dimID(1),dimID(21),dimID(19),dimID(23),dimID(24)/),varID(166))
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_att(fileID,varID(166),"long_name","Number of samples onto histogram, Radar reflectivity/terminal velocity")
+       status = nf90_put_att(fileID,varID(166),"long_name","Number of samples onto histogram, terminal velocity/Temperature")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        status = nf90_put_att(fileID,varID(166),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_def_var(fileID,"gridw_T",nf90_float,(/dimID(1),dimID(21),dimID(19),dimID(23)/),varID(167))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(167),"long_name","Number of samples onto histogram, grid w velocity/Temperature")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(167),"units",        "#")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+       status = nf90_def_var(fileID,"ZefVf_2",nf90_float,(/dimID(1),dimID(21),dimID(20),dimID(23),dimID(24)/),varID(168))
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(168),"long_name","Number of samples onto histogram, Radar reflectivity/terminal velocity")
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_att(fileID,varID(168),"units",        "#")
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
        
     end if
@@ -1591,7 +1591,7 @@ contains
     ! ---------------------------------------------------------------------------------------
         
     ! Define instrument channel indices for multiple RTTOV instruments
-    ii = 167 ! RTTOV variable indices start at 167
+    ii = 169 ! RTTOV variable indices start at 170
     if (allocated(cospOUT%rttov_outputs)) then
         do i=1,Ninst_rttov
             write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
@@ -1869,17 +1869,17 @@ contains
     status = nf90_put_var(fileID,varID(83),loc)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     ! added by DPLRW
-    status = nf90_put_var(fileID,varID(148),lvtemp_grid)
+    status = nf90_put_var(fileID,varID(150),lvtemp_grid)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(149),lvdBZe_grid)
+    status = nf90_put_var(fileID,varID(151),lvdBZe_grid)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(150),lvdplr_grid)
+    status = nf90_put_var(fileID,varID(152),lvdplr_grid)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(151),lvspwd_grid)
+    status = nf90_put_var(fileID,varID(153),lvspwd_grid)
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(152),(/0,1,2/) )
+    status = nf90_put_var(fileID,varID(154),(/0,1,2/) )
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-    status = nf90_put_var(fileID,varID(153),(/1,2,3/) )
+    status = nf90_put_var(fileID,varID(155),(/1,2,3/) )
     if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     
     ! CALIPSO simulator output
@@ -2327,42 +2327,42 @@ contains
 
     ! added by DPLRW
     if (associated(cospOUT%dplrw_Z))then
-       status = nf90_put_var(fileID,varID(154),cospOUT%dplrw_Z)
+       status = nf90_put_var(fileID,varID(156),cospOUT%dplrw_Z)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(155),cospOUT%spwid_Z)
+       status = nf90_put_var(fileID,varID(157),cospOUT%spwid_Z)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(156),cospOUT%Zef94_Z)
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-
-       status = nf90_put_var(fileID,varID(157),cospOUT%dplrw_T)
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(158),cospOUT%spwid_T)
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(159),cospOUT%Zef94_T)
+       status = nf90_put_var(fileID,varID(158),cospOUT%Zef94_Z)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_put_var(fileID,varID(160),cospOUT%ZefVd_2)
+       status = nf90_put_var(fileID,varID(159),cospOUT%dplrw_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(160),cospOUT%spwid_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(161),cospOUT%Zef94_T)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_put_var(fileID,varID(161),cospOUT%gcumw)
+       status = nf90_put_var(fileID,varID(162),cospOUT%ZefVd_2)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_put_var(fileID,varID(162),cospOUT%vfall_Z)
-       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(163),cospOUT%gridw_Z)
+       status = nf90_put_var(fileID,varID(163),cospOUT%gcumw)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_put_var(fileID,varID(164),cospOUT%vfall_T)
+       status = nf90_put_var(fileID,varID(164),cospOUT%vfall_Z)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-       status = nf90_put_var(fileID,varID(165),cospOUT%gridw_T)
+       status = nf90_put_var(fileID,varID(165),cospOUT%gridw_Z)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
 
-       status = nf90_put_var(fileID,varID(166),cospOUT%ZefVf_2)
+       status = nf90_put_var(fileID,varID(166),cospOUT%vfall_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+       status = nf90_put_var(fileID,varID(167),cospOUT%gridw_T)
+       if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+
+       status = nf90_put_var(fileID,varID(168),cospOUT%ZefVf_2)
        if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
     end if
-    
+
     ! Define instrument channel indices for multiple RTTOV instruments
-    ii = 167 ! RTTOV variable indices start at 167
+    ii = 169 ! RTTOV variable indices start at 170
     if (allocated(cospOUT%rttov_outputs)) then
         do i=1,Ninst_rttov
             write (i_str,fmt) i ! converting integer to string i_str using a 'internal file'
@@ -2416,7 +2416,7 @@ contains
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_total_pc)
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif            
-        end do
+         end do
      end if
     
      ! Close file
