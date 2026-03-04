@@ -618,6 +618,12 @@ CONTAINS
        Lcloudsat_modis_wr  = .true. ! WR: warm rain product
     endif
 
+    ! for DPLRW
+    if (associated(cospOUT%dplrw_Z)) then
+       Ldplrw = .true.
+       Lcloudsat_subcolumn = .true.
+    end if
+
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2b) Error Checking
     !     Enforce bounds on input fields. If input field is out-of-bounds, report error
