@@ -272,6 +272,34 @@ program gt2input
        &           start=(/1,1,1,1/),count=(/imax,jmax,kmax,hmax/)) )
 
   
+  ! ===== date info =====
+  write(*,*) 'Now ... date info'
+  ! ^^^
+  call nf90_check( nf90_def_var(fid,"year",NF90_DOUBLE,(/xid,yid/),vid) )
+  out2D(:,:,1) = 2025.
+  call nf90_check( nf90_put_var(fid,vid,out2D(:,:,1),start=(/1,1/), count=(/imax,jmax/) ) )
+  ! ^^^
+  call nf90_check( nf90_def_var(fid,"month",NF90_DOUBLE,(/xid,yid/),vid) )
+  out2D(:,:,1) = 1.
+  call nf90_check( nf90_put_var(fid,vid,out2D(:,:,1),start=(/1,1/), count=(/imax,jmax/) ) )
+  ! ^^^
+  call nf90_check( nf90_def_var(fid,"day",NF90_DOUBLE,(/xid,yid/),vid) )
+  out2D(:,:,1) = 1.
+  call nf90_check( nf90_put_var(fid,vid,out2D(:,:,1),start=(/1,1/), count=(/imax,jmax/) ) )
+  ! ^^^
+  call nf90_check( nf90_def_var(fid,"hour",NF90_DOUBLE,(/xid,yid/),vid) )
+  out2D(:,:,1) = 12.
+  call nf90_check( nf90_put_var(fid,vid,out2D(:,:,1),start=(/1,1/), count=(/imax,jmax/) ) )
+  ! ^^^
+  call nf90_check( nf90_def_var(fid,"minute",NF90_DOUBLE,(/xid,yid/),vid) )
+  out2D(:,:,1) = 0.
+  call nf90_check( nf90_put_var(fid,vid,out2D(:,:,1),start=(/1,1/), count=(/imax,jmax/) ) )
+  ! ^^^
+  call nf90_check( nf90_def_var(fid,"second",NF90_DOUBLE,(/xid,yid/),vid) )
+  out2D(:,:,1) = 0.
+  call nf90_check( nf90_put_var(fid,vid,out2D(:,:,1),start=(/1,1/), count=(/imax,jmax/) ) )
+
+
   ! END.
   call execute_command_line('chmod +x ../MIROC_inputs/'//trim(dir)//'_MIROCinput.nc')
 
