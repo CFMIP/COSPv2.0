@@ -934,9 +934,14 @@ contains
              ! Precipitation
              if (use_precipitation_fluxes) then
                 if (prec_ls(j,k) .ne. 0.) then
-                   fl_lsrain(j,k) = fl_lsrainIN(j,k)/prec_ls(j,k)
-                   fl_lssnow(j,k) = fl_lssnowIN(j,k)/prec_ls(j,k)
-                   fl_lsgrpl(j,k) = fl_lsgrplIN(j,k)/prec_ls(j,k)
+                   !fl_lsrain(j,k) = fl_lsrainIN(j,k)/prec_ls(j,k)
+                   !fl_lssnow(j,k) = fl_lssnowIN(j,k)/prec_ls(j,k)
+                   !fl_lsgrpl(j,k) = fl_lsgrplIN(j,k)/prec_ls(j,k)
+
+                   ! this is temporal treatment for prognostic precip. in MIROC6
+                   mr_hydro(j,:,k,I_LSRAIN) = mr_hydro(j,:,k,I_LSRAIN)/prec_ls(j,k)
+                   mr_hydro(j,:,k,I_LSSNOW) = mr_hydro(j,:,k,I_LSSNOW)/prec_ls(j,k)
+                   mr_hydro(j,:,k,I_LSGRPL) = mr_hydro(j,:,k,I_LSGRPL)/prec_ls(j,k)
                 endif
                 if (prec_cv(j,k) .ne. 0.) then
                    fl_ccrain(j,k) = fl_ccrainIN(j,k)/prec_cv(j,k)
@@ -969,45 +974,61 @@ contains
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        if (use_precipitation_fluxes) then
           ! LS rain
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 1._wp, n_ax(I_LSRAIN), n_bx(I_LSRAIN),         &
-               alpha_x(I_LSRAIN), c_x(I_LSRAIN),   d_x(I_LSRAIN),   g_x(I_LSRAIN),       &
-               a_x(I_LSRAIN),   b_x(I_LSRAIN),   gamma_1(I_LSRAIN), gamma_2(I_LSRAIN),   &
-               gamma_3(I_LSRAIN), gamma_4(I_LSRAIN), fl_lsrain,                          &
-               mr_hydro(:,:,:,I_LSRAIN), Reff(:,:,:,I_LSRAIN))
+          !call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
+          !     cospstateIN%at, frac_prec, 1._wp, n_ax(I_LSRAIN), n_bx(I_LSRAIN),         &
+          !     alpha_x(I_LSRAIN), c_x(I_LSRAIN),   d_x(I_LSRAIN),   g_x(I_LSRAIN),       &
+          !     a_x(I_LSRAIN),   b_x(I_LSRAIN),   gamma_1(I_LSRAIN), gamma_2(I_LSRAIN),   &
+          !     gamma_3(I_LSRAIN), gamma_4(I_LSRAIN), fl_lsrain,                          &
+          !     mr_hydro(:,:,:,I_LSRAIN), Reff(:,:,:,I_LSRAIN))
+          !call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+          !     cospstateIN%pfull, cospstateIN%at, frac_prec, 2._wp, I_CVRAIN, sd, &
+          !     fl_ccrain, mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN) )
           ! LS snow
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 1._wp,  n_ax(I_LSSNOW),  n_bx(I_LSSNOW),       &
-               alpha_x(I_LSSNOW), c_x(I_LSSNOW),  d_x(I_LSSNOW),  g_x(I_LSSNOW),         &
-               a_x(I_LSSNOW),   b_x(I_LSSNOW),   gamma_1(I_LSSNOW),  gamma_2(I_LSSNOW),  &
-               gamma_3(I_LSSNOW), gamma_4(I_LSSNOW), fl_lssnow,                          &
-               mr_hydro(:,:,:,I_LSSNOW), Reff(:,:,:,I_LSSNOW))
+          !call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
+          !     cospstateIN%at, frac_prec, 1._wp,  n_ax(I_LSSNOW),  n_bx(I_LSSNOW),       &
+          !     alpha_x(I_LSSNOW), c_x(I_LSSNOW),  d_x(I_LSSNOW),  g_x(I_LSSNOW),         &
+          !     a_x(I_LSSNOW),   b_x(I_LSSNOW),   gamma_1(I_LSSNOW),  gamma_2(I_LSSNOW),  &
+          !     gamma_3(I_LSSNOW), gamma_4(I_LSSNOW), fl_lssnow,                          &
+          !     mr_hydro(:,:,:,I_LSSNOW), Reff(:,:,:,I_LSSNOW))
+          !call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+          !     cospstateIN%pfull, cospstateIN%at, frac_prec, 2._wp, I_CVRAIN, sd, &
+          !     fl_ccrain, mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN) )
           ! CV rain
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 2._wp, n_ax(I_CVRAIN),  n_bx(I_CVRAIN),        &
-               alpha_x(I_CVRAIN), c_x(I_CVRAIN),   d_x(I_CVRAIN),   g_x(I_CVRAIN),       &
-               a_x(I_CVRAIN),   b_x(I_CVRAIN),   gamma_1(I_CVRAIN), gamma_2(I_CVRAIN),   &
-               gamma_3(I_CVRAIN), gamma_4(I_CVRAIN), fl_ccrain,                          &
-               mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN))
+          !call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
+          !     cospstateIN%at, frac_prec, 2._wp, n_ax(I_CVRAIN),  n_bx(I_CVRAIN),        &
+          !     alpha_x(I_CVRAIN), c_x(I_CVRAIN),   d_x(I_CVRAIN),   g_x(I_CVRAIN),       &
+          !     a_x(I_CVRAIN),   b_x(I_CVRAIN),   gamma_1(I_CVRAIN), gamma_2(I_CVRAIN),   &
+          !     gamma_3(I_CVRAIN), gamma_4(I_CVRAIN), fl_ccrain,                          &
+          !     mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN))
+          call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+               cospstateIN%pfull, cospstateIN%at, frac_prec, 2._wp, I_CVRAIN, sd, &
+               fl_ccrain, mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN) )
           ! CV snow
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 2._wp, n_ax(I_CVSNOW),  n_bx(I_CVSNOW),        &
-               alpha_x(I_CVSNOW),  c_x(I_CVSNOW),   d_x(I_CVSNOW),   g_x(I_CVSNOW),      &
-               a_x(I_CVSNOW),   b_x(I_CVSNOW),   gamma_1(I_CVSNOW), gamma_2(I_CVSNOW),   &
-               gamma_3(I_CVSNOW), gamma_4(I_CVSNOW), fl_ccsnow,                          &
-               mr_hydro(:,:,:,I_CVSNOW), Reff(:,:,:,I_CVSNOW))
+          !call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
+          !     cospstateIN%at, frac_prec, 2._wp, n_ax(I_CVSNOW),  n_bx(I_CVSNOW),        &
+          !     alpha_x(I_CVSNOW),  c_x(I_CVSNOW),   d_x(I_CVSNOW),   g_x(I_CVSNOW),      &
+          !     a_x(I_CVSNOW),   b_x(I_CVSNOW),   gamma_1(I_CVSNOW), gamma_2(I_CVSNOW),   &
+          !     gamma_3(I_CVSNOW), gamma_4(I_CVSNOW), fl_ccsnow,                          &
+          !     mr_hydro(:,:,:,I_CVSNOW), Reff(:,:,:,I_CVSNOW))
+          call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+               cospstateIN%pfull, cospstateIN%at, frac_prec, 2._wp, I_CVSNOW, sd, &
+               fl_ccsnow, mr_hydro(:,:,:,I_CVSNOW), Reff(:,:,:,I_CVSNOW) )
           ! LS groupel.
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 1._wp, n_ax(I_LSGRPL),  n_bx(I_LSGRPL),        &
-               alpha_x(I_LSGRPL), c_x(I_LSGRPL),   d_x(I_LSGRPL),   g_x(I_LSGRPL),       &
-               a_x(I_LSGRPL),   b_x(I_LSGRPL),   gamma_1(I_LSGRPL),  gamma_2(I_LSGRPL),  &
-               gamma_3(I_LSGRPL), gamma_4(I_LSGRPL), fl_lsgrpl,                          &
-               mr_hydro(:,:,:,I_LSGRPL), Reff(:,:,:,I_LSGRPL))
+          !call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
+          !     cospstateIN%at, frac_prec, 1._wp, n_ax(I_LSGRPL),  n_bx(I_LSGRPL),        &
+          !     alpha_x(I_LSGRPL), c_x(I_LSGRPL),   d_x(I_LSGRPL),   g_x(I_LSGRPL),       &
+          !     a_x(I_LSGRPL),   b_x(I_LSGRPL),   gamma_1(I_LSGRPL),  gamma_2(I_LSGRPL),  &
+          !     gamma_3(I_LSGRPL), gamma_4(I_LSGRPL), fl_lsgrpl,                          &
+          !     mr_hydro(:,:,:,I_LSGRPL), Reff(:,:,:,I_LSGRPL))
+          !call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+          !     cospstateIN%pfull, cospstateIN%at, frac_prec, 1._wp, I_LSGRPL, sd, &
+          !     fl_lsgrpl, mr_hydro(:,:,:,I_LSGRPL), Reff(:,:,:,I_LSGRPL) )
+
           deallocate(frac_prec)
        endif
 
     else
-       cospIN%frac_out(:,:,:) = 1  
+       cospIN%frac_out(:,:,:) = 1
        allocate(mr_hydro(nPoints,1,nLevels,nHydro),Reff(nPoints,1,nLevels,nHydro),       &
                 Np(nPoints,1,nLevels,nHydro))
        mr_hydro(:,1,:,I_LSCLIQ) = mr_lsliq

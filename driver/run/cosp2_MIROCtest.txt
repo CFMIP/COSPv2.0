@@ -26,7 +26,7 @@
 ! Namelist that sets up the main COSP options
 &COSP_INPUT
   NPOINTS=32768,! Number of gridpoints 153,27840,7081,6912
-  NPOINTS_IT=5000,! Max number of gridpoints to be processed in one iteration
+  NPOINTS_IT=4096,! Max number of gridpoints to be processed in one iteration
   NCOLUMNS=140,  ! Number of subcolumns
   NLEVELS=40,   ! Number of model levels
   USE_VGRID=.true., ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
@@ -82,22 +82,22 @@
   !----------------------------------------------------------------------------------
   !-------------- Swathing inputs
   !----------------------------------------------------------------------------------
-  N_SWATHS_ISCCP=2,
+  N_SWATHS_ISCCP=0,
   SWATH_LOCALTIMES_ISCCP=5.25,18.0,
   SWATH_WIDTHS_ISCCP=2000,2000,
-  N_SWATHS_MISR=2,
+  N_SWATHS_MISR=0,
   SWATH_LOCALTIMES_MISR=6.5,18.25,
   SWATH_WIDTHS_MISR=2000,2000,
-  N_SWATHS_MODIS=2,
+  N_SWATHS_MODIS=0,
   SWATH_LOCALTIMES_MODIS=5.75,13.5,
   SWATH_WIDTHS_MODIS=2000,2000,
-  N_SWATHS_CSCAL=2,
+  N_SWATHS_CSCAL=0,
   SWATH_LOCALTIMES_CSCAL=6.75,19.25,
   SWATH_WIDTHS_CSCAL=2000,2000,
-  N_SWATHS_PARASOL=2,
+  N_SWATHS_PARASOL=0,
   SWATH_LOCALTIMES_PARASOL=6.75,19,
   SWATH_WIDTHS_PARASOL=2000,2000,
-  N_SWATHS_ATLID=2,
+  N_SWATHS_ATLID=0,
   SWATH_LOCALTIMES_ATLID=7.25,19.5,
   SWATH_WIDTHS_ATLID=2000,2000,
   !----------------------------------------------------------------------------------
