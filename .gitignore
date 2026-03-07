@@ -1,6 +1,7 @@
 **.o
 **.a
 **.mod
+.DS_Store
 driver/run/cosp2_test
 !driver/data/inputs/UKMO/*_global.nc
 !driver/data/outputs/UKMO/*kgo.v*.nc
@@ -8,5 +9,5 @@ driver/run/cosp2_test
 !driver/data/outputs/UKMO/*.png
 !driver/data/outputs/cosp2_output_um.gfortran.kgo.nc
 driver/data/outputs/UKMO/*.out
-driver/data/MIROC_inputs/*.nc
-driver/data/MIROC_outputs/*.nc
+driver/data/MIROC_inputs/
+driver/data/MIROC_outputs/
