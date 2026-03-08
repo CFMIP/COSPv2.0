@@ -4,12 +4,17 @@ This is development code for Doppler velocity simulator, accomodating to EarthCA
 
 The developing codes are stored in `dplrw_src`, and links are provided so that each can be referenced from its original directory.
 
+The description paper with example results are published as [Nakamuta et al. 2026, GRL](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025MS004958).
+
 ## How to use this fork
 
 1. To make input dataset in NetCDF format, execute `exe.gt2input.out` in `driver/data/work`. This procedure is needed because vertical air motion and cumulus mass flux is required as additional input variables from the parent model. The inpud dataset is made by MIROC6.
 2. Run `make driver`.
 3. Run `./cosp2_test cosp2_MIROCtest.txt`, and a result file is generated in `driver/data/MIROC_outputs/ctrl_MIROC-COSP2.nc`.
 4. Python notebooks for visualization are stored in `driver/check`.
+
+### To CMIP side session participants:
+The input and output files are provided [here](https://github.com/yuhi-n/ECdemo-data).
 
 # About COSP
 
