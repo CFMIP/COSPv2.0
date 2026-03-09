@@ -4,7 +4,7 @@ This is development code for Doppler velocity simulator, accomodating to EarthCA
 
 The developing codes are stored in `dplrw_src`, and links are provided so that each can be referenced from its original directory.
 
-The description paper with example results are published as [Nakamuta et al. 2026, GRL](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025MS004958).
+The description paper with example results are published as [Nakamuta et al. 2026, JAMES](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025MS004958).
 
 ## How to use this fork
 
