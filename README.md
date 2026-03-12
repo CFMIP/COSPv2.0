@@ -1,3 +1,19 @@
+# About this fork
+
+This is development code for Doppler velocity simulator, accomodating to EarthCARE's CPR. Therefore, the codes are subject to change. This is being prepared for merging into COSP2.
+
+The developing codes are stored in `dplrw_src`, and links are provided so that each can be referenced from its original directory.
+
+The description paper with example results are published as [Nakamuta et al. 2026, JAMES](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025MS004958).
+
+## How to use this fork
+
+1. To make input dataset in NetCDF format, execute `exe.gt2input.out` in `driver/data/work`. This procedure is needed because vertical air motion and cumulus mass flux is required as additional input variables from the parent model. The inpud dataset is made by MIROC6.
+2. Run `make driver`.
+3. Get input data made by MIROC6 from [here](https://github.com/yuhi-n/ECdemo-data). Put `demo.tar.xz` in `driver/data` and unzip it `tar Jxvf demo.tar.xz`. (This also contains example output data.)
+4. Run `./cosp2_test cosp2_MIROCtest.txt`, and a result file is generated in `driver/data/MIROC_outputs/ctrl_MIROC-COSP2.nc`.
+5. Python notebooks for visualization are stored in `driver/check`.
+
 # About COSP
 
 The CFMIP Observation Simulator Package (COSP) takes the models representation of the
