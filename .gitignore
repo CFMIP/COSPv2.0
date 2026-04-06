@@ -3,3 +3,4 @@
 **.mod
 driver/run/cosp2_test
 driver/data/outputs/UKMO/*.nc
+**/.ipynb_checkpoints/
