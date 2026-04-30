@@ -37,7 +37,7 @@ jobs:
     - uses: actions/checkout@v6
     # Set up conda environment
     - name: Setup conda environment
-      uses: conda-incubator/setup-miniconda@v3.3.0
+      uses: conda-incubator/setup-miniconda@v4.0.1
       with:
         auto-update-conda: true
         activate-environment: ci-env
@@ -122,7 +122,7 @@ jobs:
     ###############################################################################
     - name: Upload output file if test fails
       if: failure()
-      uses: actions/upload-artifact@v6.0.0
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: outputs.${{ matrix.compiler }}.UKMO.tgz
         path: driver/data/outputs/UKMO/outputs.${{ matrix.compiler }}.UKMO.tgz
