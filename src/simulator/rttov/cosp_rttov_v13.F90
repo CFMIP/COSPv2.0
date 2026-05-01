@@ -754,17 +754,6 @@ contains
           else
              inst_profiles(j)%skin%surftype  = surftype_seaice
           end if
-          
-          ! land-sea mask (lsmask) indicates proportion of land in grid (not in CESM implementation! just a binary mask there)
-!          if (rttovIN%lsmask(i) < 0.5) then
-!            inst_profiles(j)%skin%surftype  = surftype_sea
-!          else
-!            inst_profiles(j)%skin%surftype  = surftype_land
-!          endif
-          ! sea-ice fraction
-!          if (rttovIN%icefrac(i) >= 0.5) then
-!            inst_profiles(j)%skin%surftype  = surftype_seaice
-!          endif
 
           ! dar: hard-coded to 1 (=ocean water) in rttov 9 int
           inst_profiles(j)%skin%watertype = 1
@@ -781,12 +770,12 @@ contains
             ! Convert to ppmv over dry air
             inst_profiles(j)%s2m%q     = (inst_profiles(j)%s2m%q / (1.0 - inst_profiles(j)%s2m%q)) * mdry / mH2O * 1.e6
             inst_profiles(j)%q(:)      = (inst_profiles(j)%q(:) / (1.0 - inst_profiles(j)%q(:))) * mdry / mH2O * 1.e6
-            inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * mdry / mO3 * 1.e6
-            inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * mdry / mCO2 * 1.e6
-            inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * mdry / mCH4 * 1.e6
-            inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * mdry / mN2O * 1.e6
-            inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * mdry / mCO * 1.e6
-            inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * mdry / mSO2 * 1.e6
+            if (Ldo_o3)  inst_profiles(j)%o3(:)     = inst_profiles(j)%o3(:) * mdry / mO3 * 1.e6
+            if (Ldo_co2) inst_profiles(j)%co2(:)    = inst_profiles(j)%co2(:) * mdry / mCO2 * 1.e6
+            if (Ldo_ch4) inst_profiles(j)%ch4(:)    = inst_profiles(j)%ch4(:) * mdry / mCH4 * 1.e6
+            if (Ldo_n2o) inst_profiles(j)%n2o(:)    = inst_profiles(j)%n2o(:) * mdry / mN2O * 1.e6
+            if (Ldo_co)  inst_profiles(j)%co(:)     = inst_profiles(j)%co(:) * mdry / mCO * 1.e6
+            if (Ldo_so2) inst_profiles(j)%so2(:)    = inst_profiles(j)%so2(:) * mdry / mSO2 * 1.e6
             inst_profiles(j)%gas_units  =  0
           else
             inst_profiles(j)%gas_units  =  inst_gas_units
