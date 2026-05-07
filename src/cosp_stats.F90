@@ -130,6 +130,12 @@ MODULE MOD_COSP_STATS
           refl_in,             & ! Surface reflectance (point,channel)    (1)          
           fl_rain,             & ! Precipitation (rain) flux              (kg/m2/s)
           fl_snow                ! Precipitation (snow) flux              (kg/m2/s)
+
+     ! added by DPLRW
+     real(wp),allocatable,dimension(:,:) :: &
+          gwvel,               & ! grid verical velocity                  (m/s)
+          gcumf                  ! grid cumulus mass flux                 (kg/m^2/s)
+
   end type cosp_column_inputs
 
 
@@ -165,6 +171,9 @@ MODULE MOD_COSP_STATS
      real(wp),dimension(maxhclass,mt_ntt,nRe_types) :: Ze_scaled,Zr_scaled,kr_scaled
      real(wp),dimension(maxhclass,nd,nRe_types)     :: fc, rho_eff
      real(wp),dimension(Re_MAX_BIN)                 :: base_list,step_list
+
+     ! added by DPLRW
+     real(wp),dimension(maxhclass,mt_ntt,nRe_types) :: vf_scaled,vq_scaled,v3_scaled,v0_scaled,m3_scaled,m0_scaled
 
   end type radar_cfg
 
@@ -203,6 +212,9 @@ MODULE MOD_COSP_STATS
           z_vol_cloudsat,      & ! Effective reflectivity factor (mm^6/m^3)
           kr_vol_cloudsat,     & ! Attenuation coefficient hydro (dB/km) 
           g_vol_cloudsat         ! Attenuation coefficient gases (dB/km)
+     real(wp),allocatable,dimension(:,:,:,:) :: &
+          vfall, vfsqu, zehyd, krhyd, &    ! for DPLRW, each hydrometeor
+          vtrm3, vtrm0, mmnt3, mmnt0
      real(wp),allocatable,dimension(:,:) :: &
           beta_mol_calipso,    & ! Lidar molecular backscatter coefficient (calipso @ 532nm)
           beta_mol_grLidar532, & ! Lidar molecular backscatter coefficient (ground-lidar @ 532nm) 

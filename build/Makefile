@@ -138,7 +138,7 @@ cosp_rttov_utilSTUB.o       : cosp_kinds.o
 
 
 # Example subcolumn generaton and mapping to optical properties, following COSP 1.4
-SUBCOL_OBJS = mo_rng.o scops.o prec_scops.o cosp_utils.o cosp_optics.o quickbeam_optics.o array_lib.o math_lib.o mrgrnk.o optics_lib.o cosp_errorHandling.o
+SUBCOL_OBJS = mo_rng.o scops.o prec_scops.o cosp_optics.o quickbeam_optics.o cosp_utils.o array_lib.o math_lib.o mrgrnk.o optics_lib.o cosp_errorHandling.o
 libsubcol.a: $(SUBCOL_OBJS) libcosp.a
 	ar -rvs libsubcol.a $(SUBCOL_OBJS)
 
@@ -150,7 +150,7 @@ optics_lib.o      : cosp_kinds.o cosp_errorHandling.o
 quickbeam_optics.o: cosp_kinds.o cosp_errorHandling.o cosp_constants.o cosp_config.o mrgrnk.o array_lib.o optics_lib.o math_lib.o quickbeam.o cosp_stats.o
 scops.o      : cosp_kinds.o cosp_errorHandling.o mo_rng.o
 prec_scops.o : cosp_kinds.o cosp_config.o
-cosp_utils.o : cosp_kinds.o cosp_config.o
+cosp_utils.o : cosp_kinds.o cosp_config.o quickbeam_optics.o
 cosp_optics.o: cosp_kinds.o cosp_config.o cosp_constants.o modis_simulator.o
 mo_rng.o     : cosp_kinds.o
 
