@@ -1484,6 +1484,17 @@ contains
                status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_bt")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
+            if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_bt_clear_m_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Clear-sky Brightness Temperature (cloud-free mask)")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "Degrees Kelvin")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_masked_bt")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
             if (associated(cospOUT%rttov_outputs(i)%rad_total)) then
                ii = ii + 1
                status = nf90_def_var(fileID,"rttov_rad_total_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
@@ -1494,7 +1505,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
                status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif    
+            endif
             if (associated(cospOUT%rttov_outputs(i)%rad_clear)) then
                ii = ii + 1
                status = nf90_def_var(fileID,"rttov_rad_clear_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
@@ -1505,7 +1516,18 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
                status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif    
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_rad_clear_m_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Clear-sky Radiance (cloud-free mask)")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_masked_rad")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
             if (associated(cospOUT%rttov_outputs(i)%rad_cloudy)) then
                ii = ii + 1
                status = nf90_def_var(fileID,"rttov_rad_cloudy_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
@@ -1516,7 +1538,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
                status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_cloudysky_rad")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif    
+            endif
             if (associated(cospOUT%rttov_outputs(i)%refl_total)) then
                ii = ii + 1
                status = nf90_def_var(fileID,"rttov_refl_total_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
@@ -1525,7 +1547,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "unitless")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "bleh")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_totalsky_refl")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
             if (associated(cospOUT%rttov_outputs(i)%refl_clear)) then
@@ -1536,9 +1558,20 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
                status = nf90_put_att(fileID,varID(ii),"units",        "unitless")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
-               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_allsky_refl")
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_refl")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif    
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_refl_clear_m_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","RTTOV Clear-sky Reflectance (cloud-free mask)")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "unitless")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearsky_masked_refl")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
             if (associated(cospOUT%rttov_outputs(i)%bt_total_pc)) then
                ii = ii + 1
                status = nf90_def_var(fileID,"rttov_bt_clear_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
@@ -1549,7 +1582,7 @@ contains
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
                status = nf90_put_att(fileID,varID(ii),"standard_name", "pcrttov_clearsky_bt")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif    
+            endif
             if (associated(cospOUT%rttov_outputs(i)%rad_total_pc)) then
                ii = ii + 1
                status = nf90_def_var(fileID,"rttov_rad_clear_pc_inst"//trim(i_str),nf90_float, (/dimID(1),dimID(20+i)/),varID(ii))
@@ -1559,6 +1592,17 @@ contains
                status = nf90_put_att(fileID,varID(ii),"units",        "mW/cm-1/sr/m2")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
                status = nf90_put_att(fileID,varID(ii),"standard_name", "pcrttov_clearsky_rad")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%clear_sky_mask)) then
+               ii = ii + 1
+               status = nf90_def_var(fileID,"rttov_clearmask_inst"//trim(i_str),nf90_float, (/dimID(1)/),varID(ii))
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"long_name","Clear-sky fraction (all levels <0.1)")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+               status = nf90_put_att(fileID,varID(ii),"units",        "fraction")
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))      
+               status = nf90_put_att(fileID,varID(ii),"standard_name", "rttov_clearmask")
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
         end do
@@ -2065,6 +2109,11 @@ contains
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%bt_clear)
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
+            if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%bt_clear_masked)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
             if (associated(cospOUT%rttov_outputs(i)%rad_total)) then
                ii = ii + 1
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_total)
@@ -2074,7 +2123,12 @@ contains
                ii = ii + 1
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_clear)
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif    
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_clear_masked)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif  
             if (associated(cospOUT%rttov_outputs(i)%rad_cloudy)) then
                ii = ii + 1
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_cloudy)
@@ -2090,6 +2144,11 @@ contains
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%refl_clear)
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
             endif
+            if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%refl_clear_masked)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
             if (associated(cospOUT%rttov_outputs(i)%bt_total_pc)) then
                ii = ii + 1
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%bt_total_pc)
@@ -2099,7 +2158,12 @@ contains
                ii = ii + 1
                status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%rad_total_pc)
                if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
-            endif            
+            endif
+            if (associated(cospOUT%rttov_outputs(i)%clear_sky_mask)) then
+               ii = ii + 1
+               status = nf90_put_var(fileID,varID(ii),cospOUT%rttov_outputs(i)%clear_sky_mask)
+               if (status .ne. nf90_NoERR) print*,trim(nf90_strerror(status))
+            endif
         end do  
     end if
     

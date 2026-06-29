@@ -320,7 +320,8 @@ CONTAINS
     ! Fields used in orbit swathing of gridcells.
     logical,dimension(:),allocatable :: & ! Mask of reals over all local times
          CSCAL_SWATH_MASK,    & ! Needed for MODIS CSCAL
-         MODIS_SWATH_MASK       ! Needed for MODIS CSCAL + normal MODIS
+         MODIS_SWATH_MASK,    & ! Needed for MODIS CSCAL + normal MODIS
+         rttov_mask_clearsky    ! Mask used for clear-sky masking
     integer,dimension(:),allocatable :: & ! Arrays containing the indices of the swath masks
          ISCCP_MASK_INDICES,    &
          MISR_MASK_INDICES,     &
@@ -898,7 +899,7 @@ CONTAINS
 
     ! MODIS subcolumn simulator
     if (Lmodis_subcolumn) then
-       if (modisiN%nSunlit > 0) then
+       if (modisIN%nSunlit > 0) then
           ! Allocate space for local variables
           allocate(modisRetrievedTau(modisIN%nSunlit,modisIN%nColumns),                  &
                    modisRetrievedSize(modisIN%nSunlit,modisIN%nColumns),                 &
@@ -1889,6 +1890,43 @@ CONTAINS
                   cospOUT % rttov_outputs(i) % refl_clear(ij:ik,:) = rttov_refl_clear
            endif 
 
+           ! Create additional mask for clear-sky points (all levels below 10% cloud fraction)
+           if (cospIN % cfg_rttov(i) % Lrttov_maskclear) then
+               allocate(rttov_mask_clearsky(Npoints))
+               rttov_mask_clearsky(1:Npoints) = ALL(rttovIN % tca < 0.10_wp, dim=2)
+               ! Cast mask to int so aggregate coverage can be assessed.
+               cospOUT % rttov_outputs(i) % clear_sky_mask(ij:ik) = &
+                  merge(1.0_wp, 0.0_wp, rttov_mask_clearsky(1:Npoints))
+               if (associated(cospOUT % rttov_outputs(i) % bt_clear)) then
+                  cospOUT % rttov_outputs(i) % bt_clear_masked(ij:ik, :) = R_UNDEF
+                  do j = ij, ik
+                     if (rttov_mask_clearsky(j)) then
+                        cospOUT % rttov_outputs(i) % bt_clear_masked(j, :) =            &
+                           cospOUT % rttov_outputs(i) % bt_clear(j, :)
+                     endif
+                  enddo
+               endif
+               if (associated(cospOUT % rttov_outputs(i) % rad_clear)) then
+                  cospOUT % rttov_outputs(i) % rad_clear_masked(ij:ik, :) = R_UNDEF
+                  do j = ij, ik
+                     if (rttov_mask_clearsky(j)) then
+                        cospOUT % rttov_outputs(i) % rad_clear_masked(j, :) =           &
+                           cospOUT % rttov_outputs(i) % rad_clear(j, :)
+                     endif
+                  enddo
+               endif
+               if (associated(cospOUT % rttov_outputs(i) % refl_clear)) then
+                  cospOUT % rttov_outputs(i) % refl_clear_masked(ij:ik, :) = R_UNDEF
+                  do j = ij, ik
+                     if (rttov_mask_clearsky(j)) then
+                        cospOUT % rttov_outputs(i) % refl_clear_masked(j, :) =          &
+                           cospOUT % rttov_outputs(i) % refl_clear(j, :)
+                     endif
+                  enddo
+               endif
+               deallocate(rttov_mask_clearsky)
+           endif
+
            ! Free up memory from output (if necessary)
            if (allocated(rttov_bt_total))               deallocate(rttov_bt_total)          
            if (allocated(rttov_bt_clear))               deallocate(rttov_bt_clear)          
@@ -1896,7 +1934,7 @@ CONTAINS
            if (allocated(rttov_rad_clear))              deallocate(rttov_rad_clear)          
            if (allocated(rttov_rad_cloudy))             deallocate(rttov_rad_cloudy)          
            if (allocated(rttov_refl_total))             deallocate(rttov_refl_total)          
-           if (allocated(rttov_refl_clear))             deallocate(rttov_refl_clear)   
+           if (allocated(rttov_refl_clear))             deallocate(rttov_refl_clear)
 
         end do
     
@@ -3135,7 +3173,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
          end if          
        endif
@@ -3254,7 +3295,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -3309,7 +3353,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -3347,7 +3394,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -3445,7 +3495,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if         
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -3535,7 +3588,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
           if (associated(cospOUT%calipso_cfad_sr))        cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -3583,7 +3639,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if         
           if (associated(cospOUT%calipso_cfad_sr))       cospOUT%calipso_cfad_sr(:,:,:)       = R_UNDEF
@@ -3619,7 +3678,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
           if (associated(cospOUT%isccp_totalcldarea))  cospOUT%isccp_totalcldarea(:)  = R_UNDEF
@@ -3651,7 +3713,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3670,7 +3735,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3689,7 +3757,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3708,7 +3779,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3727,7 +3801,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3746,7 +3823,10 @@ CONTAINS
 !                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
 !                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
 !                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-!                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+!                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+               !   if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+               !   if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+               !   if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
 !             end do
 !          end if
 !       endif
@@ -3765,7 +3845,10 @@ CONTAINS
 !                 if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
 !                 if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
 !                 if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-!                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+!                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+               !   if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+               !   if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+               !   if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
 !             end do
 !          end if
 !       endif
@@ -3784,7 +3867,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3803,7 +3889,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3822,7 +3911,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3841,7 +3933,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3860,7 +3955,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif       
@@ -3879,7 +3977,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif 
@@ -3898,7 +3999,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3917,7 +4021,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif 
@@ -3936,7 +4043,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif   
@@ -3955,7 +4065,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3974,7 +4087,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif
@@ -3993,7 +4109,10 @@ CONTAINS
                  if (associated(cospOUT%rttov_outputs(i)%refl_total))           cospOUT%rttov_outputs(i)%refl_total(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%refl_clear))           cospOUT%rttov_outputs(i)%refl_clear(:,:)     = R_UNDEF
                  if (associated(cospOUT%rttov_outputs(i)%bt_total_pc))          cospOUT%rttov_outputs(i)%bt_total_pc(:,:)    = R_UNDEF
-                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF                
+                 if (associated(cospOUT%rttov_outputs(i)%rad_total_pc))         cospOUT%rttov_outputs(i)%rad_total_pc(:,:)   = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%bt_clear_masked))     cospOUT%rttov_outputs(i)%bt_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%rad_clear_masked))   cospOUT%rttov_outputs(i)%rad_clear_masked(:,:) = R_UNDEF
+                 if (associated(cospOUT%rttov_outputs(i)%refl_clear_masked)) cospOUT%rttov_outputs(i)%refl_clear_masked(:,:) = R_UNDEF
              end do
           end if
        endif       
@@ -4833,6 +4952,31 @@ CONTAINS
        endif
     endif
   end subroutine cosp_errorCheck
+
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ! SUBROUTINE clean_RTTOV_outputs
+  !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  subroutine clean_RTTOV_outputs(rttov_outputs)
+    
+    ! Inputs
+    type(rttov_output),intent(inout) :: rttov_outputs
+
+    if (associated(rttov_outputs%channel_indices))      rttov_outputs%channel_indices(:)  = 0
+    if (associated(rttov_outputs%bt_total))             rttov_outputs%bt_total(:,:)       = R_UNDEF
+    if (associated(rttov_outputs%bt_clear))             rttov_outputs%bt_clear(:,:)       = R_UNDEF
+    if (associated(rttov_outputs%rad_total))            rttov_outputs%rad_total(:,:)      = R_UNDEF
+    if (associated(rttov_outputs%rad_clear))            rttov_outputs%rad_clear(:,:)      = R_UNDEF
+    if (associated(rttov_outputs%rad_cloudy))           rttov_outputs%rad_cloudy(:,:)     = R_UNDEF
+    if (associated(rttov_outputs%refl_total))           rttov_outputs%refl_total(:,:)     = R_UNDEF
+    if (associated(rttov_outputs%refl_clear))           rttov_outputs%refl_clear(:,:)     = R_UNDEF
+    if (associated(rttov_outputs%bt_total_pc))          rttov_outputs%bt_total_pc(:,:)    = R_UNDEF
+    if (associated(rttov_outputs%rad_total_pc))         rttov_outputs%rad_total_pc(:,:)   = R_UNDEF
+    if (associated(rttov_outputs%clear_sky_mask))       rttov_outputs%clear_sky_mask(:)   = 0.0_wp
+    if (associated(rttov_outputs%bt_clear_masked))     rttov_outputs%bt_clear_masked(:,:) = R_UNDEF
+    if (associated(rttov_outputs%rad_clear_masked))   rttov_outputs%rad_clear_masked(:,:) = R_UNDEF
+    if (associated(rttov_outputs%refl_clear_masked)) rttov_outputs%refl_clear_masked(:,:) = R_UNDEF
+
+  end subroutine clean_RTTOV_outputs
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! END MODULE

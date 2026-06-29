@@ -568,7 +568,8 @@ program cosp2_test
      cospstateIN%phalf(:,1)           = 0._wp
      ! Surface pressure
      if (any(psfc(start_idx:end_idx) .lt. 0._wp)) then
-        print*,'Some of values of the surface pressure field are negative. Replacing all psfc values with the lowest boundary pressure.'
+        print*, 'Some of values of the surface pressure field are negative. '// &
+     &        'Replacing all psfc values with the lowest boundary pressure.'
         psfc(start_idx:end_idx) = cospstateIN%phalf(start_idx:end_idx,Nlevels+1)
      end if          
      cospstateIN%psfc        = psfc(start_idx:end_idx)              ! Pa
@@ -657,7 +658,10 @@ program cosp2_test
      ! The weighted Reff is given by: Reff_net = (M_1 + M_2) / (M_1/Reff_1 + M_2/Reff_2)
      cospstateIN%DeffLiq(:,:) = 0._wp ! Initialize for zero everywhere.
      where ((mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
-         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + &
+         mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / &
+         Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / &
+         Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
      elsewhere (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ)
      elsewhere (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
@@ -666,7 +670,10 @@ program cosp2_test
      
      cospstateIN%DeffIce(:,:) = 0._wp ! Initialize for zero everywhere.
      where ((mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
-         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + &
+         mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / &
+         Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / &
+         Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
      elsewhere (mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE)
      elsewhere (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
@@ -1572,10 +1579,14 @@ contains
                 allocate(x % rttov_outputs(i) % channel_indices(rttov_configs(i) % nchan_out))
                 if (rttov_configs(i) % Lrttov_bt) then                              ! Brightness temp
                     allocate(x % rttov_outputs(i) % bt_total_pc(Npoints,rttov_configs(i) % nchan_out))
+                    if (rttov_configs(i) % Lrttov_maskclear) &
+                        allocate(x % rttov_outputs(i) % bt_clear_masked(Npoints,rttov_configs(i) % nchan_out))
         !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_bt_clear(Npoints,Nchan))
                 end if
                 if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
                     allocate(x % rttov_outputs(i) % rad_total_pc(Npoints,rttov_configs(i) % nchan_out))
+                    if (rttov_configs(i) % Lrttov_maskclear) &
+                        allocate(x % rttov_outputs(i) % rad_clear_masked(Npoints,rttov_configs(i) % nchan_out))
         !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_clear(Npoints,Nchan))
         !            if (Lrttov_cld .or. Lrttov_aer) allocate(x%rttov_rad_cloudy(Npoints,Nchan))
                 end if  
@@ -1586,6 +1597,8 @@ contains
                     if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % bt_clear(Npoints,rttov_configs(i) % nchan_out))
                     end if
+                    if (rttov_configs(i) % Lrttov_maskclear) &
+                        allocate(x % rttov_outputs(i) % bt_clear_masked(Npoints,rttov_configs(i) % nchan_out))
                 end if
                 if (rttov_configs(i) % Lrttov_rad) then                             ! Radiance
                     allocate(x % rttov_outputs(i) % rad_total(Npoints,rttov_configs(i) % nchan_out))
@@ -1595,14 +1608,19 @@ contains
                     if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % rad_cloudy(Npoints,rttov_configs(i) % nchan_out))
                     end if
+                    if (rttov_configs(i) % Lrttov_maskclear) &
+                        allocate(x % rttov_outputs(i) % rad_clear_masked(Npoints,rttov_configs(i) % nchan_out))
                 end if
                 if (rttov_configs(i) % Lrttov_refl) then                            ! Reflectance
                     allocate(x % rttov_outputs(i) % refl_total(Npoints,rttov_configs(i) % nchan_out))
                     if ((rttov_configs(i) % Lrttov_cld) .or. (rttov_configs(i) % Lrttov_aer)) then
                         allocate(x % rttov_outputs(i) % refl_clear(Npoints,rttov_configs(i) % nchan_out))
                     end if
-                end if    
-            end if         
+                    if (rttov_configs(i) % Lrttov_maskclear) &
+                        allocate(x % rttov_outputs(i) % refl_clear_masked(Npoints,rttov_configs(i) % nchan_out))
+                end if
+            end if
+            if (rttov_configs(i) % Lrttov_maskclear) allocate(x % rttov_outputs(i) % clear_sky_mask(Npoints))
         end do
     else
         x % Ninst_rttov = 0

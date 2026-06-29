@@ -154,6 +154,7 @@ CONTAINS
     logical         :: Lrttov_gridbox_cldmmr
     logical         :: Ldo_nlte_correction
     logical         :: Lrttov_pc
+    logical         :: Lrttov_maskclear
     logical         :: Lrttov_solar
     logical         :: Lchannel_filepath
     logical         :: Lwavenum_filepath
@@ -214,6 +215,7 @@ CONTAINS
     Lrttov_gridbox_cldmmr = .true. ! Assume gridbox average MMRs. Most common for GCMs.
     Ldo_nlte_correction   = .false. ! Correct for non-local thermal equilibrium effects? Default false.
     Lrttov_pc             = .false.
+    Lrttov_maskclear      = .false.
     Lrttov_solar          = .false.
     Lchannel_filepath     = .false.
     Lwavenum_filepath     = .false.
@@ -236,9 +238,9 @@ CONTAINS
     namelist/RTTOV_INPUT/Lrttov_bt,Lrttov_rad,Lrttov_refl,Lrttov_cld,            & ! Logicals for RTTOV configuration
                          Lrttov_aer,Lrttov_cldparam,Lrttov_aerparam,             & ! 
                          Lrttov_gridbox_cldmmr,Ldo_nlte_correction,              & ! Assume cloud water mixing ratios are gridbox average instead of in-cloud
-                         Lrttov_pc,Lrttov_solar,nchannels_rec,Lchannel_filepath, &
-                         channel_filepath,Lwavenum_filepath,wavenum_filepath,    &
-                         rttov_srcDir,rttov_coefDir,            &
+                         Lrttov_pc,Lrttov_maskclear,Lrttov_solar,nchannels_rec,  &
+                         Lchannel_filepath,channel_filepath,Lwavenum_filepath,   &
+                         wavenum_filepath,rttov_srcDir,rttov_coefDir,            &
                          OD_coef_filepath,aer_coef_filepath,cld_coef_filepath,   &
                          PC_coef_filepath,                                       &
                          CO2_data,CH4_data,CO_data,N2O_data,SO2_data,ozone_data, & ! Use trace gases for radiative transfer?
@@ -295,6 +297,7 @@ CONTAINS
     rttov_config%Lrttov_rad        = Lrttov_rad
     rttov_config%Lrttov_refl       = Lrttov_refl
     rttov_config%Lrttov_pc         = Lrttov_pc
+    rttov_config%Lrttov_maskclear  = Lrttov_maskclear
         
     ! Set paths for RTTOV config
     rttov_config%rttov_srcDir      = rttov_srcDir

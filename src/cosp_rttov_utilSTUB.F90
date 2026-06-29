@@ -43,6 +43,7 @@ MODULE MOD_COSP_RTTOV_UTIL
           Lrttov_refl,         &
           Lrttov_cld,          &
           Lrttov_aer,          &
+          Lrttov_maskclear,    &
           Lrttov_pc
       character(len=256)           :: &
           rttov_srcDir,        &
@@ -82,15 +83,19 @@ MODULE MOD_COSP_RTTOV_UTIL
       integer,pointer     :: &
           channel_indices(:)
       real(wp),pointer    :: &
-          bt_total(:,:),    &
-          bt_clear(:,:),    &
-          rad_total(:,:),   &
-          rad_clear(:,:),   &
-          rad_cloudy(:,:),  &
-          refl_total(:,:),  &
-          refl_clear(:,:),  &
-          bt_total_pc(:,:), &
-          rad_total_pc(:,:)
+          bt_total(:,:),         &
+          bt_clear(:,:),         &
+          rad_total(:,:),        &
+          rad_clear(:,:),        &
+          rad_cloudy(:,:),       &
+          refl_total(:,:),       &
+          refl_clear(:,:),       &
+          bt_total_pc(:,:),      &
+          rad_total_pc(:,:),     &
+          clear_sky_mask(:),     &
+          bt_clear_masked(:,:),  &
+          rad_clear_masked(:,:), &
+          refl_clear_masked(:,:)
   end type rttov_output
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

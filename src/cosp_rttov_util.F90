@@ -57,6 +57,7 @@ MODULE MOD_COSP_RTTOV_UTIL
           Lrttov_cld,          &
           Lrttov_aer,          &
           Lrttov_pc,           &
+          Lrttov_maskclear,    &
           Lrttov_solar,        &
           Lrttov_mwscatt,      &
           user_tracegas_input
@@ -121,7 +122,11 @@ MODULE MOD_COSP_RTTOV_UTIL
           refl_total(:,:)    => null(), &
           refl_clear(:,:)    => null(), &
           bt_total_pc(:,:)   => null(), &
-          rad_total_pc(:,:)  => null()
+          rad_total_pc(:,:)  => null(), &
+          clear_sky_mask(:)  => null(), &
+          bt_clear_masked(:,:)      => null(), &
+          rad_clear_masked(:,:)     => null(), &
+          refl_clear_masked(:,:)    => null()
   end type rttov_output
 
   ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
