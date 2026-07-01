@@ -40,14 +40,18 @@ module mod_quickbeam_optics
   use quickbeam,           ONLY: dmin,dmax,Re_BIN_LENGTH,  &
                                  Re_MAX_BIN,nRe_types,nd,maxhclass
   use mod_cosp_config,     ONLY: N_HYDRO
-  use mod_cosp_error,      ONLY: errorMessage
   use mod_cosp_stats,      ONLY: radar_cfg
+  use mod_cosp_error,      ONLY: errorMessage
   implicit none
 
   ! Derived type for particle size distribution
   TYPE size_distribution
      real(wp),dimension(maxhclass) :: p1,p2,p3,dmin,dmax,apm,bpm,rho
      integer, dimension(maxhclass) :: dtype,phase
+
+     ! for DPLRW
+     integer, dimension(N_HYDRO) :: ftype,fvscs
+     real(wp),dimension(N_HYDRO) :: f1,f2,f3
   END TYPE size_distribution
   
   ! Parameters
@@ -81,7 +85,9 @@ contains
   ! SUBROUTINE QUICKBEAM_OPTICS
   ! ######################################################################################
   subroutine quickbeam_optics(sd, rcfg, nprof, ngate, undef, hm_matrix, re_matrix,       &
-       Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol)
+       Np_matrix, p_matrix, t_matrix, sh_matrix,z_vol,kr_vol, &
+       vfall, vfsqu, zehyd, krhyd, &
+       vtrm3, vtrm0, mmnt3, mmnt0 )
     
     ! INPUTS
     type(size_distribution),intent(inout) :: &
@@ -108,6 +114,11 @@ contains
          z_vol,         & ! Effective reflectivity factor (mm^6/m^3)
          kr_vol           ! Attenuation coefficient hydro (dB/km)
 
+    ! OUTPUTS for DPLRW
+    real(wp),intent(out), dimension(nprof, ngate, N_HYDRO) :: &
+         vfall, vfsqu, zehyd, krhyd, &
+         vtrm3, vtrm0, mmnt3, mmnt0
+
     ! INTERNAL VARIABLES   
     integer :: &
          phase, ns,tp,j,k,pr,itt,iRe_type,n 
@@ -116,7 +127,12 @@ contains
     real(wp) :: &
          t_kelvin,Re_internal
     real(wp) :: &
-         rho_a,kr,ze,zr,scale_factor,Re,Np,base,step 
+         rho_a,kr,ze,zr,scale_factor,Re,Np,base,step
+
+    ! INTERNAL VARIABLES for DPLRW
+    real(wp) :: vf,vq
+    real(wp) :: vt3,vt0,D3int,D0int
+    real(wp),dimension(:),allocatable :: fall_speed
 
     real(wp),dimension(:),allocatable :: &
          Deq,     & ! Discrete drop sizes (um)
@@ -139,6 +155,14 @@ contains
     z_vol    = 0._wp
     z_ray    = 0._wp
     kr_vol   = 0._wp
+    vfall    = 0._wp
+    vfsqu    = 0._wp
+    zehyd    = 0._wp
+    krhyd    = 0._wp
+    vtrm3    = 0._wp
+    vtrm0    = 0._wp
+    mmnt3    = 0._wp
+    mmnt0    = 0._wp
 
     do k=1,ngate       ! Loop over each profile (nprof)
        do pr=1,nprof
@@ -280,8 +304,14 @@ contains
                    ! xxa are unused (Mie scattering and extinction efficiencies)
                    xxa(1:ns) = -9.9_wp
                    rhoi = rcfg%rho_eff(tp,1:ns,iRe_type)
+
+                   allocate(fall_speed(ns))
+                   call fall_velocity(ns,Deq*1e-6,sd,p_matrix(pr,k),t_matrix(pr,k),tp,&
+                        & fall_speed)
                    call zeff(rcfg%freq,Deq,Ni,ns,rcfg%k2,t_kelvin,phase,rcfg%do_ray, &
-                        ze,zr,kr,xxa,xxa,rhoi)
+                        ze,zr,kr,xxa,xxa,rhoi, &
+                        fall_speed, vf, vq, &
+                        vt3, vt0, D3int, D0int)
 
                    ! Test compares total number concentration with sum of discrete samples 
                    ! The second test, below, compares ab initio and "scaled" computations 
@@ -302,6 +332,7 @@ contains
 
                    ! Clean up space
                    deallocate(Di,Ni,rhoi,xxa,Deq)
+                   deallocate(fall_speed)
 
                    ! LUT test code
                    ! This segment of code compares full calculation to scaling result
@@ -319,12 +350,30 @@ contains
                    zr = rcfg%Zr_scaled(tp,itt,iRe_type) * scale_factor
                    ze = rcfg%Ze_scaled(tp,itt,iRe_type) * scale_factor
                    kr = rcfg%kr_scaled(tp,itt,iRe_type) * scale_factor
+                   
+                   vf = rcfg%vf_scaled(tp,itt,iRe_type) * scale_factor
+                   vq = rcfg%vq_scaled(tp,itt,iRe_type) * scale_factor
+
+                   vt3 = rcfg%v3_scaled(tp,itt,iRe_type) * scale_factor
+                   vt0 = rcfg%v0_scaled(tp,itt,iRe_type) * scale_factor
+                   D3int = rcfg%m3_scaled(tp,itt,iRe_type) * scale_factor
+                   D0int = rcfg%m0_scaled(tp,itt,iRe_type) * scale_factor
                 endif  ! end z_scaling
                 
                 kr_vol(pr,k) = kr_vol(pr,k) + kr
                 z_vol(pr,k)  = z_vol(pr,k)  + ze
                 z_ray(pr,k)  = z_ray(pr,k)  + zr
+
+                vfall(pr,k,tp) = vf/ze
+                vfsqu(pr,k,tp) = vq/ze
+                zehyd(pr,k,tp) = ze
+                krhyd(pr,k,tp) = kr
                 
+                vtrm3(pr,k,tp) = vt3/D3int
+                vtrm0(pr,k,tp) = vt0/D0int
+                mmnt3(pr,k,tp) = D3int
+                mmnt0(pr,k,tp) = D0int
+
                 ! Construct Ze_scaled, Zr_scaled, and kr_scaled ... if we can
                 if ( .not. rcfg%Z_scale_flag(tp,itt,iRe_type) ) then
                    if (iRe_type>1) then
@@ -334,6 +383,14 @@ contains
                       rcfg%kr_scaled(tp,itt,iRe_type) = kr/ scale_factor
                       rcfg%Z_scale_flag(tp,itt,iRe_type) = .true.
                       rcfg%Z_scale_added_flag(tp,itt,iRe_type)=.true.
+
+                      rcfg%vf_scaled(tp,itt,iRe_type) = vf/ scale_factor
+                      rcfg%vq_scaled(tp,itt,iRe_type) = vq/ scale_factor
+
+                      rcfg%v3_scaled(tp,itt,iRe_type) = vt3/ scale_factor
+                      rcfg%v0_scaled(tp,itt,iRe_type) = vt0/ scale_factor
+                      rcfg%m3_scaled(tp,itt,iRe_type) = D3int/ scale_factor
+                      rcfg%m0_scaled(tp,itt,iRe_type) = D0int/ scale_factor
                    endif
                 endif
              enddo   ! end loop of tp (hydrometeor type)
@@ -862,7 +919,8 @@ contains
   end subroutine dsd
   ! ##############################################################################################
   ! ##############################################################################################
-  subroutine zeff(freq,D,N,nsizes,k2,tt,ice,xr,z_eff,z_ray,kr,qe,qs,rho_e)
+  subroutine zeff(freq,D,N,nsizes,k2,tt,ice,xr,z_eff,z_ray,kr,qe,qs,rho_e, &
+       fall_speed, vf, vq, vt3, vt0, D3int, D0int)
     ! ##############################################################################################
     ! Purpose:
     !   Simulates radar return of a volume given DSD of spheres
@@ -907,13 +965,19 @@ contains
          freq,  & ! Radar frequency (GHz)
          tt       ! Hydrometeor temperature (K)
     real(wp), intent(inout) :: &
-         k2            ! |K|^2, -1=use frequency dependent default 
+         k2            ! |K|^2, -1=use frequency dependent default
+    real(wp), intent(in), dimension(nsizes) :: &
+         fall_speed    ! droplet fall speed
     
     ! Outputs
     real(wp), intent(out) :: &
          z_eff,      & ! Unattenuated effective reflectivity factor (mm^6/m^3)
          z_ray,      & ! Reflectivity factor, Rayleigh only (mm^6/m^3)
          kr            ! Attenuation coefficient (db km^-1)
+    real(wp), intent(out) :: &
+         vf, vq        ! Ze weighted 
+    real(wp), intent(out) :: &
+         vt0, vt3, D3int, D0int ! for terminal velocity
     
     ! Internal Variables
     integer                     :: correct_for_rho ! Correct for density flag
@@ -940,6 +1004,7 @@ contains
          conv_f  = 0.299792458    ! Conversion for radar frequency (to m)
     complex(wp),dimension(nsizes) ::&
          m0             ! Complex index of refraction
+    real(wp) :: fall_sum ! temporal array for DPLRW
     
     ! Initialize
     z0_ray = 0._wp
@@ -1023,7 +1088,65 @@ contains
     cr = 10./log(10.)
     ! DS2014 STOP
     kr = k_sum*0.25_wp*pi*(1000._wp*cr)
+
+    ! <---------- vf_sum --------->
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*qbsca(1)*(n(1)*1E6)*D0(1)*D0(1)
+    else
+       xtemp = fall_speed*qbsca*N0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    const   = ((wl*wl*wl*wl)/(pi*pi*pi*pi*pi))*(1._wp/k2)
+    vf = fall_sum*const*0.25_wp*pi*1E18
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*fall_speed(1)*qbsca(1)*(n(1)*1E6)*D0(1)*D0(1)
+    else
+       xtemp = fall_speed*fall_speed*qbsca*N0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    const   = ((wl*wl*wl*wl)/(pi*pi*pi*pi*pi))*(1._wp/k2)
+    vq = fall_sum*const*0.25_wp*pi*1E18
     
+    ! <---------- vf_sum for terminal velocity --------->
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*(n(1)*1E6)*D0(1)*D0(1)*D0(1)
+    else
+       xtemp = fall_speed*N0*D0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    vt3 = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = (n(1)*1E6)*D0(1)*D0(1)*D0(1)
+    else
+       xtemp = N0*D0*D0*D0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    D3int = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = fall_speed(1)*(n(1)*1E6)
+    else
+       xtemp = fall_speed*N0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    vt0 = fall_sum
+
+    fall_sum = 0._wp
+    if (size(D0) == 1) then
+       fall_sum = (n(1)*1E6)
+    else
+       xtemp = N0
+       call avint(xtemp,D0,nsizes,D0(1),D0(size(D0,1)),fall_sum)
+    end if
+    D0int = fall_sum
+
     ! z_ray = sum[D^6*N(D)*deltaD]
     if (xr == 1) then
        z0_ray = 0._wp
@@ -1323,18 +1446,25 @@ contains
    ! SINGLE MOMENT PARAMETERS
    integer,parameter,dimension(N_HYDRO) :: &
                     ! LSL  LSI  LSR  LSS  CVL  CVI  CVR  CVS  LSG    
-       HCLASS1_TYPE  = (/5,   1,   2,   2,   5,   1,   2,   2,   2/), & ! 
+!       HCLASS1_TYPE  = (/5,   1,   2,   2,   5,   1,   2,   2,   2/), & ! 
+       HCLASS1_TYPE  = (/1,   1,   1,   1,   1,   1,   2,   2,   1/), & ! 
        HCLASS1_PHASE = (/0,   1,   0,   1,   0,   1,   0,   1,   1/)    ! 
    real(wp),parameter,dimension(N_HYDRO) ::&
                       ! LSL   LSI    LSR    LSS    CVL   CVI    CVR    CVS    LSG    
        HCLASS1_DMIN = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,   -1.,   -1.,   -1.  /),  &
        HCLASS1_DMAX = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,   -1.,   -1.,   -1.  /),  &
-       HCLASS1_APM  = (/524., 110.8, 524.,   -1.,  524., 110.8, 524.,   -1.,   -1.  /),  &
-       HCLASS1_BPM  = (/  3.,   2.91,  3.,   -1.,    3.,   2.91,  3.,   -1.,   -1.  /),  &
-       HCLASS1_RHO  = (/ -1.,  -1.,   -1.,  100.,   -1.,  -1.,   -1.,  100.,  400.  /),  &
-       HCLASS1_P1   = (/ -1.,  -1.,    8.e6,  3.e6, -1.,  -1.,    8.e6,  3.e6,  4.e6/),  & 
-       HCLASS1_P2   = (/  6.,  40.,   -1.,   -1.,    6.,  40.,   -1.,   -1.,   -1.   /), & 
-       HCLASS1_P3   = (/  0.3,  2.,   -1.,   -1.,    0.3,  2.,   -1.,   -1.,   -1.   /)
+!       HCLASS1_APM  = (/524., 110.8, 524.,   -1.,  524., 110.8, 524.,   -1.,   -1.  /),  &
+!       HCLASS1_BPM  = (/  3.,   2.91,  3.,   -1.,    3.,   2.91,  3.,   -1.,   -1.  /),  &
+!       HCLASS1_RHO  = (/ -1.,  -1.,   -1.,  100.,   -1.,  -1.,   -1.,  100.,  400.  /),  &
+       HCLASS1_APM  = (/524.,  -1.,  524.,   -1.,  524.,  -1.,  524.,   -1.,   -1.  /),  &
+       HCLASS1_BPM  = (/  3.,  -1.,    3.,   -1.,    3.,  -1.,    3.,   -1.,   -1.  /),  &
+       HCLASS1_RHO  = (/ -1., 500.,   -1.,  250.,   -1., 500.,   -1.,  250.,  500.  /),  &
+!       HCLASS1_P1   = (/ -1.,  -1.,    8.e6,  3.e6, -1.,  -1.,    8.e6,  3.e6,  4.e6/),  & 
+!       HCLASS1_P2   = (/  6.,  40.,   -1.,   -1.,    6.,  40.,   -1.,   -1.,   -1.   /), & 
+!       HCLASS1_P3   = (/  0.3,  2.,   -1.,   -1.,    0.3,  2.,   -1.,   -1.,   -1.   /)
+       HCLASS1_P1   = (/ -1.,  -1.,   -1.,   -1.,   -1.,  -1.,    8.e6,  3.e6, -1.  /),  & 
+       HCLASS1_P2   = (/  6.,  40.,   20.,   40.,    6.,  40.,   -1.,   -1.,   60.  /),  & 
+       HCLASS1_P3   = (/  1.,   1.,    5.,    1.,    1.,   5.,   -1.,   -1.,    1.  /)
 
     ! TWO MOMENT PARAMETERS
     integer,parameter,dimension(N_HYDRO) :: &
@@ -1352,6 +1482,18 @@ contains
        HCLASS2_P1   = (/ -1,     -1,     -1,     -1,    -1,    -1,   -1,     -1,   -1/), &
        HCLASS2_P2   = (/ -1,     -1,     -1,     -1,    -1,    -1,   -1,     -1,   -1/), &
        HCLASS2_P3   = (/ -2,      1,      1,      1,    -2,     1,    1,      1,    1/) 
+
+    integer,parameter,dimension(N_HYDRO) :: &
+         ! type1 -> p1*D^p2 ; type2 -> Posselt and Lohmann (2008) Eq.11
+         !         LSL  LSI  LSR  LSS  CVL  CVI  CVR  CVS  LSG
+         ftype = (/   2,   1,   2,   1,   2,   1,   1,   1,   1 /),&
+         fvscs = (/   0,   0,   0,   0,   0,   0,   1,   1,   0 /)
+
+    real(wp),parameter,dimension(N_HYDRO) :: &
+         !          LSL       LSI       LSR       LSS       CVL       CVI       CVR       CVS       LSG  
+         f1   = (/  9.65   ,  1.107  ,  9.65   ,  3.321  ,  9.65   ,  1.107  ,  8.42E+2,  4.84   , 19.3  /),&
+         f2   = (/ 10.43   ,  0.22   , 10.43   ,  0.22   , 10.43   ,  0.22   ,  0.8    ,  0.25   ,  0.37 /),&
+         f3   = (/  6.00E+2,  0.00   ,  6.00E+2,  0.00   ,  6.00E+2,  0.00   ,  0.00   ,  0.00   ,  0.00 /)
     
     if (lsingle) then    
        sd%dtype(1:N_HYDRO) = HCLASS1_TYPE(1:N_HYDRO)
@@ -1376,6 +1518,60 @@ contains
        sd%p1(1:N_HYDRO)    = HCLASS2_P1(1:N_HYDRO)
        sd%p2(1:N_HYDRO)    = HCLASS2_P2(1:N_HYDRO)
        sd%p3(1:N_HYDRO)    = HCLASS2_P3(1:N_HYDRO)
-    endif    
-  end subroutine hydro_class_init    
+    endif
+    
+    sd%ftype = ftype
+    sd%fvscs = fvscs
+    sd%f1    = f1
+    sd%f2    = f2
+    sd%f3    = f3
+    
+  end subroutine hydro_class_init
+
+  subroutine fall_velocity(nsizes,D0,sd,p_matrix,t_matrix,tp,fall)
+    implicit none
+    integer,intent(in)   :: &
+         nsizes,tp
+    real(wp),intent(in), dimension(nsizes) :: &
+         D0              ! [m], equivalent volume spheres                                                
+    type(size_distribution),intent(in) :: &
+         sd
+    real(wp),intent(in) :: &
+         p_matrix,t_matrix
+    real(wp),intent(out),dimension(nsizes) :: &
+         fall            ! positive = ascending, [m/s]                                                   
+
+    ! internal work                                                                                      
+    real(wp) :: rho,rho0
+    integer,parameter  :: &  ! same index as in subsample_and_optics                                     
+         LSCLIQ = 1,      &
+         LSCICE = 2,      &
+         LSRAIN = 3,      &
+         LSSNOW = 4,      &
+         CVCLIQ = 5,      &
+         CVCICE = 6,      &
+         CVRAIN = 7,      &
+         CVSNOW = 8,      &
+         LSGRPL = 9
+    real(wp),dimension(N_HYDRO) :: vscs_fct
+
+    rho0 = 101300/273.15/287
+    rho  = p_matrix/t_matrix/287
+    vscs_fct  = merge(sqrt(rho0/rho),1._wp,sd%fvscs==1)
+
+    if (sd%ftype(tp) == 1) then
+       ! p1 * D^p2                                                                                       
+       fall = -1 * vscs_fct(tp) * &
+            ( sd%f1(tp) * D0**sd%f2(tp) + sd%f3(tp) )
+    else if (sd%ftype(tp) == 2) then
+       ! Posselt and Lohmann (2008), Eq.11                                                               
+       fall = -1 * vscs_fct(tp) * &
+            ( sd%f1(tp) - sd%f2(tp)*exp(-1*sd%f3(tp)*D0) + (sd%f2(tp)-sd%f1(tp))*exp(-5*sd%f3(tp)*D0) )
+    else
+       write(*,*) 'WARNING: size_distribution, undefined ftype; STOP'
+       stop
+    end if
+
+  end subroutine fall_velocity
+  
 end module mod_quickbeam_optics

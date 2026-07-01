@@ -70,6 +70,7 @@ MODULE MOD_COSP
   USE MOD_COSP_CLOUDSAT_INTERFACE,   ONLY: cosp_cloudsat_init,    cloudsat_IN, &
                                            COSP_ASSIGN_cloudsatIN,COSP_ASSIGN_cloudsatIN_clean
   USE quickbeam,                     ONLY: quickbeam_subcolumn,   quickbeam_column
+  USE quickbeam,                     ONLY: quickbeam_dplrw  ! for DPLRW
   USE MOD_ICARUS,                    ONLY: icarus_subcolumn,      icarus_column
   USE MOD_MISR_SIMULATOR,            ONLY: misr_subcolumn,        misr_column
   USE MOD_LIDAR_SIMULATOR,           ONLY: lidar_subcolumn,       lidar_column
@@ -171,7 +172,7 @@ MODULE MOD_COSP
           isccp_fq  => null()             ! The fraction of the model grid box covered by each of
                                           ! the 49 ISCCP D level cloud types. (%)
 
-     ! MISR outptus
+     ! MISR outputs
      real(wp),dimension(:,:,:),pointer ::   & !
           misr_fq => null()          ! Fraction of the model grid box covered by each of the MISR
                            ! cloud types
@@ -181,7 +182,7 @@ MODULE MOD_COSP
           misr_meanztop => null(), & ! Mean MISR cloud top height
           misr_cldarea => null()     ! Mean MISR cloud cover area
 
-     ! MODIS outptus
+     ! MODIS outputs
      real(wp),pointer,dimension(:) ::      & !
           modis_Cloud_Fraction_Total_Mean => null(),       & ! L3 MODIS retrieved cloud fraction (total)
           modis_Cloud_Fraction_Water_Mean => null(),       & ! L3 MODIS retrieved cloud fraction (liq)
@@ -214,10 +215,23 @@ MODULE MOD_COSP
           cfodd_ntotal => null()       ! # of CFODD (Npoints,CFODD_NDBZE,CFODD_NICOD,CFODD_NCLASS)
      real(wp),dimension(:,:),    pointer :: &
           wr_occfreq_ntotal => null()  ! # of nonprecip/drizzle/precip (Npoints,WR_NREGIME)
+
+     ! RTTOV outputs
      integer                    :: &
          Ninst_rttov
      type(rttov_output),dimension(:),allocatable :: &
          rttov_outputs
+
+     ! Doppler capability of radar (CloudSat/QuickBeam)
+     real(wp),dimension(:,:,:,:),pointer :: &
+          dplrw_Z => null(), spwid_Z => null(), Zef94_Z => null(), &
+          dplrw_T => null(), spwid_T => null(), Zef94_T => null(), &
+          ZefVd_2 => null(), &
+          gridw_Z => null(), gridw_T => null()
+     real(wp),dimension(:,:,:,:,:),pointer :: &
+          vfall_Z => null(), vfall_T => null(), ZefVf_2 => null()
+     real(wp),dimension(:,:),pointer :: &
+          gcumw => null()
 
   end type cosp_outputs
 
@@ -276,7 +290,8 @@ CONTAINS
          Lcloudsat_tcc,        & !
          Lcloudsat_tcc2,       & !         
          Llidar_only_freq_cloud, & ! On/Off switch from joint Calipso/Cloudsat product
-         Lcloudsat_modis_wr      ! On/Off switch from joint CloudSat/MODIS warm rain product
+         Lcloudsat_modis_wr,   & ! On/Off switch from joint CloudSat/MODIS warm rain product
+         Ldplrw                  ! On/Off switch from Doppler capability of CLOUDSAT simulator
     logical :: &
          ok_lidar_cfad    = .false.,         &
          ok_lidar_cfad_grLidar532 = .false., & 
@@ -602,6 +617,12 @@ CONTAINS
        Lcloudsat_subcolumn = .true.
        Lcloudsat_modis_wr  = .true. ! WR: warm rain product
     endif
+
+    ! for DPLRW
+    if (associated(cospOUT%dplrw_Z)) then
+       Ldplrw = .true.
+       Lcloudsat_subcolumn = .true.
+    end if
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ! 2b) Error Checking
@@ -1493,7 +1514,7 @@ CONTAINS
        if (cospIN % cospswathsIN(3) % N_inst_swaths .gt. 0) then ! Trigger use of swathed arrays
           if (cloudsatIN%Npoints .gt. 0) then
              allocate(temp_cloudsat_cfad_ze(cloudsatIN%Npoints,cloudsat_DBZE_BINS,Nlvgrid),    &
-                      temp_cloudsat_precip_cover(cloudsatIN%Npoints,cloudsat_DBZE_BINS),       &
+                      temp_cloudsat_precip_cover(cloudsatIN%Npoints,nCloudsatPrecipClass),       &
                       temp_cloudsat_pia(cloudsatIN%Npoints))
              call quickbeam_column(cloudsatIN%Npoints, cloudsatIN%Ncolumns, cloudsatIN%Nlevels,            &
                   Nlvgrid, cloudsat_DBZE_BINS, 'cloudsat', cloudsatDBZe, cloudsatZe_non,                   &
@@ -1543,6 +1564,27 @@ CONTAINS
           deallocate(out1D_3)
           nullify(cospOUT%cloudsat_precip_cover)
        endif
+
+       ! for DPLRW
+       if (Ldplrw) then
+          call quickbeam_dplrw(cospIN%Npoints, cospIN%Ncolumns, cospIN%Nlevels, &
+               cospIN%rcfg_cloudsat, &
+               cospgridIN%hgt_matrix, cospgridIN%hgt_matrix_half, cospgridIN%surfelev, &
+               cospgridIN%at, cospgridIN%pfull, &
+               cospgridIN%gwvel, cospgridIN%gcumf, &
+               cospIN%vfall, cospIN%vfsqu, cospIN%zehyd, &
+               cospIN%g_vol_cloudsat, cospIN%krhyd, &
+               cospIN%vtrm3, cospIN%vtrm0, cospIN%mmnt3, cospIN%mmnt0, &
+               cospOUT%gcumw(ij:ik,:), &
+               cospOUT%dplrw_Z(ij:ik,:,:,:), cospOUT%spwid_Z(ij:ik,:,:,:), &
+               cospOUT%Zef94_Z(ij:ik,:,:,:), &
+               cospOUT%dplrw_T(ij:ik,:,:,:), cospOUT%spwid_T(ij:ik,:,:,:), &
+               cospOUT%Zef94_T(ij:ik,:,:,:), &
+               cospOUT%ZefVd_2(ij:ik,:,:,:), &
+               cospOUT%vfall_Z(ij:ik,:,:,:,:), cospOUT%gridw_Z(ij:ik,:,:,:), &
+               cospOUT%vfall_T(ij:ik,:,:,:,:), cospOUT%gridw_T(ij:ik,:,:,:), &
+               cospOUT%ZefVf_2(ij:ik,:,:,:,:) )
+       end if
     endif
 
     ! MODIS

@@ -1,4 +1,4 @@
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%A%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! Copyright (c) 2016, Regents of the University of Colorado
 ! All rights reserved.
 !
@@ -64,11 +64,12 @@ program cosp2_test
   USE mod_scops,           ONLY: scops
   USE mod_prec_scops,      ONLY: prec_scops
   USE MOD_COSP_UTILS,      ONLY: cosp_precip_mxratio
+  use MOD_COSP_RTTOV_UTIL, only: rttov_cfg, rttov_output
   use cosp_optics,         ONLY: cosp_simulator_optics,lidar_optics,modis_optics,         &
                                  modis_optics_partition
   use mod_cosp_stats,      ONLY: COSP_CHANGE_VERTICAL_GRID,cosp_optical_inputs,           &
                                  cosp_column_inputs,radar_cfg,cosp_cleanUp
-  use MOD_COSP_RTTOV_UTIL, only: rttov_cfg
+  use mod_cosp_config,     ONLY: Nlvdplr, Nlvspwd, NlvdBZe, Nlvtemp  ! added by DPLRW
   
   implicit none
 
@@ -126,6 +127,16 @@ program cosp2_test
        frac_out,  & ! Subcolumn cloud cover (0/1)
        Reff         ! Subcolumn effective radius
 
+  ! additional inputs for DPLRW
+  real(wp),dimension(:,:),allocatable,target :: &
+       gwvel,     & ! Model grid vertical velocity (m/s)
+       gcumf        ! Model cumulus mass flux (kg/m^2/s)
+
+  ! adjust to prognostic precipitation
+  real(wp),dimension(:,:),allocatable,target :: &
+       mr_lsrain,     & ! Mass mixing ratio for stratiform cloud rain (kg/kg)
+       mr_lssnow        ! Mass mixing ratio for stratiform cloud snow (kg/kg)
+  
   ! Input namelist fields
   integer ::                      & !
        Npoints,                   & ! Number of gridpoints
@@ -149,8 +160,8 @@ program cosp2_test
   logical ::                      & !
        use_vgrid,                 & ! Use fixed vertical grid for outputs?
        csat_vgrid,                & ! CloudSat vertical grid? 
-       use_precipitation_fluxes     ! True if precipitation fluxes are input to the 
-                                    ! algorithm 
+       use_precipitation_fluxes     ! True if precipitation fluxes are input to the flux
+
   character(len=64) :: &
        cloudsat_micro_scheme        ! Microphysical scheme used in cloudsat radar simulator
   character(len=64) :: &
@@ -224,7 +235,9 @@ program cosp2_test
              Lclmodis,Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,           &
              Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,      &
              Lptradarflag9,Lradarpia,                                                    &
-             Lwr_occfreq,Lcfodd
+             Lwr_occfreq, Lcfodd, &
+             Ldplrw ! for DPLRW
+
   namelist/COSP_OUTPUT/Lcfaddbze94,Ldbze94,Latb532,LcfadLidarsr532,Lclcalipso,           &
                        Lclhcalipso,Lcllcalipso,Lclmcalipso,Lcltcalipso,LparasolRefl,     &
                        Lclcalipsoliq,Lclcalipsoice,Lclcalipsoun,Lclcalipsotmp,           &
@@ -250,7 +263,9 @@ program cosp2_test
                        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,          &
                        Lptradarflag4,Lptradarflag5,Lptradarflag6,Lptradarflag7,          &
                        Lptradarflag8,Lptradarflag9,Lradarpia,                            &
-                       Lwr_occfreq, Lcfodd
+                       Lwr_occfreq, Lcfodd, &
+                       Ldplrw
+
   ! Local variables
   logical :: &
        lsingle     = .true.,  & ! True if using MMF_v3_single_moment CLOUDSAT microphysical scheme (default)
@@ -320,6 +335,7 @@ program cosp2_test
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   call cpu_time(driver_time(1))
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Read in namelists
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -374,6 +390,8 @@ program cosp2_test
            dtau_s(Npoints,Nlevels),dtau_c(Npoints,Nlevels),dem_s(Npoints,Nlevels),       &
            dem_c(Npoints,Nlevels),skt(Npoints),psfc(Npoints),landmask(Npoints),          &
            mr_ozone(Npoints,Nlevels),u_wind(Npoints),v_wind(Npoints),sunlit(Npoints),    &
+           gwvel(Npoints,Nlevels),gcumf(Npoints,Nlevels), & ! added by DPLRW
+           mr_lsrain(Npoints,Nlevels),mr_lssnow(Npoints,Nlevels),                        &
            frac_out(Npoints,Ncolumns,Nlevels),surfelev(Npoints),year(Npoints),           &
            month(Npoints),day(Npoints),hour(Npoints),minute(Npoints),seconds(Npoints))
 
@@ -389,9 +407,11 @@ program cosp2_test
   call nc_read_input_file(fileIN,Npoints,Nlevels,N_HYDRO,lon,lat,p,ph,zlev,zlev_half,    &
                           T,sh,rh,tca,cca,mr_lsliq,mr_lsice,mr_ccliq,mr_ccice,fl_lsrain, &
                           fl_lssnow,fl_lsgrpl,fl_ccrain,fl_ccsnow,Reff,dtau_s,dtau_c,    &
-                          dem_s,dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,        &
-                          emsfc_lw,geomode,Nlon,Nlat,surfelev,year,month,day,hour,       &
-                          minute,seconds)
+                          dem_s,dem_c,skt,psfc,landmask,mr_ozone,u_wind,v_wind,sunlit,   &
+                          gwvel, gcumf, & ! added by DPLRW
+                          mr_lsrain, mr_lssnow, & ! adjust to prognostic precipitation
+                          emsfc_lw,geomode,Nlon,Nlat,surfelev,                           &
+                          year,month,day,hour,minute,seconds)
   call cpu_time(driver_time(2))
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -432,8 +452,8 @@ program cosp2_test
        Lptradarflag6 .or. Lptradarflag7 .or. Lptradarflag8 .or. Lptradarflag9 .or.       &
        Lradarpia) Lcloudsat = .true.
   if (Lparasolrefl) Lparasol = .true.
-  
   if (rttov_Ninstruments .gt. 0)  Lrttov = .true.
+  if (Ldplrw) Lcloudsat = .true. ! added by DPLRW  
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -469,7 +489,7 @@ program cosp2_test
        rttov_Ninstruments, rttov_instrument_namelists_final, rttov_configs,              &
        debug=rttov_verbose)
   call cpu_time(driver_time(3))
-    
+
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! Construct output derived type.
   ! *NOTE* The "construct/destroy" subroutines are local to this module and should be
@@ -496,8 +516,7 @@ program cosp2_test
        LcfadDbze94, Ldbze94, Lparasolrefl,                                               &
        Lptradarflag0,Lptradarflag1,Lptradarflag2,Lptradarflag3,Lptradarflag4,            &
        Lptradarflag5,Lptradarflag6,Lptradarflag7,Lptradarflag8,Lptradarflag9,Lradarpia,  &
-       Lwr_occfreq, Lcfodd,                                                              &
-       rttov_Ninstruments,rttov_configs,                                                 &
+       Lwr_occfreq, Lcfodd, rttov_Ninstruments, rttov_configs, Ldplrw,                   &
        Npoints, Ncolumns, Nlevels, Nlvgrid_local, use_vgrid, cospOUT)
 
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -510,7 +529,9 @@ program cosp2_test
      nChunks = nPoints/nPoints_it+1
   endif 
   if (nPoints .eq. nPoints_it) nChunks = 1
+  write(*,*) 'nChunks = ',nChunks
   do iChunk=1,nChunks
+     write(*,*) 'Now ... iChunk = ',iChunk
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      ! Determine indices for "chunking" (again, if necessary)
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -577,6 +598,10 @@ program cosp2_test
      ! cospstateIN%hgt_matrix_half(:,Nlevels) contains the bottom of the surface layer.
      cospstateIN%hgt_matrix_half(:,1:Nlevels) = zlev_half(start_idx:end_idx,Nlevels:1:-1) ! km
      
+     ! added by DPLRW
+     cospstateIN%gwvel(:,1:Nlevels) = gwvel(start_idx:end_idx,Nlevels:1:-1)
+     cospstateIN%gcumf(:,1:Nlevels) = gcumf(start_idx:end_idx,Nlevels:1:-1)
+
      ! Assign RTTOV values
      ! Keeping these structures since refl and emis could come from model input
    !   cospstateIN%emis_in(:,:) = 1._wp
@@ -657,7 +682,8 @@ program cosp2_test
      ! The weighted Reff is given by: Reff_net = (M_1 + M_2) / (M_1/Reff_1 + M_2/Reff_2)
      cospstateIN%DeffLiq(:,:) = 0._wp ! Initialize for zero everywhere.
      where ((mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
-         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))          
+         cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1)) / &
+              & (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ) + mr_ccliq(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCLIQ))
      elsewhere (mr_lsliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffLiq(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCLIQ)
      elsewhere (mr_ccliq(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
@@ -666,7 +692,8 @@ program cosp2_test
      
      cospstateIN%DeffIce(:,:) = 0._wp ! Initialize for zero everywhere.
      where ((mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp) .and. (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp))
-         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))          
+         cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * (mr_lsice(start_idx:end_idx,Nlevels:1:-1) + mr_ccice(start_idx:end_idx,Nlevels:1:-1)) / &
+              & (mr_lsice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE) + mr_ccice(start_idx:end_idx,Nlevels:1:-1) / Reff(start_idx:end_idx,Nlevels:1:-1,I_CVCICE))
      elsewhere (mr_lsice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
          cospstateIN%DeffIce(:,:) = 2._wp * 1.0e6 * Reff(start_idx:end_idx,Nlevels:1:-1,I_LSCICE)
      elsewhere (mr_ccice(start_idx:end_idx,Nlevels:1:-1) .gt. 0._wp)
@@ -686,13 +713,15 @@ program cosp2_test
      ! Generate subcolumns and compute optical inputs.
      !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      call subsample_and_optics(nPtsPerIt,nLevels,nColumns,N_HYDRO,overlap,                     &
-          use_vgrid,use_precipitation_fluxes,lidar_ice_type,sd,                                &
+          use_vgrid,use_precipitation_fluxes,lidar_ice_type,sd, &
           tca(start_idx:end_idx,Nlevels:1:-1),cca(start_idx:end_idx,Nlevels:1:-1),             &
           fl_lsrain(start_idx:end_idx,Nlevels:1:-1),fl_lssnow(start_idx:end_idx,Nlevels:1:-1), &
           fl_lsgrpl(start_idx:end_idx,Nlevels:1:-1),fl_ccrain(start_idx:end_idx,Nlevels:1:-1), &
           fl_ccsnow(start_idx:end_idx,Nlevels:1:-1),mr_lsliq(start_idx:end_idx,Nlevels:1:-1),  &
           mr_lsice(start_idx:end_idx,Nlevels:1:-1),mr_ccliq(start_idx:end_idx,Nlevels:1:-1),   &
-          mr_ccice(start_idx:end_idx,Nlevels:1:-1),Reff(start_idx:end_idx,Nlevels:1:-1,:),     &
+          mr_ccice(start_idx:end_idx,Nlevels:1:-1), &
+          mr_lsrain(start_idx:end_idx,Nlevels:1:-1),mr_lssnow(start_idx:end_idx,Nlevels:1:-1), &
+          Reff(start_idx:end_idx,Nlevels:1:-1,:), &
           dtau_c(start_idx:end_idx,nLevels:1:-1),dtau_s(start_idx:end_idx,nLevels:1:-1),       &
           dem_c(start_idx:end_idx,nLevels:1:-1),dem_s(start_idx:end_idx,nLevels:1:-1),         &
           cospstateIN,cospIN)
@@ -708,6 +737,7 @@ program cosp2_test
      end do
      
      call cpu_time(driver_time(7))
+
   end do
 
   print*,'Time to read in data:     ',driver_time(2)-driver_time(1)
@@ -747,14 +777,16 @@ contains
   ! SUBROUTINE subsample_and_optics
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   subroutine subsample_and_optics(nPoints, nLevels, nColumns, nHydro, overlap, use_vgrid,   &
-       use_precipitation_fluxes, lidar_ice_type, sd, tca, cca, fl_lsrainIN, fl_lssnowIN,    &
+       use_precipitation_fluxes, lidar_ice_type, sd, &
+       tca, cca, fl_lsrainIN, fl_lssnowIN,    &
        fl_lsgrplIN, fl_ccrainIN, fl_ccsnowIN, mr_lsliq, mr_lsice, mr_ccliq, mr_ccice,       &
+       mr_lsrain, mr_lssnow, & ! adjust to prognostic precipitation
        reffIN, dtau_c, dtau_s, dem_c, dem_s, cospstateIN, cospIN)
     ! Inputs
     integer,intent(in) :: nPoints, nLevels, nColumns, nHydro, overlap, lidar_ice_type
     real(wp),intent(in),dimension(nPoints,nLevels) :: tca,cca,mr_lsliq,mr_lsice,mr_ccliq,   &
          mr_ccice,dtau_c,dtau_s,dem_c,dem_s,fl_lsrainIN,fl_lssnowIN,fl_lsgrplIN,fl_ccrainIN,&
-         fl_ccsnowIN
+         fl_ccsnowIN, mr_lsrain, mr_lssnow
     real(wp),intent(in),dimension(nPoints,nLevels,nHydro) :: reffIN
     logical,intent(in) :: use_vgrid ! .false.: outputs on model levels
                                     ! .true.:  outputs on evenly-spaced vertical levels.
@@ -782,6 +814,7 @@ contains
          column_frac_out, column_prec_out, fl_lsrain, fl_lssnow, fl_lsgrpl, fl_ccrain, fl_ccsnow
     real(wp),dimension(nPoints,nColumns,Nlvgrid_local) :: tempOut
     logical :: cmpGases=.true.
+    logical :: prog_flag=.true. ! adjust to prognostic precipitation
 
     if (Ncolumns .gt. 1) then
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -807,8 +840,8 @@ contains
           cv_p_rate(:,1:nLevels) = fl_ccrainIN + fl_ccsnowIN
        else
           ls_p_rate(:,1:nLevels) = 0 ! mixing_ratio(rain) + mixing_ratio(snow) + mixing_ratio (groupel)
-          cv_p_rate(:,1:nLevels) = 0 ! mixing_ratio(rain) + mixing_ratio(snow)
-       endif
+          cv_p_rate(:,1:nLevels) = 0 ! mixing_ratio(rain) + mixing_ratio(snow) + mixing_ratio (groupel)
+       end if
        
        ! Call PREC_SCOPS
        allocate(frac_prec(nPoints,nColumns,nLevels))
@@ -856,6 +889,10 @@ contains
        mr_hydro(:,:,:,:) = 0._wp
        Reff(:,:,:,:)     = 0._wp
        Np(:,:,:,:)       = 0._wp
+
+       ! check prognostic precipitaion
+       if ( any(mr_lsrain .lt. 0._wp) .or. any(mr_lssnow .lt. 0._wp) ) prog_flag = .false.
+       
        do k=1,nColumns
           ! Subcolumn cloud fraction
           column_frac_out = cospIN%frac_out(:,k,:)
@@ -881,8 +918,8 @@ contains
           where ((column_prec_out == 1) .or. (column_prec_out == 3) )
              Reff(:,k,:,I_LSRAIN) = ReffIN(:,:,I_LSRAIN)
              Reff(:,k,:,I_LSSNOW) = ReffIN(:,:,I_LSSNOW)
-             Reff(:,k,:,I_LSGRPL) = ReffIN(:,:,I_LSGRPL)
-             ! CONV precipitation   
+             Reff(:,k,:,I_LSGRPL) = ReffIN(:,:,I_LSGRPL)             
+          ! CONV precipitation
           elsewhere ((column_prec_out == 2) .or. (column_prec_out == 3))
              Reff(:,k,:,I_CVRAIN) = ReffIN(:,:,I_CVRAIN)
              Reff(:,k,:,I_CVSNOW) = ReffIN(:,:,I_CVSNOW)
@@ -899,6 +936,7 @@ contains
        fl_lsgrpl(:,:) = 0._wp
        fl_ccrain(:,:) = 0._wp
        fl_ccsnow(:,:) = 0._wp
+
        do k=1,nLevels
           do j=1,nPoints
              ! In-cloud mixing ratios.
@@ -913,9 +951,14 @@ contains
              ! Precipitation
              if (use_precipitation_fluxes) then
                 if (prec_ls(j,k) .ne. 0.) then
-                   fl_lsrain(j,k) = fl_lsrainIN(j,k)/prec_ls(j,k)
-                   fl_lssnow(j,k) = fl_lssnowIN(j,k)/prec_ls(j,k)
-                   fl_lsgrpl(j,k) = fl_lsgrplIN(j,k)/prec_ls(j,k)
+                   if (prog_flag) then
+                      mr_hydro(j,:,k,I_LSRAIN) = mr_lsrain(j,k)/prec_ls(j,k)
+                      mr_hydro(j,:,k,I_LSSNOW) = mr_lssnow(j,k)/prec_ls(j,k)
+                   else
+                      fl_lsrain(j,k) = fl_lsrainIN(j,k)/prec_ls(j,k)
+                      fl_lssnow(j,k) = fl_lssnowIN(j,k)/prec_ls(j,k)
+                      fl_lsgrpl(j,k) = fl_lsgrplIN(j,k)/prec_ls(j,k)
+                   end if
                 endif
                 if (prec_cv(j,k) .ne. 0.) then
                    fl_ccrain(j,k) = fl_ccrainIN(j,k)/prec_cv(j,k)
@@ -932,6 +975,13 @@ contains
                    mr_hydro(j,:,k,I_CVSNOW) = mr_hydro(j,:,k,I_CVSNOW)/prec_cv(j,k)
                 endif
              endif
+
+             ! cumulus mass flux, added by DPLRW
+             if (cca(j,k) > 0._wp .and. cca(j,k) <= 1._wp) then
+                cospstateIN%gcumf(j,k) = cospstateIN%gcumf(j,k)/cca(j,k)
+             else
+                cospstateIN%gcumf(j,k) = R_UNDEF
+             end if
           enddo
        enddo
        deallocate(frac_ls,prec_ls,frac_cv,prec_cv)
@@ -941,45 +991,35 @@ contains
        !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        if (use_precipitation_fluxes) then
           ! LS rain
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 1._wp, n_ax(I_LSRAIN), n_bx(I_LSRAIN),         &
-               alpha_x(I_LSRAIN), c_x(I_LSRAIN),   d_x(I_LSRAIN),   g_x(I_LSRAIN),       &
-               a_x(I_LSRAIN),   b_x(I_LSRAIN),   gamma_1(I_LSRAIN), gamma_2(I_LSRAIN),   &
-               gamma_3(I_LSRAIN), gamma_4(I_LSRAIN), fl_lsrain,                          &
-               mr_hydro(:,:,:,I_LSRAIN), Reff(:,:,:,I_LSRAIN))
+          if (.not. prog_flag) then
+             call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+                  cospstateIN%pfull, cospstateIN%at, frac_prec, 1._wp, I_LSRAIN, sd, &
+                  fl_lsrain, mr_hydro(:,:,:,I_LSRAIN), Reff(:,:,:,I_LSRAIN) )
+          end if
           ! LS snow
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 1._wp,  n_ax(I_LSSNOW),  n_bx(I_LSSNOW),       &
-               alpha_x(I_LSSNOW), c_x(I_LSSNOW),  d_x(I_LSSNOW),  g_x(I_LSSNOW),         &
-               a_x(I_LSSNOW),   b_x(I_LSSNOW),   gamma_1(I_LSSNOW),  gamma_2(I_LSSNOW),  &
-               gamma_3(I_LSSNOW), gamma_4(I_LSSNOW), fl_lssnow,                          &
-               mr_hydro(:,:,:,I_LSSNOW), Reff(:,:,:,I_LSSNOW))
+          if (.not. prog_flag) then
+             call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+                  cospstateIN%pfull, cospstateIN%at, frac_prec, 1._wp, I_LSSNOW, sd, &
+                  fl_lssnow, mr_hydro(:,:,:,I_LSSNOW), Reff(:,:,:,I_LSSNOW) )
+          end if
           ! CV rain
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 2._wp, n_ax(I_CVRAIN),  n_bx(I_CVRAIN),        &
-               alpha_x(I_CVRAIN), c_x(I_CVRAIN),   d_x(I_CVRAIN),   g_x(I_CVRAIN),       &
-               a_x(I_CVRAIN),   b_x(I_CVRAIN),   gamma_1(I_CVRAIN), gamma_2(I_CVRAIN),   &
-               gamma_3(I_CVRAIN), gamma_4(I_CVRAIN), fl_ccrain,                          &
-               mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN))
+          call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+               cospstateIN%pfull, cospstateIN%at, frac_prec, 2._wp, I_CVRAIN, sd, &
+               fl_lssnow, mr_hydro(:,:,:,I_CVRAIN), Reff(:,:,:,I_CVRAIN) )
           ! CV snow
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 2._wp, n_ax(I_CVSNOW),  n_bx(I_CVSNOW),        &
-               alpha_x(I_CVSNOW),  c_x(I_CVSNOW),   d_x(I_CVSNOW),   g_x(I_CVSNOW),      &
-               a_x(I_CVSNOW),   b_x(I_CVSNOW),   gamma_1(I_CVSNOW), gamma_2(I_CVSNOW),   &
-               gamma_3(I_CVSNOW), gamma_4(I_CVSNOW), fl_ccsnow,                          &
-               mr_hydro(:,:,:,I_CVSNOW), Reff(:,:,:,I_CVSNOW))
+          call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+               cospstateIN%pfull, cospstateIN%at, frac_prec, 2._wp, I_CVSNOW, sd, &
+               fl_lssnow, mr_hydro(:,:,:,I_CVSNOW), Reff(:,:,:,I_CVSNOW) )
           ! LS groupel.
-          call cosp_precip_mxratio(nPoints, nLevels, nColumns, cospstateIN%pfull,        &
-               cospstateIN%at, frac_prec, 1._wp, n_ax(I_LSGRPL),  n_bx(I_LSGRPL),        &
-               alpha_x(I_LSGRPL), c_x(I_LSGRPL),   d_x(I_LSGRPL),   g_x(I_LSGRPL),       &
-               a_x(I_LSGRPL),   b_x(I_LSGRPL),   gamma_1(I_LSGRPL),  gamma_2(I_LSGRPL),  &
-               gamma_3(I_LSGRPL), gamma_4(I_LSGRPL), fl_lsgrpl,                          &
-               mr_hydro(:,:,:,I_LSGRPL), Reff(:,:,:,I_LSGRPL))
+          call cosp_precip_mxratio(Npoints, Nlevels, Ncolumns, &
+               cospstateIN%pfull, cospstateIN%at, frac_prec, 1._wp, I_LSGRPL, sd, &
+               fl_lssnow, mr_hydro(:,:,:,I_LSGRPL), Reff(:,:,:,I_LSGRPL) )
+
           deallocate(frac_prec)
        endif
 
     else
-       cospIN%frac_out(:,:,:) = 1  
+       cospIN%frac_out(:,:,:) = 1
        allocate(mr_hydro(nPoints,1,nLevels,nHydro),Reff(nPoints,1,nLevels,nHydro),       &
                 Np(nPoints,1,nLevels,nHydro))
        mr_hydro(:,1,:,I_LSCLIQ) = mr_lsliq
@@ -1051,7 +1091,7 @@ contains
              cospIN%g_vol_cloudsat(i,:,j)=g_vol(i,j)
           end do
        end do
-       
+
        ! Loop over all subcolumns
        allocate(fracPrecipIce(nPoints,nColumns,nLevels))
        fracPrecipIce(:,:,:) = 0._wp
@@ -1060,8 +1100,16 @@ contains
                mr_hydro(:,k,:,1:nHydro)*1000._wp, Reff(:,k,:,1:nHydro)*1.e6_wp,&
                Np(:,k,:,1:nHydro), cospstateIN%pfull, cospstateIN%at,          &
                cospstateIN%qv, cospIN%z_vol_cloudsat(1:nPoints,k,:),           &
-               cospIN%kr_vol_cloudsat(1:nPoints,k,:))
-          
+               cospIN%kr_vol_cloudsat(1:nPoints,k,:), &
+               cospIN%vfall(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%vfsqu(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%zehyd(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%krhyd(1:nPoints,k,:,1:N_Hydro), &
+               cospIN%vtrm3(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%vtrm0(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%mmnt3(1:nPoints,k,:,1:N_Hydro),                      &
+               cospIN%mmnt0(1:nPoints,k,:,1:N_Hydro) )
+
           ! At each model level, what fraction of the precipitation is frozen?
           where(mr_hydro(:,k,:,I_LSRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_LSSNOW) .gt. 0 .or. &
                 mr_hydro(:,k,:,I_CVRAIN) .gt. 0 .or. mr_hydro(:,k,:,I_CVSNOW) .gt. 0 .or. &
@@ -1204,6 +1252,17 @@ contains
                 y%kr_vol_cloudsat(npoints, ncolumns,nlevels),&
                 y%g_vol_cloudsat(npoints,  ncolumns,nlevels),&
                 y%fracPrecipIce(npoints,   ncolumns))
+
+       ! added by DPLRW
+       allocate(y%vfall(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%vfsqu(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%zehyd(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%krhyd(npoints, ncolumns, nlevels, N_HYDRO) )
+       allocate(y%vtrm3(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%vtrm0(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%mmnt3(npoints, ncolumns, nlevels, N_HYDRO), &
+                y%mmnt0(npoints, ncolumns, nlevels, N_HYDRO) )
+
     endif
     if (Lmodis) then
        allocate(y%fracLiq(npoints,        ncolumns,nlevels),&
@@ -1238,6 +1297,8 @@ contains
              y%tca(nPoints,nLevels),y%hgt_matrix_half(nPoints,nlevels),                  &
              y%rttov_date(nPoints,3),y%rttov_time(nPoints,3),y%sza(nPoints))
 
+    ! added by DPLRW
+    allocate(y%gwvel(npoints,nlevels),y%gcumf(npoints,nlevels))
 
   end subroutine construct_cospstateIN
 
@@ -1278,7 +1339,7 @@ contains
                                     Lptradarflag3,Lptradarflag4,Lptradarflag5,           &
                                     Lptradarflag6,Lptradarflag7,Lptradarflag8,           &
                                     Lptradarflag9,Lradarpia,Lwr_occfreq,Lcfodd,          &
-                                    Ninst_rttov,rttov_configs,                           &
+                                    Ninst_rttov,rttov_configs, Ldplrw,                   &
                                     Npoints,Ncolumns,Nlevels,Nlvgrid,use_vgrid,x)
      ! Inputs
      logical,intent(in) :: &
@@ -1389,6 +1450,7 @@ contains
          Lradarpia,        & ! CLOUDSAT 
          Lwr_occfreq,      & ! CloudSat+MODIS joint diagnostics
          Lcfodd,           & ! CloudSat+MODIS joint diagnostics
+         Ldplrw,           & ! Doppler capability of radar (CloudSat)
          use_vgrid
          
      integer,intent(in) :: &
@@ -1608,6 +1670,29 @@ contains
         x % Ninst_rttov = 0
     end if
 
+    ! Doppler capability of radar (CloudSat)
+    if (Ldplrw) then
+       allocate(x%dplrw_Z(Npoints, Nlvdplr, Nlvgrid, 0:2))
+       allocate(x%spwid_Z(Npoints, Nlvspwd, Nlvgrid, 0:2))
+       allocate(x%Zef94_Z(Npoints, NlvdBZe, Nlvgrid, 0:2))
+       
+       allocate(x%dplrw_T(Npoints, Nlvdplr, Nlvtemp, 0:2))
+       allocate(x%spwid_T(Npoints, Nlvspwd, Nlvtemp, 0:2))
+       allocate(x%Zef94_T(Npoints, NlvdBZe, Nlvtemp, 0:2))
+
+       allocate(x%ZefVd_2(Npoints, Nlvdplr, NlvdBZe, 0:2))
+       
+       allocate(x%gcumw(Npoints, Nlevels))
+
+       allocate(x%vfall_Z(Npoints, Nlvdplr, Nlvgrid, 0:2, 3))
+       allocate(x%gridw_Z(Npoints, Nlvdplr, Nlvgrid, 0:2))
+       allocate(x%vfall_T(Npoints, Nlvdplr, Nlvtemp, 0:2, 3))
+       allocate(x%gridw_T(Npoints, Nlvdplr, Nlvtemp, 0:2))
+
+       allocate(x%ZefVf_2(Npoints, Nlvdplr, NlvdBZe, 0:2, 3))
+       
+    end if
+
   end subroutine construct_cosp_outputs
   
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1644,7 +1729,28 @@ contains
     if (allocated(y%tau_mol_atlid))       deallocate(y%tau_mol_atlid) 
     if (allocated(y%tautot_atlid))        deallocate(y%tautot_atlid)
     if (allocated(y%fracPrecipIce))       deallocate(y%fracPrecipIce)
+
+    !if (allocated(y%rcfg_cloudsat%N_scale_flag))       deallocate(y%rcfg_cloudsat%N_scale_flag)
+    !if (allocated(y%rcfg_cloudsat%Z_scale_flag))       deallocate(y%rcfg_cloudsat%Z_scale_flag)
+    !if (allocated(y%rcfg_cloudsat%Z_scale_added_flag)) deallocate(y%rcfg_cloudsat%Z_scale_added_flag)
+    !if (allocated(y%rcfg_cloudsat%Ze_scaled))          deallocate(y%rcfg_cloudsat%Ze_scaled)
+    !if (allocated(y%rcfg_cloudsat%Zr_scaled))          deallocate(y%rcfg_cloudsat%Zr_scaled)
+    !if (allocated(y%rcfg_cloudsat%kr_scaled))          deallocate(y%rcfg_cloudsat%kr_scaled)
+    !if (allocated(y%rcfg_cloudsat%fc))                 deallocate(y%rcfg_cloudsat%fc)
+    !if (allocated(y%rcfg_cloudsat%rho_eff))            deallocate(y%rcfg_cloudsat%rho_eff)
+    !if (allocated(y%rcfg_cloudsat%base_list))          deallocate(y%rcfg_cloudsat%base_list)
+    !if (allocated(y%rcfg_cloudsat%step_list))          deallocate(y%rcfg_cloudsat%step_list)
+    if (allocated(y%vfall))               deallocate(y%vfall)
+    if (allocated(y%vfsqu))               deallocate(y%vfsqu)
+    if (allocated(y%zehyd))               deallocate(y%zehyd)
+    if (allocated(y%krhyd))               deallocate(y%krhyd)
+    if (allocated(y%vtrm3))               deallocate(y%vtrm3)
+    if (allocated(y%vtrm0))               deallocate(y%vtrm0)
+    if (allocated(y%mmnt3))               deallocate(y%mmnt3)
+    if (allocated(y%mmnt0))               deallocate(y%mmnt0)
+    
     if (associated(y%cfg_rttov))          nullify(y%cfg_rttov)
+
   end subroutine destroy_cospIN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! SUBROUTINE destroy_cospstateIN     
@@ -1685,6 +1791,9 @@ contains
     if (allocated(y%fl_rain))         deallocate(y%fl_rain)
     if (allocated(y%fl_snow))         deallocate(y%fl_snow)
     if (allocated(y%tca))             deallocate(y%tca)
+
+    if (allocated(y%gwvel))           deallocate(y%gwvel)
+    if (allocated(y%gcumf))           deallocate(y%gcumf)
     
   end subroutine destroy_cospstateIN
   
@@ -2004,7 +2113,54 @@ contains
         deallocate(y%wr_occfreq_ntotal)
         nullify(y%wr_occfreq_ntotal)
      endif
+
+     ! added by DPLRW
+     if (associated(y%dplrw_Z)) then
+        deallocate(y%dplrw_Z) ; nullify(y%dplrw_Z)
+     end if
+     if (associated(y%spwid_Z)) then
+        deallocate(y%spwid_Z) ; nullify(y%spwid_Z)
+     end if
+     if (associated(y%Zef94_Z)) then
+        deallocate(y%Zef94_Z) ; nullify(y%Zef94_Z)
+     end if
+
+     if (associated(y%dplrw_T)) then
+        deallocate(y%dplrw_T) ; nullify(y%dplrw_T)
+     end if
+     if (associated(y%spwid_T)) then
+        deallocate(y%spwid_T) ; nullify(y%spwid_T)
+     end if
+     if (associated(y%Zef94_T)) then
+        deallocate(y%Zef94_T) ; nullify(y%Zef94_T)
+     end if
+
+     if (associated(y%ZefVd_2)) then
+        deallocate(y%ZefVd_2) ; nullify(y%ZefVd_2)
+     end if
+
+     if (associated(y%gcumw)) then
+        deallocate(y%gcumw) ; nullify(y%gcumw)
+     end if
      
+     if (associated(y%vfall_Z)) then
+        deallocate(y%vfall_Z) ; nullify(y%vfall_Z)
+     end if
+     if (associated(y%gridw_Z)) then
+        deallocate(y%gridw_Z) ; nullify(y%gridw_Z)
+     end if
+
+     if (associated(y%vfall_T)) then
+        deallocate(y%vfall_T) ; nullify(y%vfall_T)
+     end if
+     if (associated(y%gridw_T)) then
+        deallocate(y%gridw_T) ; nullify(y%gridw_T)
+     end if
+
+     if (associated(y%ZefVf_2)) then
+        deallocate(y%ZefVf_2) ; nullify(y%ZefVf_2)
+     end if
+
      ! RTTOV multi-instrument
      if (allocated(y%rttov_outputs)) then
          do i=1,y % Ninst_rttov ! Iterate over each instrument
@@ -2073,4 +2229,3 @@ contains
   end subroutine rttov_cleanup
 
  end program cosp2_test
-

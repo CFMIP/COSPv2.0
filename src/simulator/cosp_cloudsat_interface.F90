@@ -32,7 +32,7 @@
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 MODULE MOD_COSP_CLOUDSAT_INTERFACE
   USE COSP_KINDS,      ONLY: wp
-  USE quickbeam,       ONLY: quickbeam_init,Re_MAX_BIN,Re_BIN_LENGTH, &                                                                                                                                                       
+  USE quickbeam,       ONLY: quickbeam_init,Re_MAX_BIN,Re_BIN_LENGTH, &
                              maxhclass, nRe_types, nd, mt_ntt
   use mod_cosp_stats,  ONLY: radar_cfg,compute_orbitmasks,cosp_optical_inputs,cosp_column_inputs
   IMPLICIT NONE
@@ -49,7 +49,7 @@ MODULE MOD_COSP_CLOUDSAT_INTERFACE
      temp_z_vol_cloudsat,   &
      temp_kr_vol_cloudsat,  &
      temp_g_vol_cloudsat
-
+  
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ! TYPE cloudsat_IN
   !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

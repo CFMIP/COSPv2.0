@@ -101,6 +101,18 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             xticks_labels = None
             xticks = np.arange(-90,91,30)
             xlabel = 'Latitude (deg)'          
+        if vd['xaxis_type'] == 'NlvdBZe':
+            x = np.arange(-40,31,2)
+            xticks = np.arange(-40,31,5)
+            xticks_labels = ('-40', '-35', '-30', '-25', '-20', '-15', '-10', '-5', '0',
+                             '5', '10', '15', '20', '25', '30')
+            xlabel = 'Radar reflectivity (dBZ)'
+        if vd['xaxis_type'] == 'Nlvdplr':
+            x = np.arange(-6,6.1,0.2)
+            xticks = np.arange(-6,6.1,1)
+            xticks_labels = ('-6', '-5', '-4', '-3', '-2', '-1', '0',
+                             '1', '2', '3', '4', '5', '6')
+            xlabel = 'Doppler velocity (m s^-1)'
         if vd['yaxis_type'] == 'pres7':
             yticks_labels = ('1000', '800', '680', '560', '440', '310', '180','')
             yticks = y
@@ -135,6 +147,11 @@ def collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dims):
             yticks_labels = None
             ylabel = 'Model level'
             yflip = True
+        if vd['yaxis_type'] == 'Nlvtemp':
+            y = np.arange(-80,31,2)
+            yticks = np.arange(-80,31,10)
+            yticks_labels = ('30', '20', '10', '0', '-10', '-20', '-30', '-40', '-50', '-60', '-70', '-80')
+            ylabel = 'Temperature (degC)'
     # Extra processing for specific variables
     vmax = None
     if vname == 'cfadLidarsr355': vmax = 0.03
@@ -185,7 +202,10 @@ def plot_pcolormesh(x, y, v, d, fig_name, title=None, coastlines=False):
     """
     fig = plt.figure(figsize=(10,5))
     cmap = plt.get_cmap('YlOrRd', 20)
-    cmap.set_bad('grey', 1)
+    if coastlines:
+        cmap.set_bad(alpha=0.0)
+    else:
+        cmap.set_bad('grey', 1)
     if coastlines:
         ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=0))
         ax.coastlines()
@@ -217,7 +237,8 @@ def read_dimensions(fname):
            'RELIQ_MODIS', 'levStat', 'SR_BINS', 'lev'
     """
     dim_names = ['cloudsat_DBZE_BINS', 'hgt16', 'REICE_MODIS', 'RELIQ_MODIS',
-                 'levStat', 'SR_BINS', 'lev']
+                 'levStat', 'SR_BINS', 'lev',
+                 'NlvdBZe', 'Nlvdplr', 'Nlvtemp']
     d = {}
     f_id = netCDF4.Dataset(fname, 'r')
     for dim in dim_names:
@@ -275,6 +296,29 @@ def produce_cosp_summary_plots(fname, variables, output_dir, Nlat_lon = None):
         new_shape = None
         if vd['reshape']: new_shape = Nlat_lon
         vx, longitude, latitude, units, long_name = read_var_to_masked_array(fname, vname, fill_value, Nlat_lon = new_shape)
+
+        if vname in ('Zef94_Z', 'Zef94_T', 'dplrw_T'):
+            vx = np.take(vx, 0, axis=0)
+            #longitude = np.take(longitude, 0, axis=0)
+            #latitude = np.take(latitude, 0, axis=0)
+            
+            if vname in ('Zef94_Z', 'Zef94_T'):
+                nrm = np.sum(vx, axis=1, keepdims=True)*2.0
+            elif vname == 'dplrw_T':
+                nrm = np.sum(vx, axis=1, keepdims=True)*0.2                
+
+            vx = np.divide(vx, nrm, out=np.zeros_like(vx), where=(nrm != 0))
+            vx = vx[::-1, :, :]
+
+        if vname == 'dplrw_Z':
+            vx = np.take(vx, 0, axis=0)
+            vel = dimensions['Nlvdplr']
+            vel = vel[None, :, None, None]
+            num = np.sum(vx * vel, axis=1)
+            den = np.sum(vx, axis=1)
+            vx = np.divide(num, den, out=np.zeros_like(num), where=(den != 0))
+            vx = vx[::-1, :, :]
+
         x, y, z, pkw = collapse_dimensions_for_plotting(longitude, latitude, vname, vx, vd, dimensions)
         title = long_name + ' (' + units + ')'
         fig_name = os.path.join(output_dir, ".".join([os.path.basename(fname), vname, 'png']))
@@ -300,6 +344,10 @@ def variable2D_metadata(var_list, fname):
                   ('RELIQ_MODIS', 'tau7', 'loc'),
                   ('levStat', 'SR_BINS', 'loc'))
     zcs_dims = (('levStat','loc'), ('lev','loc'))
+    dplrw_dims = (('regimeID', 'levStat', 'NlvdBZe', 'loc'),
+                  ('regimeID', 'Nlvtemp', 'NlvdBZe', 'loc'),
+                  ('regimeID', 'Nlvtemp', 'Nlvdplr', 'loc'))
+    vdzmn_dims = (('regimeID', 'levStat', 'Nlvdplr', 'loc'),)
     f_id = netCDF4.Dataset(fname, 'r')
     vmeta = {}
     print("=== Processing variables in output file:\n {}".format(fname))
@@ -319,6 +367,17 @@ def variable2D_metadata(var_list, fname):
                 vmeta[vname] = {'plot_type':'zonal_cross_section', 'reshape':True,
                                 'xaxis_type': 'latitude',
                                 'yaxis_type': x.dimensions[0]}
+            # dplrw histograms
+            if x.dimensions in dplrw_dims:
+                vmeta[vname] = {'plot_type': '2Dhist', 'reshape': False,
+                                'xaxis_type': x.dimensions[2],
+                                'yaxis_type': x.dimensions[1],
+                                'regime_axis': 0}
+            if x.dimensions in vdzmn_dims:
+                vmeta[vname] = {'plot_type': 'zonal_cross_section', 'reshape': True,
+                                'xaxis_type': 'latitude',
+                                'yaxis_type': x.dimensions[1],
+                                'regime_axis': 0}
         except:
             print("Skipping {}, not found in output file.".format(vname))
     f_id.close()
@@ -356,11 +415,13 @@ if __name__ == '__main__':
     v2D_hists_names = ['clisccp', 'clmodis', 'cfadDbze94', 'clMISR',
                        'modis_Optical_Thickness_vs_ReffICE',
                        'modis_Optical_Thickness_vs_ReffLIQ',
-                       'cfadLidarsr532', 'cfadLidarsr532gr', 'cfadLidarsr355']
+                       'cfadLidarsr532', 'cfadLidarsr532gr', 'cfadLidarsr355',
+                       'Zef94_Z', 'Zef94_T', 'dplrw_T']
     v2D_zcs_names = ['clcalipsoice','clcalipsoliq','clcalipsoun','clcalipsotmp','clcalipsotmpice','clcalipsotmpliq',
                      'clcalipsotmpun','clcalipso','clcalipsoopaque','clcalipsothin','clcalipsozopaque',
                      'clcalipsoopacity','clgrLidar532','clatlid','clcalipso2',
-                     'lidarBetaMol532gr','lidarBetaMol532','lidarBetaMol355']
+                     'lidarBetaMol532gr','lidarBetaMol532','lidarBetaMol355',
+                     'dplrw_Z']
     v2D_all_names = v2D_maps_names + v2D_hists_names + v2D_zcs_names
     # Plots for these variables are not yet developed
     # atb532_perp(lev, cosp_scol, loc);
